@@ -2,6 +2,7 @@ package com.sksamuel.hs
 
 import java.sql.DriverManager
 
+import com.sksamuel.hs.source.JdbcSource
 import org.scalatest.{WordSpec, Matchers}
 
 class JdbcSourceTest extends WordSpec with Matchers {

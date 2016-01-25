@@ -2,6 +2,7 @@ package com.sksamuel.hs
 
 import java.nio.file.{Paths, Path}
 
+import com.sksamuel.hs.source.CsvSource
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvTest extends WordSpec with Matchers {

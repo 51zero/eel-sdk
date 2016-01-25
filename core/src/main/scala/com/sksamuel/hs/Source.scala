@@ -1,11 +1,11 @@
 package com.sksamuel.hs
 
-import java.sql.DriverManager
+import com.sksamuel.hs.sink.Row
 
 import scala.language.implicitConversions
 
 trait Source {
-  def loader: Iterator[Seq[String]]
+  def loader: Iterator[Row]
 }
 
 object Source {

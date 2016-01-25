@@ -1,19 +1,12 @@
 package com.sksamuel.hs
 
-import com.sksamuel.hs.sink.Sink
+import com.sksamuel.hs.sink.Row
 
 trait Frame {
   outer =>
 
-  def to(sink: Sink): Unit = {
-    toIterator.foreach { row =>
-      sink.insert(row)
-    }
-    sink.completed()
-  }
-
   def hasNext: Boolean
-  def next: Seq[String]
+  def next: Row
 
   def drop(k: Int): Frame = new Frame {
     var j = 0
@@ -24,40 +17,46 @@ trait Frame {
       }
       outer.hasNext
     }
-    override def next: Seq[String] = outer.next
+    override def next: Row = outer.next
   }
 
-  def map(f: String => String): Frame = new Frame {
+  def map(f: Row => Row): Frame = new Frame {
     override def hasNext: Boolean = outer.hasNext
-    override def next: Seq[String] = outer.next.map(f)
+    override def next: Row = f(outer.next)
   }
 
-  def filter(p: String => Boolean): Frame = new Frame {
+  def filterNot(p: Row => Boolean): Frame = filter(str => !p(str))
+  def filter(p: Row => Boolean): Frame = new Frame {
     override def hasNext: Boolean = outer.hasNext
-    override def next: Seq[String] = outer.next.filter(p)
+    override def next: Row = outer.next
   }
-
-  def filterNot(p: String => Boolean): Frame = filter(str => !p(str))
 
   def size: Long = toIterator.size
 
-  private def toIterator: Iterator[Seq[String]] = new Iterator[Seq[String]] {
+  def to(sink: Sink): Unit = {
+    toIterator.foreach { row =>
+      sink.insert(row)
+    }
+    sink.completed()
+  }
+
+  private def toIterator: Iterator[Row] = new Iterator[Row] {
     override def hasNext: Boolean = outer.hasNext
-    override def next(): Seq[String] = outer.next
+    override def next(): Row = outer.next
   }
 }
 
 object Frame {
 
-  def fromSeq(seq: Seq[Seq[String]]): Frame = new Frame {
-    val iterator = seq.iterator
+  def apply(rows: Row*): Frame = new Frame {
+    val iterator = rows.iterator
     override def hasNext: Boolean = iterator.hasNext
-    override def next: Seq[String] = iterator.next()
+    override def next: Row = iterator.next()
   }
 
   def fromSource(source: Source): Frame = new Frame {
     val load = source.loader
     override def hasNext: Boolean = load.hasNext
-    override def next: Seq[String] = load.next()
+    override def next: Row = load.next()
   }
 }
