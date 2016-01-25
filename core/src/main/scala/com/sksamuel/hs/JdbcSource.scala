@@ -5,17 +5,15 @@ import java.sql.DriverManager
 import scala.language.implicitConversions
 
 trait Source {
-  def load: Iterator[Seq[String]]
+  def loader: Iterator[Seq[String]]
 }
 
 object Source {
-  implicit def toFrame(source: Source): Frame = new Frame(source)
+  implicit def toFrame(source: Source): Frame = Frame.fromSource(source)
 }
 
 case class JdbcSource(url: String, query: String) extends Source {
-  def size: Long = load.toList.size
-
-  override def load: Iterator[Seq[String]] = new Iterator[Seq[String]] {
+  override def loader: Iterator[Seq[String]] = new Iterator[Seq[String]] {
     val conn = DriverManager.getConnection(url)
     val rs = conn.createStatement().executeQuery(query)
     override def hasNext: Boolean = rs.next()
