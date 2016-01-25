@@ -33,6 +33,8 @@ trait Frame {
 
   def size: Long = toIterator.size
 
+  def toList: List[Row] = toIterator.toList
+
   def to(sink: Sink): Unit = {
     toIterator.foreach { row =>
       sink.insert(row)

@@ -25,11 +25,15 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
       "org.slf4j"             % "slf4j-api"        % Slf4jVersion,
+      "org.slf4j"             % "log4j-over-slf4j" % Slf4jVersion,
+      "log4j"                 % "log4j"            % Log4jVersion,
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
       "com.typesafe"          % "config"           % "1.3.0",
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
-      "log4j"                 % "log4j"            % Log4jVersion % "test",
-      "org.slf4j"             % "log4j-over-slf4j" % Slf4jVersion % "test",
+      "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",
+      "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
+      "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
+      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.0" % "test",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
       "com.h2database" % "h2" % "1.4.191" % "test"
     ),
