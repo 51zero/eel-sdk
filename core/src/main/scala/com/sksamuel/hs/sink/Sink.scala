@@ -2,7 +2,7 @@ package com.sksamuel.hs.sink
 
 import java.sql.DriverManager
 
-import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.scalalogging.slf4j.StrictLogging
 
 trait Sink {
   def insert(row: Seq[String])
