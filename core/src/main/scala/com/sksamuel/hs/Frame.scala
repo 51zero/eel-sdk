@@ -6,6 +6,18 @@ trait Frame {
   def hasNext: Boolean
   def next: Seq[String]
 
+  def drop(k: Int): Frame = new Frame {
+    var j = 0
+    override def hasNext: Boolean = {
+      while (j < k && outer.hasNext) {
+        outer.next
+        j += 1
+      }
+      outer.hasNext
+    }
+    override def next: Seq[String] = outer.next
+  }
+
   def map(f: String => String): Frame = new Frame {
     override def hasNext: Boolean = outer.hasNext
     override def next: Seq[String] = outer.next.map(f)
@@ -27,6 +39,13 @@ trait Frame {
 }
 
 object Frame {
+
+  def fromSeq(seq: Seq[Seq[String]]): Frame = new Frame {
+    val iterator = seq.iterator
+    override def hasNext: Boolean = iterator.hasNext
+    override def next: Seq[String] = iterator.next()
+  }
+
   def fromSource(source: Source): Frame = new Frame {
     val load = source.loader
     override def hasNext: Boolean = load.hasNext
