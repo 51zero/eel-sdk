@@ -6,8 +6,6 @@ import org.scalatest.{WordSpec, Matchers}
 
 class JdbcTest extends WordSpec with Matchers {
 
-  import HadoopDsl._
-
   Class.forName("org.h2.Driver")
   val conn = DriverManager.getConnection("jdbc:h2:mem:test")
   conn.createStatement().executeUpdate("create table mytable (a integer, b integer, c integer)")
@@ -17,6 +15,9 @@ class JdbcTest extends WordSpec with Matchers {
   "JdbcSource" should {
     "read from jdbc" in {
       JdbcSource("jdbc:h2:mem:test", "select * from mytable").size shouldBe 2
+    }
+    "use supplied query" in {
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable where a=4").size shouldBe 1
     }
   }
 }
