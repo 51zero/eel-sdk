@@ -1,7 +1,16 @@
 package com.sksamuel.hs
 
+import com.sksamuel.hs.sink.Sink
+
 trait Frame {
   outer =>
+
+  def to(sink: Sink): Unit = {
+    toIterator.foreach { row =>
+      sink.insert(row)
+    }
+    sink.completed()
+  }
 
   def hasNext: Boolean
   def next: Seq[String]

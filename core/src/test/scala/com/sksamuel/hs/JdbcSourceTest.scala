@@ -4,7 +4,7 @@ import java.sql.DriverManager
 
 import org.scalatest.{WordSpec, Matchers}
 
-class JdbcTest extends WordSpec with Matchers {
+class JdbcSourceTest extends WordSpec with Matchers {
 
   Class.forName("org.h2.Driver")
   val conn = DriverManager.getConnection("jdbc:h2:mem:test")
