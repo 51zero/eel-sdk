@@ -16,6 +16,8 @@ trait Frame {
     override def next: Seq[String] = outer.next.filter(p)
   }
 
+  def filterNot(p: String => Boolean): Frame = filter(str => !p(str))
+
   def size: Long = toIterator.size
 
   private def toIterator: Iterator[Seq[String]] = new Iterator[Seq[String]] {
