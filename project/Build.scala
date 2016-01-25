@@ -4,15 +4,12 @@ import sbt.Keys._
 
 object Build extends Build {
 
-  val org = "com.sksamuel.avro4s"
+  val org = "com.sksamuel.hadoop-streams"
 
-  val AvroVersion = "1.7.7"
   val ScalaVersion = "2.11.7"
   val ScalatestVersion = "3.0.0-M12"
   val Slf4jVersion = "1.7.12"
   val Log4jVersion = "1.2.17"
-  val ShapelessVersion = "2.2.5"
-  val Json4sVersion = "3.3.0"
 
   val rootSettings = Seq(
     organization := org,
@@ -41,7 +38,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/sksamuel/avro4s</url>
+      <url>https://github.com/sksamuel/hadoop-streams</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -50,8 +47,8 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:sksamuel/avro4s.git</url>
-          <connection>scm:git@github.com:sksamuel/avro4s.git</connection>
+          <url>git@github.com:sksamuel/hadoop-streams.git</url>
+          <connection>scm:git@github.com:sksamuel/hadoop-streams.git</connection>
         </scm>
         <developers>
           <developer>
@@ -67,11 +64,11 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(publish := {})
     .settings(publishArtifact := false)
-    .settings(name := "avro4s")
+    .settings(name := "hadoop-streams")
     .aggregate(core)
 
   lazy val core = Project("hadoop-streams-core", file("core"))
     .settings(rootSettings: _*)
     .settings(publish := {})
-    .settings(name := "avro4s-core")
+    .settings(name := "hadoop-streams-core")
 }
