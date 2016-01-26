@@ -33,7 +33,7 @@ object Build extends Build {
       "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",
       "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
       "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
-      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.0" % "test",
+      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2" % "test",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
       "com.h2database" % "h2" % "1.4.191" % "test"
     ),
