@@ -54,7 +54,7 @@ class FrameTest extends WordSpec with Matchers {
     "support row filtering by column name and fn" in {
       frame.filter("b", _ == "2").size shouldBe 1
     }
-    "support append" in {
+    "support union" in {
       frame.union(frame).size shouldBe 4
       frame.union(frame).toList shouldBe List(
         Row(columns, Seq("1", "2")),
@@ -62,6 +62,9 @@ class FrameTest extends WordSpec with Matchers {
         Row(columns, Seq("1", "2")),
         Row(columns, Seq("3", "4"))
       )
+    }
+    "support ++" in {
+      frame.++(frame).size shouldBe 4
     }
     "support reduceLeft" in {
       frame.reduceLeft((a, b) => a).toList shouldBe List(Row(List("a", "b"), List("1", "2")))

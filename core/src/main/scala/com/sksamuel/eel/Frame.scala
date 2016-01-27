@@ -49,6 +49,7 @@ trait Frame {
     override def schema: FrameSchema = outer.schema.removeColumn(name)
   }
 
+  def ++(frame: Frame): Frame = union(frame)
   def union(frame: Frame): Frame = Frame(schema, () => outer.iterator ++ frame.iterator)
 
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
