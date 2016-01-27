@@ -24,9 +24,6 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "org.slf4j"             % "slf4j-api"        % Slf4jVersion,
-      "org.slf4j"             % "log4j-over-slf4j" % Slf4jVersion,
-      "log4j"                 % "log4j"            % Log4jVersion,
       "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
       "com.typesafe"          % "config"           % "1.2.1",
@@ -35,7 +32,9 @@ object Build extends Build {
       "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
       "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
-      "com.h2database" % "h2" % "1.4.191" % "test"
+      "org.slf4j"             % "slf4j-log4j12"    % Slf4jVersion % "test",
+      "log4j"                 % "log4j"            % Log4jVersion % "test",
+      "com.h2database"        % "h2"               % "1.4.191" % "test"
     ),
     publishTo <<= version {
       (v: String) =>
