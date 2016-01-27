@@ -8,10 +8,23 @@ object Field {
 
 case class Field(value: String)
 
-case class Column(name: String)
+case class Column(name: String, `type`: SchemaType, nullable: Boolean)
+
+sealed trait SchemaType
+object SchemaType {
+  case object Int extends SchemaType
+  case object Long extends SchemaType
+  case object String extends SchemaType
+  case object BigInt extends SchemaType
+  case object Boolean extends SchemaType
+  case object Double extends SchemaType
+  case object Float extends SchemaType
+  case object Decimal extends SchemaType
+  case object Date extends SchemaType
+}
 
 object Column {
-  implicit def toField(str: String): Column = Column(str)
+  implicit def apply(str: String): Column = Column(str, SchemaType.String, false)
 }
 
 object Row {

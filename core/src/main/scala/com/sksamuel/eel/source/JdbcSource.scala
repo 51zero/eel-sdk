@@ -1,8 +1,8 @@
 package com.sksamuel.eel.source
 
-import java.sql.DriverManager
+import java.sql.{DriverManager, Types}
 
-import com.sksamuel.eel.{Field, Column, Row, Source}
+import com.sksamuel.eel.{Column, Field, Row, SchemaType, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100)) extends Source {
 
@@ -18,7 +18,11 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
     lazy val columns: Seq[Column] = {
       for ( k <- 1 to rs.getMetaData.getColumnCount ) yield {
-        Column(rs.getMetaData.getColumnLabel(k))
+        Column(
+          name = rs.getMetaData.getColumnLabel(k),
+          `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
+          nullable = rs.getMetaData.isNullable(k) == 1
+        )
       }
     }
 
@@ -33,3 +37,18 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 }
 
 case class JdbcSourceProps(fetchSize: Int)
+
+object JdbcTypeToSchemaType {
+  def apply(int: Int): SchemaType = {
+    int match {
+      case Types.BIGINT => SchemaType.BigInt
+      case Types.SMALLINT | Types.TINYINT | Types.INTEGER => SchemaType.Int
+      case Types.BOOLEAN => SchemaType.Boolean
+      case Types.DOUBLE => SchemaType.Double
+      case Types.FLOAT => SchemaType.Float
+      case Types.DECIMAL => SchemaType.Decimal
+      case Types.DATE => SchemaType.Date
+      case _ => SchemaType.String
+    }
+  }
+}

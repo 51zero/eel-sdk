@@ -3,9 +3,13 @@ package com.sksamuel.eel.source
 import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
-import com.sksamuel.eel.{Field, Column, Row, Source}
+import com.sksamuel.eel.{FrameSchema, Field, Column, Row, Source}
 
-case class CsvSource(path: Path) extends Source {
+case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) extends Source {
+
+  override def schema: FrameSchema = overrideSchema.getOrElse(super.schema)
+
+  def withSchema(schema: FrameSchema): CsvSource = copy(overrideSchema = Some(schema))
 
   private def iterator: Iterator[Row] = new Iterator[Row] {
     val reader = CSVReader.open(path.toFile)

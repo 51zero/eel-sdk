@@ -2,7 +2,7 @@ package com.sksamuel.eel.source
 
 import java.sql.DriverManager
 
-import com.sksamuel.eel.{Column, FrameSchema}
+import com.sksamuel.eel.{SchemaType, Column, FrameSchema}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {
@@ -15,7 +15,13 @@ class JdbcSourceTest extends WordSpec with Matchers {
 
   "JdbcSource" should {
     "read schema" in {
-      JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema shouldBe FrameSchema(Seq(Column("A"), Column("B"), Column("C")))
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema shouldBe {
+        FrameSchema(Seq(
+          Column("A", SchemaType.Int, true),
+          Column("B", SchemaType.Int, true),
+          Column("C", SchemaType.Int, true)
+        ))
+      }
     }
     "read from jdbc" in {
       JdbcSource("jdbc:h2:mem:test", "select * from mytable").size shouldBe 2
