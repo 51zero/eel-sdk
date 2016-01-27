@@ -1,5 +1,7 @@
 # Eel
 
+![Logo](core/src/main/graphics/eel.png)
+
 ### Examples
 
 ```scala
