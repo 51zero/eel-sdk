@@ -10,7 +10,7 @@
         </layout>
     </appender>
 
-    <logger name="com.sksamuel.eel">
+    <logger name="com.fiftyonezero.eel">
         <level value="debug"/>
     </logger>
 

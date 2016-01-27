@@ -1,6 +1,6 @@
 package com.fiftyonezero.eel.component.parquet
 
-import com.fiftyonezero.eel.{Column, Field, Reader, Row, Source}
+import com.fiftyonezero.eel.{Locator, Column, Field, Reader, Row, Source}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetReader

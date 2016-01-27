@@ -3,6 +3,7 @@ package com.fiftyonezero.eel.source
 import java.sql.{DriverManager, Types}
 
 import com.fiftyonezero.eel.{Reader, Source, FrameSchema, Row, SchemaType, Column, Field}
+import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
@@ -13,6 +14,9 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     logger.debug(s"Connecting to jdbc source [$url]")
     private val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
+
+    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
+    println(tables.toList.map(_.toList))
 
     private val stmt = conn.createStatement()
     stmt.setFetchSize(props.fetchSize)

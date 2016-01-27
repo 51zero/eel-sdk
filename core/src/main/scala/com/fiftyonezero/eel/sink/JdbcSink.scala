@@ -15,14 +15,14 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
   override def writer: Writer = new Writer {
 
     val conn = DriverManager.getConnection(url)
-    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, null)).map(_.apply(3).toLowerCase)
+    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).map(_.apply(3).toLowerCase)
     var created = false
 
     def createTable(row: Row): Unit = {
       if (!created && props.createTable && !tables.contains(table.toLowerCase)) {
         val columns = row.columns.map(c => s"${c.name} VARCHAR").mkString("(", ",", ")")
         val stmt = s"CREATE TABLE $table $columns"
-        logger.debug("Creating table [$stmt]")
+        logger.debug(s"Creating table [$stmt]")
         conn.createStatement().executeUpdate(stmt)
       }
       created = true

@@ -31,6 +31,14 @@ trait Frame {
     override def schema: FrameSchema = outer.schema
   }
 
+  /**
+    * Execute some arbitary sql against this Frame.
+    */
+  def sql(query: String): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = ???
+    override def schema: FrameSchema = ???
+  }
+
   def addColumn(name: String, value: String): Frame = new Frame {
     override val schema: FrameSchema = outer.schema.addColumn(name)
     override protected def iterator: Iterator[Row] = new Iterator[Row] {
