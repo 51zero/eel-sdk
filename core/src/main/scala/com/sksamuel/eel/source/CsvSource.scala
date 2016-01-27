@@ -4,10 +4,11 @@ import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.eel.Source
-import com.sksamuel.eel.sink.{Field, Column, Row}
+import com.sksamuel.eel.sink.{Column, Field, Row}
 
 case class CsvSource(path: Path) extends Source {
-  override def loader: Iterator[Row] = new Iterator[Row] {
+
+  private def iterator: Iterator[Row] = new Iterator[Row] {
     val reader = CSVReader.open(path.toFile)
     lazy val (iterator, headers) = {
       val iterator = reader.iterator
@@ -17,4 +18,6 @@ case class CsvSource(path: Path) extends Source {
     override def hasNext: Boolean = iterator.hasNext
     override def next(): Row = Row(headers, iterator.next.map(Field.apply))
   }
+
+  override def loader: Iterator[Row] = iterator
 }

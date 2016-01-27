@@ -3,6 +3,8 @@ package com.sksamuel.eel
 import com.sksamuel.eel.sink.{Column, Row}
 import org.scalatest.{Matchers, WordSpec}
 
+import scala.collection.mutable.ArrayBuffer
+
 class FrameTest extends WordSpec with Matchers {
 
   val columns = Seq(Column("a"), Column("b"))
@@ -34,17 +36,23 @@ class FrameTest extends WordSpec with Matchers {
       frame.drop(2).size shouldBe 0
     }
     "support adding columns" in {
-      frame.addColumn("testy", "bibble").head.get shouldBe Row(Seq("a", "b", "testy"), Seq("1", "2", "bibble"))
+      val f = frame.addColumn("testy", "bibble")
+      f.head.get shouldBe Row(Seq("a", "b", "testy"), Seq("1", "2", "bibble"))
+      f.schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("testy")))
     }
     "support removing columns" in {
       val columns = Seq(Column("a"), Column("b"), Column("c"), Column("d"))
       val frame = Frame(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
-      frame.removeColumn("c").head.get shouldBe Row(Seq("a", "b", "d"), Seq("1", "2", "4"))
+      val f = frame.removeColumn("c")
+      f.head.get shouldBe Row(Seq("a", "b", "d"), Seq("1", "2", "4"))
+      f.schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("d")))
     }
     "support column projection" in {
       val columns = Seq(Column("a"), Column("b"), Column("c"), Column("d"))
       val frame = Frame(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
-      frame.projection("d", "a", "c", "b").head.get shouldBe Row(Seq("d", "a", "c", "b"), Seq("4", "1", "3", "2"))
+      val f = frame.projection("d", "a", "c", "b")
+      f.head.get shouldBe Row(Seq("d", "a", "c", "b"), Seq("4", "1", "3", "2"))
+      f.schema shouldBe FrameSchema(Seq(Column("d"), Column("a"), Column("c"), Column("b")))
     }
     "support row filtering by column name and fn" in {
       frame.filter("b", _ == "2").size shouldBe 1

@@ -1,8 +1,8 @@
-package com.sksamuel.eel
+package com.sksamuel.eel.sink
 
 import java.sql.DriverManager
 
-import com.sksamuel.eel.sink.{Column, JdbcSink, JdbcSinkProps, Row}
+import com.sksamuel.eel.Frame
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers {
@@ -18,7 +18,7 @@ class JdbcSinkTest extends WordSpec with Matchers {
     Row(columns, Seq("7", "8", "9"))
   )
 
-  "JdbcSource" should {
+  "JdbcSink" should {
     "write frame to table" in {
       frame.to(JdbcSink("jdbc:h2:mem:test", "mytab"))
       val rs = conn.createStatement().executeQuery("select count(*) from mytab")

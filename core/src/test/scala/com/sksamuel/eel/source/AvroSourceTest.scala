@@ -3,12 +3,17 @@ package com.sksamuel.eel.source
 import java.io.File
 import java.nio.file.Paths
 
+import com.sksamuel.eel.FrameSchema
 import com.sksamuel.eel.sink.{Column, Row}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceTest extends WordSpec with Matchers {
 
   "AvroSource" should {
+    "read schema" in {
+      val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath))
+      people.schema shouldBe FrameSchema(Seq(Column("name"), Column("job"), Column("location")))
+    }
     "read avro files" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath)).toList
       people shouldBe List(

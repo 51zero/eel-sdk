@@ -5,6 +5,7 @@ import com.sksamuel.eel.sink.Row
 import scala.language.implicitConversions
 
 trait Source {
+  def schema: FrameSchema = FrameSchema(loader.take(1).toList.head.columns)
   def loader: Iterator[Row]
 }
 

@@ -3,7 +3,7 @@ package com.sksamuel.eel.source
 import java.sql.DriverManager
 
 import com.sksamuel.eel.Source
-import com.sksamuel.eel.sink.{Field, Column, Row}
+import com.sksamuel.eel.sink.{Column, Field, Row}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100)) extends Source {
 
@@ -30,6 +30,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
       Row(columns, fields)
     }
   }
+
 }
 
 case class JdbcSourceProps(fetchSize: Int)

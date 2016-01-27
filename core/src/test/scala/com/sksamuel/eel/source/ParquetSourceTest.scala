@@ -2,6 +2,7 @@ package com.sksamuel.eel.source
 
 import java.io.File
 
+import com.sksamuel.eel.FrameSchema
 import com.sksamuel.eel.sink.{Column, Row}
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
@@ -9,6 +10,10 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSourceTest extends WordSpec with Matchers {
 
   "ParquetSource" should {
+    "read schema" in {
+      val people = ParquetSource(new Path(new File(getClass.getResource("/person.pq").getFile).getAbsolutePath))
+      people.schema shouldBe FrameSchema(Seq(Column("name"), Column("job"), Column("location")))
+    }
     "read parquet files" in {
       val people = ParquetSource(new Path(new File(getClass.getResource("/person.pq").getFile).getAbsolutePath)).toList
       people shouldBe List(
