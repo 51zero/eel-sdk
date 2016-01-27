@@ -9,6 +9,15 @@ trait Frame {
 
   def exists(p: (Row) => Boolean): Boolean = iterator.exists(p)
   def find(p: (Row) => Boolean): Option[Row] = iterator.find(p)
+  def head: Option[Row] = iterator.take(1).toList.headOption
+
+  def addColumn(name: String, value: String): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator
+      override def hasNext: Boolean = iterator.hasNext
+      override def next(): Row = iterator.next().addColumn(name, value)
+    }
+  }
 
   /**
     * Execute a side effect function for every row in the frame, returning the same Frame.

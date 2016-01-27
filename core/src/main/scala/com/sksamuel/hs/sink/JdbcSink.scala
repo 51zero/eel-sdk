@@ -50,6 +50,10 @@ object ResultsetIterator {
 
 case class Column(name: String)
 
+object Column {
+  implicit def toField(str: String): Column = Column(str)
+}
+
 case class Field(value: String)
 
 object Field {
@@ -58,5 +62,10 @@ object Field {
 
 case class Row(columns: Seq[Column], fields: Seq[Field]) {
   require(columns.size == fields.size, "Columns and fields should have the same size")
+
   def size: Int = columns.size
+
+  def addColumn(name: String, value: String): Row = {
+    copy(columns = columns :+ Column(name), fields = fields :+ Field(value))
+  }
 }

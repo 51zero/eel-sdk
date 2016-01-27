@@ -6,7 +6,7 @@ import org.scalatest.{Matchers, WordSpec}
 class FrameTest extends WordSpec with Matchers {
 
   val columns = Seq(Column("a"), Column("b"))
-  val frame: Frame = Frame(Row(columns, Seq("1", "2")), Row(columns, Seq("3", "4")))
+  val frame = Frame(Row(columns, Seq("1", "2")), Row(columns, Seq("3", "4")))
 
   "Frame" should {
     "be immutable and repeatable" in {
@@ -32,6 +32,9 @@ class FrameTest extends WordSpec with Matchers {
       frame.drop(1).size shouldBe 1
       frame.drop(0).size shouldBe 2
       frame.drop(2).size shouldBe 0
+    }
+    "support adding columns" in {
+      frame.addColumn("testy", "bibble").head.get shouldBe Row(Seq("a", "b", "testy"), Seq("1", "2", "bibble"))
     }
   }
 }
