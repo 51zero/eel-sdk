@@ -46,7 +46,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/sksamuel/hadoop-streams</url>
+      <url>https://github.com/sksamuel/eel</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -55,8 +55,8 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:sksamuel/hadoop-streams.git</url>
-          <connection>scm:git@github.com:sksamuel/hadoop-streams.git</connection>
+          <url>git@github.com:sksamuel/eel.git</url>
+          <connection>scm:git@github.com:sksamuel/eel.git</connection>
         </scm>
         <developers>
           <developer>
