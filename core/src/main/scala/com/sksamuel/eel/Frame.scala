@@ -133,6 +133,6 @@ object Frame {
 
   def fromSource(source: Source): Frame = new Frame {
     override lazy val schema: FrameSchema = source.schema
-    def iterator: Iterator[Row] = source.loader
+    def iterator: Iterator[Row] = source.reader.iterator
   }
 }

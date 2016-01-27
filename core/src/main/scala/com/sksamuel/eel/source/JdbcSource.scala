@@ -2,38 +2,54 @@ package com.sksamuel.eel.source
 
 import java.sql.{DriverManager, Types}
 
-import com.sksamuel.eel.{Column, Field, Row, SchemaType, Source}
+import com.sksamuel.eel.{FrameSchema, Reader, Column, Field, Row, SchemaType, Source}
+import com.typesafe.scalalogging.slf4j.StrictLogging
 
-case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100)) extends Source {
+case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
+  extends Source with StrictLogging {
 
-  override def loader: Iterator[Row] = new Iterator[Row] {
+  override def reader: Reader = new Reader {
 
-    lazy val conn = DriverManager.getConnection(url)
+    logger.debug(s"Connecting to jdbc source [$url]")
+    private val conn = DriverManager.getConnection(url)
+    logger.debug(s"Connected to $url")
 
-    lazy val rs = {
-      val stmt = conn.createStatement()
-      stmt.setFetchSize(props.fetchSize)
-      stmt.executeQuery(query)
+    private val stmt = conn.createStatement()
+    stmt.setFetchSize(props.fetchSize)
+    private val rs = stmt.executeQuery(query)
+
+    override def iterator: Iterator[Row] = new Iterator[Row] {
+
+      override def hasNext: Boolean = {
+        val hasNext = rs.next()
+        if (!hasNext)
+          close()
+        hasNext
+      }
+
+      override def next: Row = {
+        val fields = for ( k <- 1 to rs.getMetaData.getColumnCount ) yield Field(rs.getString(k))
+        Row(schema.columns, fields)
+      }
     }
 
-    lazy val columns: Seq[Column] = {
-      for ( k <- 1 to rs.getMetaData.getColumnCount ) yield {
+    override def close(): Unit = {
+      rs.close()
+      stmt.close()
+      conn.close()
+    }
+
+    private def schema: FrameSchema = {
+      val cols = for ( k <- 1 to rs.getMetaData.getColumnCount ) yield {
         Column(
           name = rs.getMetaData.getColumnLabel(k),
           `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
           nullable = rs.getMetaData.isNullable(k) == 1
         )
       }
-    }
-
-    override def hasNext: Boolean = rs.next()
-
-    override def next(): Row = {
-      val fields = for ( k <- 1 to rs.getMetaData.getColumnCount ) yield Field(rs.getString(k))
-      Row(columns, fields)
+      FrameSchema(cols)
     }
   }
-
 }
 
 case class JdbcSourceProps(fetchSize: Int)
