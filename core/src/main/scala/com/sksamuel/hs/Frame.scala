@@ -83,6 +83,14 @@ trait Frame {
     }
   }
 
+  def filter(column: String, p: String => Boolean): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator.filter(row => p(row(column)))
+      override def hasNext: Boolean = iterator.hasNext
+      override def next: Row = iterator.next
+    }
+  }
+
   def size: Long = iterator.size
 
   def toList: List[Row] = iterator.toList

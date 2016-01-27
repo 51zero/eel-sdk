@@ -61,8 +61,12 @@ object Field {
 }
 
 case class Row(columns: Seq[Column], fields: Seq[Field]) {
-
   require(columns.size == fields.size, "Columns and fields should have the same size")
+
+  def apply(name: String): String = {
+    val pos = columns.indexWhere(_.name == name)
+    fields(pos).value
+  }
 
   def size: Int = columns.size
 
