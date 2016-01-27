@@ -74,14 +74,9 @@ case class Row(columns: Seq[Column], fields: Seq[Field]) {
     copy(columns = columns :+ Column(name), fields = fields :+ Field(value))
   }
 
-  def removeColumn(name: String): Row = {
-    val pos = columns.indexWhere(_.name == name)
-    if (pos < 0) this
-    else copy(
-      columns = columns.slice(0, pos) ++ columns.slice(pos + 1, columns.size),
-      fields = fields.slice(0, pos) ++ fields.slice(pos + 1, fields.size)
-    )
-  }
+  def removeColumn(name: String): Row = Row(toMap - name)
+
+  def toMap: Map[String, String] = columns.map(_.name).zip(fields.map(_.value)).toMap
 }
 
 object Row {
