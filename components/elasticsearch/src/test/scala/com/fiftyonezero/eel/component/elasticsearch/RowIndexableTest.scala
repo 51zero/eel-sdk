@@ -1,7 +1,6 @@
 package com.fiftyonezero.eel.component.elasticsearch
 
 import com.fiftyonezero.eel.Row
-import IndexableImplicits
 import org.scalatest.{Matchers, WordSpec}
 
 class RowIndexableTest extends WordSpec with Matchers {

@@ -2,7 +2,7 @@ package com.fiftyonezero.eel.component.elasticsearch
 
 import java.nio.file.Files
 
-import com.fiftyonezero.eel.{Column, Row}
+import com.fiftyonezero.eel.{Frame, Column, Row}
 import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl}
 import org.elasticsearch.common.settings.Settings
 import org.scalatest.concurrent.Eventually

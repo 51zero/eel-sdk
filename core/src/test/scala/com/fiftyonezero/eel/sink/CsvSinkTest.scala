@@ -3,8 +3,7 @@ package com.fiftyonezero.eel.sink
 import java.nio.charset.Charset
 import java.nio.file.Files
 
-import com.fiftyonezero.eel.{Row, Column}
-import com.sksamuel.eel.Frame
+import com.fiftyonezero.eel.{Frame, Row, Column}
 import org.scalatest.{Matchers, WordSpec}
 import scala.collection.JavaConverters._
 

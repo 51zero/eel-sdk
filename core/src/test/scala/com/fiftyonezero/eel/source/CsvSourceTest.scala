@@ -3,7 +3,6 @@ package com.fiftyonezero.eel.source
 import java.nio.file.Paths
 
 import com.fiftyonezero.eel.{FrameSchema, SchemaType, Column}
-import com.sksamuel.eel.FrameSchema
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceTest extends WordSpec with Matchers {

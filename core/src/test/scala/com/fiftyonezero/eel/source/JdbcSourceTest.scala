@@ -3,7 +3,6 @@ package com.fiftyonezero.eel.source
 import java.sql.DriverManager
 
 import com.fiftyonezero.eel.{FrameSchema, SchemaType, Column}
-import com.sksamuel.eel.FrameSchema
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {

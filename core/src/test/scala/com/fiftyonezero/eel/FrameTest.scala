@@ -1,6 +1,5 @@
 package com.fiftyonezero.eel
 
-import com.sksamuel.eel.FrameSchema
 import org.scalatest.{Matchers, WordSpec}
 
 class FrameTest extends WordSpec with Matchers {

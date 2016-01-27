@@ -1,4 +1,4 @@
-package com.sksamuel.eel.component.parquet
+package com.fiftyonezero.eel.component.parquet
 
 object ParquetFileWriter extends App {
 

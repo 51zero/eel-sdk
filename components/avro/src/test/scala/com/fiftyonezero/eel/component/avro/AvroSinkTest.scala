@@ -1,7 +1,6 @@
 package com.fiftyonezero.eel.component.avro
 
-import com.fiftyonezero.eel.Row
-import com.sksamuel.eel.Frame
+import com.fiftyonezero.eel.{Frame, Row}
 import org.scalatest.{WordSpec, Matchers}
 
 class AvroSinkTest extends WordSpec with Matchers {

@@ -2,8 +2,7 @@ package com.fiftyonezero.eel.sink
 
 import java.sql.DriverManager
 
-import com.fiftyonezero.eel.{Row, Column}
-import com.sksamuel.eel.Frame
+import com.fiftyonezero.eel.{Frame, Row, Column}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers {
