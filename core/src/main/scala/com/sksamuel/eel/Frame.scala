@@ -1,5 +1,7 @@
 package com.sksamuel.eel
 
+import scala.util.Random
+
 trait Frame {
   outer =>
 
@@ -9,6 +11,15 @@ trait Frame {
   def exists(p: (Row) => Boolean): Boolean = iterator.exists(p)
   def find(p: (Row) => Boolean): Option[Row] = iterator.find(p)
   def head: Option[Row] = iterator.take(1).toList.headOption
+
+  /**
+    * Returns a new Frame where only each "step" row is retained. Ie, if step is 2 then rows 1,3,5,7 will be
+    * retainined and if step was 10, then 1,11,21,31 etc.
+    */
+  def step(k: Int): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = outer.iterator.grouped(k).withPartial(true).map(_.head)
+    override def schema: FrameSchema = outer.schema
+  }
 
   def addColumn(name: String, value: String): Frame = new Frame {
     override val schema: FrameSchema = outer.schema.addColumn(name)
