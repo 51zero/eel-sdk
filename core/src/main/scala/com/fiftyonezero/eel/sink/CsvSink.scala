@@ -4,7 +4,6 @@ import java.nio.file.Path
 
 import com.fiftyonezero.eel.{Writer, Sink, Row}
 import com.github.tototoshi.csv.{QUOTE_MINIMAL, Quoting, CSVFormat, CSVWriter}
-import com.sksamuel.eel.Writer
 
 case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sink {
 

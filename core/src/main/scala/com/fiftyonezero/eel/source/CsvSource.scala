@@ -4,7 +4,6 @@ import java.nio.file.Path
 
 import com.fiftyonezero.eel.{Reader, Source, FrameSchema, Row, Column, Field}
 import com.github.tototoshi.csv.CSVReader
-import com.sksamuel.eel.Reader
 
 case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) extends Source {
 

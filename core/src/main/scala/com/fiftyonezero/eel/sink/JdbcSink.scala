@@ -3,7 +3,6 @@ package com.fiftyonezero.eel.sink
 import java.sql.DriverManager
 
 import com.fiftyonezero.eel.{Writer, Sink, Row}
-import com.sksamuel.eel.Writer
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 

@@ -3,7 +3,6 @@ package com.fiftyonezero.eel.source
 import java.sql.{DriverManager, Types}
 
 import com.fiftyonezero.eel.{Reader, Source, FrameSchema, Row, SchemaType, Column, Field}
-import com.sksamuel.eel.Reader
 import com.typesafe.scalalogging.slf4j.StrictLogging
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
