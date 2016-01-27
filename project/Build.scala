@@ -26,6 +26,7 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
+      "com.sksamuel.scalax"   %% "scalax"           % "0.10.0",
       "com.typesafe"          % "config"           % "1.2.1",
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
       "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",

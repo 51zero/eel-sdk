@@ -1,8 +1,9 @@
 package com.sksamuel.eel.sink
 
-import java.sql.{DriverManager, ResultSet}
+import java.sql.DriverManager
 
-import com.sksamuel.eel.{ResultsetIterator, Writer, Row, Sink}
+import com.sksamuel.eel.{Row, Sink, Writer}
+import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 
 import scala.language.implicitConversions
@@ -14,7 +15,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
   override def writer: Writer = new Writer {
 
     val conn = DriverManager.getConnection(url)
-    val tables = ResultsetIterator(conn.getMetaData.getTables(null, null, null, null)).map(_.apply(3).toLowerCase)
+    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, null)).map(_.apply(3).toLowerCase)
     var created = false
 
     def createTable(row: Row): Unit = {
