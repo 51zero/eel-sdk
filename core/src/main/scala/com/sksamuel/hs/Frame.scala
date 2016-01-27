@@ -50,6 +50,8 @@ trait Frame {
     }
   }
 
+  def reduceLeft(f: (Row, Row) => Row): Frame = Frame(outer.iterator.reduceLeft(f))
+
   /**
     * Execute a side effect function for every row in the frame, returning the same Frame.
     *
@@ -112,6 +114,10 @@ trait Frame {
 }
 
 object Frame {
+
+  private[hs] def apply(iterfn: () => Iterator[Row]) = new Frame {
+    override protected def iterator: Iterator[Row] = iterfn()
+  }
 
   def apply(rows: Row*): Frame = new Frame {
     override def iterator: Iterator[Row] = rows.iterator

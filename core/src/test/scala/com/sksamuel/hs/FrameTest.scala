@@ -58,5 +58,8 @@ class FrameTest extends WordSpec with Matchers {
         Row(columns, Seq("3", "4"))
       )
     }
+    "support reduceLeft" in {
+      frame.reduceLeft((a, b) => a).toList shouldBe List(Row(List("a", "b"), List("1", "2")))
+    }
   }
 }
