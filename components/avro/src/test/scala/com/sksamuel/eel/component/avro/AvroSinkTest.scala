@@ -1,6 +1,7 @@
 package com.sksamuel.eel.component.avro
 
 import com.sksamuel.eel.{Frame, Row}
+import org.scalatest.{WordSpec, Matchers}
 
 class AvroSinkTest extends WordSpec with Matchers {
 

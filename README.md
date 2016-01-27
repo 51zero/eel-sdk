@@ -24,6 +24,12 @@ AvroSource("test.avro").to(JdbcSink("jdbc:....", "totable", JdbcSinkProps(create
 JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSinkProps(createTable = true)))
 ```
 
+### Frame Operations
+
+##### Union
+##### Join
+##### Projection
+
 ### Components
 
 * CSV
