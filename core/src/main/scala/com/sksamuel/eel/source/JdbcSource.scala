@@ -2,8 +2,7 @@ package com.sksamuel.eel.source
 
 import java.sql.DriverManager
 
-import com.sksamuel.eel.Source
-import com.sksamuel.eel.sink.{Column, Field, Row}
+import com.sksamuel.eel.{Field, Column, Row, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100)) extends Source {
 

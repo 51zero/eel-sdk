@@ -3,8 +3,7 @@ package com.sksamuel.eel.source
 import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
-import com.sksamuel.eel.Source
-import com.sksamuel.eel.sink.{Column, Field, Row}
+import com.sksamuel.eel.{Field, Column, Row, Source}
 
 case class CsvSource(path: Path) extends Source {
 

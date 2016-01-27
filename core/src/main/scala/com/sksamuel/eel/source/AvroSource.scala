@@ -2,8 +2,7 @@ package com.sksamuel.eel.source
 
 import java.nio.file.Path
 
-import com.sksamuel.eel.Source
-import com.sksamuel.eel.sink.Row
+import com.sksamuel.eel.{Row, Source}
 import org.apache.avro.file.{DataFileReader, SeekableFileInput}
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 

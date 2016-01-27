@@ -2,8 +2,7 @@ package com.sksamuel.eel.source
 
 import java.io.File
 
-import com.sksamuel.eel.FrameSchema
-import com.sksamuel.eel.sink.{Column, Row}
+import com.sksamuel.eel.{Row, Column, FrameSchema}
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 

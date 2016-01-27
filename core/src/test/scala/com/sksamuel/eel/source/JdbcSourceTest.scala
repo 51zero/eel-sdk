@@ -2,8 +2,7 @@ package com.sksamuel.eel.source
 
 import java.sql.DriverManager
 
-import com.sksamuel.eel.FrameSchema
-import com.sksamuel.eel.sink.Column
+import com.sksamuel.eel.{Column, FrameSchema}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {

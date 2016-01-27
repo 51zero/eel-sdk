@@ -1,7 +1,5 @@
 package com.sksamuel.eel
 
-import com.sksamuel.eel.sink.{Field, Column, Row}
-
 trait Frame {
   outer =>
 
@@ -94,10 +92,9 @@ trait Frame {
   def toList: List[Row] = iterator.toList
 
   def to(sink: Sink): Unit = {
-    iterator.foreach { row =>
-      sink.insert(row)
-    }
-    sink.completed()
+    val writer = sink.writer
+    iterator.foreach(writer.write)
+    writer.close()
   }
 }
 

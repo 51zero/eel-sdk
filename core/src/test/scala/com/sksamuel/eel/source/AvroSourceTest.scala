@@ -3,8 +3,7 @@ package com.sksamuel.eel.source
 import java.io.File
 import java.nio.file.Paths
 
-import com.sksamuel.eel.FrameSchema
-import com.sksamuel.eel.sink.{Column, Row}
+import com.sksamuel.eel.{Row, Column, FrameSchema}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceTest extends WordSpec with Matchers {

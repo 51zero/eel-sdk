@@ -2,7 +2,7 @@ package com.sksamuel.eel.sink
 
 import java.nio.file.Files
 
-import com.sksamuel.eel.Frame
+import com.sksamuel.eel.{Row, Column, Frame}
 import org.scalatest.{Matchers, WordSpec}
 import scala.collection.JavaConverters._
 

@@ -2,8 +2,7 @@ package com.sksamuel.eel.source
 
 import java.nio.file.Paths
 
-import com.sksamuel.eel.FrameSchema
-import com.sksamuel.eel.sink.Column
+import com.sksamuel.eel.{Column, FrameSchema}
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceTest extends WordSpec with Matchers {

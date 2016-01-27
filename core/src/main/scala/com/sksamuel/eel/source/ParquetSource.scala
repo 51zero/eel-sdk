@@ -1,7 +1,6 @@
 package com.sksamuel.eel.source
 
-import com.sksamuel.eel.Source
-import com.sksamuel.eel.sink.{Field, Column, Row}
+import com.sksamuel.eel.{Field, Column, Row, Source}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetReader

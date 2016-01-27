@@ -1,7 +1,5 @@
 package com.sksamuel.eel
 
-import com.sksamuel.eel.sink.Row
-
 import scala.language.implicitConversions
 
 trait Source {

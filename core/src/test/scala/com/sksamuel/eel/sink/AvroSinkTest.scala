@@ -5,7 +5,7 @@ import java.nio.file.{Paths, Files}
 
 import com.sksamuel.avro4s.AvroInputStream
 import com.sksamuel.eel.source.AvroFileWriter.Person
-import com.sksamuel.eel.{Sink, Frame}
+import com.sksamuel.eel.{Row, Sink, Frame}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {

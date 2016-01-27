@@ -1,9 +1,6 @@
 package com.sksamuel.eel
 
-import com.sksamuel.eel.sink.{Column, Row}
 import org.scalatest.{Matchers, WordSpec}
-
-import scala.collection.mutable.ArrayBuffer
 
 class FrameTest extends WordSpec with Matchers {
 
