@@ -66,5 +66,11 @@ class FrameTest extends WordSpec with Matchers {
     "support reduceLeft" in {
       frame.reduceLeft((a, b) => a).toList shouldBe List(Row(List("a", "b"), List("1", "2")))
     }
+    "support joins" in {
+      val frame1 = Frame(Row(Map("a" -> "sam", "b" -> "bam")))
+      val frame2 = Frame(Row(Map("c" -> "ham", "d" -> "jam")))
+      frame1.join(frame2).schema shouldBe FrameSchema(Seq(Column("a"), Column("b"), Column("c"), Column("d")))
+      frame1.join(frame2).head.get shouldBe Row(Map("a" -> "sam", "b" -> "bam", "c" -> "ham", "d" -> "jam"))
+    }
   }
 }
