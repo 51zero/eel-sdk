@@ -27,6 +27,14 @@ trait Frame {
     }
   }
 
+  def union(frame: Frame): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator ++ frame.iterator
+      override def hasNext: Boolean = iterator.hasNext
+      override def next(): Row = iterator.next()
+    }
+  }
+
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
     override protected def iterator: Iterator[Row] = new Iterator[Row] {
