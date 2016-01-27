@@ -83,3 +83,9 @@ case class Row(columns: Seq[Column], fields: Seq[Field]) {
     )
   }
 }
+
+object Row {
+  def apply(map: Map[String, String]): Row = {
+    Row(map.keys.map(Column.apply).toSeq, map.values.seq.map(Field.apply).toSeq)
+  }
+}
