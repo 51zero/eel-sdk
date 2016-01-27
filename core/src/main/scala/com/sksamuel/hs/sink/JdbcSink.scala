@@ -56,4 +56,7 @@ object Field {
   implicit def toField(str: String): Field = Field(str)
 }
 
-case class Row(columns: Seq[Column], fields: Seq[Field])
+case class Row(columns: Seq[Column], fields: Seq[Field]) {
+  require(columns.size == fields.size, "Columns and fields should have the same size")
+  def size: Int = columns.size
+}

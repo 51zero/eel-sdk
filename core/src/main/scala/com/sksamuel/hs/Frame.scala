@@ -7,6 +7,29 @@ trait Frame {
 
   protected def iterator: Iterator[Row]
 
+  def exists(p: (Row) => Boolean): Boolean = iterator.exists(p)
+  def find(p: (Row) => Boolean): Option[Row] = iterator.find(p)
+
+  /**
+    * Execute a side effect function for every row in the frame, returning the same Frame.
+    *
+    * @param f the function to execute
+    * @return this frame, to allow for builder style chaining
+    */
+  def foreach[U](f: (Row) => U): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator
+      override def hasNext: Boolean = iterator.hasNext
+      override def next: Row = {
+        val row = iterator.next
+        f(row)
+        row
+      }
+    }
+  }
+
+  def forall(p: (Row) => Boolean): Boolean = iterator.forall(p)
+
   def drop(k: Int): Frame = new Frame {
     override def iterator: Iterator[Row] = outer.iterator.drop(k)
   }
