@@ -1,4 +1,4 @@
-package com.sksamuel.hs.source
+package com.sksamuel.eel.source
 
 import com.sksamuel.avro4s.AvroSchema
 import org.apache.avro.generic.GenericData.Record

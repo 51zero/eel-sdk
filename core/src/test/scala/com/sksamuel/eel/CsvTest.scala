@@ -1,8 +1,8 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
 import java.nio.file.{Paths, Path}
 
-import com.sksamuel.hs.source.CsvSource
+import com.sksamuel.eel.source.CsvSource
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvTest extends WordSpec with Matchers {

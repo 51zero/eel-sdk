@@ -1,8 +1,8 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
 import java.sql.DriverManager
 
-import com.sksamuel.hs.source.JdbcSource
+import com.sksamuel.eel.source.JdbcSource
 import org.scalatest.{WordSpec, Matchers}
 
 class JdbcSourceTest extends WordSpec with Matchers {

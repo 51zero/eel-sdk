@@ -1,6 +1,6 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
-import com.sksamuel.hs.sink.{Field, Column, Row}
+import com.sksamuel.eel.sink.{Field, Column, Row}
 
 trait Frame {
   outer =>
@@ -115,7 +115,7 @@ trait Frame {
 
 object Frame {
 
-  private[hs] def apply(iterfn: () => Iterator[Row]) = new Frame {
+  private[eel] def apply(iterfn: () => Iterator[Row]) = new Frame {
     override protected def iterator: Iterator[Row] = iterfn()
   }
 

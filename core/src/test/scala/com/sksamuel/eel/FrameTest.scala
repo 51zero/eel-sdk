@@ -1,6 +1,6 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
-import com.sksamuel.hs.sink.{Column, Row}
+import com.sksamuel.eel.sink.{Column, Row}
 import org.scalatest.{Matchers, WordSpec}
 
 class FrameTest extends WordSpec with Matchers {

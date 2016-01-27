@@ -1,6 +1,6 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
-import com.sksamuel.hs.sink.Row
+import com.sksamuel.eel.sink.Row
 
 trait Sink {
   def insert(row: Row)

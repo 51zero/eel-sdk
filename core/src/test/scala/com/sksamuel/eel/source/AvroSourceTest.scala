@@ -1,9 +1,9 @@
-package com.sksamuel.hs.source
+package com.sksamuel.eel.source
 
 import java.io.File
 import java.nio.file.Paths
 
-import com.sksamuel.hs.sink.{Column, Row}
+import com.sksamuel.eel.sink.{Column, Row}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceTest extends WordSpec with Matchers {

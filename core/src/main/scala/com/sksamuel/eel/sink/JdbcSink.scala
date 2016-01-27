@@ -1,8 +1,8 @@
-package com.sksamuel.hs.sink
+package com.sksamuel.eel.sink
 
 import java.sql.{DriverManager, ResultSet}
 
-import com.sksamuel.hs.Sink
+import com.sksamuel.eel.Sink
 import com.typesafe.scalalogging.slf4j.StrictLogging
 
 import scala.language.implicitConversions

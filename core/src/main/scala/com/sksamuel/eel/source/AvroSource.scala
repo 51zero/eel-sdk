@@ -1,9 +1,9 @@
-package com.sksamuel.hs.source
+package com.sksamuel.eel.source
 
 import java.nio.file.Path
 
-import com.sksamuel.hs.Source
-import com.sksamuel.hs.sink.Row
+import com.sksamuel.eel.Source
+import com.sksamuel.eel.sink.Row
 import org.apache.avro.file.{DataFileReader, SeekableFileInput}
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import scala.collection.JavaConverters._

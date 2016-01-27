@@ -1,9 +1,9 @@
-package com.sksamuel.hs.sink
+package com.sksamuel.eel.sink
 
 import java.nio.file.Path
 
 import com.github.tototoshi.csv.{QUOTE_MINIMAL, Quoting, CSVFormat, CSVWriter}
-import com.sksamuel.hs.Sink
+import com.sksamuel.eel.Sink
 
 case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sink {
   lazy val writer = CSVWriter.open(path.toFile)(new CSVFormat {

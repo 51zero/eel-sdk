@@ -1,4 +1,4 @@
-package com.sksamuel.hs.source
+package com.sksamuel.eel.source
 
 import java.io.File
 

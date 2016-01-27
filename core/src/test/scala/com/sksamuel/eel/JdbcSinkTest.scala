@@ -1,8 +1,8 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
 import java.sql.DriverManager
 
-import com.sksamuel.hs.sink.{Column, JdbcSink, JdbcSinkProps, Row}
+import com.sksamuel.eel.sink.{Column, JdbcSink, JdbcSinkProps, Row}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers {

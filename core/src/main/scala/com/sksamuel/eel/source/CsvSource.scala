@@ -1,10 +1,10 @@
-package com.sksamuel.hs.source
+package com.sksamuel.eel.source
 
 import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
-import com.sksamuel.hs.Source
-import com.sksamuel.hs.sink.{Field, Column, Row}
+import com.sksamuel.eel.Source
+import com.sksamuel.eel.sink.{Field, Column, Row}
 
 case class CsvSource(path: Path) extends Source {
   override def loader: Iterator[Row] = new Iterator[Row] {

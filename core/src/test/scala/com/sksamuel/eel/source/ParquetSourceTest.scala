@@ -1,8 +1,8 @@
-package com.sksamuel.hs.source
+package com.sksamuel.eel.source
 
 import java.io.File
 
-import com.sksamuel.hs.sink.{Column, Row}
+import com.sksamuel.eel.sink.{Column, Row}
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 

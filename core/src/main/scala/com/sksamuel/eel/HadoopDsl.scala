@@ -1,4 +1,4 @@
-package com.sksamuel.hs
+package com.sksamuel.eel
 
 trait HadoopDsl {
 }

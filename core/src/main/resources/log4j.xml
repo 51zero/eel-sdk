@@ -10,7 +10,7 @@
         </layout>
     </appender>
 
-    <logger name="com.sksamuel.hs">
+    <logger name="com.sksamuel.eel">
         <level value="debug"/>
     </logger>
 
