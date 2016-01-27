@@ -1,6 +1,6 @@
 package com.sksamuel.hs
 
-import com.sksamuel.hs.sink.Row
+import com.sksamuel.hs.sink.{Field, Column, Row}
 
 trait Frame {
   outer =>
@@ -24,6 +24,21 @@ trait Frame {
       val iterator = outer.iterator
       override def hasNext: Boolean = iterator.hasNext
       override def next(): Row = iterator.next().removeColumn(name)
+    }
+  }
+
+  def projection(first: String, rest: String*): Frame = projection(first +: rest)
+  def projection(columns: Seq[String]): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator
+      val newColumns = columns.map(Column.apply)
+      override def hasNext: Boolean = iterator.hasNext
+      override def next(): Row = {
+        val row = iterator.next()
+        val map = row.columns.map(_.name).zip(row.fields.map(_.value)).toMap
+        val fields = newColumns.map(col => Field(map(col.name)))
+        Row(newColumns, fields)
+      }
     }
   }
 

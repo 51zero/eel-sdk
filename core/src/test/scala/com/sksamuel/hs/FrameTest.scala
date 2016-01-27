@@ -41,5 +41,10 @@ class FrameTest extends WordSpec with Matchers {
       val frame = Frame(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
       frame.removeColumn("c").head.get shouldBe Row(Seq("a", "b", "d"), Seq("1", "2", "4"))
     }
+    "support column projection" in {
+      val columns = Seq(Column("a"), Column("b"), Column("c"), Column("d"))
+      val frame = Frame(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
+      frame.projection("d", "a", "c", "b").head.get shouldBe Row(Seq("d", "a", "c", "b"), Seq("4", "1", "3", "2"))
+    }
   }
 }
