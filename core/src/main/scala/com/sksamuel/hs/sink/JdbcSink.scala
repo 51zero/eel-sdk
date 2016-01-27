@@ -61,11 +61,21 @@ object Field {
 }
 
 case class Row(columns: Seq[Column], fields: Seq[Field]) {
+
   require(columns.size == fields.size, "Columns and fields should have the same size")
 
   def size: Int = columns.size
 
   def addColumn(name: String, value: String): Row = {
     copy(columns = columns :+ Column(name), fields = fields :+ Field(value))
+  }
+
+  def removeColumn(name: String): Row = {
+    val pos = columns.indexWhere(_.name == name)
+    if (pos < 0) this
+    else copy(
+      columns = columns.slice(0, pos) ++ columns.slice(pos + 1, columns.size),
+      fields = fields.slice(0, pos) ++ fields.slice(pos + 1, fields.size)
+    )
   }
 }

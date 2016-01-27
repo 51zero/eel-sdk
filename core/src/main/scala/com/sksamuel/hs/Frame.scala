@@ -19,6 +19,14 @@ trait Frame {
     }
   }
 
+  def removeColumn(name: String): Frame = new Frame {
+    override protected def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator
+      override def hasNext: Boolean = iterator.hasNext
+      override def next(): Row = iterator.next().removeColumn(name)
+    }
+  }
+
   /**
     * Execute a side effect function for every row in the frame, returning the same Frame.
     *
