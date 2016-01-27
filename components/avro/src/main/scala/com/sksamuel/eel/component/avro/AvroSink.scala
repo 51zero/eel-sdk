@@ -1,4 +1,4 @@
-package com.sksamuel.eel.sink
+package com.sksamuel.eel.component.avro
 
 import java.io.{File, OutputStream}
 import java.nio.file.{Files, Path}

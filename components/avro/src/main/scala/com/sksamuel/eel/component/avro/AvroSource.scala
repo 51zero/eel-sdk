@@ -1,4 +1,4 @@
-package com.sksamuel.eel.source
+package com.sksamuel.eel.component.avro
 
 import java.nio.file.Path
 

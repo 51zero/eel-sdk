@@ -1,8 +1,4 @@
-package com.sksamuel.eel.source
-
-import java.io.File
-
-import com.sksamuel.avro4s.{AvroOutputStream, AvroSchema}
+package com.sksamuel.eel.component.avro
 
 object AvroFileWriter extends App {
 

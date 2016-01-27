@@ -1,9 +1,9 @@
-package com.sksamuel.eel.source
+package com.sksamuel.eel.component.avro
 
 import java.io.File
 import java.nio.file.Paths
 
-import com.sksamuel.eel.{Row, Column, FrameSchema}
+import com.sksamuel.eel.{Column, FrameSchema, Row}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceTest extends WordSpec with Matchers {

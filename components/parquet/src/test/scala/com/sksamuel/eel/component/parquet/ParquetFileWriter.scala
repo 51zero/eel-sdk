@@ -1,10 +1,4 @@
-package com.sksamuel.eel.source
-
-import com.sksamuel.avro4s.AvroSchema
-import org.apache.avro.generic.GenericData.Record
-import org.apache.avro.generic.GenericRecord
-import org.apache.hadoop.fs.Path
-import org.apache.parquet.avro.AvroParquetWriter
+package com.sksamuel.eel.component.parquet
 
 object ParquetFileWriter extends App {
 

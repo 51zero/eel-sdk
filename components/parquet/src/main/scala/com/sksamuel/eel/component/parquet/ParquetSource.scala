@@ -1,9 +1,10 @@
-package com.sksamuel.eel.source
+package com.sksamuel.eel.component.parquet
 
-import com.sksamuel.eel.{Field, Column, Reader, Row, Source}
+import com.sksamuel.eel.{Column, Field, Reader, Row, Source}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetReader
+
 import scala.collection.JavaConverters._
 
 case class ParquetSource(path: Path) extends Source {

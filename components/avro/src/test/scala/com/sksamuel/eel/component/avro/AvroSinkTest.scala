@@ -1,11 +1,6 @@
-package com.sksamuel.eel.sink
+package com.sksamuel.eel.component.avro
 
-import java.io.ByteArrayOutputStream
-
-import com.sksamuel.avro4s.AvroInputStream
-import com.sksamuel.eel.source.Person
 import com.sksamuel.eel.{Frame, Row}
-import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
 

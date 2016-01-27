@@ -7,7 +7,7 @@ object Build extends Build {
   val org = "com.sksamuel.eel"
 
   val ScalaVersion = "2.11.7"
-  val ScalatestVersion = "3.0.0-M12"
+  val ScalatestVersion = "2.2.4"
   val Slf4jVersion = "1.7.12"
   val Log4jVersion = "1.2.17"
 
@@ -24,19 +24,17 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
       "com.sksamuel.scalax"   %% "scalax"           % "0.10.0",
       "com.typesafe"          % "config"           % "1.2.1",
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
       "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",
       "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
-      "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
       "com.google.guava"      % "guava"            % "18.0",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
       "org.slf4j"             % "slf4j-log4j12"    % Slf4jVersion % "test",
       "log4j"                 % "log4j"            % Log4jVersion % "test",
-      "com.h2database"      % "h2"               % "1.4.191" % "test"
+      "com.h2database"        % "h2"               % "1.4.191" % "test"
     ),
     publishTo <<= version {
       (v: String) =>
@@ -74,7 +72,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, kafka, elasticsearch, hdfs, solr)
+    .aggregate(core, kafka, elasticsearch, hdfs, solr, parquet, avro)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
@@ -91,6 +89,24 @@ object Build extends Build {
   lazy val hdfs = Project("eel-hdfs", file("components/hdfs"))
     .settings(rootSettings: _*)
     .settings(name := "eel-hdfs")
+    .dependsOn(core)
+
+  lazy val avro = Project("eel-avro", file("components/avro"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-avro")
+    .settings(libraryDependencies ++= Seq(
+      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2"
+    ))
+    .dependsOn(core)
+
+  lazy val parquet = Project("eel-parquet", file("components/parquet"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-parquet")
+    .settings(libraryDependencies ++= Seq(
+      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
+      "org.apache.parquet"    % "parquet-avro"     % "1.8.1"
+
+    ))
     .dependsOn(core)
 
   lazy val solr = Project("eel-solr", file("components/solr"))
