@@ -4,7 +4,7 @@ import sbt.Keys._
 
 object Build extends Build {
 
-  val org = "com.sksamuel.eel"
+  val org = "com.fiftyonezero.eel"
 
   val ScalaVersion = "2.11.7"
   val ScalatestVersion = "2.2.4"
@@ -45,7 +45,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/sksamuel/eel</url>
+      <url>https://github.com/51zero/eel</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -54,8 +54,8 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:sksamuel/eel.git</url>
-          <connection>scm:git@github.com:sksamuel/eel.git</connection>
+          <url>git@github.com:51zero/eel.git</url>
+          <connection>scm:git@github.com:51zero/eel.git</connection>
         </scm>
         <developers>
           <developer>

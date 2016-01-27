@@ -2,7 +2,9 @@ package com.sksamuel.eel.component.parquet
 
 import java.io.File
 
-import com.sksamuel.eel.{Column, FrameSchema, Row}
+import com.fiftyonezero.eel.component.parquet.ParquetSource
+import com.fiftyonezero.eel.{FrameSchema, Row, Column}
+import com.sksamuel.eel.FrameSchema
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 
