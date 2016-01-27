@@ -1,5 +1,6 @@
 package com.sksamuel.eel.sink
 
+import java.nio.charset.Charset
 import java.nio.file.Files
 
 import com.sksamuel.eel.{Row, Column, Frame}
@@ -15,13 +16,13 @@ class CsvSinkTest extends WordSpec with Matchers {
     "write csv data" in {
       val temp = Files.createTempFile("csvsink", ".test")
       frame.to(CsvSink(temp))
-      val result = Files.readAllLines(temp).asScala.toList
+      val result = Files.readAllLines(temp, Charset.defaultCharset).asScala.toList
       result shouldBe List("1,2,3,4", "5,6,7,8")
     }
     "support setting delimiter" in {
       val temp = Files.createTempFile("csvsink", ".test")
       frame.to(CsvSink(temp, CsvSinkProps(delimiter = '>')))
-      val result = Files.readAllLines(temp).asScala.toList
+      val result = Files.readAllLines(temp, Charset.defaultCharset).asScala.toList
       result shouldBe List("1>2>3>4", "5>6>7>8")
     }
   }
