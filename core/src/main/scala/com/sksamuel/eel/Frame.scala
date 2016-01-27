@@ -27,13 +27,7 @@ trait Frame {
     }
   }
 
-  def union(frame: Frame): Frame = new Frame {
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator ++ frame.iterator
-      override def hasNext: Boolean = iterator.hasNext
-      override def next(): Row = iterator.next()
-    }
-  }
+  def union(frame: Frame): Frame = Frame(() => outer.iterator ++ frame.iterator)
 
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
@@ -85,21 +79,8 @@ trait Frame {
   }
 
   def filterNot(p: Row => Boolean): Frame = filter(str => !p(str))
-  def filter(p: Row => Boolean): Frame = new Frame {
-    override def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator.filter(p)
-      override def hasNext: Boolean = iterator.hasNext
-      override def next: Row = iterator.next
-    }
-  }
-
-  def filter(column: String, p: String => Boolean): Frame = new Frame {
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator.filter(row => p(row(column)))
-      override def hasNext: Boolean = iterator.hasNext
-      override def next: Row = iterator.next
-    }
-  }
+  def filter(p: Row => Boolean): Frame = Frame(() => outer.iterator.filter(p))
+  def filter(column: String, p: String => Boolean): Frame = Frame(() => outer.iterator.filter(row => p(row(column))))
 
   def size: Long = iterator.size
 
