@@ -1,5 +1,7 @@
 # Eel
 
+[![Build Status](https://travis-ci.org/51zero/eel.svg?branch=master)](https://travis-ci.org/51zero/eel)
+
 ![Logo](core/src/main/graphics/eel.png)
 
 Toolkit for using big data technologies in the small.
