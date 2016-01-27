@@ -32,10 +32,11 @@ object Build extends Build {
       "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",
       "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
       "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
+      "com.google.guava"      % "guava"            % "18.0",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
       "org.slf4j"             % "slf4j-log4j12"    % Slf4jVersion % "test",
       "log4j"                 % "log4j"            % Log4jVersion % "test",
-      "com.h2database"        % "h2"               % "1.4.191" % "test"
+      "com.h2database"      % "h2"               % "1.4.191" % "test"
     ),
     publishTo <<= version {
       (v: String) =>
@@ -73,10 +74,27 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core)
+    .aggregate(core, kafka, elasticsearch)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
-    .settings(publish := {})
     .settings(name := "eel-core")
+
+  lazy val kafka = Project("eel-kafka", file("kafka"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-kafka")
+    .settings(libraryDependencies ++= Seq(
+      "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
+    ))
+    .dependsOn(core)
+
+  lazy val elasticsearch = Project("eel-elasticsearch", file("elasticsearch"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-elasticsearch")
+    .settings(libraryDependencies ++= Seq(
+      "com.sksamuel.elastic4s" %% "elastic4s-core" % "2.1.1",
+      "org.json4s" %% "json4s-native" % "3.3.0",
+      "org.elasticsearch" % "elasticsearch" % "2.1.1" % "test"
+    ))
+    .dependsOn(core)
 }
