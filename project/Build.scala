@@ -4,7 +4,7 @@ import sbt.Keys._
 
 object Build extends Build {
 
-  val org = "com.sksamuel.hadoop-streams"
+  val org = "com.sksamuel.eel"
 
   val ScalaVersion = "2.11.7"
   val ScalatestVersion = "3.0.0-M12"
@@ -28,7 +28,7 @@ object Build extends Build {
       "org.slf4j"             % "log4j-over-slf4j" % Slf4jVersion,
       "log4j"                 % "log4j"            % Log4jVersion,
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
-      "com.typesafe"          % "config"           % "1.3.0",
+      "com.typesafe"          % "config"           % "1.2.1",
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
       "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",
       "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
@@ -68,15 +68,15 @@ object Build extends Build {
     }
   )
 
-  lazy val root = Project("hadoop-streams", file("."))
+  lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(publish := {})
     .settings(publishArtifact := false)
-    .settings(name := "hadoop-streams")
+    .settings(name := "eel")
     .aggregate(core)
 
-  lazy val core = Project("hadoop-streams-core", file("core"))
+  lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
     .settings(publish := {})
-    .settings(name := "hadoop-streams-core")
+    .settings(name := "eel-core")
 }
