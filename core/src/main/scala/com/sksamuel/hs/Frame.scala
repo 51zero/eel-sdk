@@ -5,60 +5,48 @@ import com.sksamuel.hs.sink.Row
 trait Frame {
   outer =>
 
-  def hasNext: Boolean
-  def next: Row
+  protected def iterator: Iterator[Row]
 
   def drop(k: Int): Frame = new Frame {
-    var j = 0
-    override def hasNext: Boolean = {
-      while (j < k && outer.hasNext) {
-        outer.next
-        j += 1
-      }
-      outer.hasNext
-    }
-    override def next: Row = outer.next
+    override def iterator: Iterator[Row] = outer.iterator.drop(k)
   }
 
   def map(f: Row => Row): Frame = new Frame {
-    override def hasNext: Boolean = outer.hasNext
-    override def next: Row = f(outer.next)
+    override def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator
+      override def hasNext: Boolean = iterator.hasNext
+      override def next: Row = f(iterator.next)
+    }
   }
 
   def filterNot(p: Row => Boolean): Frame = filter(str => !p(str))
   def filter(p: Row => Boolean): Frame = new Frame {
-    override def hasNext: Boolean = outer.hasNext
-    override def next: Row = outer.next
+    override def iterator: Iterator[Row] = new Iterator[Row] {
+      val iterator = outer.iterator.filter(p)
+      override def hasNext: Boolean = iterator.hasNext
+      override def next: Row = iterator.next
+    }
   }
 
-  def size: Long = toIterator.size
+  def size: Long = iterator.size
 
-  def toList: List[Row] = toIterator.toList
+  def toList: List[Row] = iterator.toList
 
   def to(sink: Sink): Unit = {
-    toIterator.foreach { row =>
+    iterator.foreach { row =>
       sink.insert(row)
     }
     sink.completed()
-  }
-
-  private def toIterator: Iterator[Row] = new Iterator[Row] {
-    override def hasNext: Boolean = outer.hasNext
-    override def next(): Row = outer.next
   }
 }
 
 object Frame {
 
   def apply(rows: Row*): Frame = new Frame {
-    val iterator = rows.iterator
-    override def hasNext: Boolean = iterator.hasNext
-    override def next: Row = iterator.next()
+    override def iterator: Iterator[Row] = rows.iterator
   }
 
   def fromSource(source: Source): Frame = new Frame {
-    val load = source.loader
-    override def hasNext: Boolean = load.hasNext
-    override def next: Row = load.next()
+    def iterator: Iterator[Row] = source.loader
   }
 }
