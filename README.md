@@ -13,3 +13,12 @@ AvroSource("test.avro").to(JdbcSink("jdbc:....", "totable", JdbcSinkProps(create
 // copying from one jdbc source to another
 JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSinkProps(createTable = true)))
 ```
+
+### Components
+
+* CSV
+* JDBC
+* Parquet
+* Avro
+* Kafka
+* Elasticsearch

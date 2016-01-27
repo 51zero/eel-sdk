@@ -74,13 +74,13 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, kafka, elasticsearch)
+    .aggregate(core, kafka, elasticsearch, hdfs, solr)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
     .settings(name := "eel-core")
 
-  lazy val kafka = Project("eel-kafka", file("kafka"))
+  lazy val kafka = Project("eel-kafka", file("components/kafka"))
     .settings(rootSettings: _*)
     .settings(name := "eel-kafka")
     .settings(libraryDependencies ++= Seq(
@@ -88,7 +88,20 @@ object Build extends Build {
     ))
     .dependsOn(core)
 
-  lazy val elasticsearch = Project("eel-elasticsearch", file("elasticsearch"))
+  lazy val hdfs = Project("eel-hdfs", file("components/hdfs"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-hdfs")
+    .dependsOn(core)
+
+  lazy val solr = Project("eel-solr", file("components/solr"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-hdfs")
+    .settings(libraryDependencies ++= Seq(
+      "org.apache.solr" % "solr-solrj" % "5.4.1"
+    ))
+    .dependsOn(core)
+
+  lazy val elasticsearch = Project("eel-elasticsearch", file("components/elasticsearch"))
     .settings(rootSettings: _*)
     .settings(name := "eel-elasticsearch")
     .settings(libraryDependencies ++= Seq(
