@@ -4,7 +4,7 @@ import sbt.Keys._
 
 object Build extends Build {
 
-  val org = "com.fiftyonezero.eel"
+  val org = "com.sksamuel.eels"
 
   val ScalaVersion = "2.11.7"
   val ScalatestVersion = "2.2.4"
