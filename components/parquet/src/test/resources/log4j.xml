@@ -10,7 +10,7 @@
         </layout>
     </appender>
 
-    <logger name="com.fiftyonezero.eel">
+    <logger name="io.eels">
         <level value="debug"/>
     </logger>
 
