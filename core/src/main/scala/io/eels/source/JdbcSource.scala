@@ -2,21 +2,17 @@ package io.eels.source
 
 import java.sql.{DriverManager, Types}
 
-import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Reader, Source, FrameSchema, Row, SchemaType, Column, Field}
+import io.eels.{Column, Field, FrameSchema, Reader, Row, SchemaType, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source with StrictLogging {
 
   override def reader: Reader = new Reader {
 
-    logger.debug(s"Connecting to jdbc source [$url]")
+    logger.debug(s"Connecting to jdbc source $url...")
     private val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
-
-    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
-    println(tables.toList.map(_.toList))
 
     private val stmt = conn.createStatement()
     stmt.setFetchSize(props.fetchSize)

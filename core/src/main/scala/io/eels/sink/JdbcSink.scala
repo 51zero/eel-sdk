@@ -14,12 +14,21 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
   override def writer: Writer = new Writer {
 
+    logger.debug(s"Connecting to jdbc source $url...")
     val conn = DriverManager.getConnection(url)
-    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).map(_.apply(3).toLowerCase)
+    logger.debug(s"Connected to $url")
+
+    def tableExists: Boolean = {
+      logger.debug("Fetching tables to detect if table exists")
+      val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
+      logger.debug(s"${tables.size} tables found")
+      tables.map(_.apply(3).toLowerCase) contains table.toLowerCase
+    }
+
     var created = false
 
     def createTable(row: Row): Unit = {
-      if (!created && props.createTable && !tables.contains(table.toLowerCase)) {
+      if (props.createTable && !created && !tableExists) {
         val columns = row.columns.map(c => s"${c.name} VARCHAR").mkString("(", ",", ")")
         val stmt = s"CREATE TABLE $table $columns"
         logger.debug(s"Creating table [$stmt]")
@@ -35,6 +44,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       val columns = row.columns.map(_.name).mkString(",")
       val values = row.fields.map(_.value).mkString("'", "','", "'")
       val stmt = s"INSERT INTO $table ($columns) VALUES ($values)"
+      logger.debug(s"Inserting [$stmt]")
       conn.createStatement().executeUpdate(stmt)
     }
   }
