@@ -3,7 +3,7 @@ package io.eels
 import java.nio.file.Files
 
 import org.apache.hadoop.fs.Path
-import org.scalatest.{WordSpec, Matchers}
+import org.scalatest.{Matchers, WordSpec}
 
 class FilePatternTest extends WordSpec with Matchers {
 
@@ -32,9 +32,18 @@ class FilePatternTest extends WordSpec with Matchers {
     "detect relative local file expansion with schema" in {
       val dir = Files.createTempDirectory("filepatterntest")
       val files = List("a", "b", "c").map(dir.resolve)
-      val hdfsPaths = files.map(path => new Path("file:" + path))
+      val hdfsPaths = files.map(file => new Path("file:" + file))
       files.foreach(Files.createFile(_))
       FilePattern(dir.toAbsolutePath.toString + "/*").toPaths.toSet shouldBe hdfsPaths.toSet
+      files.foreach(Files.deleteIfExists)
+      Files.deleteIfExists(dir)
+    }
+    "use filter if supplied" in {
+      val dir = Files.createTempDirectory("filepatterntest")
+      val files = List("a", "b", "c").map(dir.resolve)
+      files.foreach(Files.createFile(_))
+      FilePattern(dir.toAbsolutePath.toString + "/*").withFilter(_.toString.endsWith("a")).toPaths.toSet shouldBe
+        Set(new Path("file:" + dir.resolve("a")))
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }

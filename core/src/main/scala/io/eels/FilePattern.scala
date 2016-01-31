@@ -6,7 +6,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 import scala.language.implicitConversions
 
-case class FilePattern(pattern: String) extends StrictLogging {
+case class FilePattern(pattern: String, filter: Option[Path => Boolean] = None) extends StrictLogging {
   val FileExpansionRegex = "(file:|hdfs:)?(?://)?(.*?)/\\*".r
   def toPaths: Seq[Path] = {
     pattern match {
@@ -14,10 +14,11 @@ case class FilePattern(pattern: String) extends StrictLogging {
         val path = new Path(pattern.stripSuffix("/*"))
         logger.debug("File expansion will check path: " + path)
         val fs = FileSystem.get(new Configuration)
-        HdfsIterator(fs.listFiles(path, false)).toList.map(_.getPath)
+        HdfsIterator(fs.listFiles(path, false)).toList.map(_.getPath).filter(filter.getOrElse(_ => true))
       case str => Seq(new Path(str))
     }
   }
+  def withFilter(p: Path => Boolean): FilePattern = copy(filter = Some(p))
 }
 
 object FilePattern {
