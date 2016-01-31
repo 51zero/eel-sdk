@@ -53,3 +53,7 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 * Elasticsearch
 * Hadoop Sequence files
 * Solr
+
+### How to use
+
+Eel is released to maven central, so is very easy to include in your project. Just find the latest version on [maven central](http://search.maven.org/#search|ga|1|io.eels) and copy the includes.
