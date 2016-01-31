@@ -72,7 +72,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, kafka, elasticsearch, hdfs, solr, parquet, avro)
+    .aggregate(core, kafka, elasticsearch, orc, solr, parquet, avro)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
@@ -84,11 +84,6 @@ object Build extends Build {
     .settings(libraryDependencies ++= Seq(
       "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
     ))
-    .dependsOn(core)
-
-  lazy val hdfs = Project("eel-hdfs", file("components/hdfs"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-hdfs")
     .dependsOn(core)
 
   lazy val avro = Project("eel-avro", file("components/avro"))
@@ -105,13 +100,25 @@ object Build extends Build {
     .settings(libraryDependencies ++= Seq(
       "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
       "org.apache.parquet"    % "parquet-avro"     % "1.8.1"
+    ))
+    .dependsOn(core)
 
+  lazy val orc = Project("eel-orc", file("components/orc"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-orc")
+    .settings(libraryDependencies ++= Seq(
+      "org.apache.hadoop" % "hadoop-extras" % "2.7.1",
+      "org.apache.hadoop" % "hadoop-client" % "2.7.1",
+      "org.apache.hive" % "hive" % "1.2.1",
+      "org.apache.hive" % "hive-common" % "1.2.1",
+      "org.apache.hive" % "hive-metastore" % "1.2.1",
+      "org.apache.hive" % "hive-serde" % "1.2.1"
     ))
     .dependsOn(core)
 
   lazy val solr = Project("eel-solr", file("components/solr"))
     .settings(rootSettings: _*)
-    .settings(name := "eel-hdfs")
+    .settings(name := "eel-solr")
     .settings(libraryDependencies ++= Seq(
       "org.apache.solr" % "solr-solrj" % "5.4.1"
     ))
