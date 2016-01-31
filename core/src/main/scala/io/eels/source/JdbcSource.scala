@@ -15,32 +15,15 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     logger.debug(s"Connected to $url")
 
     private val stmt = conn.createStatement()
+    logger.debug(s"Setting jdbc fetch size to ${props.fetchSize}")
     stmt.setFetchSize(props.fetchSize)
+
     private val rs = stmt.executeQuery(query)
 
-    override def iterator: Iterator[Row] = new Iterator[Row] {
+    private val columnCount = rs.getMetaData.getColumnCount
 
-      override def hasNext: Boolean = {
-        val hasNext = rs.next()
-        if (!hasNext)
-          close()
-        hasNext
-      }
-
-      override def next: Row = {
-        val fields = for ( k <- 1 to rs.getMetaData.getColumnCount ) yield Field(rs.getString(k))
-        Row(schema.columns, fields)
-      }
-    }
-
-    override def close(): Unit = {
-      rs.close()
-      stmt.close()
-      conn.close()
-    }
-
-    private def schema: FrameSchema = {
-      val cols = for ( k <- 1 to rs.getMetaData.getColumnCount ) yield {
+    private val schema: FrameSchema = {
+      val cols = for ( k <- 1 to columnCount ) yield {
         Column(
           name = rs.getMetaData.getColumnLabel(k),
           `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
@@ -48,6 +31,32 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
         )
       }
       FrameSchema(cols)
+    }
+    logger.debug("Built schema from resultset:")
+    logger.debug(schema.print)
+
+    override def iterator: Iterator[Row] = new Iterator[Row] {
+
+      override def hasNext: Boolean = {
+        val hasNext = rs.next()
+        if (!hasNext) {
+          logger.debug("Resultset is completed; closing stream")
+          close()
+        }
+        hasNext
+      }
+
+      override def next: Row = {
+        val fields = for ( k <- 1 to columnCount ) yield Field(rs.getString(k))
+        Row(schema.columns, fields)
+      }
+    }
+
+    override def close(): Unit = {
+      logger.debug("Closing reader")
+      rs.close()
+      stmt.close()
+      conn.close()
     }
   }
 }

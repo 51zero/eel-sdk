@@ -18,7 +18,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
-    def tableExists: Boolean = {
+    lazy val tableExists: Boolean = {
       logger.debug("Fetching tables to detect if table exists")
       val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
       logger.debug(s"${tables.size} tables found")
