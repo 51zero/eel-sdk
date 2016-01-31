@@ -22,13 +22,19 @@ class SequenceSinkTest extends WordSpec with Matchers {
       Files.readAllBytes(Paths.get(path.toString))
 
       val reader = new SequenceFile.Reader(new Configuration, SequenceFile.Reader.file(path))
-      val w = new BytesWritable
-      reader.next(new IntWritable(0))
-      reader.getCurrentValue(w)
-      new String(w.copyBytes()) shouldBe "1,2,3,4"
-      reader.next(new IntWritable(1))
-      reader.getCurrentValue(w)
-      new String(w.copyBytes()) shouldBe "5,6,7,8"
+
+      val k = new IntWritable
+      val v = new BytesWritable
+
+      reader.next(k, v)
+      new String(v.copyBytes) shouldBe "a,b,c,d"
+
+      reader.next(k, v)
+      new String(v.copyBytes) shouldBe "1,2,3,4"
+
+      reader.next(k, v)
+      new String(v.copyBytes) shouldBe "5,6,7,8"
+
       reader.close()
     }
   }
