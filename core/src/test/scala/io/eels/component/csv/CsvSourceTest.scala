@@ -1,8 +1,8 @@
-package io.eels.source
+package io.eels.component.csv
 
 import java.nio.file.Paths
 
-import io.eels.{FrameSchema, SchemaType, Column}
+import io.eels.{Column, FrameSchema, SchemaType}
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceTest extends WordSpec with Matchers {

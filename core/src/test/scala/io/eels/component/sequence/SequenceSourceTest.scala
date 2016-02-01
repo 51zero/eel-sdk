@@ -1,7 +1,6 @@
 package io.eels.component.sequence
 
 import com.sksamuel.scalax.io.IO
-import io.eels.source.SequenceSource
 import io.eels.{SchemaType, FrameSchema, Column, Frame, Row}
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}

@@ -1,9 +1,9 @@
-package io.eels.source
+package io.eels.component.json
 
 import com.sksamuel.scalax.io.IO
-import io.eels.{SchemaType, Column, Row, Field}
+import io.eels.{Column, Field, Row, SchemaType}
 import org.apache.hadoop.fs.Path
-import org.scalatest.{WordSpec, Matchers}
+import org.scalatest.{Matchers, WordSpec}
 
 class JsonSourceTest extends WordSpec with Matchers {
 

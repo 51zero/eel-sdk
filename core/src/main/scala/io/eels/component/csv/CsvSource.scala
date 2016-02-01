@@ -1,4 +1,4 @@
-package io.eels.source
+package io.eels.component.csv
 
 import java.nio.file.Path
 

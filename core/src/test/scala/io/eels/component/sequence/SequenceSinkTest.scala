@@ -2,7 +2,6 @@ package io.eels.component.sequence
 
 import java.nio.file.{Files, Paths}
 
-import io.eels.sink.SequenceSink
 import io.eels.{Column, Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path

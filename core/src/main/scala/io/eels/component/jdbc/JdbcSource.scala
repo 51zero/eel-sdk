@@ -1,4 +1,4 @@
-package io.eels.source
+package io.eels.component.jdbc
 
 import java.sql.{DriverManager, Types}
 

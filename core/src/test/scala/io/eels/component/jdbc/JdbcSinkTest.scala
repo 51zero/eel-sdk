@@ -1,8 +1,8 @@
-package io.eels.sink
+package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.{Frame, Row, Column}
+import io.eels.{Column, Frame, Row}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers {

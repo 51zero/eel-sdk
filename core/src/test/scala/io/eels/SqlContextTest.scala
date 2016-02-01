@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.scalax.io.IO
-import io.eels.source.CsvSource
+import io.eels.component.csv.CsvSource
 import org.scalatest.{Matchers, WordSpec}
 
 class SqlContextTest extends WordSpec with Matchers {

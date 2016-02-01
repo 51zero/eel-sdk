@@ -1,8 +1,8 @@
-package io.eels.source
+package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.{FrameSchema, SchemaType, Column}
+import io.eels.{Column, FrameSchema, SchemaType}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {

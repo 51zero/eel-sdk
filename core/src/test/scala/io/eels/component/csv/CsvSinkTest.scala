@@ -1,10 +1,11 @@
-package io.eels.sink
+package io.eels.component.csv
 
 import java.nio.charset.Charset
 import java.nio.file.Files
 
-import io.eels.{Frame, Row, Column}
+import io.eels.{Column, Frame, Row}
 import org.scalatest.{Matchers, WordSpec}
+
 import scala.collection.JavaConverters._
 
 class CsvSinkTest extends WordSpec with Matchers {

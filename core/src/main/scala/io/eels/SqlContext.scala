@@ -2,8 +2,7 @@ package io.eels
 
 import java.util.UUID
 
-import io.eels.sink.{JdbcSinkProps, JdbcSink}
-import io.eels.source.JdbcSource
+import io.eels.component.jdbc.{JdbcSinkProps, JdbcSink, JdbcSource}
 
 class SqlContext {
 

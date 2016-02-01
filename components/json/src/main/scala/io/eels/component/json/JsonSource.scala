@@ -1,4 +1,4 @@
-package io.eels.source
+package io.eels.component.json
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import io.eels.{Column, Field, Reader, Row, Source}

@@ -1,9 +1,9 @@
-package io.eels.sink
+package io.eels.component.csv
 
 import java.nio.file.Path
 
-import com.github.tototoshi.csv.{QUOTE_MINIMAL, Quoting, CSVFormat, CSVWriter}
-import io.eels.{Writer, Sink, Row}
+import com.github.tototoshi.csv.{CSVFormat, CSVWriter, QUOTE_MINIMAL, Quoting}
+import io.eels.{Row, Sink, Writer}
 
 case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sink {
 

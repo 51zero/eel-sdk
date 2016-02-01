@@ -1,4 +1,4 @@
-package io.eels.source
+package io.eels.component.sequence
 
 import java.io.StringReader
 

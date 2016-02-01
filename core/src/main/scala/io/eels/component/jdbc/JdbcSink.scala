@@ -1,10 +1,10 @@
-package io.eels.sink
+package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Writer, Sink, Row}
+import io.eels.{Row, Sink, Writer}
 
 import scala.language.implicitConversions
 

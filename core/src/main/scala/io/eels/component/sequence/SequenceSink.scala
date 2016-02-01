@@ -1,4 +1,4 @@
-package io.eels.sink
+package io.eels.component.sequence
 
 import java.io.StringWriter
 

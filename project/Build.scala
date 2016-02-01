@@ -72,14 +72,19 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, kafka, elasticsearch, solr, parquet, avro)
+    .aggregate(core, json, kafka, elasticsearch, solr, parquet, avro)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
+    .settings(name := "eel-core")
+
+  lazy val json = Project("eel-json", file("components/json"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-json")
     .settings(libraryDependencies ++= Seq(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.0"
     ))
-    .settings(name := "eel-core")
+    .dependsOn(core)
 
   lazy val kafka = Project("eel-kafka", file("components/kafka"))
     .settings(rootSettings: _*)
