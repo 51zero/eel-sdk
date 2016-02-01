@@ -72,7 +72,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, elasticsearch, solr, parquet, avro)
+    .aggregate(core, json, kafka,  solr, parquet, avro)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
