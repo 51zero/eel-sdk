@@ -10,7 +10,8 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 import scala.collection.JavaConverters._
 
-case class HiveSource(db: String, table: String)(implicit fs: FileSystem, hive: HiveConf)
+case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSourceProps())
+                     (implicit fs: FileSystem, hive: HiveConf)
   extends Source
     with StrictLogging {
 
@@ -38,7 +39,10 @@ case class HiveSource(db: String, table: String)(implicit fs: FileSystem, hive: 
     }
     logger.info("Loaded columns " + columns.mkString(", "))
 
-    val paths = HdfsIterator(fs.listFiles(new Path(location), true)).filter(_.isFile).toList.map(_.getPath)
+    logger.debug(s"Scanning $location, filtering=${props.ignoreHiddenFiles} pattern=${props.hiddenFilePattern}")
+    val paths = HdfsIterator(fs.listFiles(new Path(location), true)).filter(_.isFile).filter { file =>
+      props.noHiddenFiles || file.getPath.getName.matches(props.hiddenFilePattern)
+    }.toList.map(_.getPath)
     logger.info(s"Found ${paths.size} files for table $db.$table")
     val streams = paths.map(fs.open)
 
@@ -60,4 +64,8 @@ case class HiveSource(db: String, table: String)(implicit fs: FileSystem, hive: 
 
     override def close(): Unit = streams.foreach(_.close)
   }
+}
+
+case class HiveSourceProps(ignoreHiddenFiles: Boolean = true, hiddenFilePattern: String = "_.*") {
+  def noHiddenFiles: Boolean = !ignoreHiddenFiles
 }
