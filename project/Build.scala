@@ -10,6 +10,9 @@ object Build extends Build {
   val ScalatestVersion = "2.2.4"
   val Slf4jVersion = "1.7.12"
   val Log4jVersion = "1.2.17"
+  val HadoopVersion = "2.7.2"
+  val HiveVersion = "1.2.1"
+  val Avro4sVersion = "1.2.2"
 
   val rootSettings = Seq(
     organization := org,
@@ -28,8 +31,8 @@ object Build extends Build {
       "com.sksamuel.scalax"   %% "scalax"           % "0.10.0",
       "com.typesafe"          % "config"           % "1.2.1",
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
-      "org.apache.hadoop"     % "hadoop-common"    % "2.7.1",
-      "org.apache.hadoop"     % "hadoop-hdfs"      % "2.7.1",
+      "org.apache.hadoop"     % "hadoop-common"    % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-hdfs"      % HadoopVersion,
       "com.google.guava"      % "guava"            % "18.0",
       "com.h2database"        % "h2"               % "1.4.191",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
@@ -72,7 +75,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka,  solr, parquet, avro)
+    .aggregate(core, json, kafka,  solr, parquet, avro, hive)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
@@ -83,6 +86,24 @@ object Build extends Build {
     .settings(name := "eel-json")
     .settings(libraryDependencies ++= Seq(
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.0"
+    ))
+    .dependsOn(core)
+
+  lazy val hive = Project("eel-hive", file("components/hive"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-hive")
+    .settings(libraryDependencies ++= Seq(
+      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion,
+      "org.apache.hive"       % "hive-common"               % HiveVersion,
+      "org.apache.hive"       % "hive-exec"                 % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
+      "org.apache.hive"       % "hive-jdbc"                 % HiveVersion,
+      "org.apache.hive"       % "hive-metastore"            % HiveVersion,
+      "org.apache.hive"       % "hive-shims"                % HiveVersion,
+      "mysql" % "mysql-connector-java" % "5.1.38"
     ))
     .dependsOn(core)
 
@@ -98,7 +119,7 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-avro")
     .settings(libraryDependencies ++= Seq(
-      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2"
+      "com.sksamuel.avro4s"   %% "avro4s-core"     % Avro4sVersion
     ))
     .dependsOn(core)
 
