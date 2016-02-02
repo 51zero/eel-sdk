@@ -63,6 +63,11 @@ class FrameTest extends WordSpec with Matchers {
         Row(columns, Seq("3", "4"))
       )
     }
+    "support collect" in {
+      frame.collect {
+        case row if row.fields.head.value == "3" => row
+      }.size shouldBe 1
+    }
     "support ++" in {
       frame.++(frame).size shouldBe 4
     }

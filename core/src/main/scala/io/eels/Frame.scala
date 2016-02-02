@@ -89,6 +89,11 @@ trait Frame {
     override def schema: FrameSchema = outer.schema
   }
 
+  def collect(pf: PartialFunction[Row, Row]): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override protected def iterator: Iterator[Row] = outer.iterator.collect(pf)
+  }
+
   def forall(p: (Row) => Boolean): Boolean = iterator.forall(p)
 
   def drop(k: Int): Frame = Frame(schema, () => outer.iterator.drop(k))
