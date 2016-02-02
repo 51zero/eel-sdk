@@ -29,10 +29,17 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
     def createTable(row: Row): Unit = {
       if (props.createTable && !created && !tableExists) {
+
         val columns = row.columns.map(c => s"${c.name} VARCHAR(255)").mkString("(", ",", ")")
-        val stmt = s"CREATE TABLE $table $columns"
-        logger.debug(s"Creating table [$stmt]")
-        conn.createStatement().executeUpdate(stmt)
+        val sql = s"CREATE TABLE $table $columns"
+        logger.debug(s"Creating table [$sql]")
+
+        val stmt = conn.createStatement()
+        try {
+          stmt.executeUpdate(sql)
+        } finally {
+          stmt.close()
+        }
       }
       created = true
     }
@@ -41,11 +48,18 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
     override def write(row: Row): Unit = {
       createTable(row)
+
       val columns = row.columns.map(_.name).mkString(",")
       val values = row.fields.map(_.value).mkString("'", "','", "'")
-      val stmt = s"INSERT INTO $table ($columns) VALUES ($values)"
-      logger.debug(s"Inserting [$stmt]")
-      conn.createStatement().executeUpdate(stmt)
+      val sql = s"INSERT INTO $table ($columns) VALUES ($values)"
+      logger.debug(s"Inserting [$sql]")
+
+      val stmt = conn.createStatement()
+      try {
+        stmt.executeUpdate(sql)
+      } finally {
+        stmt.close()
+      }
     }
   }
 }
