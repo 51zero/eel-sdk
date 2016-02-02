@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, Field, FilePattern, Reader, Row, Source}
 import org.apache.avro.generic.GenericRecord
 import org.apache.parquet.avro.AvroParquetReader
-import org.apache.parquet.hadoop.ParquetReader
 
 import scala.collection.JavaConverters._
 

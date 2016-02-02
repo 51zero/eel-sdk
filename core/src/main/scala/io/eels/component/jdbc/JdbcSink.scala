@@ -14,7 +14,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
   override def writer: Writer = new Writer {
 
-    logger.debug(s"Connecting to jdbc source $url...")
+    logger.debug(s"Connecting to jdbc sink $url...")
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
@@ -29,7 +29,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
     def createTable(row: Row): Unit = {
       if (props.createTable && !created && !tableExists) {
-        val columns = row.columns.map(c => s"${c.name} VARCHAR").mkString("(", ",", ")")
+        val columns = row.columns.map(c => s"${c.name} VARCHAR(255)").mkString("(", ",", ")")
         val stmt = s"CREATE TABLE $table $columns"
         logger.debug(s"Creating table [$stmt]")
         conn.createStatement().executeUpdate(stmt)

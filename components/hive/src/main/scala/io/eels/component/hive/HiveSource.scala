@@ -61,4 +61,3 @@ case class HiveSource(db: String, table: String)(implicit fs: FileSystem, hive: 
     override def close(): Unit = streams.foreach(_.close)
   }
 }
-
