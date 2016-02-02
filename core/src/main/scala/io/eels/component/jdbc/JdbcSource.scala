@@ -18,9 +18,12 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     logger.debug(s"Setting jdbc fetch size to ${props.fetchSize}")
     stmt.setFetchSize(props.fetchSize)
 
+    logger.debug(s"Executing query [$query]...")
     private val rs = stmt.executeQuery(query)
+    logger.debug(s"Query completed")
 
     private val columnCount = rs.getMetaData.getColumnCount
+    logger.debug("Resultset column count is $columnCount")
 
     private val schema: FrameSchema = {
       val cols = for ( k <- 1 to columnCount ) yield {
@@ -32,7 +35,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
       }
       FrameSchema(cols)
     }
-    logger.debug("Built schema from resultset:")
+    logger.debug("Built schema from resultset: ")
     logger.debug(schema.print)
 
     override def iterator: Iterator[Row] = new Iterator[Row] {
