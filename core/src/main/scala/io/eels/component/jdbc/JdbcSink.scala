@@ -4,7 +4,7 @@ import java.sql.DriverManager
 
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, Sink, Writer}
+import io.eels.{FrameSchema, Row, Sink, Writer}
 
 import scala.language.implicitConversions
 
@@ -29,10 +29,10 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
     def createTable(row: Row): Unit = {
       if (props.createTable && !created && !tableExists) {
+        logger.info(s"Creating sink table $table")
 
-        val columns = row.columns.map(c => s"${c.name} VARCHAR(255)").mkString("(", ",", ")")
-        val sql = s"CREATE TABLE $table $columns"
-        logger.debug(s"Creating table [$sql]")
+        val sql = JdbcDialect(url).create(FrameSchema(row.columns), table)
+        logger.debug(s"Executing [$sql]")
 
         val stmt = conn.createStatement()
         try {
@@ -49,9 +49,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     override def write(row: Row): Unit = {
       createTable(row)
 
-      val columns = row.columns.map(_.name).mkString(",")
-      val values = row.fields.map(_.value).mkString("'", "','", "'")
-      val sql = s"INSERT INTO $table ($columns) VALUES ($values)"
+      val sql = JdbcDialect(url).insert(row, table)
       logger.debug(s"Inserting [$sql]")
 
       val stmt = conn.createStatement()
