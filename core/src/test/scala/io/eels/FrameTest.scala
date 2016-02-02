@@ -75,5 +75,11 @@ class FrameTest extends WordSpec with Matchers {
       frame1.join(frame2).schema shouldBe FrameSchema(Seq(Column("a"), Column("b"), Column("c"), Column("d")))
       frame1.join(frame2).head.get shouldBe Row(Map("a" -> "sam", "b" -> "bam", "c" -> "ham", "d" -> "jam"))
     }
+    "support multirow joins" in {
+      val frame1 = Frame(Row(Map("a" -> "sam", "b" -> "bam")), Row(Map("a" -> "ham", "b" -> "jam")))
+      val frame2 = Frame(Row(Map("c" -> "gary", "d" -> "harry")), Row(Map("c" -> "barry", "d" -> "larry")))
+      frame1.join(frame2).schema shouldBe FrameSchema(Seq(Column("a"), Column("b"), Column("c"), Column("d")))
+      frame1.join(frame2).toList shouldBe List(Row(Map("a" -> "sam", "b" -> "bam", "c" -> "gary", "d" -> "harry")), Row(Map("a" -> "ham", "b" -> "jam", "c" -> "barry", "d" -> "larry")))
+    }
   }
 }
