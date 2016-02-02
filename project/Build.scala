@@ -130,7 +130,7 @@ object Build extends Build {
       "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
       "org.apache.parquet"    % "parquet-avro"     % "1.8.1"
     ))
-    .dependsOn(core)
+    .dependsOn(core, avro)
 
   lazy val solr = Project("eel-solr", file("components/solr"))
     .settings(rootSettings: _*)

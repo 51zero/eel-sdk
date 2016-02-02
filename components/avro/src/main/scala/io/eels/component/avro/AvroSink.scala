@@ -3,13 +3,10 @@ package io.eels.component.avro
 import java.io.{File, OutputStream}
 import java.nio.file.{Files, Path}
 
-import io.eels.{Row, Sink, Writer}
-import org.apache.avro.Schema
+import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
-
-import scala.collection.JavaConverters._
 
 case class AvroSink(out: OutputStream) extends Sink {
 
@@ -29,21 +26,14 @@ case class AvroSink(out: OutputStream) extends Sink {
     }
 
     private def createWriter(row: Row): DataFileWriter[GenericRecord] = {
-      val datumWriter = new GenericDatumWriter[GenericRecord](schema(row))
+      val datumWriter = new GenericDatumWriter[GenericRecord](AvroSchemaGen(FrameSchema(row.columns)))
       val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
-      dataFileWriter.create(schema(row), out)
+      dataFileWriter.create(AvroSchemaGen(FrameSchema(row.columns)), out)
       dataFileWriter
     }
 
-    private def schema(row: Row): Schema = {
-      val schema = Schema.createRecord("row", "", "packge", false)
-      val fields = row.columns.map(col => new Schema.Field(col.name, Schema.create(Schema.Type.STRING), "", null))
-      schema.setFields(fields.asJava)
-      schema
-    }
-
     private def toRecord(row: Row): GenericRecord = {
-      val record = new Record(schema(row))
+      val record = new Record(AvroSchemaGen(FrameSchema(row.columns)))
       row.toMap.foreach { case (key, value) => record.put(key, value) }
       record
     }
