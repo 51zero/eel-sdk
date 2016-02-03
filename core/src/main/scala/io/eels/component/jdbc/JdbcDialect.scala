@@ -1,6 +1,6 @@
 package io.eels.component.jdbc
 
-import io.eels.{Row, FrameSchema, SchemaType}
+import io.eels.{Column, Row, FrameSchema, SchemaType}
 
 trait JdbcDialect {
   def create(schema: FrameSchema, table: String): String
@@ -17,14 +17,14 @@ object JdbcDialect {
 
 object GenericJdbcDialect extends JdbcDialect {
 
-  def toTypeString(schemaType: SchemaType): String = schemaType match {
-    case SchemaType.String => "varchar(255)"
+  def toTypeString(column: Column): String = column.`type` match {
     case SchemaType.Int => "int"
-    case _ => "varchar(255)"
+    case SchemaType.Short => "smallint"
+    case _ => s"varchar(${column.precision})"
   }
 
   override def create(schema: FrameSchema, table: String): String = {
-    val columns = schema.columns.map(c => s"${c.name} ${toTypeString(c.`type`)}").mkString("(", ",", ")")
+    val columns = schema.columns.map(c => s"${c.name} ${toTypeString(c)}").mkString("(", ",", ")")
     s"CREATE TABLE $table $columns"
   }
 

@@ -8,11 +8,12 @@ object Field {
 
 case class Field(value: String)
 
-case class Column(name: String, `type`: SchemaType, nullable: Boolean)
+case class Column(name: String, `type`: SchemaType, nullable: Boolean, precision: Int = 0, scale: Int = 0)
 
 sealed trait SchemaType
 object SchemaType {
   case object Int extends SchemaType
+  case object Short extends SchemaType
   case object Long extends SchemaType
   case object String extends SchemaType
   case object BigInt extends SchemaType

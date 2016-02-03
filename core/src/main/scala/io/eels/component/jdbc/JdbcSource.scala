@@ -30,7 +30,9 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
         Column(
           name = rs.getMetaData.getColumnLabel(k),
           `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
-          nullable = rs.getMetaData.isNullable(k) == 1
+          nullable = rs.getMetaData.isNullable(k) == 1,
+          rs.getMetaData.getPrecision(k),
+          rs.getMetaData.getScale(k)
         )
       }
       FrameSchema(cols)
