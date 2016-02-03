@@ -13,7 +13,7 @@ class OrcComponentTest extends WordSpec with Matchers {
       implicit val fs = FileSystem.get(new Configuration)
 
       val frame = Frame(
-        Row(Seq("name", "job", "location"), Seq("clint will eastwood", "actor", "carmel")),
+        Row(Seq("name", "job", "location"), Seq("clint eastwood", "actor", "carmel")),
         Row(Seq("name", "job", "location"), Seq("elton john", "musician", "pinner")),
         Row(Seq("name", "job", "location"), Seq("david bowie", "musician", "surrey"))
       )
