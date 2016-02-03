@@ -44,6 +44,8 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
       props.noHiddenFiles || file.getPath.getName.matches(props.hiddenFilePattern)
     }.toList.map(_.getPath)
     logger.info(s"Found ${paths.size} files for table $db.$table")
+
+    // todo, open one at a time
     val streams = paths.map(fs.open)
 
     def inputIterator(in: InputStream): Iterator[String] = {
