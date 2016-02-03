@@ -1,5 +1,7 @@
 package io.eels
 
+import java.util.UUID
+
 trait Frame {
   outer =>
 
@@ -120,7 +122,13 @@ trait Frame {
 
   def to(sink: Sink): Unit = {
     val writer = sink.writer
-    iterator.foreach(writer.write)
+    val meter1 = MetricsSystem.registry.meter(sink.getClass.getName + "_" + UUID.randomUUID + ".sink.meter")
+    val meter2 = MetricsSystem.registry.meter("sink.meter")
+    iterator.foreach { row =>
+      writer.write(row)
+      meter1.mark()
+      meter2.mark()
+    }
     writer.close()
   }
 }
@@ -139,6 +147,19 @@ object Frame {
 
   def fromSource(source: Source): Frame = new Frame {
     override lazy val schema: FrameSchema = source.schema
-    def iterator: Iterator[Row] = source.reader.iterator
+    def iterator: Iterator[Row] = new Iterator[Row] {
+      val iter = source.reader.iterator
+      val meter1 = MetricsSystem.registry.meter(source.getClass.getName + "_" + UUID.randomUUID + ".source.meter")
+      val meter2 = MetricsSystem.registry.meter("source.meter")
+      val counter = MetricsSystem.registry.counter("row.count")
+      override def hasNext: Boolean = iter.hasNext
+      override def next(): Row = {
+        val next = iter.next
+        meter1.mark()
+        meter2.mark()
+        counter.inc()
+        next
+      }
+    }
   }
 }
