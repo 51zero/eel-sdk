@@ -97,16 +97,13 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-hive")
     .settings(libraryDependencies ++= Seq(
-      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion,
-      "org.apache.hive"       % "hive-common"               % HiveVersion,
-      "org.apache.hive"       % "hive-exec"                 % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
-      "org.apache.hive"       % "hive-jdbc"                 % HiveVersion,
-      "org.apache.hive"       % "hive-metastore"            % HiveVersion,
-      "org.apache.hive"       % "hive-shims"                % HiveVersion,
+      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
+      "org.apache.hive"       % "hive-common"               % HiveVersion   % "provided",
+      "org.apache.hive"       % "hive-exec"                 % HiveVersion  % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
       "mysql" % "mysql-connector-java" % "5.1.38"
     ))
     .dependsOn(core)
@@ -115,11 +112,11 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-orc")
     .settings(libraryDependencies ++= Seq(
-      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion% "provided",
+      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion% "provided",
+      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion% "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion% "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion% "provided",
       "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm")
     ))
     .dependsOn(core)
