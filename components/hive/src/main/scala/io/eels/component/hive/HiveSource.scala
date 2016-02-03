@@ -1,9 +1,7 @@
 package io.eels.component.hive
 
-import java.io.{BufferedReader, InputStream, InputStreamReader}
-
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Field, HdfsIterator, Reader, Row, SchemaType, Source}
+import io.eels.{Column, HdfsIterator, Reader, Row, SchemaType, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -28,6 +26,9 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
     val format = t.getSd.getInputFormat
     logger.debug(s"Table format is $format")
 
+    val dialect = HiveDialect(format)
+    logger.debug(s"HiveDialect is $dialect")
+
     val keys = t.getPartitionKeys.asScala
     logger.debug("Partition keys=" + keys.mkString(", "))
 
@@ -45,26 +46,14 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
     }.toList.map(_.getPath)
     logger.info(s"Found ${paths.size} files for table $db.$table")
 
-    // todo, open one at a time
-    val streams = paths.map(fs.open)
-
-    def inputIterator(in: InputStream): Iterator[String] = {
-      val buff = new BufferedReader(new InputStreamReader(in))
-      Iterator.continually(buff.readLine).takeWhile(_ != null)
-    }
+    val iterators = paths.map(dialect.iterator(_)(fs))
 
     override val iterator: Iterator[Row] = {
-      if (streams.isEmpty) Iterator.empty
-      else {
-        streams.map(inputIterator).reduceLeft((a, b) => a ++ b).map { line =>
-          val fields = line.split('\001').map(Field.apply).toList
-          logger.debug("Fields=" + fields)
-          Row(columns, fields)
-        }
-      }
+      if (iterators.isEmpty) Iterator.empty
+      else iterators.reduceLeft((a, b) => a ++ b).map(fields => Row(columns, fields))
     }
 
-    override def close(): Unit = streams.foreach(_.close)
+    override def close(): Unit = ()
   }
 }
 

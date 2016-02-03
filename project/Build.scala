@@ -11,7 +11,7 @@ object Build extends Build {
   val Slf4jVersion = "1.7.12"
   val Log4jVersion = "1.2.17"
   val HadoopVersion = "2.7.2"
-  val HiveVersion = "1.2.1"
+  val HiveVersion = "1.1.0"
   val Avro4sVersion = "1.2.2"
 
   val rootSettings = Seq(
@@ -20,6 +20,7 @@ object Build extends Build {
     crossScalaVersions := Seq(ScalaVersion, "2.10.6"),
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
+    resolvers += "conjars" at "http://conjars.org/repo/",
     publishArtifact in Test := false,
     parallelExecution in Test := false,
     scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
@@ -28,11 +29,11 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
-      "com.sksamuel.scalax"   %% "scalax"           % "0.10.0",
+      "com.sksamuel.scalax"   %% "scalax"          % "0.11.0",
       "com.typesafe"          % "config"           % "1.2.1",
+      "org.apache.hadoop"     % "hadoop-common"    % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-hdfs"      % HadoopVersion % "provided",
       "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
-      "org.apache.hadoop"     % "hadoop-common"    % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-hdfs"      % HadoopVersion,
       "com.google.guava"      % "guava"            % "18.0",
       "com.h2database"        % "h2"               % "1.4.191",
       "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
@@ -80,8 +81,8 @@ object Build extends Build {
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
     .settings(libraryDependencies ++= Seq(
-      "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
-      "io.dropwizard.metrics" % "metrics-jvm" % "3.1.2"
+      "io.dropwizard.metrics" % "metrics-core"     % "3.1.2",
+      "io.dropwizard.metrics" % "metrics-jvm"      % "3.1.2"
     ))
     .settings(name := "eel-core")
 
@@ -103,21 +104,21 @@ object Build extends Build {
       "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
       "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
       "org.apache.hive"       % "hive-common"               % HiveVersion   % "provided",
-      "org.apache.hive"       % "hive-exec"                 % HiveVersion  % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
+      "org.apache.hive"       % "hive-exec"                 % HiveVersion   % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
       "mysql" % "mysql-connector-java" % "5.1.38"
     ))
-    .dependsOn(core)
+    .dependsOn(core, parquet)
 
   lazy val orc = Project("eel-orc", file("components/orc"))
     .settings(rootSettings: _*)
     .settings(name := "eel-orc")
     .settings(libraryDependencies ++= Seq(
-      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion% "provided",
-      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion% "provided",
-      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion% "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion% "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion% "provided",
-      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm")
+      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
+      "org.apache.hive"       % "hive-exec"                 % HiveVersion   % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm")
     ))
     .dependsOn(core)
 
