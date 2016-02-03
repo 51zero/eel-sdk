@@ -75,7 +75,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka,  solr, parquet, avro, hive)
+    .aggregate(core, json, kafka, solr, parquet, avro, hive, orc)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
@@ -104,6 +104,19 @@ object Build extends Build {
       "org.apache.hive"       % "hive-metastore"            % HiveVersion,
       "org.apache.hive"       % "hive-shims"                % HiveVersion,
       "mysql" % "mysql-connector-java" % "5.1.38"
+    ))
+    .dependsOn(core)
+
+  lazy val orc = Project("eel-orc", file("components/orc"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-orc")
+    .settings(libraryDependencies ++= Seq(
+      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion,
+      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm")
     ))
     .dependsOn(core)
 
