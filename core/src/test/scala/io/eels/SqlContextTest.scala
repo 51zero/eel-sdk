@@ -25,7 +25,7 @@ class SqlContextTest extends WordSpec with Matchers {
       val result = sqlContext.sql("select state, count(*) from people group by state")
       result.schema shouldBe FrameSchema(Seq(
         Column("STATE", SchemaType.String, true),
-        Column("COUNT(*)", SchemaType.BigInt, false)
+        Column("COUNT(*)", SchemaType.BigInt, false, 19)
       ))
       result.size shouldBe 47
     }
