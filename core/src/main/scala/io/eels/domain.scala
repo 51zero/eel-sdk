@@ -8,7 +8,12 @@ object Field {
 
 case class Field(value: String)
 
-case class Column(name: String, `type`: SchemaType, nullable: Boolean, precision: Int = 0, scale: Int = 0)
+case class Column(name: String,
+                  `type`: SchemaType,
+                  nullable: Boolean,
+                  precision: Int = 0,
+                  scale: Int = 0,
+                  comment: Option[String] = None)
 
 sealed trait SchemaType
 object SchemaType {

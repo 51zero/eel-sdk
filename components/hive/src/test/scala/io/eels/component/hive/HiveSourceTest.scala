@@ -19,8 +19,8 @@ class HiveSourceTest extends WordSpec {
   hive.reloadConfiguration()
 
   "HiveSource" should {
-    "locate table in hive" ignore {
-      println(HiveSource("sam", "product").toList)
+    "locate table in hive" in {
+      println(HiveSource("sam", "news").toList)
     }
   }
 }
