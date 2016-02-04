@@ -49,9 +49,11 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 * JDBC
 * Parquet
 * Avro
+* Hadoop Sequence files
+* Hadoop Orc
+* Hive
 * Kafka
 * Elasticsearch
-* Hadoop Sequence files
 * Solr
 
 ### How to use
