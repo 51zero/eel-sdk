@@ -14,6 +14,9 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
   override def writer: Writer = new Writer {
 
+    val dialect = props.dialectFn(url)
+    logger.debug(s"Writer will use dialect=$dialect")
+
     logger.debug(s"Connecting to jdbc sink $url...")
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
@@ -31,7 +34,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       if (props.createTable && !created && !tableExists) {
         logger.info(s"Creating sink table $table")
 
-        val sql = JdbcDialect(url).create(FrameSchema(row.columns), table)
+        val sql = dialect.create(FrameSchema(row.columns), table)
         logger.debug(s"Executing [$sql]")
 
         val stmt = conn.createStatement()
@@ -49,7 +52,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     override def write(row: Row): Unit = {
       createTable(row)
 
-      val sql = JdbcDialect(url).insert(row, table)
+      val sql = dialect.insert(row, table)
       logger.debug(s"Inserting [$sql]")
 
       val stmt = conn.createStatement()
@@ -62,5 +65,5 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
   }
 }
 
-case class JdbcSinkProps(createTable: Boolean = false)
+case class JdbcSinkProps(createTable: Boolean = false, dialectFn: String => JdbcDialect = url => JdbcDialect(url))
 
