@@ -13,8 +13,8 @@ class SqlContextTest extends WordSpec with Matchers {
       sqlContext.registerFrame("people", frame)
       val result = sqlContext.sql("select first_name, last_name from people ")
       result.schema shouldBe FrameSchema(List(
-        Column("FIRST_NAME", SchemaType.String, true),
-        Column("LAST_NAME", SchemaType.String, true)
+        Column("FIRST_NAME", SchemaType.String, true, precision = 255),
+        Column("LAST_NAME", SchemaType.String, true, precision = 255)
       ))
       result.size shouldBe 500
     }
@@ -24,7 +24,7 @@ class SqlContextTest extends WordSpec with Matchers {
       sqlContext.registerFrame("people", frame)
       val result = sqlContext.sql("select state, count(*) from people group by state")
       result.schema shouldBe FrameSchema(List(
-        Column("STATE", SchemaType.String, true),
+        Column("STATE", SchemaType.String, true, precision = 255),
         Column("COUNT(*)", SchemaType.BigInt, false, 19)
       ))
       result.size shouldBe 47
