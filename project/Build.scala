@@ -82,8 +82,9 @@ object Build extends Build {
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
     .settings(libraryDependencies ++= Seq(
-      "io.dropwizard.metrics" % "metrics-core"     % "3.1.2",
-      "io.dropwizard.metrics" % "metrics-jvm"      % "3.1.2"
+      "com.typesafe.akka"     %% "akka-actor"       % "2.4.1",
+      "io.dropwizard.metrics" %  "metrics-core"     % "3.1.2",
+      "io.dropwizard.metrics" %  "metrics-jvm"      % "3.1.2"
     ))
     .settings(name := "eel-core")
 
