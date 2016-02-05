@@ -3,12 +3,12 @@ package io.eels.component.hive
 import java.io.{BufferedReader, InputStream, InputStreamReader}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.Field
+import io.eels.{Row, FrameSchema, Field}
 import io.eels.component.parquet.ParquetSource
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 trait HiveDialect extends StrictLogging {
-  def iterator(path: Path)(implicit fs: FileSystem): Iterator[Seq[Field]]
+  def iterator(path: Path, schema: FrameSchema)(implicit fs: FileSystem): Iterator[Row]
 }
 
 object HiveDialect {
@@ -23,14 +23,15 @@ object TextHiveDialect extends HiveDialect {
 
   val delimiter = '\001'
 
-  override def iterator(path: Path)(implicit fs: FileSystem): Iterator[Seq[Field]] = new Iterator[Seq[Field]] {
+  override def iterator(path: Path, schema: FrameSchema)
+                       (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
     lazy val in = fs.open(path)
     lazy val iter = lineIterator(in)
     override def hasNext: Boolean = iter.hasNext
-    override def next(): Seq[Field] = {
-      val fields = iter.next.split(delimiter).map(Field.apply).toList
+    override def next(): Row = {
+      val fields = iter.next.split(delimiter).map(Field.apply).toList.padTo(schema.columns.size, null)
       logger.debug("Fields=" + fields)
-      fields
+      Row(schema.columns.toList, fields)
     }
   }
 
@@ -41,10 +42,15 @@ object TextHiveDialect extends HiveDialect {
 }
 
 object ParquetHiveDialect extends HiveDialect {
-  override def iterator(path: Path)(implicit fs: FileSystem): Iterator[Seq[Field]] = new Iterator[Seq[Field]] {
+  override def iterator(path: Path, schema: FrameSchema)
+                       (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
     val ps = ParquetSource(path)
     lazy val iter = ps.reader.iterator
     override def hasNext: Boolean = iter.hasNext
-    override def next(): Seq[Field] = iter.next.fields
+    override def next(): Row = {
+      val map = iter.next.toMap
+      val fields = for ( column <- schema.columns ) yield Field(map.getOrElse(column.name, null))
+      Row(schema.columns.toList, fields)
+    }
   }
 }

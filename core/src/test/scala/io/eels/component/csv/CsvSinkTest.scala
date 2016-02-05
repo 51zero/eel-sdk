@@ -10,8 +10,8 @@ import scala.collection.JavaConverters._
 
 class CsvSinkTest extends WordSpec with Matchers {
 
-  val columns = Seq(Column("a"), Column("b"), Column("c"), Column("d"))
-  val frame = Frame(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
+  val columns = List(Column("a"), Column("b"), Column("c"), Column("d"))
+  val frame = Frame(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
 
   "CsvSink" should {
     "write csv data" in {

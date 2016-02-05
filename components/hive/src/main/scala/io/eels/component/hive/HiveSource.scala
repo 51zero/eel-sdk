@@ -49,11 +49,11 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
     val paths = files.filterNot(isHidden).map(_.getPath)
     logger.info(s"Found ${paths.size} files after filtering")
 
-    val iterators = paths.map(dialect.iterator(_)(fs))
+    val iterators = paths.map(dialect.iterator(_, frameSchema)(fs))
 
     override val iterator: Iterator[Row] = {
       if (iterators.isEmpty) Iterator.empty
-      else iterators.reduceLeft((a, b) => a ++ b).map(fields => Row(frameSchema.columns, fields))
+      else iterators.reduceLeft((a, b) => a ++ b)
     }
 
     override def close(): Unit = ()

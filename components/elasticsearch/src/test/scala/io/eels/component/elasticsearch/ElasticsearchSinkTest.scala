@@ -36,8 +36,8 @@ class ElasticsearchSinkTest extends WordSpec with Matchers with Eventually {
     "persist each row" in {
 
       val frame = Frame(
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("clint eastwood", "actor", "carmel")),
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("elton john", "musician", "pinner"))
+        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
+        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner"))
       )
       frame.to(ElasticsearchSink(() => client, "myindex", "mytype", closeClient = false))
       eventually(Timeout(Span(5, Seconds))) {

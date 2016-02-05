@@ -11,11 +11,11 @@ class JdbcSinkTest extends WordSpec with Matchers {
   val conn = DriverManager.getConnection("jdbc:h2:mem:test")
   conn.createStatement().executeUpdate("create table mytab (a integer, b integer, c integer)")
 
-  val columns = Seq(Column("a"), Column("b"), Column("c"))
+  val columns = List(Column("a"), Column("b"), Column("c"))
   def frame: Frame = Frame(
-    Row(columns, Seq("1", "2", "3")),
-    Row(columns, Seq("4", "5", "6")),
-    Row(columns, Seq("7", "8", "9"))
+    Row(columns, List("1", "2", "3")),
+    Row(columns, List("4", "5", "6")),
+    Row(columns, List("7", "8", "9"))
   )
 
   "JdbcSink" should {

@@ -13,9 +13,9 @@ class OrcComponentTest extends WordSpec with Matchers {
       implicit val fs = FileSystem.get(new Configuration)
 
       val frame = Frame(
-        Row(Seq("name", "job", "location"), Seq("clint eastwood", "actor", "carmel")),
-        Row(Seq("name", "job", "location"), Seq("elton john", "musician", "pinner")),
-        Row(Seq("name", "job", "location"), Seq("david bowie", "musician", "surrey"))
+        Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
+        Row(List("name", "job", "location"), List("elton john", "musician", "pinner")),
+        Row(List("name", "job", "location"), List("david bowie", "musician", "surrey"))
       )
 
       val path = new Path("test.orc")
@@ -25,9 +25,9 @@ class OrcComponentTest extends WordSpec with Matchers {
       fs.delete(path, false)
 
       rows.map(_.fields.map(_.value)) shouldBe Seq(
-        Seq("clint eastwood", "actor", "carmel"),
-        Seq("elton john", "musician", "pinner"),
-        Seq("david bowie", "musician", "surrey")
+        List("clint eastwood", "actor", "carmel"),
+        List("elton john", "musician", "pinner"),
+        List("david bowie", "musician", "surrey")
       )
 
     }

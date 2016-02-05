@@ -34,7 +34,7 @@ case class SequenceSource(path: Path) extends Source {
       override def hasNext: Boolean = reader.next(k, v)
       override def next(): Row = {
         val fields = toValues(v).map(Field.apply)
-        Row(columns, fields)
+        Row(columns.toList, fields.toList)
       }
     }
   }

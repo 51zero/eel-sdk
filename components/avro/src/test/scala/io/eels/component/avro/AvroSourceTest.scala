@@ -11,14 +11,14 @@ class AvroSourceTest extends WordSpec with Matchers {
   "AvroSource" should {
     "read schema" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath))
-      people.schema shouldBe FrameSchema(Seq(Column("name"), Column("job"), Column("location")))
+      people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
     }
     "read avro files" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath)).toList
       people shouldBe List(
-        Row(Seq("name", "job", "location"), Seq("clint eastwood", "actor", "carmel")),
-        Row(Seq("name", "job", "location"), Seq("elton john", "musician", "pinner")),
-        Row(Seq("name", "job", "location"), Seq("issac newton", "scientist", "heaven"))
+        Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
+        Row(List("name", "job", "location"), List("elton john", "musician", "pinner")),
+        Row(List("name", "job", "location"), List("issac newton", "scientist", "heaven"))
       )
     }
   }

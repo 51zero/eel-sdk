@@ -16,7 +16,7 @@ object FrameSchemaBuilder extends StrictLogging {
       Column(s.getName, schemaType, false, precision = precision, comment = NonEmptyString(s.getComment))
     }
 
-    FrameSchema(columns)
+    FrameSchema(columns.toList)
   }
 
   val VarcharRegex = "varchar\\(\\d+\\)".r

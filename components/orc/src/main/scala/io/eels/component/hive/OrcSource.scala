@@ -20,7 +20,7 @@ case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source {
           case al: java.util.List[_] => al.asScala.map(_.toString)
           case _ => toString.split(",").toList
         }
-        Row(fields.map(Column.apply), fields.map(Field.apply))
+        Row(fields.map(Column.apply).toList, fields.map(Field.apply).toList)
       }
     }
   }

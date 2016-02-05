@@ -7,14 +7,14 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSourceTest extends WordSpec with Matchers {
 
-  val columns = Seq(Column("a"), Column("b"), Column("c"), Column("d"))
-  val frame = Frame(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
+  val columns = List(Column("a"), Column("b"), Column("c"), Column("d"))
+  val frame = Frame(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
 
   "SequenceSource" should {
     "read sequence files" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)
       val rows = SequenceSource(path).toList
-      rows shouldBe Seq(Row(columns, Seq("1", "2", "3", "4")), Row(columns, Seq("5", "6", "7", "8")))
+      rows shouldBe List(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
     }
     "read header as schema" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)

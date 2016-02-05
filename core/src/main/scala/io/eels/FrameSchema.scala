@@ -1,6 +1,6 @@
 package io.eels
 
-case class FrameSchema(columns: Seq[Column]) {
+case class FrameSchema(columns: List[Column]) {
 
   def addColumn(col: Column): FrameSchema = copy(columns :+ col)
 

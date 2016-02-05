@@ -8,8 +8,8 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(
-    Row(Seq("name", "job", "location"), Seq("clint eastwood", "actor", "carmel")),
-    Row(Seq("name", "job", "location"), Seq("elton john", "musician", "pinner"))
+    Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
+    Row(List("name", "job", "location"), List("elton john", "musician", "pinner"))
   )
 
   val fs = FileSystem.get(new Configuration)
@@ -21,7 +21,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame to ParquetSink(path)
       val people = ParquetSource(path)
-      people.schema shouldBe FrameSchema(Seq(Column("name"), Column("job"), Column("location")))
+      people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
       fs.delete(path, false)
     }
     "write data" in {
@@ -32,22 +32,22 @@ class ParquetSinkTest extends WordSpec with Matchers {
       people.toList shouldBe
         List(
           Row(
-            Seq(
+            List(
               Column("name", SchemaType.String, false),
               Column("job", SchemaType.String, false),
               Column("location", SchemaType.String, false)
             ),
-            Seq(
+            List(
               Field("clint eastwood"), Field("actor"), Field("carmel")
             )
           ),
           Row(
-            Seq(
+            List(
               Column("name", SchemaType.String, false),
               Column("job", SchemaType.String, false),
               Column("location", SchemaType.String, false)
             ),
-            Seq(
+            List(
               Field("elton john"), Field("musician"), Field("pinner")
             )
           )

@@ -16,7 +16,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
   "JdbcSource" should {
     "read schema" in {
       JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema shouldBe {
-        FrameSchema(Seq(
+        FrameSchema(List(
           Column("A", SchemaType.Int, true, 10),
           Column("B", SchemaType.Int, true, 10),
           Column("C", SchemaType.Int, true, 10)

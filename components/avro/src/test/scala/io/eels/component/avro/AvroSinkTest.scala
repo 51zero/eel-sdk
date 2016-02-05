@@ -6,9 +6,9 @@ import org.scalatest.{Matchers, WordSpec}
 class AvroSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(
-    Row(Seq("name", "job", "location"), Seq("clint eastwood", "actor", "carmel")),
-    Row(Seq("name", "job", "location"), Seq("elton john", "musician", "pinner")),
-    Row(Seq("name", "job", "location"), Seq("issac newton", "scientist", "heaven"))
+    Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
+    Row(List("name", "job", "location"), List("elton john", "musician", "pinner")),
+    Row(List("name", "job", "location"), List("issac newton", "scientist", "heaven"))
   )
 
 //  "AvroSink" should {

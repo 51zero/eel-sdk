@@ -29,7 +29,7 @@ case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) ext
           close()
         hasNext
       }
-      override def next: Row = Row(headers, _iterator.next.map(Field.apply))
+      override def next: Row = Row(headers.toList, _iterator.next.map(Field.apply).toList)
     }
   }
 }

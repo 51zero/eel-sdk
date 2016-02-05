@@ -56,7 +56,7 @@ trait Frame {
 
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
-    override val schema: FrameSchema = FrameSchema(columns.map(Column.apply))
+    override val schema: FrameSchema = FrameSchema(columns.map(Column.apply).toList)
     override protected def iterator: Iterator[Row] = new Iterator[Row] {
       val iterator = outer.iterator
       val newColumns = columns.map(Column.apply)
@@ -65,7 +65,7 @@ trait Frame {
         val row = iterator.next()
         val map = row.columns.map(_.name).zip(row.fields.map(_.value)).toMap
         val fields = newColumns.map(col => Field(map(col.name)))
-        Row(newColumns, fields)
+        Row(newColumns.toList, fields.toList)
       }
     }
   }

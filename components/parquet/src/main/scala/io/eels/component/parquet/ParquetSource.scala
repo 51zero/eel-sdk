@@ -19,7 +19,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging
     private val iterators = readers.map(reader => Iterator.continually(reader.read).takeWhile(_ != null).map { record =>
       val columns = record.getSchema.getFields.asScala.map(_.name).map(Column.apply)
       val fields = columns.map(col => Option(record.get(col.name)).map(_.toString).orNull).map(Field.apply)
-      Row(columns, fields)
+      Row(columns.toList, fields.toList)
     })
     private val mergedIterator = iterators.reduce((a, b) => a ++ b)
 

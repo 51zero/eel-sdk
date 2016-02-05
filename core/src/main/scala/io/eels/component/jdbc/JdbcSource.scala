@@ -36,7 +36,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
           None
         )
       }
-      FrameSchema(cols)
+      FrameSchema(cols.toList)
     }
     logger.debug("Built schema from resultset: ")
     logger.debug(schema.print)
@@ -54,7 +54,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
       override def next: Row = {
         val fields = for ( k <- 1 to columnCount ) yield Field(rs.getString(k))
-        Row(schema.columns, fields)
+        Row(schema.columns, fields.toList)
       }
     }
 

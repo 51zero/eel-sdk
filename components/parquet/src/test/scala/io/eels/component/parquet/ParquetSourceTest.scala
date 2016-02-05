@@ -13,22 +13,22 @@ class ParquetSourceTest extends WordSpec with Matchers {
   "ParquetSource" should {
     "read schema" in {
       val people = ParquetSource(personFile.getAbsolutePath)
-      people.schema shouldBe FrameSchema(Seq(Column("name"), Column("job"), Column("location")))
+      people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
     }
     "read parquet files" in {
       val people = ParquetSource(personFile.getAbsolutePath).toList
       people shouldBe List(
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("clint eastwood", "actor", "carmel")),
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("elton john", "musician", "pinner"))
+        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
+        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner"))
       )
     }
     "read multiple parquet files using file expansion" in {
       val people = ParquetSource(resourcesDir + "/*").toList
       people shouldBe List(
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("clint eastwood", "actor", "carmel")),
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("elton john", "musician", "pinner")),
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("clint eastwood", "actor", "carmel")),
-        Row(Seq(Column("name"), Column("job"), Column("location")), Seq("elton john", "musician", "pinner"))
+        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
+        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner")),
+        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
+        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner"))
       )
     }
   }
