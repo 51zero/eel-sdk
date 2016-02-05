@@ -1,5 +1,6 @@
 package io.eels.component.jdbc
 
+import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, Row, FrameSchema, SchemaType}
 
 trait JdbcDialect {
@@ -15,12 +16,18 @@ object JdbcDialect {
   def apply(url: String): JdbcDialect = GenericJdbcDialect
 }
 
-object GenericJdbcDialect extends JdbcDialect {
+object GenericJdbcDialect extends JdbcDialect with StrictLogging {
 
   def toTypeString(column: Column): String = column.`type` match {
+    case SchemaType.Long => "int"
+    case SchemaType.BigInt => "int"
     case SchemaType.Int => "int"
     case SchemaType.Short => "smallint"
-    case _ => s"varchar(${column.precision})"
+    case SchemaType.String if column.precision > 0 => s"varchar(${column.precision})"
+    case other =>
+      logger.warn(s"Unknown schema type $other")
+      "varchar(255)"
+
   }
 
   override def create(schema: FrameSchema, table: String): String = {

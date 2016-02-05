@@ -10,7 +10,7 @@ object Build extends Build {
   val ScalatestVersion = "2.2.4"
   val Slf4jVersion = "1.7.12"
   val Log4jVersion = "1.2.17"
-  val HadoopVersion = "2.7.2"
+  val HadoopVersion = "2.6.1"
   val HiveVersion = "1.1.0"
   val Avro4sVersion = "1.2.2"
 
@@ -29,6 +29,7 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
+      "org.scala-lang"        % "scala-reflect"    % scalaVersion.value,
       "com.sksamuel.scalax"   %% "scalax"          % "0.11.0",
       "com.typesafe"          % "config"           % "1.2.1",
       "org.apache.hadoop"     % "hadoop-common"    % HadoopVersion % "provided",
@@ -160,7 +161,7 @@ object Build extends Build {
     .settings(name := "eel-elasticsearch")
     .settings(libraryDependencies ++= Seq(
       "com.sksamuel.elastic4s" %% "elastic4s-core" % "2.1.1",
-      "org.json4s" %% "json4s-native" % "3.3.0",
+      "org.json4s"             %% "json4s-native"  % "3.3.0",
       "org.elasticsearch" % "elasticsearch" % "2.1.1" % "test"
     ))
     .dependsOn(core)
