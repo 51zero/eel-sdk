@@ -123,7 +123,7 @@ trait Frame {
 
   def forall(p: (Row) => Boolean): ConcurrentPlan[Boolean] = new ForallPlan(this, p)
 
-  def to(sink: Sink): ConcurrentPlan[Int] = new SinkPlan(sink, this)
+  def to(sink: Sink): ConcurrentPlan[Long] = new SinkPlan(sink, this)
 
   def exists(p: (Row) => Boolean): Plan[Boolean] = new ExistsPlan(this, p)
 
