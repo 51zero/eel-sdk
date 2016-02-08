@@ -6,6 +6,7 @@ import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, Row, Sink, Writer}
 
+import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 
 case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkProps())
@@ -47,23 +48,47 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       created = true
     }
 
-    override def close(): Unit = conn.close()
+    def doBatch(): Unit = {
+      logger.info(s"Inserting batch [${buffer.size} rows]")
+      val stmt = conn.createStatement()
+      buffer.foreach(stmt.addBatch)
+      try {
+        stmt.executeBatch()
+        logger.info("Batch complete")
+      } catch {
+        case e: Exception =>
+          logger.error("Batch failure", e)
+          throw e
+      }
+      finally {
+        stmt.close()
+      }
+    }
+
+    override def close(): Unit = {
+      if (buffer.nonEmpty)
+        doBatch()
+      conn.close()
+    }
+
+    val buffer = new ArrayBuffer[String](props.batchSize)
 
     override def write(row: Row): Unit = {
       createTable(row)
 
       val sql = dialect.insert(row, table)
-      logger.debug(s"Inserting [$sql]")
+      logger.debug(s"Buffering [$sql]")
+      buffer.append(sql)
 
-      val stmt = conn.createStatement()
-      try {
-        stmt.executeUpdate(sql)
-      } finally {
-        stmt.close()
+      if (buffer.size == props.batchSize) {
+        doBatch()
+        buffer.clear()
       }
     }
   }
 }
 
-case class JdbcSinkProps(createTable: Boolean = false, dialectFn: String => JdbcDialect = url => JdbcDialect(url))
+case class JdbcSinkProps(createTable: Boolean = false,
+                         batchSize: Int = 100,
+                         dialectFn: String => JdbcDialect = url => JdbcDialect(url))
 
