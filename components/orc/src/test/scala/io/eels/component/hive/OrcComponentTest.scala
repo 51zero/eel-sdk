@@ -19,7 +19,7 @@ class OrcComponentTest extends WordSpec with Matchers {
       )
 
       val path = new Path("test.orc")
-      frame.to(OrcSink(path))
+      frame.to(OrcSink(path)).runConcurrent(2)
 
       val rows = OrcSource(path).toList.run
       fs.delete(path, false)

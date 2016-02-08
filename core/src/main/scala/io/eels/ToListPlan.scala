@@ -6,7 +6,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] {
 
-  override def run(concurrency: Int): List[Row] = {
+  override def runConcurrent(concurrency: Int): List[Row] = {
 
     import com.sksamuel.scalax.concurrent.ExecutorImplicits._
 

@@ -19,7 +19,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     "write schema" in {
       if (fs.exists(path))
         fs.delete(path, false)
-      frame to ParquetSink(path)
+      frame.to(ParquetSink(path)).run
       val people = ParquetSource(path)
       people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
       fs.delete(path, false)
@@ -27,9 +27,9 @@ class ParquetSinkTest extends WordSpec with Matchers {
     "write data" in {
       if (fs.exists(path))
         fs.delete(path, false)
-      frame to ParquetSink(path)
+      frame.to(ParquetSink(path)).run
       val people = ParquetSource(path)
-      people.toList shouldBe
+      people.toList.runConcurrent(2) shouldBe
         List(
           Row(
             List(

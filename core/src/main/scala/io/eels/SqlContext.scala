@@ -10,7 +10,7 @@ class SqlContext {
   val uri = s"jdbc:h2:mem:sqlcontext${UUID.randomUUID.toString.replace("-", "")};IGNORECASE=TRUE;DB_CLOSE_DELAY=-1"
 
   def registerFrame(name: String, frame: Frame): Unit = {
-    frame.to(JdbcSink(uri, name, JdbcSinkProps(createTable = true)))
+    frame.to(JdbcSink(uri, name, JdbcSinkProps(createTable = true))).run
   }
 
   def sql(query: String): Frame = JdbcSource(uri, query)

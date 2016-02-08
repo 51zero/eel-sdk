@@ -5,7 +5,7 @@ import java.util.concurrent.{Executors, TimeUnit}
 
 class ToSizePlan(frame: Frame) extends ConcurrentPlan[Long] {
 
-  override def run(concurrency: Int): Long = {
+  override def runConcurrent(concurrency: Int): Long = {
 
     val count = new AtomicLong(0)
     import com.sksamuel.scalax.concurrent.ExecutorImplicits._

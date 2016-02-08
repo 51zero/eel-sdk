@@ -15,6 +15,7 @@ class AvroSourceTest extends WordSpec with Matchers {
     }
     "read avro files" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath)).toList
+        .runConcurrent(2)
       people shouldBe List(
         Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
         Row(List("name", "job", "location"), List("elton john", "musician", "pinner")),

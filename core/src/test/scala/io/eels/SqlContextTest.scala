@@ -16,7 +16,7 @@ class SqlContextTest extends WordSpec with Matchers {
         Column("FIRST_NAME", SchemaType.String, true, precision = 255),
         Column("LAST_NAME", SchemaType.String, true, precision = 255)
       ))
-      result.size shouldBe 500
+      result.size.runConcurrent(4) shouldBe 500
     }
     "accept group by queries" in {
       val frame = CsvSource(IO.pathFromResource("/us-500.csv"))
@@ -27,7 +27,7 @@ class SqlContextTest extends WordSpec with Matchers {
         Column("STATE", SchemaType.String, true, precision = 255),
         Column("COUNT(*)", SchemaType.BigInt, false, 19)
       ))
-      result.size shouldBe 47
+      result.size.run shouldBe 47
     }
   }
 }

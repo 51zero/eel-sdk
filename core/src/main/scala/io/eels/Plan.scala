@@ -8,15 +8,15 @@ trait Plan[T] {
 }
 
 trait ConcurrentPlan[T] extends Plan[T] {
-  def run: T = run(1)
-  def run(concurrency: Int): T
+  def run: T = runConcurrent(1)
+  def runConcurrent(concurrency: Int): T
 }
 
 class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Int] {
 
   import com.sksamuel.scalax.concurrent.ExecutorImplicits._
 
-  override def run(concurrency: Int): Int = {
+  override def runConcurrent(concurrency: Int): Int = {
     val executor = Executors.newFixedThreadPool(concurrency)
     val count = new AtomicInteger(0)
     frame.parts.foreach { part =>
@@ -36,7 +36,7 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Int] {
 }
 
 class ForallPlan(frame: Frame, p: Row => Boolean) extends ConcurrentPlan[Boolean] {
-  override def run(concurrency: Int): Boolean = {
+  override def runConcurrent(concurrency: Int): Boolean = {
     import com.sksamuel.scalax.concurrent.ExecutorImplicits._
     val executor = Executors.newFixedThreadPool(concurrency)
     val forall = new AtomicBoolean(true)

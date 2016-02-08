@@ -20,7 +20,7 @@ class SequenceSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, true)
 
-      frame.to(SequenceSink(path))
+      frame.to(SequenceSink(path)).runConcurrent(3)
 
       val reader = new SequenceFile.Reader(new Configuration, SequenceFile.Reader.file(path))
 

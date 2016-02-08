@@ -117,13 +117,13 @@ trait Frame {
   }
 
   // -- actions --
-  def size: Plan[Long] = new ToSizePlan(this)
+  def size: ConcurrentPlan[Long] = new ToSizePlan(this)
 
-  def toList: Plan[List[Row]] = new ToListPlan(this)
+  def toList: ConcurrentPlan[List[Row]] = new ToListPlan(this)
 
-  def forall(p: (Row) => Boolean): Plan[Boolean] = new ForallPlan(this, p)
+  def forall(p: (Row) => Boolean): ConcurrentPlan[Boolean] = new ForallPlan(this, p)
 
-  def to(sink: Sink): Plan[Int] = new SinkPlan(sink, this)
+  def to(sink: Sink): ConcurrentPlan[Int] = new SinkPlan(sink, this)
 
   def exists(p: (Row) => Boolean): Plan[Boolean] = new ExistsPlan(this, p)
 
