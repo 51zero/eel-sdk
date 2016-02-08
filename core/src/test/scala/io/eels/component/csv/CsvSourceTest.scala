@@ -14,7 +14,7 @@ class CsvSourceTest extends WordSpec with Matchers {
       CsvSource(path).schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("c")))
     }
     "read from path" in {
-      CsvSource(path).size shouldBe 3
+      CsvSource(path).size.run shouldBe 3
     }
     "allow specifying manual schema" in {
       val schema = FrameSchema(List(

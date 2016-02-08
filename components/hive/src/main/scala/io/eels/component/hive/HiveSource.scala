@@ -1,8 +1,9 @@
 package io.eels.component.hive
 
+import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{HdfsIterator, Reader, Row, Source}
-import org.apache.hadoop.fs.{LocatedFileStatus, FileSystem, Path}
+import io.eels.{FrameSchema, HdfsIterator, Part, Row, Source}
+import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
@@ -11,16 +12,41 @@ import scala.collection.JavaConverters._
 case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSourceProps())
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
-    with StrictLogging {
+    with StrictLogging
+    with Using {
+
+  def createClient: HiveMetaStoreClient = new HiveMetaStoreClient(hive)
 
   def isHidden(file: LocatedFileStatus): Boolean = {
     props.ignoreHiddenFiles && file.getPath.getName.matches(props.hiddenFilePattern)
   }
 
-  override def reader: Reader = new Reader {
+  def visiblePaths(location: String): Seq[Path] = {
+    logger.debug(s"Scanning $location, filtering=${props.ignoreHiddenFiles} pattern=${props.hiddenFilePattern}")
+    val files = HdfsIterator(fs.listFiles(new Path(location), true)).filter(_.isFile).toList
+    logger.debug(s"Found ${files.size} files before filtering")
 
-    val client = new HiveMetaStoreClient(hive)
+    val paths = files.filterNot(isHidden).map(_.getPath)
+    logger.info(s"Found ${paths.size} files after filtering")
+    paths
+  }
 
+  override def schema: FrameSchema = {
+    using(createClient) { client =>
+
+      val s = client.getSchema(db, table).asScala
+      logger.debug("Loaded hive schema " + s.mkString(", "))
+
+      val frameSchema = FrameSchemaBuilder(s)
+      logger.debug("Generated frame schema=" + frameSchema)
+
+      frameSchema
+    }
+  }
+
+  override def parts: Seq[Part] = {
+
+    val client = createClient
     val t = client.getTable(db, table)
     logger.debug("table=" + t)
 
@@ -36,28 +62,24 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
     val keys = t.getPartitionKeys.asScala
     logger.debug("Partition keys=" + keys.mkString(", "))
 
-    val schema = client.getSchema(db, table).asScala
-    logger.debug("Loaded hive schema " + schema.mkString(", "))
+    val s = client.getSchema(db, table).asScala
+    logger.debug("Loaded hive schema " + s.mkString(", "))
 
-    val frameSchema = FrameSchemaBuilder(schema)
+    val frameSchema = FrameSchemaBuilder(s)
     logger.debug("Generated frame schema=" + frameSchema)
 
-    logger.debug(s"Scanning $location, filtering=${props.ignoreHiddenFiles} pattern=${props.hiddenFilePattern}")
-    val files = HdfsIterator(fs.listFiles(new Path(location), true)).filter(_.isFile).toList
-    logger.debug(s"Found ${files.size} files before filtering")
+    val paths = visiblePaths(location)
 
-    val paths = files.filterNot(isHidden).map(_.getPath)
-    logger.info(s"Found ${paths.size} files after filtering")
+    client.close()
 
-    val iterators = paths.map(dialect.iterator(_, frameSchema)(fs))
-
-    override val iterator: Iterator[Row] = {
-      if (iterators.isEmpty) Iterator.empty
-      else iterators.reduceLeft((a, b) => a ++ b)
+    paths.map {
+      path =>
+        new Part {
+          override def iterator: Iterator[Row] = dialect.iterator(path, frameSchema)
+        }
     }
-
-    override def close(): Unit = ()
   }
+
 }
 
 case class HiveSourceProps(ignoreHiddenFiles: Boolean = true, hiddenFilePattern: String = "_.*")

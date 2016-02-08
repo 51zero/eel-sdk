@@ -20,13 +20,13 @@ class JdbcSinkTest extends WordSpec with Matchers {
 
   "JdbcSink" should {
     "write frame to table" in {
-      frame.to(JdbcSink("jdbc:h2:mem:test", "mytab"))
+      frame.to(JdbcSink("jdbc:h2:mem:test", "mytab")).run
       val rs = conn.createStatement().executeQuery("select count(*) from mytab")
       rs.next
       rs.getLong(1) shouldBe 3
     }
     "create table" in {
-      frame.to(JdbcSink("jdbc:h2:mem:test", "qwerty", JdbcSinkProps(createTable = true)))
+      frame.to(JdbcSink("jdbc:h2:mem:test", "qwerty", JdbcSinkProps(createTable = true))).run
       val rs = conn.createStatement().executeQuery("select count(*) from qwerty")
       rs.next
       rs.getLong(1) shouldBe 3

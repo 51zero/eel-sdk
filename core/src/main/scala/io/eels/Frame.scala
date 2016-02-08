@@ -1,26 +1,31 @@
 package io.eels
 
-import java.util.UUID
-
 trait Frame {
   outer =>
 
   def schema: FrameSchema
-  protected def iterator: Iterator[Row]
 
-  def exists(p: (Row) => Boolean): Boolean = iterator.exists(p)
-  def find(p: (Row) => Boolean): Option[Row] = iterator.find(p)
-  def head: Option[Row] = iterator.take(1).toList.headOption
+  private[eels] def parts: Seq[Part]
 
+  /**
+    * Note: Reduces parts to 1.
+    */
   def join(other: Frame): Frame = new Frame {
 
     override def schema: FrameSchema = outer.schema.join(other.schema)
 
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iter1 = outer.iterator
-      val iter2 = other.iterator
-      override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
-      override def next(): Row = iter1.next.join(iter2.next)
+    override private[eels] def parts: Seq[Part] = {
+      val part = new Part {
+        override def iterator: Iterator[Row] = new Iterator[Row] {
+
+          val iter1 = outer.parts.map(_.iterator).reduceLeft((a, b) => a ++ b)
+          val iter2 = other.parts.map(_.iterator).reduceLeft((a, b) => a ++ b)
+
+          override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
+          override def next(): Row = iter1.next() join iter2.next
+        }
+      }
+      Seq(part)
     }
   }
 
@@ -29,48 +34,35 @@ trait Frame {
     * retainined and if step was 10, then 1,11,21,31 etc.
     */
   def step(k: Int): Frame = new Frame {
-    override protected def iterator: Iterator[Row] = outer.iterator.grouped(k).withPartial(true).map(_.head)
     override def schema: FrameSchema = outer.schema
+    override private[eels] def parts: Seq[Part] = outer.parts.map { part =>
+      Part(
+        () => part.iterator.grouped(k).withPartial(true).map(_.head)
+      )
+    }
   }
 
-  def addColumn(name: String, value: String): Frame = new Frame {
+  def addColumn(name: String, defaultValue: String): Frame = new Frame {
     override val schema: FrameSchema = outer.schema.addColumn(name)
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator
-      override def hasNext: Boolean = iterator.hasNext
-      override def next(): Row = iterator.next().addColumn(name, value)
-    }
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.addColumn(name, defaultValue))
   }
 
   def removeColumn(name: String): Frame = new Frame {
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator
-      override def hasNext: Boolean = iterator.hasNext
-      override def next(): Row = iterator.next().removeColumn(name)
-    }
     override def schema: FrameSchema = outer.schema.removeColumn(name)
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.removeColumn(name))
   }
 
   def ++(frame: Frame): Frame = union(frame)
-  def union(frame: Frame): Frame = Frame(schema, () => outer.iterator ++ frame.iterator)
+  def union(other: Frame): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override private[eels] def parts: Seq[Part] = outer.parts ++ other.parts
+  }
 
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
     override val schema: FrameSchema = FrameSchema(columns.map(Column.apply).toList)
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator
-      val newColumns = columns.map(Column.apply)
-      override def hasNext: Boolean = iterator.hasNext
-      override def next(): Row = {
-        val row = iterator.next()
-        val map = row.columns.map(_.name).zip(row.fields.map(_.value)).toMap
-        val fields = newColumns.map(col => Field(map(col.name)))
-        Row(newColumns.toList, fields.toList)
-      }
-    }
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.projection(columns))
   }
-
-  def reduceLeft(f: (Row, Row) => Row): Frame = Frame(outer.iterator.reduceLeft(f))
 
   /**
     * Execute a side effect function for every row in the frame, returning the same Frame.
@@ -79,87 +71,81 @@ trait Frame {
     * @return this frame, to allow for builder style chaining
     */
   def foreach[U](f: (Row) => U): Frame = new Frame {
-    override protected def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator
-      override def hasNext: Boolean = iterator.hasNext
-      override def next: Row = {
-        val row = iterator.next
-        f(row)
-        row
-      }
-    }
     override def schema: FrameSchema = outer.schema
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.foreach(f))
   }
 
   def collect(pf: PartialFunction[Row, Row]): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override protected def iterator: Iterator[Row] = outer.iterator.collect(pf)
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.collect(pf))
   }
 
-  def forall(p: (Row) => Boolean): Boolean = iterator.forall(p)
-
-  def drop(k: Int): Frame = Frame(schema, () => outer.iterator.drop(k))
+  /**
+    * Note: Reduces parts to 1.
+    */
+  def drop(k: Int): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override private[eels] def parts: Seq[Part] = {
+      val part = new Part {
+        override def iterator: Iterator[Row] = {
+          val iters = outer.parts.map(_.iterator).reduceLeft((a, b) => a ++ b)
+          iters.drop(k)
+        }
+      }
+      Seq(part)
+    }
+  }
 
   def map(f: Row => Row): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def iterator: Iterator[Row] = new Iterator[Row] {
-      val iterator = outer.iterator
-      override def hasNext: Boolean = iterator.hasNext
-      override def next: Row = f(iterator.next)
-    }
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.map(f))
   }
 
   def filterNot(p: Row => Boolean): Frame = filter(str => !p(str))
-  def filter(p: Row => Boolean): Frame = Frame(schema, () => outer.iterator.filter(p))
-  def filter(column: String, p: String => Boolean): Frame = Frame(
-    schema,
-    () => outer.iterator.filter(row => p(row(column)))
-  )
 
-  def size: Long = iterator.size
-
-  def toList: List[Row] = iterator.toList
-
-  def to(sink: Sink): Unit = {
-    val writer = sink.writer
-    val meter1 = MetricsSystem.registry.meter(sink.getClass.getName + "_" + UUID.randomUUID + ".sink.meter")
-    val meter2 = MetricsSystem.registry.meter("sink.meter")
-    iterator.foreach { row =>
-      writer.write(row)
-      meter1.mark()
-      meter2.mark()
-    }
-    writer.close()
+  def filter(p: Row => Boolean): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.filter(p))
   }
+
+  /**
+    * Filters where the given column matches the given predicate.
+    */
+  def filter(column: String, p: String => Boolean): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override private[eels] def parts: Seq[Part] = outer.parts.map(_.filter(column, p))
+  }
+
+  // -- actions --
+  def size: Plan[Long] = new ToSizePlan(this)
+
+  def toList: Plan[List[Row]] = new ToListPlan(this)
+
+  def forall(p: (Row) => Boolean): Plan[Boolean] = new ForallPlan(this, p)
+
+  def to(sink: Sink): Plan[Int] = new SinkPlan(sink, this)
+
+  def exists(p: (Row) => Boolean): Plan[Boolean] = new ExistsPlan(this, p)
+
+  def find(p: (Row) => Boolean): Plan[Option[Row]] = new FindPlan(this, p)
+
+  def head: Plan[Option[Row]] = new HeadPlan(this)
 }
 
 object Frame {
 
-  private[eels] def apply(_schema: FrameSchema, iterfn: () => Iterator[Row]) = new Frame {
-    override def schema: FrameSchema = _schema
-    override protected def iterator: Iterator[Row] = iterfn()
-  }
-
   def apply(first: Row, rest: Row*): Frame = new Frame {
-    override def iterator: Iterator[Row] = (first +: rest).iterator
     override lazy val schema: FrameSchema = FrameSchema(first.columns)
+    override private[eels] def parts: Seq[Part] = {
+      val part = new Part {
+        override def iterator: Iterator[Row] = (first +: rest).iterator
+      }
+      Seq(part)
+    }
   }
 
   def fromSource(source: Source): Frame = new Frame {
     override lazy val schema: FrameSchema = source.schema
-    def iterator: Iterator[Row] = new Iterator[Row] {
-      val iter = source.reader.iterator
-      val meter1 = MetricsSystem.registry.meter(source.getClass.getName + "_" + UUID.randomUUID + ".source.meter")
-      val meter2 = MetricsSystem.registry.meter("source.meter")
-      val counter = MetricsSystem.registry.counter("row.count")
-      override def hasNext: Boolean = iter.hasNext
-      override def next(): Row = {
-        val next = iter.next
-        meter1.mark()
-        meter2.mark()
-        counter.inc()
-        next
-      }
-    }
+    override private[eels] def parts: Seq[Part] = source.parts
   }
 }

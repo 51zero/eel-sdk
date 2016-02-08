@@ -21,7 +21,7 @@ class OrcComponentTest extends WordSpec with Matchers {
       val path = new Path("test.orc")
       frame.to(OrcSink(path))
 
-      val rows = OrcSource(path).toList
+      val rows = OrcSource(path).toList.run
       fs.delete(path, false)
 
       rows.map(_.fields.map(_.value)) shouldBe Seq(

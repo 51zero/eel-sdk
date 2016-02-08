@@ -2,37 +2,51 @@ package io.eels.component.avro
 
 import java.nio.file.Path
 
-import io.eels.{Reader, Row, Source}
-import org.apache.avro.file.{DataFileReader, SeekableFileInput}
-import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
-
+import com.sksamuel.scalax.io.Using
+import io.eels.{Row, Part, FrameSchema, Source}
+import org.apache.avro.file.{SeekableFileInput, DataFileReader}
+import org.apache.avro.generic.{GenericRecord, GenericDatumReader}
 import scala.collection.JavaConverters._
 
-case class AvroSource(path: Path) extends Source {
+case class AvroSource(path: Path) extends Source with Using {
 
-  override def reader: Reader = new Reader {
+  def createReader: DataFileReader[GenericRecord] = {
+    val datumReader = new GenericDatumReader[GenericRecord]()
+    new DataFileReader[GenericRecord](new SeekableFileInput(path.toFile), datumReader)
+  }
 
-    private val datumReader = new GenericDatumReader[GenericRecord]()
-    private val dataFileReader = new DataFileReader[GenericRecord](new SeekableFileInput(path.toFile), datumReader)
+  override def schema: FrameSchema = {
+    using(createReader) { reader =>
+      val record = reader.next()
+      val columns = record.getSchema.getFields.asScala.map(_.name)
+      FrameSchema(columns)
+    }
+  }
 
-    override def close(): Unit = dataFileReader.close()
+  override def parts: Seq[Part] = {
 
-    override val iterator: Iterator[Row] = new Iterator[Row] {
+    val part = new Part {
 
-      override def hasNext: Boolean = {
-        val hasNext = dataFileReader.hasNext
-        if (!hasNext)
-          close()
-        hasNext
-      }
+      override def iterator: Iterator[Row] = new Iterator[Row] {
 
-      override def next: Row = {
-        val record = dataFileReader.next
-        val map = record.getSchema.getFields.asScala.map { field =>
-          field.name -> record.get(field.name).toString
-        }.toMap
-        Row(map)
+        val reader = createReader
+
+        override def hasNext: Boolean = {
+          val hasNext = reader.hasNext
+          if (!hasNext)
+            reader.close()
+          hasNext
+        }
+
+        override def next: Row = {
+          val record = reader.next
+          val map = record.getSchema.getFields.asScala.map { field =>
+            field.name -> record.get(field.name).toString
+          }.toMap
+          Row(map)
+        }
       }
     }
+    Seq(part)
   }
 }

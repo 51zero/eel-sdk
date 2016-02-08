@@ -16,13 +16,13 @@ class CsvSinkTest extends WordSpec with Matchers {
   "CsvSink" should {
     "write csv data" in {
       val temp = Files.createTempFile("csvsink", ".test")
-      frame.to(CsvSink(temp))
+      frame.to(CsvSink(temp)).run
       val result = Files.readAllLines(temp, Charset.defaultCharset).asScala.toList
       result shouldBe List("1,2,3,4", "5,6,7,8")
     }
     "support setting delimiter" in {
       val temp = Files.createTempFile("csvsink", ".test")
-      frame.to(CsvSink(temp, CsvSinkProps(delimiter = '>')))
+      frame.to(CsvSink(temp, CsvSinkProps(delimiter = '>'))).run
       val result = Files.readAllLines(temp, Charset.defaultCharset).asScala.toList
       result shouldBe List("1>2>3>4", "5>6>7>8")
     }

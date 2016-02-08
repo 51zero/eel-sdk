@@ -9,7 +9,7 @@ class JsonSourceTest extends WordSpec with Matchers {
 
   "JsonSource" should {
     "read multiple json docs from a file" in {
-      JsonSource(new Path(IO.fileFromResource("/test.json").getAbsolutePath)).toList shouldBe
+      JsonSource(new Path(IO.fileFromResource("/test.json").getAbsolutePath)).toList.run shouldBe
         List(
           Row(
             List(Column("name", SchemaType.String, false), Column("location", SchemaType.String, false)),

@@ -3,67 +3,86 @@ package io.eels.component.jdbc
 import java.sql.{DriverManager, Types}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Field, FrameSchema, Reader, Row, SchemaType, Source}
+import io.eels.{Column, Field, FrameSchema, Part, Row, SchemaType, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source with StrictLogging {
 
-  override def reader: Reader = new Reader {
+  lazy val schema: FrameSchema = {
 
     logger.debug(s"Connecting to jdbc source $url...")
-    private val conn = DriverManager.getConnection(url)
+    val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
-    private val stmt = conn.createStatement()
-    logger.debug(s"Setting jdbc fetch size to ${props.fetchSize}")
-    stmt.setFetchSize(props.fetchSize)
+    val stmt = conn.createStatement()
+    stmt.setFetchSize(1)
+    stmt.setMaxRows(1)
 
-    logger.debug(s"Executing query [$query]...")
-    private val rs = stmt.executeQuery(query)
-    logger.debug(s"Query completed")
+    logger.debug(s"Executing query for schema [$query]...")
+    val rs = stmt.executeQuery(query)
 
-    private val columnCount = rs.getMetaData.getColumnCount
-    logger.debug("Resultset column count is $columnCount")
+    val columnCount = rs.getMetaData.getColumnCount
+    logger.debug(s"Resultset column count is $columnCount")
 
-    private val schema: FrameSchema = {
-      val cols = for ( k <- 1 to columnCount ) yield {
-        Column(
-          name = rs.getMetaData.getColumnLabel(k),
-          `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
-          nullable = rs.getMetaData.isNullable(k) == 1,
-          precision = rs.getMetaData.getPrecision(k),
-          scale = rs.getMetaData.getScale(k),
-          None
-        )
-      }
-      FrameSchema(cols.toList)
+    val cols = for ( k <- 1 to columnCount ) yield {
+      Column(
+        name = rs.getMetaData.getColumnLabel(k),
+        `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
+        nullable = rs.getMetaData.isNullable(k) == 1,
+        precision = rs.getMetaData.getPrecision(k),
+        scale = rs.getMetaData.getScale(k),
+        None
+      )
     }
-    logger.debug("Built schema from resultset: ")
+
+    val schema = FrameSchema(cols.toList)
+
+    logger.debug("Fetched schema: ")
     logger.debug(schema.print)
 
-    override def iterator: Iterator[Row] = new Iterator[Row] {
+    schema
+  }
 
-      override def hasNext: Boolean = {
-        val hasNext = rs.next()
-        if (!hasNext) {
-          logger.debug("Resultset is completed; closing stream")
-          close()
+  override def parts: Seq[Part] = {
+
+   val part = new Part {
+
+      override def iterator: Iterator[Row] = new Iterator[Row] {
+
+        logger.debug(s"Connecting to jdbc source $url...")
+        val conn = DriverManager.getConnection(url)
+        logger.debug(s"Connected to $url")
+
+        val stmt = conn.createStatement()
+        stmt.setFetchSize(props.fetchSize)
+
+        logger.debug(s"Executing query [$query]...")
+        val rs = stmt.executeQuery(query)
+
+        private def close(): Unit = {
+          logger.debug("Closing reader")
+          rs.close()
+          stmt.close()
+          conn.close()
         }
-        hasNext
-      }
 
-      override def next: Row = {
-        val fields = for ( k <- 1 to columnCount ) yield Field(rs.getString(k))
-        Row(schema.columns, fields.toList)
+        override def hasNext: Boolean = {
+          val hasNext = rs.next()
+          if (!hasNext) {
+            logger.debug("Resultset is completed; closing stream")
+            close()
+          }
+          hasNext
+        }
+
+        override def next: Row = {
+          val fields = for ( k <- 1 to schema.columns.size ) yield Field(rs.getString(k))
+          Row(schema.columns, fields.toList)
+        }
       }
     }
 
-    override def close(): Unit = {
-      logger.debug("Closing reader")
-      rs.close()
-      stmt.close()
-      conn.close()
-    }
+    Seq(part)
   }
 }
 

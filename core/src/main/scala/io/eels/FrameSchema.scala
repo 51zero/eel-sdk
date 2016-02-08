@@ -22,3 +22,7 @@ case class FrameSchema(columns: List[Column]) {
     }.mkString("\n")
   }
 }
+
+object FrameSchema {
+  def apply(names: Seq[String]): FrameSchema = FrameSchema(names.map(Column.apply).toList)
+}

@@ -3,8 +3,8 @@ package io.eels.component.hive
 import java.io.{BufferedReader, InputStream, InputStreamReader}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, FrameSchema, Field}
-import io.eels.component.parquet.ParquetSource
+import io.eels.component.parquet.ParquetIterator
+import io.eels.{Field, FrameSchema, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 trait HiveDialect extends StrictLogging {
@@ -31,7 +31,7 @@ object TextHiveDialect extends HiveDialect {
     override def next(): Row = {
       val fields = iter.next.split(delimiter).map(Field.apply).toList.padTo(schema.columns.size, null)
       logger.debug("Fields=" + fields)
-      Row(schema.columns.toList, fields)
+      Row(schema.columns, fields)
     }
   }
 
@@ -44,13 +44,12 @@ object TextHiveDialect extends HiveDialect {
 object ParquetHiveDialect extends HiveDialect {
   override def iterator(path: Path, schema: FrameSchema)
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
-    val ps = ParquetSource(path)
-    lazy val iter = ps.reader.iterator
+    lazy val iter = ParquetIterator(path)
     override def hasNext: Boolean = iter.hasNext
     override def next(): Row = {
       val map = iter.next.toMap
       val fields = for ( column <- schema.columns ) yield Field(map.getOrElse(column.name, null))
-      Row(schema.columns.toList, fields)
+      Row(schema.columns, fields)
     }
   }
 }

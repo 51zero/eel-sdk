@@ -17,7 +17,7 @@ class JsonSinkTest extends WordSpec with Matchers {
       val fs = FileSystem.get(new Configuration)
       if (fs.exists(path))
         fs.delete(path, false)
-      Frame(row1, row2).to(JsonSink(path))
+      Frame(row1, row2).to(JsonSink(path)).run
       IOUtils.toString(fs.open(path)) shouldBe """{"a":"sam","b":"ham"}""" + "\n" +"""{"a":"tim","b":"lim"}""" + "\n"
       fs.delete(path, false)
     }

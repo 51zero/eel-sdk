@@ -24,10 +24,10 @@ class JdbcSourceTest extends WordSpec with Matchers {
       }
     }
     "read from jdbc" in {
-      JdbcSource("jdbc:h2:mem:test", "select * from mytable").size shouldBe 2
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable").size.run shouldBe 2
     }
     "use supplied query" in {
-      JdbcSource("jdbc:h2:mem:test", "select * from mytable where a=4").size shouldBe 1
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable where a=4").size.run shouldBe 1
     }
   }
 }
