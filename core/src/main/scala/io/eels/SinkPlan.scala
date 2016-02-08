@@ -11,6 +11,7 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] {
 
     val executor = Executors.newFixedThreadPool(concurrency)
     val count = new AtomicLong(0)
+
     frame.parts.foreach { part =>
       executor submit {
         val writer = sink.writer
@@ -21,8 +22,10 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] {
         writer.close()
       }
     }
+
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
+
     count.get()
   }
 }
