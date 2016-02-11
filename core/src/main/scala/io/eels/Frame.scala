@@ -1,44 +1,34 @@
 package io.eels
 
-import java.util.concurrent.{TimeUnit, CountDownLatch, ArrayBlockingQueue, BlockingQueue, LinkedBlockingQueue}
+import java.util.concurrent.ConcurrentLinkedQueue
 
-import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
-
-import scala.concurrent.{ExecutionContext, Future}
+import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
 
 trait Frame {
   outer =>
 
-  def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer
-
   def schema: FrameSchema
+
+  def buffer: Buffer
 
   def join(other: Frame): Frame = new Frame {
     override def schema: FrameSchema = outer.schema.join(other.schema)
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
+    override def buffer: Buffer = new Buffer {
 
-      val buffer1 = outer.buffer(workers)
-      val buffer2 = other.buffer(workers)
+      val buffer1 = outer.buffer
+      val buffer2 = other.buffer
 
       override def close(): Unit = {
         buffer1.close()
         buffer2.close()
       }
 
-      val latch = new CountDownLatch(workers)
-
-      for ( k <- 1 to workers ) Future {
+      override def iterator: Iterator[Row] = new Iterator[Row] {
         val iter1 = buffer1.iterator
         val iter2 = buffer2.iterator
-        new Iterator[Row] {
-          override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
-          override def next(): Row = iter1.next() join iter2.next()
-        } foreach queue.put
-        latch.countDown()
+        override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
+        override def next(): Row = iter1.next() join iter2.next()
       }
-
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
     }
   }
 
@@ -48,77 +38,54 @@ trait Frame {
     */
   def step(k: Int): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = ???
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.grouped(k).map(_.head)
+    }
   }
 
   def addColumn(name: String, defaultValue: String): Frame = new Frame {
     override def schema: FrameSchema = outer.schema.addColumn(name)
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.map(_.addColumn(name, defaultValue)).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.map(_.addColumn(name, defaultValue))
     }
   }
 
   def removeColumn(name: String): Frame = new Frame {
     override def schema: FrameSchema = outer.schema.removeColumn(name)
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.map(_.removeColumn(name)).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.map(_.removeColumn(name))
     }
   }
 
   def ++(frame: Frame): Frame = union(frame)
   def union(other: Frame): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer1 = outer.buffer(workers)
-      val buffer2 = other.buffer(workers)
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        (buffer1.iterator ++ buffer2.iterator).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
-      override def close(): Unit = {
-        buffer1.close()
-        buffer2.close()
-      }
+    override def buffer: Buffer = new Buffer {
+      val buffer1 = outer.buffer
+      val buffer2 = other.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer1.iterator ++ buffer2.iterator
     }
   }
 
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
     override val schema: FrameSchema = FrameSchema(columns.map(Column.apply).toList)
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       val newColumns = columns.map(Column.apply)
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.map { row =>
-          val map = row.columns.map(_.name).zip(row.fields.map(_.value)).toMap
-          val fields = newColumns.map(col => Field(map(col.name)))
-          Row(newColumns.toList, fields.toList)
-        }.foreach(queue.put)
-        latch.countDown()
+      override def iterator: Iterator[Row] = buffer.iterator.map { row =>
+        val map = row.columns.map(_.name).zip(row.fields.map(_.value)).toMap
+        val fields = newColumns.map(col => Field(map(col.name)))
+        Row(newColumns.toList, fields.toList)
       }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
     }
   }
 
@@ -130,62 +97,40 @@ trait Frame {
     */
   def foreach[U](f: (Row) => U): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.foreach { row =>
-          f(row)
-          queue.put(row)
-        }
-        latch.countDown()
+      override def iterator: Iterator[Row] = buffer.iterator.map { row =>
+        f(row)
+        row
       }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
     }
   }
 
   def collect(pf: PartialFunction[Row, Row]): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.collect(pf).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.collect(pf)
     }
   }
 
-  /**
-    * Single worker
-    */
   def drop(k: Int): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      buffer.iterator.drop(k).foreach(queue.put)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.drop(k)
     }
   }
 
   def map(f: Row => Row): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.map(f).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.map(f)
     }
   }
 
@@ -193,16 +138,10 @@ trait Frame {
 
   def filter(p: Row => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.filter(p).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.filter(p)
     }
   }
 
@@ -211,16 +150,10 @@ trait Frame {
     */
   def filter(column: String, p: String => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      val buffer = outer.buffer(workers)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      val latch = new CountDownLatch(workers)
-      for ( k <- 1 to workers ) Future {
-        buffer.iterator.filter(row => p(row(column))).foreach(queue.put)
-        latch.countDown()
-      }
-      latch.await(1, TimeUnit.HOURS)
-      queue.put(Row.Sentinel)
+      override def iterator: Iterator[Row] = buffer.iterator.filter(row => p(row(column)))
     }
   }
 
@@ -242,22 +175,14 @@ trait Frame {
 
 object Frame {
 
+  import scala.collection.JavaConverters._
+
   def apply(first: Row, rest: Row*): Frame = new Frame {
     override lazy val schema: FrameSchema = FrameSchema(first.columns)
-    override def buffer(workers: Int)(implicit executor: ExecutionContext): Buffer = new BlockingQueueBuffer {
-      (first +: rest).foreach(queue.put)
-      queue.put(Row.Sentinel)
+    override def buffer: Buffer = new Buffer {
+      val queue = new ConcurrentLinkedQueue[Row]((first +: rest).asJava)
       override def close(): Unit = ()
+      override def iterator: Iterator[Row] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
   }
-}
-
-trait Buffer {
-  def close(): Unit
-  def iterator: Iterator[Row]
-}
-
-trait BlockingQueueBuffer extends Buffer {
-  val queue = new ArrayBlockingQueue[Row](100)
-  override def iterator: Iterator[Row] = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
 }

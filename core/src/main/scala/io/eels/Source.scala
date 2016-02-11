@@ -1,12 +1,11 @@
 package io.eels
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{CountDownLatch, TimeUnit, ArrayBlockingQueue, Executors}
+import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 
-import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
 
 trait Source extends StrictLogging {
@@ -17,7 +16,9 @@ trait Source extends StrictLogging {
 
   def toFrame(ioThreads: Int): Frame = new Frame {
 
-    override def buffer(ignored: Int)(implicit executor: ExecutionContext): Buffer = {
+    override def schema: FrameSchema = self.schema
+
+    override def buffer: Buffer = {
       import com.sksamuel.scalax.concurrent.ExecutorImplicits._
 
       val queue = new ArrayBlockingQueue[Row](1000)
@@ -62,9 +63,15 @@ trait Source extends StrictLogging {
         }
       }
     }
-
-    override def schema: FrameSchema = self.schema
   }
+}
+
+/**
+  * A Part represents part of the source data. Eg a single path in a multifile source, or a single table
+  * in a multitable source. A part provides a reader when requested.
+  */
+trait Part {
+  def reader: Reader
 }
 
 /**
