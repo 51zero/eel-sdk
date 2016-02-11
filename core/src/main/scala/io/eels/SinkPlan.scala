@@ -22,9 +22,15 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with Stric
             writer.write(row)
             count.incrementAndGet()
           }
+        } catch {
+          case e: Throwable =>
+            logger.error("Error writing; shutting down executor", e)
+            executors.shutdownNow()
+            throw e
         } finally {
           writer.close()
           logger.debug("Closed writer")
+          latch.countDown()
         }
       }
     }
@@ -33,6 +39,9 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with Stric
       buffer.close()
       logger.debug("Closed buffer")
     }
+
+    executors.shutdown()
+    executors.awaitTermination(1, TimeUnit.HOURS)
 
     count.get()
   }

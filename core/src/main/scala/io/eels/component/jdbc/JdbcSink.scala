@@ -59,9 +59,9 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
         case e: Exception =>
           logger.error("Batch failure", e)
           throw e
-      }
-      finally {
+      } finally {
         stmt.close()
+        buffer.clear()
       }
     }
 
@@ -82,7 +82,6 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
       if (buffer.size == props.batchSize) {
         doBatch()
-        buffer.clear()
       }
     }
   }

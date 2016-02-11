@@ -24,10 +24,10 @@ object GenericJdbcDialect extends JdbcDialect with StrictLogging {
     case SchemaType.Int => "int"
     case SchemaType.Short => "smallint"
     case SchemaType.String if column.precision > 0 => s"varchar(${column.precision})"
+    case SchemaType.String => "varchar(255)"
     case other =>
       logger.warn(s"Unknown schema type $other")
       "varchar(255)"
-
   }
 
   override def create(schema: FrameSchema, table: String): String = {
