@@ -77,7 +77,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       createTable(row)
 
       val sql = dialect.insert(row, table)
-      logger.debug(s"Buffering [$sql]")
+      logger.trace(s"Buffering [$sql]")
       buffer.append(sql)
 
       if (buffer.size == props.batchSize) {

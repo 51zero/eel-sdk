@@ -69,7 +69,10 @@ trait Frame {
     override def buffer: Buffer = new Buffer {
       val buffer1 = outer.buffer
       val buffer2 = other.buffer
-      override def close(): Unit = buffer.close()
+      override def close(): Unit = {
+        buffer1.close()
+        buffer2.close()
+      }
       override def iterator: Iterator[Row] = buffer1.iterator ++ buffer2.iterator
     }
   }
