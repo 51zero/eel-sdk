@@ -34,6 +34,8 @@ object Column {
 }
 
 object Row {
+  val Sentinel: Row = Row(Nil, Nil)
+
   def apply(map: Map[String, String]): Row = {
     Row(map.keys.map(Column.apply).toList, map.values.seq.map(Field.apply).toList)
   }

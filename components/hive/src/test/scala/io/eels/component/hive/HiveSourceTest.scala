@@ -20,7 +20,7 @@ class HiveSourceTest extends WordSpec {
 
   "HiveSource" should {
     "locate table in hive" ignore {
-      println(HiveSource("sam", "news").toList)
+      println(HiveSource("sam", "news").toList.run)
     }
   }
 }

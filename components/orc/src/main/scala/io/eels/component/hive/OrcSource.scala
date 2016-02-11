@@ -1,9 +1,10 @@
 package io.eels.component.hive
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{Field, Column, Row, Part, FrameSchema, Source}
+import io.eels.{Field, Column, Row, FrameSchema, Reader, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.ql.io.orc.{RecordReader, OrcFile}
+import org.apache.hadoop.hive.ql.io.orc.{OrcFile, RecordReader}
+
 import scala.collection.JavaConverters._
 
 case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
@@ -19,15 +20,13 @@ case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Us
       FrameSchema(fields)
     }
   }
+  override def readers: Seq[Reader] = {
 
-  override def parts: Seq[Part] = {
+    val reader = OrcFile.createReader(fs, path).rows()
 
-    val part = new Part {
-
+    val part = new Reader {
+      override def close(): Unit = reader.close()
       override def iterator: Iterator[Row] = new Iterator[Row] {
-
-        val reader = OrcFile.createReader(fs, path).rows()
-        def close(): Unit = reader.close()
 
         override def hasNext: Boolean = reader.hasNext
         override def next(): Row = {

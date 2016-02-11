@@ -3,9 +3,10 @@ package io.eels.component.avro
 import java.nio.file.Path
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{Row, Part, FrameSchema, Source}
-import org.apache.avro.file.{SeekableFileInput, DataFileReader}
-import org.apache.avro.generic.{GenericRecord, GenericDatumReader}
+import io.eels.{Row, FrameSchema, Reader, Source}
+import org.apache.avro.file.{DataFileReader, SeekableFileInput}
+import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
+
 import scala.collection.JavaConverters._
 
 case class AvroSource(path: Path) extends Source with Using {
@@ -22,14 +23,15 @@ case class AvroSource(path: Path) extends Source with Using {
       FrameSchema(columns)
     }
   }
+  override def readers: Seq[Reader] = {
 
-  override def parts: Seq[Part] = {
+    val reader = new Reader {
 
-    val part = new Part {
+      val reader = createReader
+
+      override def close(): Unit = reader.close()
 
       override def iterator: Iterator[Row] = new Iterator[Row] {
-
-        val reader = createReader
 
         override def hasNext: Boolean = {
           val hasNext = reader.hasNext
@@ -44,9 +46,10 @@ case class AvroSource(path: Path) extends Source with Using {
             field.name -> record.get(field.name).toString
           }.toMap
           Row(map)
-        }
+      }
       }
     }
-    Seq(part)
+
+    Seq(reader)
   }
 }

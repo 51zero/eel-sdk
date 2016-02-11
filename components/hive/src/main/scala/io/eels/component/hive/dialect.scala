@@ -21,7 +21,7 @@ object HiveDialect {
 
 object TextHiveDialect extends HiveDialect {
 
-  val delimiter = '\001'
+  val delimiter = '\u0001'
 
   override def iterator(path: Path, schema: FrameSchema)
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {

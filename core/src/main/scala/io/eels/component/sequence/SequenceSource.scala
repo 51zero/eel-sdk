@@ -4,14 +4,18 @@ import java.io.StringReader
 
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
-import io.eels.{FrameSchema, Column, Field, Part, Row, Source}
+import com.typesafe.scalalogging.slf4j.StrictLogging
+import io.eels.{Reader, Field, Buffer, Column, FrameSchema, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
 
-case class SequenceSource(path: Path) extends Source with Using {
+case class SequenceSource(path: Path) extends Source with Using with StrictLogging {
+  logger.debug(s"Creating sequence source from $path")
 
-  def createReader: SequenceFile.Reader = new SequenceFile.Reader(new Configuration, SequenceFile.Reader.file(path))
+  private def createReader: SequenceFile.Reader = {
+    new SequenceFile.Reader(new Configuration, SequenceFile.Reader.file(path))
+  }
 
   private def toValues(v: BytesWritable): Seq[String] = toValues(new String(v.copyBytes, "UTF8"))
   private def toValues(str: String): Seq[String] = {
@@ -22,6 +26,7 @@ case class SequenceSource(path: Path) extends Source with Using {
   }
 
   override def schema: FrameSchema = {
+    logger.debug(s"Fetching sequence schema for $path")
     using(createReader) { reader =>
       val k = new IntWritable
       val v = new BytesWritable
@@ -33,21 +38,26 @@ case class SequenceSource(path: Path) extends Source with Using {
     }
   }
 
-  override def parts: Seq[Part] = {
+  override def readers: Seq[Reader] = {
+    logger.debug(s"Fetching readers for $path")
 
-    val part = new Part {
+    val k = new IntWritable
+    val v = new BytesWritable
+
+    val reader = new Reader {
 
       val reader = createReader
-
-      val k = new IntWritable
-      val v = new BytesWritable
 
       val columns: Seq[Column] = {
         reader.next(k, v)
         toValues(v).map(Column.apply)
       }
 
-      def iterator: Iterator[Row] = new Iterator[Row] {
+      logger.debug(s"Readers will use schema $columns")
+
+      override def close(): Unit = reader.close()
+
+      override def iterator: Iterator[Row] = new Iterator[Row] {
         override def hasNext: Boolean = reader.next(k, v)
         override def next(): Row = {
           val fields = toValues(v).map(Field.apply)
@@ -55,6 +65,7 @@ case class SequenceSource(path: Path) extends Source with Using {
         }
       }
     }
-    Seq(part)
+
+    Seq(reader)
   }
 }

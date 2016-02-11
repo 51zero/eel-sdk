@@ -29,7 +29,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path)).run
       val people = ParquetSource(path)
-      people.toList.runConcurrent(2) shouldBe
+      people.toList.run shouldBe
         List(
           Row(
             List(

@@ -8,6 +8,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSinkTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val columns = List(Column("a"), Column("b"), Column("c"), Column("d"))
   val frame = Frame(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
 
@@ -16,7 +18,7 @@ class SequenceSinkTest extends WordSpec with Matchers {
 
       implicit val fs = FileSystem.get(new Configuration)
 
-      val path = new Path("test.seq")
+      val path = new Path("seqsink.seq")
       if (fs.exists(path))
         fs.delete(path, true)
 

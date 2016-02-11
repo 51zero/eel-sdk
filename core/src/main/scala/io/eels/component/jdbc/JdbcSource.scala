@@ -3,10 +3,52 @@ package io.eels.component.jdbc
 import java.sql.{DriverManager, Types}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Field, FrameSchema, Part, Row, SchemaType, Source}
+import io.eels.{Column, Field, FrameSchema, Reader, Row, SchemaType, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source with StrictLogging {
+
+  override def readers: Seq[Reader] = {
+
+    logger.debug(s"Connecting to jdbc source $url...")
+    val conn = DriverManager.getConnection(url)
+    logger.debug(s"Connected to $url")
+
+    val stmt = conn.createStatement()
+    stmt.setFetchSize(props.fetchSize)
+
+    logger.debug(s"Executing query [$query]...")
+    val rs = stmt.executeQuery(query)
+
+    val part = new Reader {
+
+      override def close(): Unit = {
+        logger.debug("Closing reader")
+        rs.close()
+        stmt.close()
+        conn.close()
+      }
+
+      override def iterator: Iterator[Row] = new Iterator[Row] {
+
+        override def hasNext: Boolean = {
+          val hasNext = rs.next()
+          if (!hasNext) {
+            logger.debug("Resultset is completed; closing stream")
+            close()
+          }
+          hasNext
+        }
+
+        override def next: Row = {
+          val fields = for ( k <- 1 to schema.columns.size ) yield Field(rs.getString(k))
+          Row(schema.columns, fields.toList)
+        }
+      }
+    }
+
+    Seq(part)
+  }
 
   lazy val schema: FrameSchema = {
 
@@ -41,48 +83,6 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     logger.debug(schema.print)
 
     schema
-  }
-
-  override def parts: Seq[Part] = {
-
-   val part = new Part {
-
-      override def iterator: Iterator[Row] = new Iterator[Row] {
-
-        logger.debug(s"Connecting to jdbc source $url...")
-        val conn = DriverManager.getConnection(url)
-        logger.debug(s"Connected to $url")
-
-        val stmt = conn.createStatement()
-        stmt.setFetchSize(props.fetchSize)
-
-        logger.debug(s"Executing query [$query]...")
-        val rs = stmt.executeQuery(query)
-
-        private def close(): Unit = {
-          logger.debug("Closing reader")
-          rs.close()
-          stmt.close()
-          conn.close()
-        }
-
-        override def hasNext: Boolean = {
-          val hasNext = rs.next()
-          if (!hasNext) {
-            logger.debug("Resultset is completed; closing stream")
-            close()
-          }
-          hasNext
-        }
-
-        override def next: Row = {
-          val fields = for ( k <- 1 to schema.columns.size ) yield Field(rs.getString(k))
-          Row(schema.columns, fields.toList)
-        }
-      }
-    }
-
-    Seq(part)
   }
 }
 

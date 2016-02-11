@@ -13,7 +13,8 @@ class SequenceSourceTest extends WordSpec with Matchers {
   "SequenceSource" should {
     "read sequence files" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)
-      val rows = SequenceSource(path).toList.runConcurrent(2)
+      val rows = SequenceSource(path).toList.run
+      println(rows)
       rows shouldBe List(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
     }
     "read header as schema" in {

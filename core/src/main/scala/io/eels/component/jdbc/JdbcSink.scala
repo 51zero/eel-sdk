@@ -1,6 +1,6 @@
 package io.eels.component.jdbc
 
-import java.sql.DriverManager
+import java.sql.{Connection, DriverManager}
 
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -13,6 +13,13 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
   extends Sink
     with StrictLogging {
 
+  private def tableExists(conn: Connection): Boolean = {
+    logger.debug("Fetching tables to detect if table exists")
+    val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
+    logger.debug(s"${tables.size} tables found")
+    tables.map(_.apply(3).toLowerCase) contains table.toLowerCase
+  }
+
   override def writer: Writer = new Writer {
 
     val dialect = props.dialectFn(url)
@@ -22,17 +29,10 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
-    lazy val tableExists: Boolean = {
-      logger.debug("Fetching tables to detect if table exists")
-      val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
-      logger.debug(s"${tables.size} tables found")
-      tables.map(_.apply(3).toLowerCase) contains table.toLowerCase
-    }
-
     var created = false
 
     def createTable(row: Row): Unit = {
-      if (props.createTable && !created && !tableExists) {
+      if (!created && props.createTable && !tableExists(conn)) {
         logger.info(s"Creating sink table $table")
 
         val sql = dialect.create(FrameSchema(row.columns), table)

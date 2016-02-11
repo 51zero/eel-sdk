@@ -2,9 +2,10 @@ package io.eels.component.json
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.sksamuel.scalax.io.Using
-import io.eels.{Field, Column, Row, Part, FrameSchema, Source}
+import io.eels.{Reader, Column, Field, FrameSchema, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
+
 import scala.collection.JavaConverters._
 
 case class JsonSource(path: Path) extends Source with Using {
@@ -25,15 +26,12 @@ case class JsonSource(path: Path) extends Source with Using {
     }
   }
 
-  override def parts: Seq[Part] = {
-    val part = new Part {
+  val in = createInputStream
+  val roots = reader.readValues[JsonNode](in)
 
+  override def readers: Seq[Reader] = {
+    val part = new Reader {
       override def iterator: Iterator[Row] = new Iterator[Row] {
-
-        val in = createInputStream
-        val roots = reader.readValues[JsonNode](in)
-
-        def close(): Unit = in.close()
 
         val iter = roots.asScala
         override def hasNext: Boolean = iter.hasNext
@@ -45,6 +43,8 @@ case class JsonSource(path: Path) extends Source with Using {
           Row(columns, fields)
         }
       }
+
+      override def close(): Unit = in.close()
     }
     Seq(part)
   }

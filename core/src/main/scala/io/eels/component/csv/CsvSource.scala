@@ -4,7 +4,7 @@ import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
-import io.eels.{Field, FrameSchema, Part, Row, Source}
+import io.eels.{Field, FrameSchema, Reader, Row, Source}
 
 case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) extends Source with Using {
 
@@ -18,15 +18,17 @@ case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) ext
     }
   }
 
-  override def parts: Seq[Part] = {
+  override def readers: Seq[Reader] = {
 
-    val part = new Part {
+    val reader = CSVReader.open(path.toFile)
+    val iter = reader.iterator
+    val schema = FrameSchema(iter.next)
+
+    val part = new Reader {
+
+      override def close(): Unit = reader.close()
 
       override def iterator: Iterator[Row] = new Iterator[Row] {
-
-        val reader = CSVReader.open(path.toFile)
-        val iter = reader.iterator
-        val schema = FrameSchema(iter.next)
 
         override def hasNext: Boolean = {
           val hasNext = iter.hasNext

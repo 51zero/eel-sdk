@@ -1,31 +1,26 @@
 package io.eels
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{Executors, TimeUnit}
 
-class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] {
+import com.typesafe.scalalogging.slf4j.StrictLogging
 
-  override def runConcurrent(concurrency: Int): Long = {
+import scala.concurrent.ExecutionContext
 
-    import com.sksamuel.scalax.concurrent.ExecutorImplicits._
+class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with StrictLogging {
 
-    val executor = Executors.newFixedThreadPool(concurrency)
+  override def runConcurrent(workers: Int)(implicit executor: ExecutionContext): Long = {
+
     val count = new AtomicLong(0)
-
-    frame.parts.foreach { part =>
-      executor submit {
-        val writer = sink.writer
-        part.iterator.foreach { row =>
-          writer.write(row)
-          count.incrementAndGet()
-        }
-        writer.close()
-      }
+    val buffer = frame.buffer(workers)
+    val writer = sink.writer
+    buffer.iterator.foreach { row =>
+      writer.write(row)
+      count.incrementAndGet()
     }
-
-    executor.shutdown()
-    executor.awaitTermination(1, TimeUnit.DAYS)
-
+    writer.close()
+    logger.debug("Closed writer")
+    buffer.close()
+    logger.debug("Closed buffer")
     count.get()
   }
 }
