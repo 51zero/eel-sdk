@@ -6,7 +6,7 @@
 
 Toolkit for using big data technologies in the small.
 
-Latest release 0.17.0
+Latest release [here](http://search.maven.org/#search|ga|1|io-eels)
 
 *Rationale:*
 
