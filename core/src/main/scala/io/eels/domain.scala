@@ -46,12 +46,15 @@ object Row {
 }
 
 case class Row(columns: List[Column], fields: List[Field]) {
-
   require(columns.size == fields.size, "Columns and fields should have the same size")
 
   def apply(name: String): String = {
     val pos = columns.indexWhere(_.name == name)
     fields(pos).value
+  }
+
+  def except(other: Row): Row = {
+    other.columns.foldLeft(this)((row, column) => row.removeColumn(column.name))
   }
 
   def join(other: Row): Row = Row(columns ++ other.columns, fields ++ other.fields)
@@ -62,7 +65,13 @@ case class Row(columns: List[Column], fields: List[Field]) {
     copy(columns = columns :+ Column(name), fields = fields :+ Field(value))
   }
 
-  def removeColumn(name: String): Row = Row(toMap - name)
+  lazy val columnMap: Map[String, Column] = columns.map(col => col.name -> col).toMap
+
+  def removeColumn(name: String): Row = {
+    val map = toMap - name
+    val (columns, fields) = map.map { case (key, value) => columnMap(key) -> Field(value) }.unzip
+    Row(columns.toList, fields.toList)
+  }
 
   def toMap: Map[String, String] = columns.map(_.name).zip(fields.map(_.value)).toMap
 }

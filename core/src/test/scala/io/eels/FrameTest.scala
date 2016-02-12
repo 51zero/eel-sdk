@@ -83,5 +83,10 @@ class FrameTest extends WordSpec with Matchers {
       frame1.join(frame2).schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("c"), Column("d")))
       frame1.join(frame2).toList.run shouldBe List(Row(Map("a" -> "sam", "b" -> "bam", "c" -> "gary", "d" -> "harry")), Row(Map("a" -> "ham", "b" -> "jam", "c" -> "barry", "d" -> "larry")))
     }
+    "support except" in {
+      val frame1 = Frame(Row(Map("name" -> "sam", "location" -> "aylesbury")))
+      val frame2 = Frame(Row(Map("landmark" -> "st pauls", "location" -> "london")))
+      frame1.except(frame2).toList.run shouldBe List(Row(Map("name" -> "sam")))
+    }
   }
 }

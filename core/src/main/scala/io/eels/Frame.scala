@@ -32,6 +32,26 @@ trait Frame {
     }
   }
 
+  def except(other: Frame): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer1 = outer.buffer
+      val buffer2 = other.buffer
+
+      override def close(): Unit = {
+        buffer1.close()
+        buffer2.close()
+      }
+
+      override def iterator: Iterator[Row] = new Iterator[Row] {
+        val iter1 = buffer1.iterator
+        val iter2 = buffer2.iterator
+        override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
+        override def next(): Row = iter1.next except iter2.next
+      }
+    }
+  }
+
   /**
     * Returns a new Frame where only each "step" row is retained. Ie, if step is 2 then rows 1,3,5,7 will be
     * retainined and if step was 10, then 1,11,21,31 etc.
