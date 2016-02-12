@@ -1,12 +1,14 @@
 package io.eels.component.jdbc
 
 import java.sql.{Connection, DriverManager}
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.{TimeUnit, CountDownLatch, Executors, LinkedBlockingQueue}
 
+import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, Row, Sink, Writer}
 
-import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 
 case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkProps())
@@ -29,29 +31,59 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
-    var created = false
+    val created = new AtomicBoolean(false)
 
     def createTable(row: Row): Unit = {
-      if (!created && props.createTable && !tableExists(conn)) {
-        logger.info(s"Creating sink table $table")
+      if (!created.get) {
+        JdbcSink.this.synchronized {
+          if (!created.get && props.createTable && !tableExists(conn)) {
+            logger.info(s"Creating sink table $table")
 
-        val sql = dialect.create(FrameSchema(row.columns), table)
-        logger.debug(s"Executing [$sql]")
+            val sql = dialect.create(FrameSchema(row.columns), table)
+            logger.debug(s"Executing [$sql]")
 
-        val stmt = conn.createStatement()
-        try {
-          stmt.executeUpdate(sql)
-        } finally {
-          stmt.close()
+            val stmt = conn.createStatement()
+            try {
+              stmt.executeUpdate(sql)
+            } finally {
+              stmt.close()
+            }
+          }
+          created.set(true)
         }
       }
-      created = true
     }
 
-    def doBatch(): Unit = {
-      logger.info(s"Inserting batch [${buffer.size} rows]")
+    implicit def toRunnable(thunk: => Unit): Runnable = new Runnable {
+      override def run(): Unit = thunk
+    }
+
+    val queue = new LinkedBlockingQueue[Row]()
+
+    val latch = new CountDownLatch(props.threads)
+    val executor = Executors.newFixedThreadPool(props.threads)
+    for ( k <- 1 to props.threads ) {
+      executor.submit {
+        BlockingQueueConcurrentIterator(queue, Row.Sentinel)
+          .grouped(props.batchSize)
+          .withPartial(true)
+          .foreach { rows =>
+            doBatch(rows)
+          }
+        latch.countDown()
+      }
+    }
+    executor.submit {
+      latch.await(1, TimeUnit.DAYS)
+      conn.close()
+      logger.info("Closed JDBC Connection")
+    }
+    executor.shutdown()
+
+    def doBatch(rows: Seq[Row]): Unit = {
+      logger.info(s"Inserting batch [${rows.size} rows]")
       val stmt = conn.createStatement()
-      buffer.foreach(stmt.addBatch)
+      rows.map(dialect.insert(_, table)).foreach(stmt.addBatch)
       try {
         stmt.executeBatch()
         logger.info("Batch complete")
@@ -61,33 +93,24 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
           throw e
       } finally {
         stmt.close()
-        buffer.clear()
       }
     }
 
     override def close(): Unit = {
-      if (buffer.nonEmpty)
-        doBatch()
-      conn.close()
+      queue.put(Row.Sentinel)
+      logger.debug("Waiting for sink writer to complete")
+      executor.awaitTermination(1, TimeUnit.DAYS)
     }
-
-    val buffer = new ArrayBuffer[String](props.batchSize)
 
     override def write(row: Row): Unit = {
       createTable(row)
-
-      val sql = dialect.insert(row, table)
-      logger.trace(s"Buffering [$sql]")
-      buffer.append(sql)
-
-      if (buffer.size == props.batchSize) {
-        doBatch()
-      }
+      queue.put(row)
     }
   }
 }
 
 case class JdbcSinkProps(createTable: Boolean = false,
                          batchSize: Int = 100,
-                         dialectFn: String => JdbcDialect = url => JdbcDialect(url))
+                         dialectFn: String => JdbcDialect = url => JdbcDialect(url),
+                         threads: Int = 1)
 
