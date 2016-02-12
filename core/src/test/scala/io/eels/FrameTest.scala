@@ -88,5 +88,27 @@ class FrameTest extends WordSpec with Matchers {
       val frame2 = Frame(Row(Map("landmark" -> "st pauls", "location" -> "london")))
       frame1.except(frame2).toList.run shouldBe List(Row(Map("name" -> "sam")))
     }
+    "support take while with row predicate" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jam", "location" -> "aylesbury")),
+        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      )
+      frame.takeWhile(_.apply("location") == "aylesbury").toList.run shouldBe List(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jam", "location" -> "aylesbury"))
+      )
+    }
+    "support take while with column predicate" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jam", "location" -> "aylesbury")),
+        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      )
+      frame.takeWhile("location", _ == "aylesbury").toList.run shouldBe List(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jam", "location" -> "aylesbury"))
+      )
+    }
   }
 }

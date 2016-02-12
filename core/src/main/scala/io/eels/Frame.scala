@@ -32,6 +32,24 @@ trait Frame {
     }
   }
 
+  def takeWhile(pred: Row => Boolean): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.takeWhile(pred)
+    }
+  }
+
+  def takeWhile(column: String, pred: (String) => Boolean): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.takeWhile(row => pred(row(column)))
+    }
+  }
+
   def except(other: Frame): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
