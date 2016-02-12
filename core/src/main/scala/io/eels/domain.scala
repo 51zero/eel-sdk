@@ -13,6 +13,7 @@ case class Column(name: String,
                   nullable: Boolean,
                   precision: Int = 0,
                   scale: Int = 0,
+                  signed: Boolean = true,
                   comment: Option[String] = None)
 
 sealed trait SchemaType

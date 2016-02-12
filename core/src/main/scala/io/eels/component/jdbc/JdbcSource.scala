@@ -1,6 +1,6 @@
 package io.eels.component.jdbc
 
-import java.sql.DriverManager
+import java.sql.{ResultSetMetaData, DriverManager}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, Field, FrameSchema, Reader, Row, Source}
@@ -65,16 +65,18 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
     val dialect = props.dialect.getOrElse(JdbcDialect(url))
 
-    val columnCount = rs.getMetaData.getColumnCount
+    val md: ResultSetMetaData = rs.getMetaData
+    val columnCount = md.getColumnCount
     logger.debug(s"Resultset column count is $columnCount")
 
     val cols = for ( k <- 1 to columnCount ) yield {
       Column(
-        name = rs.getMetaData.getColumnLabel(k),
-        `type` = dialect.fromJdbcType(rs.getMetaData.getColumnType(k)),
-        nullable = rs.getMetaData.isNullable(k) == 1,
-        precision = rs.getMetaData.getPrecision(k),
-        scale = rs.getMetaData.getScale(k),
+        name = md.getColumnLabel(k),
+        `type` = dialect.fromJdbcType(md.getColumnType(k)),
+        nullable = md.isNullable(k) == 1,
+        precision = md.getPrecision(k),
+        scale = md.getScale(k),
+        signed = md.isSigned(k),
         None
       )
     }

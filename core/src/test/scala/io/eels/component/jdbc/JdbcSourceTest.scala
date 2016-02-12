@@ -9,7 +9,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
 
   Class.forName("org.h2.Driver")
   val conn = DriverManager.getConnection("jdbc:h2:mem:test")
-  conn.createStatement().executeUpdate("create table mytable (a integer, b integer, c integer)")
+  conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
   conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
   conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
 
@@ -18,8 +18,8 @@ class JdbcSourceTest extends WordSpec with Matchers {
       JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema shouldBe {
         FrameSchema(List(
           Column("A", SchemaType.Int, true, 10),
-          Column("B", SchemaType.Int, true, 10),
-          Column("C", SchemaType.Int, true, 10)
+          Column("B", SchemaType.Boolean, true, 1),
+          Column("C", SchemaType.Long, true, 19)
         ))
       }
     }
