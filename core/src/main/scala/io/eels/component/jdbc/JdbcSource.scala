@@ -1,9 +1,9 @@
 package io.eels.component.jdbc
 
-import java.sql.{DriverManager, Types}
+import java.sql.DriverManager
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Field, FrameSchema, Reader, Row, SchemaType, Source}
+import io.eels.{Column, Field, FrameSchema, Reader, Row, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source with StrictLogging {
@@ -63,13 +63,15 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     logger.debug(s"Executing query for schema [$query]...")
     val rs = stmt.executeQuery(query)
 
+    val dialect = props.dialect.getOrElse(JdbcDialect(url))
+
     val columnCount = rs.getMetaData.getColumnCount
     logger.debug(s"Resultset column count is $columnCount")
 
     val cols = for ( k <- 1 to columnCount ) yield {
       Column(
         name = rs.getMetaData.getColumnLabel(k),
-        `type` = JdbcTypeToSchemaType(rs.getMetaData.getColumnType(k)),
+        `type` = dialect.fromJdbcType(rs.getMetaData.getColumnType(k)),
         nullable = rs.getMetaData.isNullable(k) == 1,
         precision = rs.getMetaData.getPrecision(k),
         scale = rs.getMetaData.getScale(k),
@@ -86,19 +88,5 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
   }
 }
 
-case class JdbcSourceProps(fetchSize: Int)
+case class JdbcSourceProps(fetchSize: Int, dialect: Option[JdbcDialect] = None)
 
-object JdbcTypeToSchemaType {
-  def apply(int: Int): SchemaType = {
-    int match {
-      case Types.BIGINT => SchemaType.BigInt
-      case Types.SMALLINT | Types.TINYINT | Types.INTEGER => SchemaType.Int
-      case Types.BOOLEAN => SchemaType.Boolean
-      case Types.DOUBLE => SchemaType.Double
-      case Types.FLOAT => SchemaType.Float
-      case Types.DECIMAL => SchemaType.Decimal
-      case Types.DATE => SchemaType.Date
-      case _ => SchemaType.String
-    }
-  }
-}
