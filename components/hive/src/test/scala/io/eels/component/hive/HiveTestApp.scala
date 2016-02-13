@@ -31,7 +31,17 @@ object HiveTestApp extends App with StrictLogging {
     Map("name" -> "ramsey bolton", "house" -> "bolton")
   )
 
-  HiveOps.createTable("sam", "characters", frame.schema, List("house"), HiveFormat.Parquet, overwrite = true)
+  fs.mkdirs(new Path("/bigdata/sam/characters"))
+
+  HiveOps.createTable(
+    "sam",
+    "characters",
+    frame.schema,
+    List("house"),
+    format = HiveFormat.Parquet,
+    location = Some("hdfs://localhost:9000/bigdata/sam/characters"),
+    overwrite = true
+  )
 
   val sink = HiveSink("sam", "characters").withPartitions("house")
   frame.to(sink).run

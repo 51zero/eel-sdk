@@ -4,6 +4,7 @@ import java.util
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.FrameSchema
+import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.{TableType, HiveMetaStoreClient}
 import org.apache.hadoop.hive.metastore.api.{SerDeInfo, FieldSchema, StorageDescriptor, Table}
 import scala.collection.JavaConverters._
@@ -54,8 +55,11 @@ object HiveOps extends StrictLogging {
   def createTable(databaseName: String,
                   tableName: String,
                   schema: FrameSchema,
-                  partitionKey: List[String],
-                  format: HiveFormat,
+                  partitionKey: List[String] = Nil,
+                  format: HiveFormat = HiveFormat.Text,
+                  props: Map[String, String] = Map.empty,
+                  tableType: TableType = TableType.MANAGED_TABLE,
+                  location: Option[String] = None,
                   overwrite: Boolean = false)
                  (implicit client: HiveMetaStoreClient): Boolean = {
 
@@ -77,6 +81,7 @@ object HiveOps extends StrictLogging {
       ))
       sd.setInputFormat(format.inputFormatClass)
       sd.setOutputFormat(format.outputFormatClass)
+      location.foreach(sd.setLocation)
 
       val table = new Table()
       table.setDbName(databaseName)
@@ -84,7 +89,8 @@ object HiveOps extends StrictLogging {
       table.setCreateTime((System.currentTimeMillis / 1000).toInt)
       table.setSd(sd)
       table.setPartitionKeys(partitionKey.map(new FieldSchema(_, "string", null)).asJava)
-      table.setTableType(TableType.MANAGED_TABLE.name)
+      table.setTableType(tableType.name)
+      props.+("generated_by" -> "eel").foreach { case (key, value) => table.putToParameters(key, value) }
 
       client.createTable(table)
       logger.info(s"Table created $databaseName.$tableName")

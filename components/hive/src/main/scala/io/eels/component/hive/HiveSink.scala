@@ -43,7 +43,7 @@ case class HiveSink(dbName: String,
       if (props.createTable && !created) {
         logger.debug(s"Ensuring table $tableName is created")
         val schema = FrameSchema(row.columns)
-        HiveOps.createTable(dbName, tableName, schema, partitionKeys, props.format, props.overwriteTable)
+        HiveOps.createTable(dbName, tableName, schema, partitionKeys, props.format, overwrite = props.overwriteTable)
         created = true
       }
     }
