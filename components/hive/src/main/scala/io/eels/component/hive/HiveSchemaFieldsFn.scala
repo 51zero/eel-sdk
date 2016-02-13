@@ -9,7 +9,7 @@ object HiveSchemaFieldsFn extends StrictLogging {
   def apply(columns: List[Column]): List[FieldSchema] = columns.map(fieldSchema)
 
   def fieldSchema(column: Column): FieldSchema = {
-    new FieldSchema(column.name, hiveType(column), "Created by eel-sdk")
+    new FieldSchema(column.name, hiveType(column), "Created by eel")
   }
 
   def hiveType(column: Column): String = column.`type` match {

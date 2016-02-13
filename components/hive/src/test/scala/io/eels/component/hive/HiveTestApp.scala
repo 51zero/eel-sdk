@@ -31,7 +31,7 @@ object HiveTestApp extends App with StrictLogging {
     Map("name" -> "ramsey bolton", "house" -> "bolton")
   )
 
-  HiveOps.createTable("sam", "characters", frame.schema, List("house"), HiveFormat.Text, overwrite = true)
+  HiveOps.createTable("sam", "characters", frame.schema, List("house"), HiveFormat.Parquet, overwrite = true)
 
   val sink = HiveSink("sam", "characters").withPartitions("house")
   frame.to(sink).run

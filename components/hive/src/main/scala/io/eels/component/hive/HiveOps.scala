@@ -72,11 +72,11 @@ object HiveOps extends StrictLogging {
       sd.setCols(HiveSchemaFieldsFn(schema.columns.filterNot(col => partitionKey.contains(col.name))).asJava)
       sd.setSerdeInfo(new SerDeInfo(
         null,
-        "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+        format.serdeClass,
         Map("serialization.format" -> "1").asJava
       ))
       sd.setInputFormat(format.inputFormatClass)
-      sd.setOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
+      sd.setOutputFormat(format.outputFormatClass)
 
       val table = new Table()
       table.setDbName(databaseName)

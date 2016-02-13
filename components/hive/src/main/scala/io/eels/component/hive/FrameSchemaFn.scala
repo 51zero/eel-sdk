@@ -7,6 +7,7 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 import scala.collection.mutable
 
+// create FrameSchema from hive FieldSchemas
 object FrameSchemaFn extends StrictLogging {
 
   def apply(schema: mutable.Buffer[FieldSchema]): FrameSchema = {
