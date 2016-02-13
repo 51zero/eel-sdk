@@ -10,11 +10,17 @@ import org.apache.hadoop.hive.metastore.api.Table
 
 import scala.collection.JavaConverters._
 
-case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSourceProps())
+case class HiveSource(db: String, table: String,
+                      props: HiveSourceProps = HiveSourceProps(),
+                      partitions: List[PartitionExpr] = Nil)
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
     with StrictLogging
     with Using {
+
+  def withPartition(name: String, value: String): HiveSource = {
+    copy(partitions = partitions :+ PartitionEquals(name, value))
+  }
 
   private def createClient: HiveMetaStoreClient = new HiveMetaStoreClient(hive)
 
@@ -22,12 +28,15 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
     props.ignoreHiddenFiles && file.getPath.getName.matches(props.hiddenFilePattern)
   }
 
+  // returns true if the file meets the exprs
+  private def isEvaluated(file: LocatedFileStatus): Boolean = partitions.forall(_.eval(file.getPath.toString))
+
   private def visiblePaths(location: String): Seq[Path] = {
     logger.debug(s"Scanning $location, filtering=${props.ignoreHiddenFiles} pattern=${props.hiddenFilePattern}")
     val files = HdfsIterator(fs.listFiles(new Path(location), true)).filter(_.isFile).toList
     logger.debug(s"Found ${files.size} files before filtering")
 
-    val paths = files.filterNot(isHidden).map(_.getPath)
+    val paths = files.filterNot(isHidden).filter(isEvaluated).map(_.getPath)
     logger.info(s"Found ${paths.size} files after filtering")
     paths
   }
@@ -56,10 +65,9 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
     dialect
   }
 
-  private def paths(t: Table): Seq[Path] = {
-
+  private def pathsToBeLoaded(t: Table): Seq[Path] = {
     val location = t.getSd.getLocation
-    logger.info(s"Loading $db.$table files from $location")
+    logger.info(s"Scanning $location for files")
 
     val keys = t.getPartitionKeys.asScala
     logger.debug("Partition keys=" + keys.mkString(", "))
@@ -74,7 +82,7 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
       val t = client.getTable(db, table)
       val schema = this.schema
       val dialect = this.dialect(t)
-      val paths = this.paths(t)
+      val paths = this.pathsToBeLoaded(t)
       (schema, dialect, paths)
     }
 
@@ -90,3 +98,11 @@ case class HiveSource(db: String, table: String, props: HiveSourceProps = HiveSo
 case class HiveSourceProps(ignoreHiddenFiles: Boolean = true,
                            hiddenFilePattern: String = "_.*",
                            concurrentReads: Int = 8)
+
+trait PartitionExpr {
+  def eval(file: String): Boolean
+}
+
+case class PartitionEquals(name: String, value: String) extends PartitionExpr {
+  override def eval(file: String): Boolean = file.toLowerCase.contains(s"$name=$value".toLowerCase)
+}
