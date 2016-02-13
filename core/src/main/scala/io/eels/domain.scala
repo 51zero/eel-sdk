@@ -53,6 +53,8 @@ case class Row(columns: List[Column], fields: List[Field]) {
     fields(pos).value
   }
 
+  def contains(columnName: String): Boolean = columns.exists(_.name == columnName)
+
   def except(other: Row): Row = {
     other.columns.foldLeft(this)((row, column) => row.removeColumn(column.name))
   }

@@ -31,7 +31,9 @@ object HiveTestApp extends App with StrictLogging {
     Map("name" -> "ramsey bolton", "house" -> "bolton")
   )
 
-  frame.to(HiveSink("sam", "characters", HiveSinkProps(createTable = true, overwriteTable = true))).run
+  val sink = HiveSink("sam", "characters", HiveSinkProps(createTable = true, overwriteTable = true))
+    .withPartitions("house")
+  frame.to(sink).run
   logger.info("Write complete")
 
   logger.info("Result=" + HiveSource("sam", "characters").toList.run)

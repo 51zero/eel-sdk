@@ -4,30 +4,63 @@ import java.util.UUID
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, Row, Sink, Writer}
-import org.apache.hadoop.fs.{FSDataOutputStream, Path, FileSystem}
+import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-case class HiveSink(dbName: String, tableName: String, props: HiveSinkProps = HiveSinkProps())
+import scala.collection.mutable
+
+case class HiveSink(dbName: String,
+                    tableName: String,
+                    props: HiveSinkProps = HiveSinkProps(),
+                    partitionKeys: List[String] = Nil)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
+
+  def withPartitions(first: String, rest: String*): HiveSink = copy(partitionKeys = (first +: rest).toList)
+
   override def writer: Writer = new Writer {
+    logger.debug(s"Writing created; partitions=${partitionKeys.mkString(",")}")
 
     implicit val client = new HiveMetaStoreClient(hiveConf)
 
     var created = false
 
-    def ensureTableCreated(row: Row): Unit = {
+    // returns all the partitions for a given row, if a row does not have a value for a particular partition,
+    // then that partition is skipped
+    private def partitions(row: Row): Seq[Partition] = {
+      partitionKeys.filter(row.contains).map(key => Partition(key, row(key)))
+    }
+
+    private def ensurePartitionsCreated(row: Row): Unit = {
+      partitions(row).foreach(p => HiveOps.createPartition(dbName, tableName, p.key, p.value))
+    }
+
+    private def tablePath(row: Row): Path = new Path(HiveOps.location(dbName, tableName))
+
+    private def partitionPath(row: Row): Path = {
+      partitions(row).foldLeft(tablePath(row))((path, part) => new Path(path, part.dirName))
+    }
+
+    private def ensureTableCreated(row: Row): Unit = {
       logger.debug(s"Ensuring table $tableName is created")
       if (props.createTable && !created) {
-        HiveOps.createTable(dbName, tableName, FrameSchema(row.columns), props.overwriteTable)
+        HiveOps.createTable(dbName, tableName, FrameSchema(row.columns), partitionKeys, props.overwriteTable)
         created = true
       }
     }
 
-    def createOutputStream: FSDataOutputStream = {
-      val path = new Path(HiveOps.location(dbName, tableName), UUID.randomUUID.toString)
-      logger.debug(s"Hive sink will write to $path")
-      fs.create(path, false)
+    // we need an output stream per partition. Since the data can come in unordered, we need to
+    // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
+    var streams = mutable.Map.empty[Path, FSDataOutputStream]
+
+    private def getOrCreateOutputStream(row: Row): FSDataOutputStream = {
+      val partPath = partitionPath(row)
+      streams.getOrElseUpdate(partPath, {
+        val filePath = new Path(partPath, UUID.randomUUID.toString)
+        logger.debug(s"Creating stream for $filePath")
+        ensurePartitionsCreated(row)
+        fs.create(filePath, false)
+      })
     }
 
     lazy val dialect = {
@@ -36,17 +69,18 @@ case class HiveSink(dbName: String, tableName: String, props: HiveSinkProps = Hi
       HiveDialect(format)
     }
 
-    var out: FSDataOutputStream = _
-
-    override def close(): Unit = if (out != null) out.close()
+    override def close(): Unit = streams.values.foreach(_.close)
 
     override def write(row: Row): Unit = {
       ensureTableCreated(row)
-      if (out == null)
-        out = createOutputStream
+      val out = getOrCreateOutputStream(row)
       dialect.write(row, out)
     }
   }
+}
+
+case class Partition(key: String, value: String) {
+  def dirName = s"$key=$value"
 }
 
 case class HiveSinkProps(createTable: Boolean = false, overwriteTable: Boolean = false)

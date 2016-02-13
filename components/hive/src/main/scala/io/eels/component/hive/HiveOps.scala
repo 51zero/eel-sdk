@@ -23,9 +23,35 @@ object HiveOps extends StrictLogging {
     client.tableExists(databaseName, tableName)
   }
 
+  def createPartition(dbName: String,
+                      tableName: String,
+                      partitionName: String,
+                      partitionValue: String)
+                     (implicit client: HiveMetaStoreClient): Unit = {
+
+    val existing = client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala.map(_.toLowerCase)
+    if (!existing.contains(s"$partitionName=$partitionValue".toLowerCase)) {
+      logger.debug(s"Creating partition value '$partitionName=$partitionValue'")
+      val table = client.getTable(dbName, tableName)
+
+      val part = new org.apache.hadoop.hive.metastore.api.Partition(
+        new util.ArrayList,
+        dbName,
+        tableName,
+        (System.currentTimeMillis / 1000).toInt,
+        0,
+        table.getSd,
+        new java.util.HashMap
+      )
+      part.addToValues(partitionValue.toLowerCase)
+      client.add_partition(part)
+    }
+  }
+
   def createTable(databaseName: String,
                   tableName: String,
                   schema: FrameSchema,
+                  partitionKey: List[String],
                   overwrite: Boolean = false)
                  (implicit client: HiveMetaStoreClient): Boolean = {
 
@@ -40,7 +66,8 @@ object HiveOps extends StrictLogging {
 
       val sd = new StorageDescriptor()
       sd.setCols(HiveSchemaFieldsFn(schema).asJava)
-      sd.setSerdeInfo(new SerDeInfo(null,
+      sd.setSerdeInfo(new SerDeInfo(
+        null,
         "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
         Map("serialization.format" -> "1").asJava
       ))
@@ -52,7 +79,7 @@ object HiveOps extends StrictLogging {
       table.setTableName(tableName)
       table.setCreateTime((System.currentTimeMillis / 1000).toInt)
       table.setSd(sd)
-      table.setPartitionKeys(new util.ArrayList[FieldSchema])
+      table.setPartitionKeys(partitionKey.map(new FieldSchema(_, "string", null)).asJava)
       table.setTableType(TableType.MANAGED_TABLE.name)
 
       client.createTable(table)
