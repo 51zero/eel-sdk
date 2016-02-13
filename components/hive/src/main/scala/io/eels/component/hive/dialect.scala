@@ -1,16 +1,20 @@
 package io.eels.component.hive
 
-import java.io.{BufferedReader, InputStream, InputStreamReader, StringWriter}
+import java.io.{BufferedReader, InputStream, InputStreamReader}
 
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
+import io.eels.component.avro.AvroSchemaGen
 import io.eels.component.parquet.ParquetIterator
 import io.eels.{Field, FrameSchema, Row}
-import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
+import org.apache.avro.generic.GenericData.Record
+import org.apache.avro.generic.GenericRecord
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.avro.AvroParquetWriter
 
 trait HiveDialect extends StrictLogging {
   def iterator(path: Path, schema: FrameSchema)(implicit fs: FileSystem): Iterator[Row]
-  def write(row: Row, fs: FSDataOutputStream): Unit
+  def writer(schema: FrameSchema, path: Path)(implicit fs: FileSystem): HiveWriter
 }
 
 object HiveDialect {
@@ -19,6 +23,11 @@ object HiveDialect {
     case "org.apache.hadoop.mapred.TextInputFormat" | "org.apache.hadoop.mapreduce.lib.input" => TextHiveDialect
     case other => sys.error("Unknown hive input format: " + other)
   }
+}
+
+trait HiveWriter {
+  def write(row: Row): Unit
+  def close(): Unit
 }
 
 object TextHiveDialect extends HiveDialect {
@@ -37,24 +46,29 @@ object TextHiveDialect extends HiveDialect {
     }
   }
 
-  override def write(row: Row, fs: FSDataOutputStream): Unit = {
-    val sw = new StringWriter
-    val csv = CSVWriter.open(sw)(new DefaultCSVFormat {
-      override val delimiter: Char = TextHiveDialect.delimiter
-      override val lineTerminator: String = "\n"
-    })
-    csv.writeRow(row.fields.map(_.value))
-    csv.close()
-    fs.writeBytes(sw.toString)
-  }
-
   def lineIterator(in: InputStream): Iterator[String] = {
     val buff = new BufferedReader(new InputStreamReader(in))
     Iterator.continually(buff.readLine).takeWhile(_ != null)
   }
+
+  override def writer(schema: FrameSchema, path: Path)
+                     (implicit fs: FileSystem): HiveWriter = new HiveWriter {
+
+    val csv = CSVWriter.open(fs.create(path, false))(new DefaultCSVFormat {
+      override val delimiter: Char = TextHiveDialect.delimiter
+      override val lineTerminator: String = "\n"
+    })
+
+    override def write(row: Row): Unit = {
+      csv.writeRow(row.fields.map(_.value))
+    }
+
+    override def close(): Unit = csv.close()
+  }
 }
 
 object ParquetHiveDialect extends HiveDialect {
+
   override def iterator(path: Path, schema: FrameSchema)
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
     lazy val iter = ParquetIterator(path)
@@ -65,5 +79,20 @@ object ParquetHiveDialect extends HiveDialect {
       Row(schema.columns, fields)
     }
   }
-  override def write(row: Row, fs: FSDataOutputStream): Unit = ???
+
+  override def writer(schema: FrameSchema, path: Path)
+                     (implicit fs: FileSystem): HiveWriter = {
+    val avroSchema = AvroSchemaGen(schema)
+    val writer = new AvroParquetWriter[GenericRecord](path, avroSchema)
+    new HiveWriter {
+      override def close(): Unit = writer.close()
+      override def write(row: Row): Unit = {
+        val record = new Record(avroSchema)
+        for ( (key, value) <- row.toMap ) {
+          record.put(key, value)
+        }
+        writer.write(record)
+      }
+    }
+  }
 }

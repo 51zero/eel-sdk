@@ -52,6 +52,7 @@ object HiveOps extends StrictLogging {
                   tableName: String,
                   schema: FrameSchema,
                   partitionKey: List[String],
+                  format: HiveFormat,
                   overwrite: Boolean = false)
                  (implicit client: HiveMetaStoreClient): Boolean = {
 
@@ -71,7 +72,7 @@ object HiveOps extends StrictLogging {
         "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
         Map("serialization.format" -> "1").asJava
       ))
-      sd.setInputFormat("org.apache.hadoop.mapred.TextInputFormat")
+      sd.setInputFormat(format.inputFormatClass)
       sd.setOutputFormat("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat")
 
       val table = new Table()

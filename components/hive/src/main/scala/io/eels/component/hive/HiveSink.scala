@@ -44,22 +44,23 @@ case class HiveSink(dbName: String,
     private def ensureTableCreated(row: Row): Unit = {
       logger.debug(s"Ensuring table $tableName is created")
       if (props.createTable && !created) {
-        HiveOps.createTable(dbName, tableName, FrameSchema(row.columns), partitionKeys, props.overwriteTable)
+        val schema = FrameSchema(row.columns)
+        HiveOps.createTable(dbName, tableName, schema, partitionKeys, props.format, props.overwriteTable)
         created = true
       }
     }
 
     // we need an output stream per partition. Since the data can come in unordered, we need to
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
-    var streams = mutable.Map.empty[Path, FSDataOutputStream]
+    var streams = mutable.Map.empty[Path, HiveWriter]
 
-    private def getOrCreateOutputStream(row: Row): FSDataOutputStream = {
+    private def getOrCreateHiveWriter(row: Row): HiveWriter = {
       val partPath = partitionPath(row)
       streams.getOrElseUpdate(partPath, {
         val filePath = new Path(partPath, UUID.randomUUID.toString)
         logger.debug(s"Creating stream for $filePath")
         ensurePartitionsCreated(row)
-        fs.create(filePath, false)
+        dialect.writer(FrameSchema(row.columns), filePath)
       })
     }
 
@@ -73,8 +74,8 @@ case class HiveSink(dbName: String,
 
     override def write(row: Row): Unit = {
       ensureTableCreated(row)
-      val out = getOrCreateOutputStream(row)
-      dialect.write(row, out)
+      val writer = getOrCreateHiveWriter(row)
+      writer.write(row)
     }
   }
 }
@@ -83,4 +84,6 @@ case class Partition(key: String, value: String) {
   def dirName = s"$key=$value"
 }
 
-case class HiveSinkProps(createTable: Boolean = false, overwriteTable: Boolean = false)
+case class HiveSinkProps(createTable: Boolean = false,
+                         overwriteTable: Boolean = false,
+                         format: HiveFormat = HiveFormat.Text)
