@@ -39,7 +39,7 @@ object HiveOps extends StrictLogging {
       logger.info(s"Creating table $databaseName.$tableName")
 
       val sd = new StorageDescriptor()
-      sd.addToCols(new FieldSchema("id", "string", "Created by eel-sdk"))
+      sd.setCols(HiveSchemaFieldsFn(schema).asJava)
       sd.setSerdeInfo(new SerDeInfo(null,
         "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
         Map("serialization.format" -> "1").asJava
