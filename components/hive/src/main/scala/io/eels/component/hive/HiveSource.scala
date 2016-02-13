@@ -12,14 +12,23 @@ import scala.collection.JavaConverters._
 
 case class HiveSource(db: String, table: String,
                       props: HiveSourceProps = HiveSourceProps(),
-                      partitions: List[PartitionExpr] = Nil)
+                      partitionExprs: List[PartitionExpr] = Nil)
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
     with StrictLogging
     with Using {
 
-  def withPartition(name: String, value: String): HiveSource = {
-    copy(partitions = partitions :+ PartitionEquals(name, value))
+  def withPartition(name: String, value: String): HiveSource = withPartition(name, "=", value)
+  def withPartition(name: String, op: String, value: String): HiveSource = {
+    val expr = op match {
+      case "=" => PartitionEquals(name, value)
+      case ">" => PartitionGt(name, value)
+      case ">=" => PartitionGte(name, value)
+      case "<" => PartitionLt(name, value)
+      case "<=" => PartitionLte(name, value)
+      case _ => sys.error(s"Unsupported op $op")
+    }
+    copy(partitionExprs = partitionExprs :+ expr)
   }
 
   private def createClient: HiveMetaStoreClient = new HiveMetaStoreClient(hive)
@@ -28,8 +37,17 @@ case class HiveSource(db: String, table: String,
     props.ignoreHiddenFiles && file.getPath.getName.matches(props.hiddenFilePattern)
   }
 
-  // returns true if the file meets the exprs
-  private def isEvaluated(file: LocatedFileStatus): Boolean = partitions.forall(_.eval(file.getPath.toString))
+  // returns true if the file meets the partition exprs
+  private def isEvaluated(file: LocatedFileStatus): Boolean = {
+    // todo need better way of getting all partition info
+    val partitions = Iterator.iterate(file.getPath.getParent)(path => path.getParent)
+      .takeWhile(_ != null)
+      .filter(_.getName.contains("="))
+      .collect {
+        case Partition(name, value) => Partition(name, value)
+      }.toList
+    partitionExprs.forall(_.eval(partitions))
+  }
 
   private def visiblePaths(location: String): Seq[Path] = {
     logger.debug(s"Scanning $location, filtering=${props.ignoreHiddenFiles} pattern=${props.hiddenFilePattern}")
@@ -100,9 +118,33 @@ case class HiveSourceProps(ignoreHiddenFiles: Boolean = true,
                            concurrentReads: Int = 8)
 
 trait PartitionExpr {
-  def eval(file: String): Boolean
+  def eval(partitions: List[Partition]): Boolean
 }
 
 case class PartitionEquals(name: String, value: String) extends PartitionExpr {
-  override def eval(file: String): Boolean = file.toLowerCase.contains(s"$name=$value".toLowerCase)
+  override def eval(partitions: List[Partition]): Boolean = partitions.contains(Partition(name, value))
+}
+
+case class PartitionLt(name: String, value: String) extends PartitionExpr {
+  override def eval(partitions: List[Partition]): Boolean = {
+    partitions.find(_.name == name).exists(_.value.compareTo(value) < 0)
+  }
+}
+
+case class PartitionLte(name: String, value: String) extends PartitionExpr {
+  override def eval(partitions: List[Partition]): Boolean = {
+    partitions.find(_.name == name).exists(_.value.compareTo(value) <= 0)
+  }
+}
+
+case class PartitionGt(name: String, value: String) extends PartitionExpr {
+  override def eval(partitions: List[Partition]): Boolean = {
+    partitions.find(_.name == name).exists(_.value.compareTo(value) > 0)
+  }
+}
+
+case class PartitionGte(name: String, value: String) extends PartitionExpr {
+  override def eval(partitions: List[Partition]): Boolean = {
+    partitions.find(_.name == name).exists(_.value.compareTo(value) >= 0)
+  }
 }

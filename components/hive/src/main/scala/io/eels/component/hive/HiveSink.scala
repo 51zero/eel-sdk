@@ -30,7 +30,7 @@ case class HiveSink(dbName: String,
     }
 
     private def ensurePartitionsCreated(row: Row): Unit = {
-      partitions(row).foreach(p => HiveOps.createPartition(dbName, tableName, p.key, p.value))
+      partitions(row).foreach(p => HiveOps.createPartition(dbName, tableName, p.name, p.value))
     }
 
     private def tablePath(row: Row): Path = new Path(HiveOps.location(dbName, tableName))
@@ -81,8 +81,16 @@ case class HiveSink(dbName: String,
   }
 }
 
-case class Partition(key: String, value: String) {
-  def unquotedDir = s"$key=$value"
+case class Partition(name: String, value: String) {
+  def unquotedDir = s"$name=$value"
+}
+
+object Partition {
+  def unapply(path: Path): Option[(String, String)] = unapply(path.getName)
+  def unapply(str: String): Option[(String, String)] = str.split('=') match {
+    case Array(a, b) => Some((a, b))
+    case _ => None
+  }
 }
 
 case class HiveSinkProps(createTable: Boolean = false,
