@@ -70,6 +70,24 @@ trait Frame {
     }
   }
 
+  def dropWhile(p: Row => Boolean): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.dropWhile(p)
+    }
+  }
+
+  def dropWhile(column: String, p: String => Boolean): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.dropWhile(row => p(row(column)))
+    }
+  }
+
   /**
     * Returns a new Frame where only each "step" row is retained. Ie, if step is 2 then rows 1,3,5,7 will be
     * retainined and if step was 10, then 1,11,21,31 etc.

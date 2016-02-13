@@ -110,5 +110,25 @@ class FrameTest extends WordSpec with Matchers {
         Row(Map("name" -> "jam", "location" -> "aylesbury"))
       )
     }
+    "support drop while" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jam", "location" -> "aylesbury")),
+        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      )
+      frame.dropWhile(_.apply("location") == "aylesbury").toList.run shouldBe List(
+        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      )
+    }
+    "support drop while with column predicate" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jam", "location" -> "aylesbury")),
+        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      )
+      frame.dropWhile("location", _ == "aylesbury").toList.run shouldBe List(
+        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      )
+    }
   }
 }
