@@ -1,9 +1,8 @@
-package io.eels.component.hive
+package io.eels.component.orc
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{Field, Column, Row, FrameSchema, Reader, Source}
+import io.eels.{Column, Field, FrameSchema, Reader, Row, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.ql.io.orc.{OrcFile, RecordReader}
 
 import scala.collection.JavaConverters._
 

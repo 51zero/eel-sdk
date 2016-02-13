@@ -1,4 +1,4 @@
-package io.eels.component.hive
+package io.eels.component.orc
 
 import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration

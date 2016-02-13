@@ -77,14 +77,24 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, solr, parquet, avro, hive, orc)
+    .aggregate(core, json, kafka, solr)
 
   lazy val core = Project("eel-core", file("core"))
     .settings(rootSettings: _*)
     .settings(libraryDependencies ++= Seq(
       "io.dropwizard.metrics" %  "metrics-core"     % "3.1.2",
-      "io.dropwizard.metrics" %  "metrics-jvm"      % "3.1.2"
-    ))
+      "io.dropwizard.metrics" %  "metrics-jvm"      % "3.1.2",
+      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
+      "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
+      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
+      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
+      "org.apache.hive"       % "hive-common"               % HiveVersion   % "provided",
+      "org.apache.hive"       % "hive-exec"                 % HiveVersion   % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
+      "mysql" % "mysql-connector-java" % "5.1.38"
+      ))
     .settings(name := "eel-core")
 
   lazy val json = Project("eel-json", file("components/json"))
@@ -95,34 +105,6 @@ object Build extends Build {
     ))
     .dependsOn(core)
 
-  lazy val hive = Project("eel-hive", file("components/hive"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-hive")
-    .settings(libraryDependencies ++= Seq(
-      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
-      "org.apache.hive"       % "hive-common"               % HiveVersion   % "provided",
-      "org.apache.hive"       % "hive-exec"                 % HiveVersion   % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
-      "mysql" % "mysql-connector-java" % "5.1.38"
-    ))
-    .dependsOn(core, parquet)
-
-  lazy val orc = Project("eel-orc", file("components/orc"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-orc")
-    .settings(libraryDependencies ++= Seq(
-      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
-      "org.apache.hive"       % "hive-exec"                 % HiveVersion   % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm")
-    ))
-    .dependsOn(core)
-
   lazy val kafka = Project("eel-kafka", file("components/kafka"))
     .settings(rootSettings: _*)
     .settings(name := "eel-kafka")
@@ -130,23 +112,6 @@ object Build extends Build {
       "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
     ))
     .dependsOn(core)
-
-  lazy val avro = Project("eel-avro", file("components/avro"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-avro")
-    .settings(libraryDependencies ++= Seq(
-      "com.sksamuel.avro4s"   %% "avro4s-core"     % Avro4sVersion
-    ))
-    .dependsOn(core)
-
-  lazy val parquet = Project("eel-parquet", file("components/parquet"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-parquet")
-    .settings(libraryDependencies ++= Seq(
-      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
-      "org.apache.parquet"    % "parquet-avro"     % "1.8.1"
-    ))
-    .dependsOn(core, avro)
 
   lazy val solr = Project("eel-solr", file("components/solr"))
     .settings(rootSettings: _*)
