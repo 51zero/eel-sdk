@@ -8,7 +8,7 @@ object Build extends Build {
 
   val ScalaVersion = "2.11.7"
   val ScalatestVersion = "2.2.4"
-  val Slf4jVersion = "1.7.12"
+  val Slf4jVersion = "1.7.5"
   val Log4jVersion = "1.2.17"
   val HadoopVersion = "2.6.1"
   val HiveVersion = "1.1.0"
