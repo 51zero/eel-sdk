@@ -37,6 +37,9 @@ trait Source extends StrictLogging {
             reader.iterator.foreach(queue.put)
             logger.debug(s"Completed reader #${count.incrementAndGet}")
             latch.countDown()
+          } catch {
+            case e: Throwable =>
+              logger.error("Error reading row", e)
           } finally {
             reader.close()
           }
@@ -49,7 +52,7 @@ trait Source extends StrictLogging {
           queue.put(Row.Sentinel)
         } catch {
           case e: Throwable =>
-            logger.warn("Error adding sentinel", e)
+            logger.error("Error adding sentinel", e)
         }
         logger.debug("Sentinel added to queue")
       }

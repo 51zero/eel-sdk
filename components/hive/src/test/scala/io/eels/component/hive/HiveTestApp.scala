@@ -1,6 +1,7 @@
 package io.eels.component.hive
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
+import io.eels.Frame
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -20,7 +21,19 @@ object HiveTestApp extends App with StrictLogging {
   hiveConf.reloadConfiguration()
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
-  HiveOps.createTable("sam", "songs", true)
 
-  logger.info("Result=" + HiveSource("sam", "songs").toList.run)
+  val frame = Frame(
+    Map("name" -> "tyrion", "house" -> "lanister"),
+    Map("name" -> "jaime", "house" -> "lanister"),
+    Map("name" -> "arya", "house" -> "stark"),
+    Map("name" -> "sansa", "house" -> "stark"),
+    Map("name" -> "roose bolton", "house" -> "bolton"),
+    Map("name" -> "ramsey bolton", "house" -> "bolton")
+  )
+
+  frame.to(HiveSink("sam", "characters", HiveSinkProps(createTable = true, overwriteTable = true))).run
+  logger.info("Write complete")
+
+  logger.info("Result=" + HiveSource("sam", "characters").toList.run)
+
 }

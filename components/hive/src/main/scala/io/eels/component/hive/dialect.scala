@@ -1,14 +1,16 @@
 package io.eels.component.hive
 
-import java.io.{BufferedReader, InputStream, InputStreamReader}
+import java.io.{BufferedReader, InputStream, InputStreamReader, StringWriter}
 
+import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.parquet.ParquetIterator
 import io.eels.{Field, FrameSchema, Row}
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
 
 trait HiveDialect extends StrictLogging {
   def iterator(path: Path, schema: FrameSchema)(implicit fs: FileSystem): Iterator[Row]
+  def write(row: Row, fs: FSDataOutputStream): Unit
 }
 
 object HiveDialect {
@@ -35,6 +37,17 @@ object TextHiveDialect extends HiveDialect {
     }
   }
 
+  override def write(row: Row, fs: FSDataOutputStream): Unit = {
+    val sw = new StringWriter
+    val csv = CSVWriter.open(sw)(new DefaultCSVFormat {
+      override val delimiter: Char = TextHiveDialect.delimiter
+      override val lineTerminator: String = "\n"
+    })
+    csv.writeRow(row.fields.map(_.value))
+    csv.close()
+    fs.writeBytes(sw.toString)
+  }
+
   def lineIterator(in: InputStream): Iterator[String] = {
     val buff = new BufferedReader(new InputStreamReader(in))
     Iterator.continually(buff.readLine).takeWhile(_ != null)
@@ -52,4 +65,5 @@ object ParquetHiveDialect extends HiveDialect {
       Row(schema.columns, fields)
     }
   }
+  override def write(row: Row, fs: FSDataOutputStream): Unit = ???
 }

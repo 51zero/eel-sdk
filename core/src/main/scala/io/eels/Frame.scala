@@ -218,6 +218,15 @@ object Frame {
 
   import scala.collection.JavaConverters._
 
+  def apply(first: Map[String, String], rest: Map[String, String]*): Frame = new Frame {
+    override lazy val schema: FrameSchema = FrameSchema(first.keys.map(Column.apply).toList)
+    override def buffer: Buffer = new Buffer {
+      val queue = new ConcurrentLinkedQueue[Row]((first +: rest).map(map => Row(map)).asJava)
+      override def close(): Unit = ()
+      override def iterator: Iterator[Row] = ConcurrentLinkedQueueConcurrentIterator(queue)
+    }
+  }
+
   def apply(first: Row, rest: Row*): Frame = new Frame {
     override lazy val schema: FrameSchema = FrameSchema(first.columns)
     override def buffer: Buffer = new Buffer {
