@@ -7,7 +7,7 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 import scala.collection.mutable
 
-object FrameSchemaBuilder extends StrictLogging {
+object FrameSchemaFn extends StrictLogging {
 
   def apply(schema: mutable.Buffer[FieldSchema]): FrameSchema = {
 
@@ -25,6 +25,7 @@ object FrameSchemaBuilder extends StrictLogging {
     case "int" => (SchemaType.Int, 0)
     case "bigint" => (SchemaType.BigInt, 0)
     case "double" => (SchemaType.Double, 0)
+    case "string" => (SchemaType.String, 0)
     case VarcharRegex(precision) => (SchemaType.String, precision.toInt)
     case other =>
       logger.warn(s"Unknown schema type $other; defaulting to varchar")

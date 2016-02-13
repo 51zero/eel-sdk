@@ -47,7 +47,7 @@ case class HiveSource(db: String, table: String,
       val s = client.getSchema(db, table).asScala
       logger.debug("Loaded hive schema " + s.mkString(", "))
 
-      val frameSchema = FrameSchemaBuilder(s)
+      val frameSchema = FrameSchemaFn(s)
       logger.debug("Generated frame schema=" + frameSchema)
 
       frameSchema
