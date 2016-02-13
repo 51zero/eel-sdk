@@ -34,13 +34,16 @@ object HiveOps extends StrictLogging {
       logger.debug(s"Creating partition value '$partitionName=$partitionValue'")
       val table = client.getTable(dbName, tableName)
 
+      val sd = new StorageDescriptor(table.getSd)
+      sd.setLocation(table.getSd.getLocation + "/" + Partition(partitionName, partitionValue).unquotedDir)
+
       val part = new org.apache.hadoop.hive.metastore.api.Partition(
         new util.ArrayList,
         dbName,
         tableName,
         (System.currentTimeMillis / 1000).toInt,
         0,
-        table.getSd,
+        sd,
         new java.util.HashMap
       )
       part.addToValues(partitionValue.toLowerCase)
@@ -66,7 +69,7 @@ object HiveOps extends StrictLogging {
       logger.info(s"Creating table $databaseName.$tableName")
 
       val sd = new StorageDescriptor()
-      sd.setCols(HiveSchemaFieldsFn(schema).asJava)
+      sd.setCols(HiveSchemaFieldsFn(schema.columns.filterNot(col => partitionKey.contains(col.name))).asJava)
       sd.setSerdeInfo(new SerDeInfo(
         null,
         "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",

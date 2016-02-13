@@ -1,10 +1,8 @@
 package io.eels.component.hive
 
-import java.util.UUID
-
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, Row, Sink, Writer}
-import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
@@ -38,12 +36,12 @@ case class HiveSink(dbName: String,
     private def tablePath(row: Row): Path = new Path(HiveOps.location(dbName, tableName))
 
     private def partitionPath(row: Row): Path = {
-      partitions(row).foldLeft(tablePath(row))((path, part) => new Path(path, part.dirName))
+      partitions(row).foldLeft(tablePath(row))((path, part) => new Path(path, part.unquotedDir))
     }
 
     private def ensureTableCreated(row: Row): Unit = {
-      logger.debug(s"Ensuring table $tableName is created")
       if (props.createTable && !created) {
+        logger.debug(s"Ensuring table $tableName is created")
         val schema = FrameSchema(row.columns)
         HiveOps.createTable(dbName, tableName, schema, partitionKeys, props.format, props.overwriteTable)
         created = true
@@ -57,8 +55,8 @@ case class HiveSink(dbName: String,
     private def getOrCreateHiveWriter(row: Row): HiveWriter = {
       val partPath = partitionPath(row)
       streams.getOrElseUpdate(partPath, {
-        val filePath = new Path(partPath, UUID.randomUUID.toString)
-        logger.debug(s"Creating stream for $filePath")
+        val filePath = new Path(partPath, "eel_" + System.nanoTime)
+        logger.debug(s"Creating hive writer for $filePath")
         ensurePartitionsCreated(row)
         dialect.writer(FrameSchema(row.columns), filePath)
       })
@@ -70,7 +68,10 @@ case class HiveSink(dbName: String,
       HiveDialect(format)
     }
 
-    override def close(): Unit = streams.values.foreach(_.close)
+    override def close(): Unit = {
+      logger.debug("Closing hive sink writer")
+      streams.values.foreach(_.close)
+    }
 
     override def write(row: Row): Unit = {
       ensureTableCreated(row)
@@ -81,7 +82,7 @@ case class HiveSink(dbName: String,
 }
 
 case class Partition(key: String, value: String) {
-  def dirName = s"$key=$value"
+  def unquotedDir = s"$key=$value"
 }
 
 case class HiveSinkProps(createTable: Boolean = false,
