@@ -32,6 +32,11 @@ class FrameTest extends WordSpec with Matchers {
       frame.drop(0).size.run shouldBe 2
       frame.drop(2).size.run shouldBe 0
     }
+    "be thread safe when using drop" in {
+      val rows = Iterator.tabulate(10000)(k => Row(Map("k" -> k.toString))).toList
+      val frame = Frame(rows)
+      frame.drop(100).toList.runConcurrent(4).size shouldBe 9900
+    }
     "support adding columns" in {
       val f = frame.addColumn("testy", "bibble")
       f.head.run.get shouldBe Row(List("a", "b", "testy"), List("1", "2", "bibble"))

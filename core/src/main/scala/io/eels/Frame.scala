@@ -1,6 +1,7 @@
 package io.eels
 
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
 
@@ -179,8 +180,9 @@ trait Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val count = new AtomicInteger(0)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.drop(k)
+      override def iterator: Iterator[Row] = buffer.iterator.dropWhile(_ => count.getAndIncrement < k)
     }
   }
 
@@ -219,7 +221,7 @@ trait Frame {
   // -- actions --
   def size: Plan[Long] = new ToSizePlan(this)
 
-  def toList: Plan[List[Row]] = new ToListPlan(this)
+  def toList: ConcurrentPlan[List[Row]] = new ToListPlan(this)
 
   def forall(p: (Row) => Boolean): Plan[Boolean] = new ForallPlan(this, p)
 
@@ -245,10 +247,12 @@ object Frame {
     }
   }
 
-  def apply(first: Row, rest: Row*): Frame = new Frame {
-    override lazy val schema: FrameSchema = FrameSchema(first.columns)
+  def apply(first: Row, rest: Row*): Frame = apply(first +: rest)
+  def apply(rows: Seq[Row]): Frame = new Frame {
+    require(rows.nonEmpty)
+    override lazy val schema: FrameSchema = FrameSchema(rows.head.columns)
     override def buffer: Buffer = new Buffer {
-      val queue = new ConcurrentLinkedQueue[Row]((first +: rest).asJava)
+      val queue = new ConcurrentLinkedQueue[Row](rows.asJava)
       override def close(): Unit = ()
       override def iterator: Iterator[Row] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
