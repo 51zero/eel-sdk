@@ -15,17 +15,16 @@ import scala.collection.mutable
 case class HiveSink(dbName: String,
                     tableName: String,
                     props: HiveSinkProps = HiveSinkProps(),
-                    partitionKeys: List[String] = Nil,
                     ioThreads: Int = 1,
+                    dynamicPartitioning: Boolean = true,
                     bufferSize: Int = 1000)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
 
-  def withPartitions(first: String, rest: String*): HiveSink = copy(partitionKeys = (first +: rest).toList)
-
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
+  def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
 
   override def writer: Writer = {
-    logger.debug(s"HiveSinkWriter created; partitions=${partitionKeys.mkString(",")}")
+    logger.debug(s"HiveSinkWriter created")
 
     implicit val client = new HiveMetaStoreClient(hiveConf)
 
@@ -35,33 +34,17 @@ case class HiveSink(dbName: String,
       HiveDialect(format)
     }
 
-    val location = HiveOps.location(dbName, tableName)
-    logger.debug(s"Table location $location")
+    val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
+    logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
-    var tableCreated = false
-
-    // returns all the partitions for a given row, if a row does not have a value for a particular partition,
-    // then that partition is skipped
-    def partitions(row: Row): Seq[Partition] = {
-      partitionKeys.filter(row.contains).map(key => Partition(key, row(key)))
-    }
-
-    def ensurePartitionsCreated(row: Row): Unit = {
-      partitions(row).foreach(p => HiveOps.createPartition(dbName, tableName, p.name, p.value))
-    }
-
-    def tablePath(row: Row): Path = new Path(location)
-
-    def partitionPath(row: Row): Path = {
-      partitions(row).foldLeft(tablePath(row))((path, part) => new Path(path, part.unquotedDir))
-    }
-
-    def ensureTableCreated(row: Row): Unit = {
-      if (props.createTable && !tableCreated) {
-        logger.debug(s"Ensuring table $tableName is created")
-        val schema = FrameSchema(row.columns)
-        HiveOps.createTable(dbName, tableName, schema, partitionKeys, props.format, overwrite = props.overwriteTable)
-        tableCreated = true
+    // returns all the partition parts for a given row, if a row doesn't contain a value
+    // for a part then an error is thrown
+    def parts(row: Row): Seq[PartitionPart] = {
+      require(partitionKeyNames.forall(row.contains), "Row must contain all partitions " + partitionKeyNames)
+      partitionKeyNames.map { name =>
+        val value = row(name)
+        require(!value.contains(" "), "Values for partition fields cannot contain spaces")
+        PartitionPart(name, value)
       }
     }
 
@@ -70,11 +53,14 @@ case class HiveSink(dbName: String,
     val writers = mutable.Map.empty[Path, HiveWriter]
 
     def getOrCreateHiveWriter(row: Row): HiveWriter = {
-      val partPath = partitionPath(row)
+      val partPath = HiveOps.partitionPath(dbName, tableName, parts(row))
       writers.getOrElseUpdate(partPath, {
         val filePath = new Path(partPath, "eel_" + System.nanoTime)
         logger.debug(s"Creating hive writer for $filePath")
-        ensurePartitionsCreated(row)
+        if (dynamicPartitioning)
+          HiveOps.createPartitionIfNotExists(dbName, tableName, parts(row))
+        else if (!HiveOps.partitionExists(dbName, tableName, parts(row)))
+          sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
         dialect.writer(FrameSchema(row.columns), filePath)
       })
     }
@@ -122,18 +108,17 @@ case class HiveSink(dbName: String,
       }
 
       override def write(row: Row): Unit = {
-        ensureTableCreated(row)
         queue.put(row)
       }
     }
   }
 }
 
-case class Partition(name: String, value: String) {
-  def unquotedDir = s"$name=$value"
+case class PartitionPart(key: String, value: String) {
+  def unquotedDir = s"$key=$value"
 }
 
-object Partition {
+object PartitionPart {
   def unapply(path: Path): Option[(String, String)] = unapply(path.getName)
   def unapply(str: String): Option[(String, String)] = str.split('=') match {
     case Array(a, b) => Some((a, b))

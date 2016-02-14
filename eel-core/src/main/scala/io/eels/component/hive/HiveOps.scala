@@ -4,57 +4,99 @@ import java.util
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.FrameSchema
-import org.apache.hadoop.hive.metastore.{TableType, HiveMetaStoreClient}
-import org.apache.hadoop.hive.metastore.api.{SerDeInfo, FieldSchema, StorageDescriptor, Table}
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.hive.metastore.api.{Partition, FieldSchema, SerDeInfo, StorageDescriptor, Table}
+import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
+
 import scala.collection.JavaConverters._
 
 object HiveOps extends StrictLogging {
 
-  def tableFormat(dbName: String, tableName: String)
-                 (implicit client: HiveMetaStoreClient): String = {
-    client.getTable(dbName, tableName).getSd.getInputFormat
+  def createTime: Int = (System.currentTimeMillis / 1000).toInt
+
+  def partitionKeys(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[FieldSchema] = {
+    client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
   }
 
-  def location(dbName: String, tableName: String)
-              (implicit client: HiveMetaStoreClient): String = client.getTable(dbName, tableName).getSd.getLocation
+  def partitionKeyNames(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[String] = {
+    partitionKeys(dbName, tableName).map(_.getName)
+  }
 
-  def tableExists(databaseName: String, tableName: String)
-                 (implicit client: HiveMetaStoreClient): Boolean = {
+  def tableExists(databaseName: String, tableName: String)(implicit client: HiveMetaStoreClient): Boolean = {
     client.tableExists(databaseName, tableName)
   }
 
-  def createPartition(dbName: String,
+  def tableFormat(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): String = {
+    client.getTable(dbName, tableName).getSd.getInputFormat
+  }
+
+  def location(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): String = {
+    client.getTable(dbName, tableName).getSd.getLocation
+  }
+
+  def tablePath(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): Path = {
+    new Path(location(dbName, tableName))
+  }
+
+  def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart])
+                   (implicit client: HiveMetaStoreClient): Path = {
+    parts.foldLeft(tablePath(dbName, tableName)) { (path, part) => new Path(path, part.unquotedDir) }
+  }
+
+  // creates (if not existing) the partition for the given partition parts
+  def partitionExists(dbName: String,
                       tableName: String,
-                      partitionName: String,
-                      partitionValue: String)
-                     (implicit client: HiveMetaStoreClient): Unit = {
+                      parts: Seq[PartitionPart])
+                     (implicit client: HiveMetaStoreClient): Boolean = {
+    logger.debug("Checking if partition exists=" + parts.mkString(","))
+    val partitionName = parts.map(_.unquotedDir).mkString("/")
+    try {
+      client.getPartition(dbName, tableName, partitionName) != null
+    } catch {
+      case _: Throwable => false
+    }
+  }
 
-    val existing = client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala.map(_.toLowerCase)
-    if (!existing.contains(s"$partitionName=$partitionValue".toLowerCase)) {
-      logger.debug(s"Creating partition value '$partitionName=$partitionValue'")
+  // creates (if not existing) the partition for the given partition parts
+  def createPartitionIfNotExists(dbName: String,
+                                 tableName: String,
+                                 parts: Seq[PartitionPart])
+                                (implicit client: HiveMetaStoreClient): Unit = {
+    logger.debug("Ensuring partition created=" + parts.mkString(","))
+    val partitionName = parts.map(_.unquotedDir).mkString("/")
+    val exists = try {
+      client.getPartition(dbName, tableName, partitionName) != null
+    } catch {
+      case _: Throwable => false
+    }
+
+    if (!exists) {
+
+      val path = partitionPath(dbName, tableName, parts)
+      logger.debug(s"Creating partition '$partitionName' at $path")
+
       val table = client.getTable(dbName, tableName)
-
       val sd = new StorageDescriptor(table.getSd)
-      sd.setLocation(table.getSd.getLocation + "/" + Partition(partitionName, partitionValue).unquotedDir)
+      sd.setLocation(path.toString)
 
-      val part = new org.apache.hadoop.hive.metastore.api.Partition(
-        new util.ArrayList,
+      val partition = new Partition(
+        parts.map(_.value).toList.asJava,
         dbName,
         tableName,
-        (System.currentTimeMillis / 1000).toInt,
+        createTime,
         0,
         sd,
-        new java.util.HashMap
+        new util.HashMap
       )
-      part.addToValues(partitionValue.toLowerCase)
-      client.add_partition(part)
+
+      client.add_partition(partition)
     }
   }
 
   def createTable(databaseName: String,
                   tableName: String,
                   schema: FrameSchema,
-                  partitionKey: List[String] = Nil,
+                  partitionKeys: List[String] = Nil,
                   format: HiveFormat = HiveFormat.Text,
                   props: Map[String, String] = Map.empty,
                   tableType: TableType = TableType.MANAGED_TABLE,
@@ -69,10 +111,10 @@ object HiveOps extends StrictLogging {
     }
 
     if (!tableExists(databaseName, tableName)) {
-      logger.info(s"Creating table $databaseName.$tableName")
+      logger.info(s"Creating table $databaseName.$tableName with partitionKeys=${partitionKeys.mkString(",")}")
 
       val sd = new StorageDescriptor()
-      sd.setCols(HiveSchemaFieldsFn(schema.columns.filterNot(col => partitionKey.contains(col.name))).asJava)
+      sd.setCols(HiveSchemaFieldsFn(schema.columns.filterNot(col => partitionKeys.contains(col.name))).asJava)
       sd.setSerdeInfo(new SerDeInfo(
         null,
         format.serdeClass,
@@ -85,9 +127,9 @@ object HiveOps extends StrictLogging {
       val table = new Table()
       table.setDbName(databaseName)
       table.setTableName(tableName)
-      table.setCreateTime((System.currentTimeMillis / 1000).toInt)
+      table.setCreateTime(createTime)
       table.setSd(sd)
-      table.setPartitionKeys(partitionKey.map(new FieldSchema(_, "string", null)).asJava)
+      table.setPartitionKeys(partitionKeys.map(new FieldSchema(_, "string", null)).asJava)
       table.setTableType(tableType.name)
       props.+("generated_by" -> "eel").foreach { case (key, value) => table.putToParameters(key, value) }
 
