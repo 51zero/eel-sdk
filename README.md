@@ -1,6 +1,6 @@
 # Eel
 
-[![Build Status](https://travis-ci.org/eel-lib/eel.svg?branch=master)](https://travis-ci.org/eel-lib/eel)
+[![Build Status](https://travis-ci.org/eel-sdk/eel.svg?branch=master)](https://travis-ci.org/eel-sdk/eel)
 
 ![Logo](core/src/main/graphics/eel.png)
 
