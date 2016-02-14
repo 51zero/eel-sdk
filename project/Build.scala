@@ -1,6 +1,8 @@
 import com.typesafe.sbt.pgp.PgpKeys
 import sbt._
 import sbt.Keys._
+import sbtassembly._
+import sbtassembly.AssemblyKeys._
 
 object Build extends Build {
 
@@ -77,24 +79,24 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, solr)
+    .aggregate(core, json, kafka, solr, cli)
 
-  lazy val core = Project("eel-core", file("core"))
+  lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
     .settings(libraryDependencies ++= Seq(
       "io.dropwizard.metrics" %  "metrics-core"     % "3.1.2",
       "io.dropwizard.metrics" %  "metrics-jvm"      % "3.1.2",
-      "com.sksamuel.avro4s"   %% "avro4s-core"     % "1.2.2",
-      "org.apache.parquet"    % "parquet-avro"     % "1.8.1",
-      "org.apache.hadoop"     % "hadoop-common"             % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-client"             % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-hdfs"               % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce"          % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-mapreduce-client"   % HadoopVersion % "provided",
-      "org.apache.hive"       % "hive-common"               % HiveVersion   % "provided",
-      "org.apache.hive"       % "hive-exec"                 % HiveVersion   % "provided" exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
-      "mysql" % "mysql-connector-java" % "5.1.38"
-      ))
+      "com.sksamuel.avro4s"   %% "avro4s-core"      % "1.2.2",
+      "org.apache.parquet"    % "parquet-avro"      % "1.8.1",
+      "org.apache.hadoop"     % "hadoop-common"     % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-client"     % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-hdfs"       % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-mapreduce"  % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-mapreduce-client" % HadoopVersion,
+      "org.apache.hive"       % "hive-common"       % HiveVersion,
+      "org.apache.hive"       % "hive-exec"         % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
+      "mysql"                 % "mysql-connector-java" % "5.1.38"
+    ))
     .settings(name := "eel-core")
 
   lazy val json = Project("eel-json", file("components/json"))
@@ -128,6 +130,24 @@ object Build extends Build {
       "com.sksamuel.elastic4s" %% "elastic4s-core" % "2.1.1",
       "org.json4s"             %% "json4s-native"  % "3.3.0",
       "org.elasticsearch" % "elasticsearch" % "2.1.1" % "test"
+    ))
+    .dependsOn(core)
+
+  lazy val cli = Project("eel-cli", file("eel-cli"))
+    .settings(rootSettings: _*)
+    .settings(
+      name := "eel-cli",
+      mainClass in assembly := Some("io.eels.cli.Main"),
+      assemblyJarName in assembly := "eel-cli.jar",
+      assemblyMergeStrategy in assembly := {
+        case PathList("META-INF", xs@_*) => MergeStrategy.discard
+        case x =>
+          val oldStrategy = (assemblyMergeStrategy in assembly).value
+          oldStrategy(x)
+      }
+    )
+    .settings(libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "3.3.0"
     ))
     .dependsOn(core)
 }
