@@ -14,6 +14,7 @@ object HiveDialect {
     case "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat" => ParquetHiveDialect
     case "org.apache.hadoop.mapred.TextInputFormat" => TextHiveDialect
     case "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" => AvroHiveDialect
+    case "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" => OrcHiveDialect
     case other => sys.error("Unknown hive input format: " + other)
   }
 }

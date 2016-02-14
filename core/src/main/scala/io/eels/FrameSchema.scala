@@ -2,6 +2,8 @@ package io.eels
 
 case class FrameSchema(columns: List[Column]) {
 
+  def columnNames: List[String] = columns.map(_.name)
+
   def addColumn(col: Column): FrameSchema = copy(columns :+ col)
 
   def removeColumn(name: String): FrameSchema = copy(columns = columns.filterNot(_.name == name))

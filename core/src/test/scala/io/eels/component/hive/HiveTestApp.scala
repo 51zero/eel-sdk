@@ -27,8 +27,8 @@ object HiveTestApp extends App with StrictLogging {
     Map("name" -> "jaime", "house" -> "lanister"),
     Map("name" -> "arya", "house" -> "stark"),
     Map("name" -> "sansa", "house" -> "stark"),
-    Map("name" -> "roose bolton", "house" -> "bolton"),
-    Map("name" -> "ramsey bolton", "house" -> "bolton")
+    Map("name" -> "roose, bolton", "house" -> "bolton"),
+    Map("name" -> "ramsey, bolton", "house" -> "bolton")
   )
 
   fs.mkdirs(new Path("/bigdata/sam/characters"))
@@ -38,7 +38,7 @@ object HiveTestApp extends App with StrictLogging {
     "characters",
     frame.schema,
     List("house"),
-    format = HiveFormat.Avro,
+    format = HiveFormat.Orc,
     location = Some("hdfs://localhost:9000/bigdata/sam/characters"),
     overwrite = true
   )
