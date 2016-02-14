@@ -1,5 +1,6 @@
 package io.eels.cli
 
+import com.sksamuel.scalax.net.UrlParamParser
 import io.eels.component.hive.{HiveSource, HiveSink}
 import io.eels.{Sink, Source}
 import org.apache.hadoop.conf.Configuration
@@ -43,10 +44,13 @@ object Main extends App {
 }
 
 object SinkFn {
-  val HiveRegex = "hive:(.*?):(.*?)".r
+  val HiveRegex = "hive:(.*?):(.*?)(?.*?)?".r
   def apply(uri: String)(implicit fs: FileSystem, hiveConf: HiveConf): Sink = uri match {
-    case HiveRegex(database, table) => HiveSink(database, table)
-    case _ => sys.error(s"Unsupported sink $uri")
+    case HiveRegex(database, table, options) =>
+      val params = Option(options).map(UrlParamParser.apply).getOrElse(Map.empty)
+      HiveSink(database, table, params)
+    case _ =>
+      sys.error(s"Unsupported sink $uri")
   }
 }
 

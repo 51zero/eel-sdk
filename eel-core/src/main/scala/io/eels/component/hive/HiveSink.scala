@@ -14,11 +14,14 @@ import scala.collection.mutable
 
 case class HiveSink(dbName: String,
                     tableName: String,
-                    props: HiveSinkProps = HiveSinkProps(),
                     ioThreads: Int = 4,
                     dynamicPartitioning: Boolean = true,
+                    createTable: Boolean = false,
+                    overwriteTable: Boolean = false,
+                    format: HiveFormat = HiveFormat.Text,
                     bufferSize: Int = 1000)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
+  logger.info(s"Created HiveSink; createTable=$createTable, overwriteTable=$overwriteTable; format=$format")
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
@@ -110,6 +113,33 @@ case class HiveSink(dbName: String,
   }
 }
 
+object HiveSink {
+
+  def apply(dbName: String, tableName: String, params: Map[String, List[String]])
+           (implicit fs: FileSystem, hiveConf: HiveConf): HiveSink = {
+
+    val createTable = params.get("createTable").contains(List("true"))
+    val overwriteTable = params.get("overwriteTable").contains(List("true"))
+    val dynamicPartitioning = params.get("dynamicPartitioning").contains(List("true"))
+
+    val format = params.get("format").map(_.head).getOrElse("text").toLowerCase match {
+      case "avro" => HiveFormat.Avro
+      case "orc" => HiveFormat.Orc
+      case "parquet" => HiveFormat.Parquet
+      case _ => HiveFormat.Text
+    }
+
+    HiveSink(
+      dbName,
+      tableName,
+      createTable = createTable,
+      overwriteTable = overwriteTable,
+      dynamicPartitioning = dynamicPartitioning,
+      format = format
+    )
+  }
+}
+
 case class PartitionPart(key: String, value: String) {
   def unquotedDir = s"$key=$value"
 }
@@ -134,7 +164,3 @@ object RowPartitionParts {
     }.toList
   }
 }
-
-case class HiveSinkProps(createTable: Boolean = false,
-                         overwriteTable: Boolean = false,
-                         format: HiveFormat = HiveFormat.Text)
