@@ -25,7 +25,7 @@ case class HiveSink(dbName: String,
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
 
   override def writer: Writer = {
-    logger.debug(s"Writing created; partitions=${partitionKeys.mkString(",")}")
+    logger.debug(s"HiveSinkWriter created; partitions=${partitionKeys.mkString(",")}")
 
     implicit val client = new HiveMetaStoreClient(hiveConf)
 

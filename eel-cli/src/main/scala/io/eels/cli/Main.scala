@@ -14,11 +14,11 @@ object Main extends App {
   val parser = new scopt.OptionParser[Options]("eel") {
     head("eel", "0.21.x")
 
-    opt[String]("source") action { (source, o) =>
+    opt[String]("source") required() action { (source, o) =>
       o.copy(from = source)
     } text "specify source, eg hive:database:table"
 
-    opt[String]("sink") action { (sink, o) =>
+    opt[String]("sink") required() action { (sink, o) =>
       o.copy(to = sink)
     } text "specify sink, eg hive:database:table"
 
@@ -31,11 +31,14 @@ object Main extends App {
     } text "number of worker threads, defaults to 1"
   }
 
-  parser.parse(args, Options()) foreach { options =>
-    val source = SourceFn(options.from)
-    val sink = SinkFn(options.to)
-    val result = source.toFrame(options.sourceIOThreads).to(sink).runConcurrent(options.workerThreads)
-    println(s"Completed with $result rows")
+  parser.parse(args, Options()) match {
+    case Some(options) =>
+      val source = SourceFn(options.from)
+      val sink = SinkFn(options.to)
+      val result = source.toFrame(options.sourceIOThreads).to(sink).runConcurrent(options.workerThreads)
+      println(s"Completed with $result rows")
+    case _ =>
+
   }
 }
 

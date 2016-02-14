@@ -3,6 +3,7 @@ import sbt._
 import sbt.Keys._
 import sbtassembly._
 import sbtassembly.AssemblyKeys._
+import xerial.sbt.Pack._
 
 object Build extends Build {
 
@@ -133,17 +134,22 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-elasticsearch")
     .settings(libraryDependencies ++= Seq(
-      "com.sksamuel.elastic4s" %% "elastic4s-core" % "2.1.1",
-      "org.json4s"             %% "json4s-native"  % "3.3.0",
-      "org.elasticsearch" % "elasticsearch" % "2.1.1" % "test"
+      "com.sksamuel.elastic4s"    %% "elastic4s-core"     % "2.1.1",
+      "org.json4s"                %% "json4s-native"      % "3.3.0",
+      "org.elasticsearch"         % "elasticsearch"       % "2.1.1"     % "test"
     ))
     .dependsOn(core)
     .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val cli = Project("eel-cli", file("eel-cli"))
     .settings(rootSettings: _*)
+    .settings(packAutoSettings: _*)
     .settings(
       name := "eel-cli",
+      packMain := Map("hello" -> "io.eels.cli.Main"),
+      packExtraClasspath := Map("hello" -> Seq("${HADOOP_HOME}/etc/hadoop", "${HIVE_HOME}/conf")),
+      packGenerateWindowsBatFile := true,
+      packJarNameConvention := "default",
       assembleArtifact := true,
       mainClass in assembly := Some("io.eels.cli.Main"),
       assemblyJarName in assembly := "eel-cli.jar",
