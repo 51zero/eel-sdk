@@ -44,7 +44,7 @@ object Main extends App {
 }
 
 object SinkFn {
-  val HiveRegex = "hive:(.*?):(.*?)(?.*?)?".r
+  val HiveRegex = "hive:(.*?):(.*?)(\\?.*?)?".r
   def apply(uri: String)(implicit fs: FileSystem, hiveConf: HiveConf): Sink = uri match {
     case HiveRegex(database, table, options) =>
       val params = Option(options).map(UrlParamParser.apply).getOrElse(Map.empty)
