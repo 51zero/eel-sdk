@@ -18,7 +18,6 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     override def hasNext: Boolean = iter.hasNext
     override def next(): Row = {
       val fields = iter.next.split(delimiter).map(Field.apply).toList.padTo(schema.columns.size, null)
-      logger.debug("Fields=" + fields)
       Row(schema.columns, fields)
     }
   }
@@ -32,7 +31,8 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
                      (implicit fs: FileSystem): HiveWriter = new HiveWriter {
     logger.debug(s"Creating text writer for $path with delimiter=${TextHiveDialect.delimiter}")
 
-    val csv = CSVWriter.open(fs.create(path, false))(new DefaultCSVFormat {
+    val out = fs.create(path, false)
+    val csv = CSVWriter.open(out)(new DefaultCSVFormat {
       override val delimiter: Char = TextHiveDialect.delimiter
       override val lineTerminator: String = "\n"
     })
@@ -41,6 +41,9 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
       csv.writeRow(row.fields.map(_.value))
     }
 
-    override def close(): Unit = csv.close()
+    override def close(): Unit = {
+      csv.close()
+      out.close()
+    }
   }
 }

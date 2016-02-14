@@ -11,6 +11,8 @@ import scala.language.implicitConversions
 trait Source extends StrictLogging {
   self =>
 
+  val DefaultBufferSize = 1000
+
   def schema: FrameSchema
   def readers: Seq[Reader]
 
@@ -21,7 +23,7 @@ trait Source extends StrictLogging {
     override def buffer: Buffer = {
       import com.sksamuel.scalax.concurrent.ExecutorImplicits._
 
-      val queue = new ArrayBlockingQueue[Row](1000)
+      val queue = new ArrayBlockingQueue[Row](DefaultBufferSize)
 
       val executor = Executors.newFixedThreadPool(ioThreads)
       logger.debug(s"Source will read using $ioThreads io threads")

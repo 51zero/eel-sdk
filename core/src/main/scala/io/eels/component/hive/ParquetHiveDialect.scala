@@ -1,13 +1,14 @@
 package io.eels.component.hive
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.avro.AvroSchemaGen
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import io.eels.component.parquet.ParquetIterator
-import io.eels.{Field, Row, FrameSchema}
-import org.apache.avro.generic.GenericData.Record
+import io.eels.{Field, FrameSchema, Row}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
+import org.apache.parquet.hadoop.ParquetWriter
+import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
@@ -26,14 +27,17 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating parquet writer for $path")
     val avroSchema = AvroSchemaGen(schema)
-    val writer = new AvroParquetWriter[GenericRecord](path, avroSchema)
+    val writer = new AvroParquetWriter[GenericRecord](
+      path,
+      avroSchema,
+      CompressionCodecName.UNCOMPRESSED,
+      ParquetWriter.DEFAULT_BLOCK_SIZE,
+      ParquetWriter.DEFAULT_PAGE_SIZE
+    )
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: Row): Unit = {
-        val record = new Record(avroSchema)
-        for ( (key, value) <- row.toMap ) {
-          record.put(key, value)
-        }
+        val record = AvroRecordFn.toRecord(row, avroSchema)
         writer.write(record)
       }
     }

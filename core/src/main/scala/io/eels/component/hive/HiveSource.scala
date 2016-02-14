@@ -114,8 +114,7 @@ case class HiveSource(db: String, table: String,
 }
 
 case class HiveSourceProps(ignoreHiddenFiles: Boolean = true,
-                           hiddenFilePattern: String = "_.*",
-                           concurrentReads: Int = 8)
+                           hiddenFilePattern: String = "_.*")
 
 trait PartitionExpr {
   def eval(partitions: List[Partition]): Boolean

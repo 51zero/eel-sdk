@@ -8,6 +8,8 @@ import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
 trait Frame {
   outer =>
 
+  val DefaultBufferSize = 1000
+
   def schema: FrameSchema
 
   def buffer: Buffer
