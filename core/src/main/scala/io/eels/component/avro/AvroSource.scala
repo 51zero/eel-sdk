@@ -40,13 +40,7 @@ case class AvroSource(path: Path) extends Source with Using {
           hasNext
         }
 
-        override def next: Row = {
-          val record = reader.next
-          val map = record.getSchema.getFields.asScala.map { field =>
-            field.name -> record.get(field.name).toString
-          }.toMap
-          Row(map)
-      }
+        override def next: Row = AvroRecordFn.fromRecord(reader.next)
       }
     }
 

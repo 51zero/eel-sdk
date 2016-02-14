@@ -38,7 +38,7 @@ object HiveTestApp extends App with StrictLogging {
     "characters",
     frame.schema,
     List("house"),
-    format = HiveFormat.Parquet,
+    format = HiveFormat.Avro,
     location = Some("hdfs://localhost:9000/bigdata/sam/characters"),
     overwrite = true
   )

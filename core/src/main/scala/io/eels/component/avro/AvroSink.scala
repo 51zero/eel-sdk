@@ -5,7 +5,6 @@ import java.nio.file.{Files, Path}
 
 import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
 
 case class AvroSink(out: OutputStream) extends Sink {
@@ -17,7 +16,9 @@ case class AvroSink(out: OutputStream) extends Sink {
     override def write(row: Row): Unit = {
       if (writer == null)
         writer = createWriter(row)
-      writer.append(toRecord(row))
+      val schema = AvroSchemaGen(FrameSchema(row.columns))
+      val record = AvroRecordFn.toRecord(row, schema)
+      writer.append(record)
     }
 
     override def close(): Unit = {
@@ -30,12 +31,6 @@ case class AvroSink(out: OutputStream) extends Sink {
       val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
       dataFileWriter.create(AvroSchemaGen(FrameSchema(row.columns)), out)
       dataFileWriter
-    }
-
-    private def toRecord(row: Row): GenericRecord = {
-      val record = new Record(AvroSchemaGen(FrameSchema(row.columns)))
-      row.toMap.foreach { case (key, value) => record.put(key, value) }
-      record
     }
   }
 }

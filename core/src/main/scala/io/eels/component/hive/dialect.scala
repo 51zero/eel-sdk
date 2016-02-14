@@ -4,11 +4,13 @@ import java.io.{BufferedReader, InputStream, InputStreamReader}
 
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.avro.AvroSchemaGen
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import io.eels.component.parquet.ParquetIterator
 import io.eels.{Field, FrameSchema, Row}
+import org.apache.avro.file.{DataFileReader, DataFileWriter, SeekableByteArrayInput}
 import org.apache.avro.generic.GenericData.Record
-import org.apache.avro.generic.GenericRecord
+import org.apache.avro.generic.{GenericDatumReader, GenericDatumWriter, GenericRecord}
+import org.apache.commons.io.IOUtils
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
 
@@ -20,7 +22,8 @@ trait HiveDialect extends StrictLogging {
 object HiveDialect {
   def apply(format: String): HiveDialect = format match {
     case "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat" => ParquetHiveDialect
-    case "org.apache.hadoop.mapred.TextInputFormat" | "org.apache.hadoop.mapreduce.lib.input" => TextHiveDialect
+    case "org.apache.hadoop.mapred.TextInputFormat" => TextHiveDialect
+    case "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" => AvroHiveDialect
     case other => sys.error("Unknown hive input format: " + other)
   }
 }
@@ -65,6 +68,46 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     }
 
     override def close(): Unit = csv.close()
+  }
+}
+
+object AvroHiveDialect extends HiveDialect with StrictLogging {
+
+  override def iterator(path: Path, schema: FrameSchema)
+                       (implicit fs: FileSystem): Iterator[Row] = {
+
+    logger.debug(s"Creating avro iterator for $path")
+
+    val in = fs.open(path)
+    val bytes = IOUtils.toByteArray(in)
+    in.close()
+
+    val datumReader = new GenericDatumReader[GenericRecord]()
+    val reader = new DataFileReader[GenericRecord](new SeekableByteArrayInput(bytes), datumReader)
+
+    new Iterator[Row] {
+      override def hasNext: Boolean = reader.hasNext
+      override def next(): Row = AvroRecordFn.fromRecord(reader.next)
+    }
+  }
+
+  override def writer(schema: FrameSchema, path: Path)
+                     (implicit fs: FileSystem): HiveWriter = {
+    logger.debug(s"Creating avro writer for $path")
+
+    val avroSchema = AvroSchemaGen(schema)
+    val datumWriter = new GenericDatumWriter[GenericRecord](avroSchema)
+    val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
+    val out = fs.create(path, false)
+    val writer = dataFileWriter.create(avroSchema, out)
+
+    new HiveWriter {
+      override def close(): Unit = writer.close()
+      override def write(row: Row): Unit = {
+        val record = AvroRecordFn.toRecord(row, avroSchema)
+        writer.append(record)
+      }
+    }
   }
 }
 
