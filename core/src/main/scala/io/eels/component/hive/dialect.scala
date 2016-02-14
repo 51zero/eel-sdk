@@ -30,7 +30,7 @@ trait HiveWriter {
   def close(): Unit
 }
 
-object TextHiveDialect extends HiveDialect {
+object TextHiveDialect extends HiveDialect with StrictLogging {
 
   val delimiter = '\u0001'
 
@@ -53,6 +53,7 @@ object TextHiveDialect extends HiveDialect {
 
   override def writer(schema: FrameSchema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = new HiveWriter {
+    logger.debug(s"Creating text writer for $path with delimiter=${TextHiveDialect.delimiter}")
 
     val csv = CSVWriter.open(fs.create(path, false))(new DefaultCSVFormat {
       override val delimiter: Char = TextHiveDialect.delimiter
@@ -67,7 +68,7 @@ object TextHiveDialect extends HiveDialect {
   }
 }
 
-object ParquetHiveDialect extends HiveDialect {
+object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
   override def iterator(path: Path, schema: FrameSchema)
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
@@ -82,6 +83,7 @@ object ParquetHiveDialect extends HiveDialect {
 
   override def writer(schema: FrameSchema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
+    logger.debug(s"Creating parquet writer for $path")
     val avroSchema = AvroSchemaGen(schema)
     val writer = new AvroParquetWriter[GenericRecord](path, avroSchema)
     new HiveWriter {

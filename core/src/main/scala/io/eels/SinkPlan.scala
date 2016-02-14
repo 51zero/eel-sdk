@@ -34,8 +34,9 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with Stric
     }
     executors.submit {
       latch.await(1, TimeUnit.DAYS)
+      logger.debug("Closing buffer feed")
       buffer.close()
-      logger.debug("Closed buffer")
+      logger.debug("Sink buffer feed closed; closing writer")
       writer.close()
       logger.debug("Closed writer")
     }

@@ -4,7 +4,6 @@ import java.util
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.FrameSchema
-import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.{TableType, HiveMetaStoreClient}
 import org.apache.hadoop.hive.metastore.api.{SerDeInfo, FieldSchema, StorageDescriptor, Table}
 import scala.collection.JavaConverters._

@@ -43,11 +43,11 @@ object HiveTestApp extends App with StrictLogging {
     overwrite = true
   )
 
-  val sink = HiveSink("sam", "characters").withPartitions("house")
+  val sink = HiveSink("sam", "characters").withPartitions("house").withIOThreads(2)
   frame.to(sink).run
   logger.info("Write complete")
 
-  val plan = HiveSource("sam", "characters").withPartition("house", ">=", "lanister").toList
+  val plan = HiveSource("sam", "characters").withPartition("house", "<=", "lanister").toList
   logger.info("Result=" + plan.run)
 
 }

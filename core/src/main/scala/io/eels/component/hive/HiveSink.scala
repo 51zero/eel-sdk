@@ -1,5 +1,8 @@
 package io.eels.component.hive
 
+import java.util.concurrent.{TimeUnit, CountDownLatch, Executors, ArrayBlockingQueue}
+
+import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -11,17 +14,27 @@ import scala.collection.mutable
 case class HiveSink(dbName: String,
                     tableName: String,
                     props: HiveSinkProps = HiveSinkProps(),
-                    partitionKeys: List[String] = Nil)
+                    partitionKeys: List[String] = Nil,
+                    ioThreads: Int = 1)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
 
+
   def withPartitions(first: String, rest: String*): HiveSink = copy(partitionKeys = (first +: rest).toList)
+
+  def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
 
   override def writer: Writer = new Writer {
     logger.debug(s"Writing created; partitions=${partitionKeys.mkString(",")}")
 
     implicit val client = new HiveMetaStoreClient(hiveConf)
 
-    var created = false
+    val dialect = {
+      val format = HiveOps.tableFormat(dbName, tableName)
+      logger.debug(s"Table format is $format")
+      HiveDialect(format)
+    }
+
+    var tableCreated = false
 
     // returns all the partitions for a given row, if a row does not have a value for a particular partition,
     // then that partition is skipped
@@ -40,43 +53,72 @@ case class HiveSink(dbName: String,
     }
 
     private def ensureTableCreated(row: Row): Unit = {
-      if (props.createTable && !created) {
+      if (props.createTable && !tableCreated) {
         logger.debug(s"Ensuring table $tableName is created")
         val schema = FrameSchema(row.columns)
         HiveOps.createTable(dbName, tableName, schema, partitionKeys, props.format, overwrite = props.overwriteTable)
-        created = true
+        tableCreated = true
       }
     }
 
     // we need an output stream per partition. Since the data can come in unordered, we need to
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
-    var streams = mutable.Map.empty[Path, HiveWriter]
+    val streams = mutable.Map.empty[Path, HiveWriter]
 
     private def getOrCreateHiveWriter(row: Row): HiveWriter = {
-      val partPath = partitionPath(row)
-      streams.getOrElseUpdate(partPath, {
-        val filePath = new Path(partPath, "eel_" + System.nanoTime)
-        logger.debug(s"Creating hive writer for $filePath")
-        ensurePartitionsCreated(row)
-        dialect.writer(FrameSchema(row.columns), filePath)
-      })
+      streams.synchronized {
+        val partPath = partitionPath(row)
+        streams.getOrElseUpdate(partPath, {
+          val filePath = new Path(partPath, "eel_" + System.nanoTime)
+          logger.debug(s"Creating hive writer for $filePath")
+          ensurePartitionsCreated(row)
+          dialect.writer(FrameSchema(row.columns), filePath)
+        })
+      }
     }
 
-    lazy val dialect = {
-      val format = HiveOps.tableFormat(dbName, tableName)
-      logger.debug(s"Table format is $format")
-      HiveDialect(format)
+    import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+
+    val queue = new ArrayBlockingQueue[Row](1000)
+    val latch = new CountDownLatch(ioThreads)
+    val executor = Executors.newFixedThreadPool(ioThreads)
+
+    for ( k <- 1 to ioThreads ) {
+      executor.submit {
+        logger.info(s"Sink thread $k started")
+        try {
+          BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { row =>
+            val writer = getOrCreateHiveWriter(row)
+            writer.synchronized {
+              writer.write(row)
+            }
+          }
+        } catch {
+          case e: Throwable => logger.error("Error writing row", e)
+        } finally {
+          logger.info(s"Sink thread $k completed")
+          latch.countDown()
+        }
+      }
     }
+
+    executor.submit {
+      latch.await(1, TimeUnit.DAYS)
+      logger.debug(s"Latch released; closing ${streams.size} hive writers")
+      streams.values.foreach(_.close)
+    }
+
+    executor.shutdown()
 
     override def close(): Unit = {
-      logger.debug("Closing hive sink writer")
-      streams.values.foreach(_.close)
+      logger.debug("Request to close hive sink writer")
+      queue.put(Row.Sentinel)
+      executor.awaitTermination(1, TimeUnit.HOURS)
     }
 
     override def write(row: Row): Unit = {
       ensureTableCreated(row)
-      val writer = getOrCreateHiveWriter(row)
-      writer.write(row)
+      queue.put(row)
     }
   }
 }
