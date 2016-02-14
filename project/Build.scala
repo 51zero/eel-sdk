@@ -29,6 +29,7 @@ object Build extends Build {
     javacOptions := Seq("-source", "1.7", "-target", "1.7"),
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
+    assembleArtifact := false,
     libraryDependencies ++= Seq(
       "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
       "org.scala-lang"        % "scala-reflect"    % scalaVersion.value,
@@ -80,6 +81,7 @@ object Build extends Build {
     .settings(publishArtifact := false)
     .settings(name := "eel")
     .aggregate(core, json, kafka, solr, cli)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -98,6 +100,7 @@ object Build extends Build {
       "mysql"                 % "mysql-connector-java" % "5.1.38"
     ))
     .settings(name := "eel-core")
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val json = Project("eel-json", file("components/json"))
     .settings(rootSettings: _*)
@@ -106,6 +109,7 @@ object Build extends Build {
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.0"
     ))
     .dependsOn(core)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val kafka = Project("eel-kafka", file("components/kafka"))
     .settings(rootSettings: _*)
@@ -114,6 +118,7 @@ object Build extends Build {
       "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
     ))
     .dependsOn(core)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val solr = Project("eel-solr", file("components/solr"))
     .settings(rootSettings: _*)
@@ -122,6 +127,7 @@ object Build extends Build {
       "org.apache.solr" % "solr-solrj" % "5.4.1"
     ))
     .dependsOn(core)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val elasticsearch = Project("eel-elasticsearch", file("components/elasticsearch"))
     .settings(rootSettings: _*)
@@ -132,18 +138,18 @@ object Build extends Build {
       "org.elasticsearch" % "elasticsearch" % "2.1.1" % "test"
     ))
     .dependsOn(core)
+    .disablePlugins(sbtassembly.AssemblyPlugin)
 
   lazy val cli = Project("eel-cli", file("eel-cli"))
     .settings(rootSettings: _*)
     .settings(
       name := "eel-cli",
+      assembleArtifact := true,
       mainClass in assembly := Some("io.eels.cli.Main"),
       assemblyJarName in assembly := "eel-cli.jar",
       assemblyMergeStrategy in assembly := {
         case PathList("META-INF", xs@_*) => MergeStrategy.discard
-        case x =>
-          val oldStrategy = (assemblyMergeStrategy in assembly).value
-          oldStrategy(x)
+        case _ => MergeStrategy.first
       }
     )
     .settings(libraryDependencies ++= Seq(
