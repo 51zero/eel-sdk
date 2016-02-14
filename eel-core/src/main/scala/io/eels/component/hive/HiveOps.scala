@@ -7,7 +7,6 @@ import io.eels.FrameSchema
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.{Partition, FieldSchema, SerDeInfo, StorageDescriptor, Table}
 import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
-import org.scalatest.path
 
 import scala.collection.JavaConverters._
 
@@ -41,7 +40,11 @@ object HiveOps extends StrictLogging {
 
   def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart])
                    (implicit client: HiveMetaStoreClient): Path = {
-    parts.foldLeft(tablePath(dbName, tableName)) { (path, part) => new Path(path, part.unquotedDir) }
+    partitionPath(dbName, tableName, parts, tablePath(dbName, tableName))
+  }
+
+  def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): Path = {
+    parts.foldLeft(tablePath) { (path, part) => new Path(path, part.unquotedDir) }
   }
 
   // creates (if not existing) the partition for the given partition parts

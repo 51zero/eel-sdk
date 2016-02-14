@@ -34,6 +34,8 @@ case class HiveSink(dbName: String,
       HiveDialect(format)
     }
 
+    val tablePath = HiveOps.tablePath(dbName, tableName)
+
     val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
     logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
@@ -53,16 +55,18 @@ case class HiveSink(dbName: String,
     val writers = mutable.Map.empty[Path, HiveWriter]
 
     def getOrCreateHiveWriter(row: Row): HiveWriter = {
-      val partPath = HiveOps.partitionPath(dbName, tableName, parts(row))
-      writers.getOrElseUpdate(partPath, {
-        val filePath = new Path(partPath, "eel_" + System.nanoTime)
-        logger.debug(s"Creating hive writer for $filePath")
-        if (dynamicPartitioning)
-          HiveOps.createPartitionIfNotExists(dbName, tableName, parts(row))
-        else if (!HiveOps.partitionExists(dbName, tableName, parts(row)))
-          sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
-        dialect.writer(FrameSchema(row.columns), filePath)
-      })
+      val partPath = HiveOps.partitionPath(dbName, tableName, parts(row), tablePath)
+      writers.synchronized {
+        writers.getOrElseUpdate(partPath, {
+          val filePath = new Path(partPath, "eel_" + System.nanoTime)
+          logger.debug(s"Creating hive writer for $filePath")
+          if (dynamicPartitioning)
+            HiveOps.createPartitionIfNotExists(dbName, tableName, parts(row))
+          else if (!HiveOps.partitionExists(dbName, tableName, parts(row)))
+            sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
+          dialect.writer(FrameSchema(row.columns), filePath)
+        })
+      }
     }
 
     import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
@@ -78,7 +82,9 @@ case class HiveSink(dbName: String,
         try {
           BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { row =>
             val writer = getOrCreateHiveWriter(row)
-            writer.write(row)
+            writer.synchronized {
+              writer.write(row)
+            }
             val k = count.incrementAndGet()
             if (k % 10000 == 0)
               logger.debug(s"Written $k / ? =>")
