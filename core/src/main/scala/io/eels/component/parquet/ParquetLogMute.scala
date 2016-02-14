@@ -6,7 +6,7 @@ import scala.util.Try
 
 object ParquetLogMute {
 
-  val packages = Seq("org.apache.parquet", "parquet")
+  val packages = Seq("org.apache.parquet", "parquet", "org.apache.parquet.hadoop")
 
   def apply(): Unit = {
     for ( pack <- packages ) {

@@ -78,28 +78,28 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val rows = List.fill(1000000)(Row(Map("name" -> UUID.randomUUID.toString, "state" -> states(Random.nextInt(50)))))
-  val frame = Frame(rows)
+ // val rows = List.fill(1000000)(Row(Map("name" -> UUID.randomUUID.toString, "state" -> states(Random.nextInt(50)))))
+ // val frame = Frame(rows)
 
-  HiveOps.createTable(
-    "sam",
-    "people",
-    frame.schema,
-    List("state"),
-    format = HiveFormat.Parquet,
-    overwrite = true
-  )
-
-  logger.info("Table created")
-
-  val sink = HiveSink("sam", "people").withPartitions("state").withIOThreads(1)
-  frame.to(sink).runConcurrent(2)
-
-  logger.info("Write complete")
+//  HiveOps.createTable(
+//    "sam",
+//    "people",
+//    frame.schema,
+//    List("state"),
+//    format = HiveFormat.Parquet,
+//    overwrite = true
+//  )
+//
+//  logger.info("Table created")
+//
+//  val sink = HiveSink("sam", "people").withPartitions("state").withIOThreads(1)
+//  frame.to(sink).runConcurrent(2)
+//
+//  logger.info("Write complete")
 
   val start = System.currentTimeMillis()
 
-  val result = HiveSource("sam", "people").withPartition("state", "<", "Iowa").toFrame(1).toList.run
+  val result = HiveSource("sam", "people").withPartition("state", "<=", "Iowa").toFrame(4).toList.runConcurrent(4)
 
   val end = System.currentTimeMillis()
 

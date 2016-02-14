@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
+import io.eels.component.parquet.ParquetLogMute
 import io.eels.{FrameSchema, HdfsIterator, Reader, Source}
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -17,6 +18,7 @@ case class HiveSource(db: String, table: String,
   extends Source
     with StrictLogging
     with Using {
+  ParquetLogMute()
 
   def withPartition(name: String, value: String): HiveSource = withPartition(name, "=", value)
   def withPartition(name: String, op: String, value: String): HiveSource = {
@@ -106,6 +108,7 @@ case class HiveSource(db: String, table: String,
 
     paths.map { path =>
       new Reader {
+        ParquetLogMute()
         lazy val iterator = dialect.iterator(path, schema)
         override def close(): Unit = () // todo close dialect
       }

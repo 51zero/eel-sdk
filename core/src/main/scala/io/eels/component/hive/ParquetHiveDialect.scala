@@ -14,6 +14,8 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
   override def iterator(path: Path, schema: FrameSchema)
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
+    ParquetLogMute()
+
     lazy val iter = ParquetIterator(path)
     override def hasNext: Boolean = iter.hasNext
     override def next(): Row = {
