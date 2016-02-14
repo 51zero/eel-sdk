@@ -15,7 +15,7 @@ import scala.collection.mutable
 case class HiveSink(dbName: String,
                     tableName: String,
                     props: HiveSinkProps = HiveSinkProps(),
-                    ioThreads: Int = 1,
+                    ioThreads: Int = 4,
                     dynamicPartitioning: Boolean = true,
                     bufferSize: Int = 1000)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
@@ -81,7 +81,7 @@ case class HiveSink(dbName: String,
             writer.write(row)
             val k = count.incrementAndGet()
             if (k % 10000 == 0)
-              logger.debug(s"Writer Buffer=>HiveDialect $k/? =>")
+              logger.debug(s"Written $k / ? =>")
           }
         } catch {
           case e: Throwable => logger.error("Error writing row", e)

@@ -7,6 +7,7 @@ import io.eels.FrameSchema
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.{Partition, FieldSchema, SerDeInfo, StorageDescriptor, Table}
 import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
+import org.scalatest.path
 
 import scala.collection.JavaConverters._
 
@@ -48,8 +49,8 @@ object HiveOps extends StrictLogging {
                       tableName: String,
                       parts: Seq[PartitionPart])
                      (implicit client: HiveMetaStoreClient): Boolean = {
-    logger.debug("Checking if partition exists=" + parts.mkString(","))
     val partitionName = parts.map(_.unquotedDir).mkString("/")
+    logger.debug(s"Checking if partition exists '$partitionName'")
     try {
       client.getPartition(dbName, tableName, partitionName) != null
     } catch {
@@ -62,8 +63,8 @@ object HiveOps extends StrictLogging {
                                  tableName: String,
                                  parts: Seq[PartitionPart])
                                 (implicit client: HiveMetaStoreClient): Unit = {
-    logger.debug("Ensuring partition created=" + parts.mkString(","))
     val partitionName = parts.map(_.unquotedDir).mkString("/")
+    logger.debug(s"Ensuring partition exists '$partitionName'")
     val exists = try {
       client.getPartition(dbName, tableName, partitionName) != null
     } catch {
