@@ -39,30 +39,20 @@ case class HiveSink(dbName: String,
     val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
     logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
-    // returns all the partition parts for a given row, if a row doesn't contain a value
-    // for a part then an error is thrown
-    def parts(row: Row): Seq[PartitionPart] = {
-      require(partitionKeyNames.forall(row.contains), "Row must contain all partitions " + partitionKeyNames)
-      partitionKeyNames.map { name =>
-        val value = row(name)
-        require(!value.contains(" "), "Values for partition fields cannot contain spaces")
-        PartitionPart(name, value)
-      }
-    }
-
     // we need an output stream per partition. Since the data can come in unordered, we need to
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
 
     def getOrCreateHiveWriter(row: Row): HiveWriter = {
-      val partPath = HiveOps.partitionPath(dbName, tableName, parts(row), tablePath)
+      val parts = RowPartitionParts(row, partitionKeyNames)
+      val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
       writers.synchronized {
         writers.getOrElseUpdate(partPath, {
           val filePath = new Path(partPath, "eel_" + System.nanoTime)
           logger.debug(s"Creating hive writer for $filePath")
           if (dynamicPartitioning)
-            HiveOps.createPartitionIfNotExists(dbName, tableName, parts(row))
-          else if (!HiveOps.partitionExists(dbName, tableName, parts(row)))
+            HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+          else if (!HiveOps.partitionExists(dbName, tableName, parts))
             sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
           dialect.writer(FrameSchema(row.columns), filePath)
         })
@@ -129,6 +119,19 @@ object PartitionPart {
   def unapply(str: String): Option[(String, String)] = str.split('=') match {
     case Array(a, b) => Some((a, b))
     case _ => None
+  }
+}
+
+// returns all the partition parts for a given row, if a row doesn't contain a value
+// for a part then an error is thrown
+object RowPartitionParts {
+  def apply(row: Row, partNames: Seq[String]): List[PartitionPart] = {
+    require(partNames.forall(row.contains), "Row must contain all partitions " + partNames)
+    partNames.map { name =>
+      val value = row(name)
+      require(!value.contains(" "), "Values for partition fields cannot contain spaces")
+      PartitionPart(name, value)
+    }.toList
   }
 }
 
