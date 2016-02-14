@@ -147,7 +147,7 @@ object Build extends Build {
     .settings(
       name := "eel-cli",
       packMain := Map("hello" -> "io.eels.cli.Main"),
-      packExtraClasspath := Map("hello" -> Seq("${HADOOP_HOME}/etc/hadoop", "${HIVE_HOME}/conf")),
+      packExtraClasspath := Map("eel" -> Seq("${HADOOP_HOME}/etc/hadoop", "${HIVE_HOME}/conf")),
       packGenerateWindowsBatFile := true,
       packJarNameConvention := "default",
       assembleArtifact := true,
