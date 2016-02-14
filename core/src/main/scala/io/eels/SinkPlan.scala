@@ -20,9 +20,7 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with Stric
         try {
           buffer.iterator.foreach { row =>
             writer.write(row)
-            val k = count.incrementAndGet()
-            //      if (k % 1000 == 0)
-            //        logger.debug(s"Frame Buffer=>Writer $k/? =>")
+            count.incrementAndGet()
           }
         } catch {
           case e: Throwable =>

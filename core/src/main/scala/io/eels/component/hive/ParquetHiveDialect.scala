@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
-import io.eels.component.parquet.ParquetIterator
+import io.eels.component.parquet.{ParquetLogMute, ParquetIterator}
 import io.eels.{Field, FrameSchema, Row}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -25,6 +25,8 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
   override def writer(schema: FrameSchema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
+    ParquetLogMute()
+
     logger.debug(s"Creating parquet writer for $path")
     val avroSchema = AvroSchemaGen(schema)
     val writer = new AvroParquetWriter[GenericRecord](
@@ -35,6 +37,8 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
       ParquetWriter.DEFAULT_PAGE_SIZE
     )
     new HiveWriter {
+      ParquetLogMute()
+
       override def close(): Unit = writer.close()
       override def write(row: Row): Unit = {
         val record = AvroRecordFn.toRecord(row, avroSchema)
