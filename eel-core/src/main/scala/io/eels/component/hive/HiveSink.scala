@@ -118,9 +118,9 @@ object HiveSink {
   def apply(dbName: String, tableName: String, params: Map[String, List[String]])
            (implicit fs: FileSystem, hiveConf: HiveConf): HiveSink = {
 
-    val createTable = params.get("createTable").contains(List("true"))
-    val overwriteTable = params.get("overwriteTable").contains(List("true"))
-    val dynamicPartitioning = params.get("dynamicPartitioning").contains(List("true"))
+    val createTable = params.get("createTable").map(_.head).getOrElse("false") == "true"
+    val overwriteTable = params.get("overwriteTable").map(_.head).getOrElse("false") == "true"
+    val dynamicPartitioning = params.get("dynamicPartitioning").map(_.head).getOrElse("false") == "true"
 
     val format = params.get("format").map(_.head).getOrElse("text").toLowerCase match {
       case "avro" => HiveFormat.Avro
