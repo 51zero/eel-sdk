@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/eel-sdk/eel.svg?branch=master)](https://travis-ci.org/eel-sdk/eel)
 
-![Logo](core/src/main/graphics/eel.png)
+![Logo](eel-core/src/main/graphics/eel.png)
 
 Toolkit for using big data technologies in the small.
 
