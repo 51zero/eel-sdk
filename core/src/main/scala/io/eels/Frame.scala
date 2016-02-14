@@ -90,10 +90,12 @@ trait Frame {
   }
 
   /**
-    * Returns a new Frame where only each "step" row is retained. Ie, if step is 2 then rows 1,3,5,7 will be
-    * retainined and if step was 10, then 1,11,21,31 etc.
+    * Returns a new Frame where only each "k" row is retained. Ie, if sample is 2, then on average,
+    * every other row will be returned. If sample is 10 then only 10% of rows will be returned.
+    * When running concurrently, the rows that are sampled will vary depending on the ordering that the
+    * workers pull through the rows. Each iterator (thread) uses its own count for the sample.
     */
-  def step(k: Int): Frame = new Frame {
+  def sample(k: Int): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
