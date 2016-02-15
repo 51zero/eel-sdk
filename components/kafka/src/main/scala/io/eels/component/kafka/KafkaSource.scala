@@ -30,7 +30,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     )
     consumer.subscribe(topics.toList.asJava)
 
-    val record = consumer.poll(1000).asScala.take(1).toList.head
+    val record = consumer.poll(4000).asScala.take(1).toList.head
     consumer.close()
     val row = deserializer(record.value)
 
@@ -53,7 +53,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
       )
       consumer.subscribe(topics.toList.asJava)
 
-      val records = consumer.poll(1000).asScala.toList
+      val records = consumer.poll(4000).asScala.toList
       logger.debug(s"Read ${records.size} records from kafka")
       consumer.close()
       logger.debug("Closed kafka consumer")

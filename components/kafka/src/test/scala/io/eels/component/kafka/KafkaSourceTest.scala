@@ -31,7 +31,7 @@ class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
       producer.close(1, TimeUnit.MINUTES)
 
-      val sourceConfig = KafkaSourceConfig("localhost:" + config.kafkaPort, topic)
+      val sourceConfig = KafkaSourceConfig("localhost:" + config.kafkaPort, "myconsumer2")
       val source = KafkaSource(sourceConfig, Set(topic), JsonKafkaDeserializer)
       val rows = source.toList.run
       rows.size shouldBe 100
