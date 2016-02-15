@@ -30,7 +30,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     )
     consumer.subscribe(topics.toList.asJava)
 
-    val record = consumer.poll(0).asScala.take(1).toList.head
+    val record = consumer.poll(1000).asScala.take(1).toList.head
     consumer.close()
     val row = deserializer(record.value)
 

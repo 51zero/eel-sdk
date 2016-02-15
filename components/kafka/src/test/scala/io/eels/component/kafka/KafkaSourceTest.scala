@@ -11,7 +11,7 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
-  val config = EmbeddedKafkaConfig()
+  val config = EmbeddedKafkaConfig(zookeeperPort = 2401, kafkaPort = 9405)
   val kafka = new EmbeddedKafka(config)
   kafka.start()
 
