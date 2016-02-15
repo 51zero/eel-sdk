@@ -4,7 +4,7 @@
 
 ![Logo](eel-core/src/main/graphics/eel.png)
 
-Eel is a toolkit for using big data technologies in the small. 
+Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as Spark or Flink, Eel operates on a single machine. It is aimed at those problems which can be solved simply and quickly by iterating over data row by row. Or when the size of the data fits into memory and shuffling data between nodes adds overhead and complexity. This turns out to be quite a common use case.
 
 Latest release [here](http://search.maven.org/#search|ga|1|io-eels)
 
