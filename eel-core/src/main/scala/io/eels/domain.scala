@@ -78,6 +78,16 @@ case class Row(columns: List[Column], fields: List[Field]) {
     )
   }
 
+  def replace(from: String, target: String): Row = {
+    Row(
+      columns,
+      fields.map {
+        case Field(`from`) => Field(target)
+        case other => other
+      }
+    )
+  }
+
   def join(other: Row): Row = Row(columns ++ other.columns, fields ++ other.fields)
 
   def size: Int = columns.size

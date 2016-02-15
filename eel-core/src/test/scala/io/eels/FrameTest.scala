@@ -161,6 +161,18 @@ class FrameTest extends WordSpec with Matchers {
         )
       }
     }
+    "support replace" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> null)),
+        Row(Map("name" -> "bob", "location" -> "buckingham"))
+      )
+      frame.replace("sam", "ham").toList.run shouldBe {
+        List(
+          Row(Map("name" -> "ham", "location" -> null)),
+          Row(Map("name" -> "bob", "location" -> "buckingham"))
+        )
+      }
+    }
     "support dropNullRows" in {
       val frame = Frame(
         Row(Map("name" -> "sam", "location" -> null)),
