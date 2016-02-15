@@ -72,12 +72,3 @@ trait KafkaDeserializer {
   def apply(bytes: Array[Byte]): Row
 }
 
-object JsonKafkaDeserializer extends KafkaDeserializer {
-  val mapper = new ObjectMapper
-  override def apply(bytes: Array[Byte]): Row = {
-    val node = mapper.readTree(bytes)
-    val columns = node.fieldNames.asScala.map(Column.apply).toList
-    val fields = node.fieldNames.asScala.map { name => Field(node.get(name).textValue) }.toList
-    Row(columns, fields)
-  }
-}

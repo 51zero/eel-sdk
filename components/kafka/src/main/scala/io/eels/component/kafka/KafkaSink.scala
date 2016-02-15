@@ -43,8 +43,3 @@ case class KafkaSink(config: KafkaSinkConfig, topic: String, serializer: KafkaSe
 trait KafkaSerializer {
   def apply(row: Row): Array[Byte]
 }
-
-object JsonKafkaSerializer extends KafkaSerializer {
-  val mapper = new ObjectMapper
-  override def apply(row: Row): Array[Byte] = mapper.writeValueAsBytes(row.toMap)
-}
