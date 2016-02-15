@@ -78,7 +78,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, solr, cli)
+    .aggregate(core, json, kafka, mongo, solr, cli)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -113,6 +113,14 @@ object Build extends Build {
       "org.apache.kafka"              %  "kafka-clients"        % "0.9.0.0",
       "com.sksamuel.kafka.embedded"   %% "embedded-kafka"       % "0.21.0",
       "com.fasterxml.jackson.core"    % "jackson-databind"      % "2.7.0"
+    ))
+    .dependsOn(core)
+
+  lazy val mongo = Project("eel-mongo", file("components/mongo"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-mongo")
+    .settings(libraryDependencies ++= Seq(
+       "org.mongodb" % "mongo-java-driver" % "3.2.2"
     ))
     .dependsOn(core)
 

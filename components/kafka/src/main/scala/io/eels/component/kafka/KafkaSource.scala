@@ -2,9 +2,8 @@ package io.eels.component.kafka
 
 import java.util.{Properties, UUID}
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Field, FrameSchema, Reader, Row, Source}
+import io.eels.{FrameSchema, Reader, Row, Source}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
@@ -30,7 +29,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     )
     consumer.subscribe(topics.toList.asJava)
 
-    val record = consumer.poll(4000).asScala.take(1).toList.head
+    val record = consumer.poll(10000).asScala.take(1).toList.head
     consumer.close()
     val row = deserializer(record.value)
 
@@ -53,7 +52,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
       )
       consumer.subscribe(topics.toList.asJava)
 
-      val records = consumer.poll(4000).asScala.toList
+      val records = consumer.poll(10000).asScala.toList
       logger.debug(s"Read ${records.size} records from kafka")
       consumer.close()
       logger.debug("Closed kafka consumer")
