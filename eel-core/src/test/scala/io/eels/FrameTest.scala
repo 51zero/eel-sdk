@@ -161,5 +161,16 @@ class FrameTest extends WordSpec with Matchers {
         )
       }
     }
+    "support dropNullRows" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> null)),
+        Row(Map("name" -> "bob", "location" -> "buckingham"))
+      )
+      frame.dropNullRows.toList.run shouldBe {
+        List(
+          Row(Map("name" -> "bob", "location" -> "buckingham"))
+        )
+      }
+    }
   }
 }

@@ -249,6 +249,15 @@ trait Frame {
     }
   }
 
+  def dropNullRows: Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.filterNot(_.hasNullValue)
+    }
+  }
+
   // -- actions --
   def size: Plan[Long] = new ToSizePlan(this)
 

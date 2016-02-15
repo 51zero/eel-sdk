@@ -46,13 +46,14 @@ object Row {
 }
 
 case class Row(columns: List[Column], fields: List[Field]) {
-
   require(columns.size == fields.size, s"Columns and fields should have the same size [cols=$columns, fields=$fields]")
 
   def apply(name: String): String = {
     val pos = columns.indexWhere(_.name == name)
     fields(pos).value
   }
+
+  def hasNullValue: Boolean = fields.exists(_.value == null)
 
   def contains(columnName: String): Boolean = columns.exists(_.name == columnName)
 
