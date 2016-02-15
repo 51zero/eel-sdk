@@ -149,5 +149,17 @@ class FrameTest extends WordSpec with Matchers {
         )
       }
     }
+    "support fill" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> null)),
+        Row(Map("name" -> null, "location" -> "buckingham"))
+      )
+      frame.fill("foo").toList.run shouldBe {
+        List(
+          Row(Map("name" -> "sam", "location" -> "foo")),
+          Row(Map("name" -> "foo", "location" -> "buckingham"))
+        )
+      }
+    }
   }
 }

@@ -142,6 +142,15 @@ trait Frame {
     }
   }
 
+  def fill(defaultValue: String): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.map(_.fill(defaultValue))
+    }
+  }
+
   def ++(frame: Frame): Frame = union(frame)
   def union(other: Frame): Frame = new Frame {
     override def schema: FrameSchema = outer.schema

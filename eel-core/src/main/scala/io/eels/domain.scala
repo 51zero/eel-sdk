@@ -67,6 +67,16 @@ case class Row(columns: List[Column], fields: List[Field]) {
     }, fields)
   }
 
+  def fill(defaultValue: String): Row = {
+    Row(
+      columns,
+      fields.map {
+        case Field(null) => Field(defaultValue)
+        case other => other
+      }
+    )
+  }
+
   def join(other: Row): Row = Row(columns ++ other.columns, fields ++ other.fields)
 
   def size: Int = columns.size
