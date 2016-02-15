@@ -4,7 +4,7 @@
 
 ![Logo](eel-core/src/main/graphics/eel.png)
 
-Toolkit for using big data technologies in the small.
+Eel is a toolkit for using big data technologies in the small. 
 
 Latest release [here](http://search.maven.org/#search|ga|1|io-eels)
 
@@ -23,6 +23,10 @@ Eel is a small toolkit for moving data between file formats and databases, when 
 * Coalescing spark output
 
 * Dumping data from JDBC into Hadoop
+
+### Introduction
+
+The core data structure in Eel is the Frame. A frame consists of columns, and rows containings values for each column. A frame is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. Frames are constructed from sources such as hive tables, jdbc databases, delimited files, kafka queues, or even programatically from Scala or Java collections.
 
 ### Examples
 
