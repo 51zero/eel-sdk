@@ -135,5 +135,19 @@ class FrameTest extends WordSpec with Matchers {
         Row(Map("name" -> "ham", "location" -> "buckingham"))
       )
     }
+    "support explode" in {
+      val frame = Frame(
+        Row(Map("name" -> "sam", "location" -> "aylesbury")),
+        Row(Map("name" -> "jim", "location" -> "buckingham"))
+      )
+      frame.explode(row => Seq(row, row)).toList.run shouldBe {
+        List(
+          Row(Map("name" -> "sam", "location" -> "aylesbury")),
+          Row(Map("name" -> "sam", "location" -> "aylesbury")),
+          Row(Map("name" -> "jim", "location" -> "buckingham")),
+          Row(Map("name" -> "jim", "location" -> "buckingham"))
+        )
+      }
+    }
   }
 }
