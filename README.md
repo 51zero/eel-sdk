@@ -57,6 +57,16 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 * Kafka
 * Elasticsearch
 * Solr
+* 
+
+### Changelog
+
+* 0.22.0 15/02/15 - Kafka sink and kafka source added
+* 0.21.0 14/02/15 - Dynamic partioning added on write to Hive sink
+* 0.20.1 13/02/15 - Contention issues fixed in hive sink
+* 0.20.0 12/02/15 - Orc and Avro table support added to Hive components
+* 0.19.0 11/02/15 - Parquet table support added to Hive and Hive now supports writing
+* 0.18.0 10/02/15 - Multi threaded read/writes now supported
 
 ### How to use
 
