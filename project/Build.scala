@@ -110,7 +110,9 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-kafka")
     .settings(libraryDependencies ++= Seq(
-      "org.apache.kafka" % "kafka-clients" % "0.9.0.0"
+      "org.apache.kafka"              %  "kafka-clients"        % "0.9.0.0",
+      "com.sksamuel.kafka.embedded"   %% "embedded-kafka"       % "0.21.0",
+      "com.fasterxml.jackson.core"    % "jackson-databind"      % "2.7.0"
     ))
     .dependsOn(core)
 

@@ -39,7 +39,7 @@ case class JsonSource(path: Path) extends Source with Using {
 
         def nodeToRow(node: JsonNode): Row = {
           val columns = node.fieldNames.asScala.map(Column.apply).toList
-          val fields = node.elements.asScala.map(node => Field(node.textValue)).toList
+          val fields = node.fieldNames.asScala.map { name => Field(node.get(name).textValue) }.toList
           Row(columns, fields)
         }
       }
