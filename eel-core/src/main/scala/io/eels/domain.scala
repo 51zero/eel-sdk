@@ -53,6 +53,8 @@ case class Row(columns: List[Column], fields: List[Field]) {
     fields(pos).value
   }
 
+  def entries: List[(Column, Field)] = columns.zip(fields)
+
   def hasNullValue: Boolean = fields.exists(_.value == null)
 
   def contains(columnName: String): Boolean = columns.exists(_.name == columnName)
@@ -86,6 +88,14 @@ case class Row(columns: List[Column], fields: List[Field]) {
         case other => other
       }
     )
+  }
+
+  def replace(columnName: String, from: String, target: String): Row = {
+    val (columns, fields) = entries.map {
+      case (column, Field(`from`)) if column.name == columnName => (column, Field(target))
+      case other => other
+    }.unzip
+    Row(columns, fields)
   }
 
   def join(other: Row): Row = Row(columns ++ other.columns, fields ++ other.fields)
