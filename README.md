@@ -96,7 +96,13 @@ Simple example of writing to a Hive database `frame.to(HiveSink("mydb", "mytable
 
 We can specify the number of concurrent writes, by using the ioThreads parameter `frame.to(HiveSink("mydb", "mytable").withIOThreads(4))`
  
- 
+ Kafka Source
+---
+
+Eel integrates with kafka to read messages from a topic or topics into a Frame. To connect to a Kafka server we need an instance of `KafkaSource` with an instance of `KafkaSourceConfig`. The config requires the broker list (host:port,host:port,..), the consumer group to connect as, as well as the topic or topics to read from. In addition we must specify a `KafkaDeserializer` that can convert the incoming byte array from Kafka into an eel Row. 
+
+To create a KafkaSource that uses the default Json message deserialier, we can do: 
+`KafkaSource(KafkaSourceConfig("localhost:12345", "consumer"), Set("topic1"), JsonKafkaDeserializer)`
 
 ### Changelog
 
