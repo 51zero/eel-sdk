@@ -57,11 +57,46 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 * Avro
 * Hadoop Sequence files
 * Hadoop Orc
-* Hive
 * Kafka
 * Elasticsearch
 * Solr
-* 
+
+Parquet Source
+--------------
+The parquet source will read from one or more parquet files. To use the source, create an instance of `ParquetSource` specifying a file pattern or `Path` object. Currently the Parquet source will assume the format of the parquet file is Avro.
+
+Example reading from a single file `ParquetSource(new Path("hdfs:///myfile"))`
+Example reading from a wildcard pattern `ParquetSource("hdfs:///user/sam/*"))`
+
+Hive Source
+---
+The Hive source will read from a hive table. To use this source, create an instance of `HiveSource` specifying the database name, the table name, any partitions to limit the read. The source also requires instances of the Hadoop [Filesystem](https://hadoop.apache.org/docs/r2.6.1/api/org/apache/hadoop/fs/FileSystem.html) object, and a [HiveConf](https://hive.apache.org/javadocs/r0.13.1/api/common/org/apache/hadoop/hive/conf/HiveConf.html) object.
+
+Reading all rows from a table is the simplest use case: `HiveSource("mydb", "mytable")`. We can also read rows from a table for a particular partition. For example, to read all rows which have the value '1975' for the partition column 'year': `HiveSource("mydb", "mytable").withPartition("year", "1975")`
+
+The partition clause accepts an operator to perform more complicated querying, such as less than, greater than etc. For example to read all rows which have a *year* less than *1975* we can do: `HiveSource("mydb", "mytable").withPartition("year", "<", "1975")`.
+
+
+Hive Sink
+----
+The Hive sink writes data to Hive tables stored in any of the following formats: ORC (Optimized Row Columnar), Parquet, Avro, or Text delimited.
+
+To configure a Hive Sink, you specify the Hive database, the table to write to, and the format to write in. The sink also requires instances of the Hadoop [Filesystem](https://hadoop.apache.org/docs/r2.6.1/api/org/apache/hadoop/fs/FileSystem.html) object, and a [HiveConf](https://hive.apache.org/javadocs/r0.13.1/api/common/org/apache/hadoop/hive/conf/HiveConf.html) object.
+
+**Properties**
+
+|Parameter|Description|
+|----------|------------------|
+|IO Threads|The number of concurrent writes to the sink|
+|Dynamic Partitioning|If set to true then any values on partitioned fields that are new, will automatically be created as partitions in the metastore. If set to false, then a new value will throw an error.
+
+**Example**
+
+Simple example of writing to a Hive database `frame.to(HiveSink("mydb", "mytable"))`
+
+We can specify the number of concurrent writes, by using the ioThreads parameter `frame.to(HiveSink("mydb", "mytable").withIOThreads(4))`
+ 
+ 
 
 ### Changelog
 
