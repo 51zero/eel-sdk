@@ -16,6 +16,11 @@ case class FrameSchema(columns: List[Column]) {
     FrameSchema(columns ++ other.columns)
   }
 
+  def renameColumn(from: String, to: String): FrameSchema = FrameSchema(columns.map {
+    case col@Column(`from`, _, _, _, _, _, _) => col.copy(name = to)
+    case other => other
+  })
+
   def print: String = {
     columns.map { column =>
       val str = s"- ${column.name} [${column.`type`}]"

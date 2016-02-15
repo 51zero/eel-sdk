@@ -46,6 +46,7 @@ object Row {
 }
 
 case class Row(columns: List[Column], fields: List[Field]) {
+
   require(columns.size == fields.size, s"Columns and fields should have the same size [cols=$columns, fields=$fields]")
 
   def apply(name: String): String = {
@@ -57,6 +58,13 @@ case class Row(columns: List[Column], fields: List[Field]) {
 
   def except(other: Row): Row = {
     other.columns.foldLeft(this)((row, column) => row.removeColumn(column.name))
+  }
+
+  def renameColumn(nameFrom: String, nameTo: String): Row = {
+    Row(columns.map {
+      case col@Column(`nameFrom`, _, _, _, _, _, _) => col.copy(name = nameTo)
+      case other => other
+    }, fields)
   }
 
   def join(other: Row): Row = Row(columns ++ other.columns, fields ++ other.fields)

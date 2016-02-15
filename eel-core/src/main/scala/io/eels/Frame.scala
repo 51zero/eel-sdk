@@ -124,6 +124,15 @@ trait Frame {
     }
   }
 
+  def renameColumn(nameFrom: String, nameTo: String): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema.renameColumn(nameFrom, nameTo)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.map(_.renameColumn(nameFrom, nameTo))
+    }
+  }
+
   def ++(frame: Frame): Frame = union(frame)
   def union(other: Frame): Frame = new Frame {
     override def schema: FrameSchema = outer.schema

@@ -6,20 +6,18 @@ import io.eels.HdfsIterator
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.metastore.api.Table
 
-object HiveFileExplorer {
+object HiveFileScanner {
   def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path] = {
-    if (partitionExprs.isEmpty) TableLocationHiveFileExplorer(table, partitionExprs)
-    else PartitionHiveFileExplorer(table, partitionExprs)
+    if (partitionExprs.isEmpty) HiveTableFileEnumerator(table)
+    else HivePartitionFileEnumerator(table, partitionExprs)
   }
 }
 
-trait HiveFileExplorer extends StrictLogging {
+trait HiveFileScanner extends StrictLogging {
 
   protected val config = ConfigFactory.load()
   protected val ignoreHiddenFiles = config.getBoolean("eel.hive.source.ignoreHiddenFiles")
   protected val hiddenFilePattern = config.getString("eel.hive.source.hiddenFilePattern")
-
-  def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path]
 
   // returns true if the given file should be considered "hidden" based on the config settings
   def isHidden(file: LocatedFileStatus): Boolean = {
@@ -36,16 +34,17 @@ trait HiveFileExplorer extends StrictLogging {
 }
 
 // loads all files under the table location
-object TableLocationHiveFileExplorer extends HiveFileExplorer {
-  override def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path] = {
+object HiveTableFileEnumerator extends HiveFileScanner {
+  def apply(table: Table)(implicit fs: FileSystem): List[Path] = {
     val location = table.getSd.getLocation
     scan(location).map(_.getPath)
   }
 }
 
-object PartitionHiveFileExplorer extends HiveFileExplorer {
+// loads all files under a table for the given set of partitions
+object HivePartitionFileEnumerator extends HiveFileScanner {
 
-  override def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path] = {
+  def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path] = {
 
     // returns true if the file meets the partition exprs
     def isEvaluated(file: LocatedFileStatus): Boolean = {

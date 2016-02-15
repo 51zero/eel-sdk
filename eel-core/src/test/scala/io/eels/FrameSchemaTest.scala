@@ -11,5 +11,9 @@ class FrameSchemaTest extends WordSpec with Matchers {
     "pretty print in desired format" in {
       frame.schema.print shouldBe "- a [String]\n- b [String]"
     }
+    "allow renaming of columns" in {
+      frame.renameColumn("a", "c").schema shouldBe
+        FrameSchema(List(Column("c", SchemaType.String, false), Column("b", SchemaType.String, false)))
+    }
   }
 }

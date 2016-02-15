@@ -64,7 +64,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
       val t = client.getTable(db, table)
       val schema = this.schema
       val dialect = this.dialect(t)
-      val paths = HiveFileExplorer(t, partitionExprs)
+      val paths = HiveFileScanner(t, partitionExprs)
       (schema, dialect, paths)
     }
 
