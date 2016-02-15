@@ -1,8 +1,9 @@
-package io.eels.component.hive
+package io.eels.component.hive.dialect
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
-import io.eels.component.parquet.{ParquetLogMute, ParquetIterator}
+import io.eels.component.hive.{HiveDialect, HiveWriter}
+import io.eels.component.parquet.{ParquetIterator, ParquetLogMute}
 import io.eels.{Field, FrameSchema, Row}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.{FileSystem, Path}

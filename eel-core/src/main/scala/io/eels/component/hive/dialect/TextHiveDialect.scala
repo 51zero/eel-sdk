@@ -1,11 +1,12 @@
-package io.eels.component.hive
+package io.eels.component.hive.dialect
 
-import java.io.{InputStreamReader, BufferedReader, InputStream}
+import java.io.{BufferedReader, InputStream, InputStreamReader}
 
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Field, Row, FrameSchema}
-import org.apache.hadoop.fs.{Path, FileSystem}
+import io.eels.component.hive.{HiveDialect, HiveWriter}
+import io.eels.{Field, FrameSchema, Row}
+import org.apache.hadoop.fs.{FileSystem, Path}
 
 object TextHiveDialect extends HiveDialect with StrictLogging {
 

@@ -1,7 +1,8 @@
-package io.eels.component.hive
+package io.eels.component.hive.dialect
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
+import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.{FrameSchema, Row}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}

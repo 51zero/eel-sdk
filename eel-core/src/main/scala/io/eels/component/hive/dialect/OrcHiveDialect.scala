@@ -1,6 +1,7 @@
-package io.eels.component.hive
+package io.eels.component.hive.dialect
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
+import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcStructInspector, StandardStructInspector}
 import io.eels.{Column, Field, FrameSchema, Row}
 import org.apache.hadoop.conf.Configuration
