@@ -106,6 +106,7 @@ To create a KafkaSource that uses the default Json message deserialier, we can d
 
 ### Changelog
 
+* 0.23.0 16/02/15 - Added mongo sink. Added replace, fill, dropNull and explode methods to frame. Added Avro serializer/deserializer to kafka components.
 * 0.22.0 15/02/15 - Kafka sink and kafka source added
 * 0.21.0 14/02/15 - Dynamic partioning added on write to Hive sink
 * 0.20.1 13/02/15 - Contention issues fixed in hive sink
