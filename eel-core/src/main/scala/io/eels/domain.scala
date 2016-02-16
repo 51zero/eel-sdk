@@ -90,6 +90,14 @@ case class Row(columns: List[Column], fields: List[Field]) {
     )
   }
 
+  def replace(columnName: String, fn: String => String): Row = {
+    val (columns, fields) = entries.map {
+      case (column, Field(from)) if column.name == columnName => (column, Field(fn(from)))
+      case other => other
+    }.unzip
+    Row(columns, fields)
+  }
+
   def replace(columnName: String, from: String, target: String): Row = {
     val (columns, fields) = entries.map {
       case (column, Field(`from`)) if column.name == columnName => (column, Field(target))

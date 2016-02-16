@@ -53,6 +53,15 @@ trait Frame {
     }
   }
 
+  def replace(column: String, fn: String => String): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[Row] = buffer.iterator.map(_.replace(column, fn))
+    }
+  }
+
   def takeWhile(pred: Row => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
