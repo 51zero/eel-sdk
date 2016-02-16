@@ -57,10 +57,9 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     logger.debug(s"Connected to $url")
 
     val stmt = conn.createStatement()
-    stmt.setFetchSize(1)
-    stmt.setMaxRows(1)
 
-    logger.debug(s"Executing query for schema [$query]...")
+    val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
+    logger.debug(s"Executing query for schema [$schemaQuery]...")
     val rs = stmt.executeQuery(query)
 
     val dialect = props.dialect.getOrElse(JdbcDialect(url))
