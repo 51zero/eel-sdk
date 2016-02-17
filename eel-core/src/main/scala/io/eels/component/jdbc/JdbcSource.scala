@@ -20,6 +20,10 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
     logger.debug(s"Executing query [$query]...")
     val rs = stmt.executeQuery(query)
+    logger.debug("Query completed")
+
+    val _schema = schema
+    logger.debug("Schema=" + _schema)
 
     val part = new Reader {
 
@@ -46,7 +50,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
         }
 
         override def next: Row = {
-          val fields = for ( k <- 1 to schema.columns.size ) yield Field(rs.getString(k))
+          val fields = for ( k <- 1 to _schema.columns.size ) yield Field(rs.getString(k))
           Row(schema.columns, fields.toList)
         }
       }
@@ -66,6 +70,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
     logger.debug(s"Executing query for schema [$schemaQuery]...")
     val rs = stmt.executeQuery(query)
+    logger.debug("Query completed")
 
     val dialect = props.dialect.getOrElse(JdbcDialect(url))
 
