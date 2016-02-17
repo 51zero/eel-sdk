@@ -288,6 +288,8 @@ trait Frame {
   // -- actions --
   def size: Plan[Long] = new ToSizePlan(this)
 
+  def fold[A](a: A)(fn: (A, Row) => A): Plan[A] = new FoldPlan(a, fn, this)
+
   def toList: ConcurrentPlan[List[Row]] = new ToListPlan(this)
 
   def toSet: ConcurrentPlan[Set[Row]] = new ToSetPlan(this)
