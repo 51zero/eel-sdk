@@ -4,6 +4,8 @@ import scala.language.implicitConversions
 
 case class FrameSchema(columns: List[Column]) {
 
+  def apply(name: String): Column = columns.find(_.name == name)
+
   def indexOf(column: Column): Int = indexOf(column.name)
   def indexOf(columnName: String): Int = columns.indexWhere(_.name == columnName)
 
