@@ -50,6 +50,8 @@ case class Row(columns: List[Column], fields: List[Field]) {
 
   def apply(name: String): String = {
     val pos = columns.indexWhere(_.name == name)
+    if (pos == -1)
+      sys.error(s"$name is not a valid column in $this")
     fields(pos).value
   }
 
