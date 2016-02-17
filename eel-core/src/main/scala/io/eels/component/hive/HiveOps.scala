@@ -5,12 +5,16 @@ import java.util
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.FrameSchema
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.api.{Partition, FieldSchema, SerDeInfo, StorageDescriptor, Table}
+import org.apache.hadoop.hive.metastore.api.{Partition => HivePartition, FieldSchema, SerDeInfo, StorageDescriptor, Table}
 import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
 
 object HiveOps extends StrictLogging {
+
+  def partitions(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[HivePartition] = {
+    client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
+  }
 
   def createTime: Int = (System.currentTimeMillis / 1000).toInt
 
@@ -83,7 +87,7 @@ object HiveOps extends StrictLogging {
       val sd = new StorageDescriptor(table.getSd)
       sd.setLocation(path.toString)
 
-      val partition = new Partition(
+      val partition = new HivePartition(
         parts.map(_.value).toList.asJava,
         dbName,
         tableName,

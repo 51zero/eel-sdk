@@ -52,4 +52,7 @@ object HiveTestApp extends App with StrictLogging {
   val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toList
   logger.info("Result=" + plan.run)
 
+  val parts = client.listPartitions("sam", "albums", Short.MaxValue)
+  println(parts)
+  val q = parts
 }
