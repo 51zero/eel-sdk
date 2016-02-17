@@ -215,8 +215,11 @@ trait Frame {
 
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      // we get a sequence of the indexes of the columns in the original schema, so we can just
+      // apply those indexes to the incoming rows
+      val indexes = columns.map(outerSchema.indexOf).toVector
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.projection(columns, _, outerSchema))
+      override def iterator: Iterator[Row] = buffer.iterator.map(row => indexes.map(row.apply))
     }
   }
 
