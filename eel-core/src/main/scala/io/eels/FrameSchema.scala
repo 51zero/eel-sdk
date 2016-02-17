@@ -37,5 +37,6 @@ case class FrameSchema(columns: List[Column]) {
 }
 
 object FrameSchema {
+  def apply(first: String, rest: String*): FrameSchema = apply(first +: rest)
   implicit def apply(strs: Seq[String]): FrameSchema = FrameSchema(strs.map(Column.apply).toList)
 }

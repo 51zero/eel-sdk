@@ -1,10 +1,15 @@
 package io.eels.component.hive
 
+import java.util.UUID
+
 import com.typesafe.scalalogging.slf4j.StrictLogging
+import io.eels.{FrameSchema, Frame}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+
+import scala.util.Random
 
 object HiveBenchmarkApp extends App with StrictLogging {
 
@@ -73,24 +78,26 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
- // val rows = List.fill(1000000)(Row(Map("name" -> UUID.randomUUID.toString, "state" -> states(Random.nextInt(50)))))
- // val frame = Frame(rows)
+  val schema = FrameSchema("id", "state")
+  val rows = List.fill(10000000)(List(UUID.randomUUID.toString, Random.nextInt(50)))
 
-//  HiveOps.createTable(
-//    "sam",
-//    "people",
-//    frame.schema,
-//    List("state"),
-//    format = HiveFormat.Parquet,
-//    overwrite = true
-//  )
-//
-//  logger.info("Table created")
-//
-//  val sink = HiveSink("sam", "people").withPartitions("state").withIOThreads(1)
-//  frame.to(sink).runConcurrent(2)
-//
-//  logger.info("Write complete")
+  logger.info(s"Generated ${rows.size} rows")
+
+  HiveOps.createTable(
+    "sam",
+    "people",
+    schema,
+    List("state"),
+    format = HiveFormat.Parquet,
+    overwrite = true
+  )
+
+  logger.info("Table created")
+
+  val sink = HiveSink("sam", "people").withDynamicPartitioning(true).withIOThreads(4)
+  Frame(schema, rows).to(sink).runConcurrent(2)
+
+  logger.info("Write complete")
 
   val start = System.currentTimeMillis()
 
