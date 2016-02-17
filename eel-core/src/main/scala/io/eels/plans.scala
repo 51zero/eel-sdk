@@ -61,6 +61,7 @@ class ToSetPlan(frame: Frame) extends ConcurrentPlan[Set[Row]] with Using with S
     }
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
+    logger.debug("Set data is complete into map; building set")
     map.keySet.asScala.toSet
   }
 }
