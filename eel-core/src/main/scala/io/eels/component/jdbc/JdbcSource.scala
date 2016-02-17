@@ -6,11 +6,12 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, Field, FrameSchema, Reader, Row, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
-  extends Source with StrictLogging {
+  extends Source
+    with StrictLogging {
 
   override def readers: Seq[Reader] = {
 
-    logger.debug(s"Connecting to jdbc source $url...")
+    logger.info(s"Connecting to jdbc source $url...")
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
@@ -29,7 +30,11 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
         conn.close()
       }
 
+      var created = false
+
       override def iterator: Iterator[Row] = new Iterator[Row] {
+        require(!created, "Cannot create more than one iterator for a jdbc source")
+        created = true
 
         override def hasNext: Boolean = {
           val hasNext = rs.next()
@@ -52,7 +57,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
   lazy val schema: FrameSchema = {
 
-    logger.debug(s"Connecting to jdbc source $url...")
+    logger.info(s"Connecting to jdbc source $url...")
     val conn = DriverManager.getConnection(url)
     logger.debug(s"Connected to $url")
 
