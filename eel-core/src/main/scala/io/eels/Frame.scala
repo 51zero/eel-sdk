@@ -304,7 +304,7 @@ trait Frame {
   }
 
   // -- actions --
-  def size: Plan[Long] = new ToSizePlan(this)
+  def size: ConcurrentPlan[Long] = new ToSizePlan(this)
 
   def fold[A](a: A)(fn: (A, Row) => A): Plan[A] = new FoldPlan(a, fn, this)
 

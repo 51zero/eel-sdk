@@ -1,5 +1,6 @@
 package io.eels
 
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.io.Using
@@ -110,10 +111,38 @@ class ForallPlan(frame: Frame, p: Row => Boolean) extends Plan[Boolean] with Usi
   }
 }
 
-class ToSizePlan(frame: Frame) extends Plan[Long] with Using {
-  override def run: Long = {
-    using(frame.buffer) { buffer =>
-      buffer.iterator.size
+class ToSizePlan(frame: Frame) extends ConcurrentPlan[Long] with StrictLogging {
+
+  import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+
+  override def runConcurrent(workers: Int): Long = {
+
+    val count = new AtomicLong(0)
+    val buffer = frame.buffer
+    val latch = new CountDownLatch(workers)
+    val executor = Executors.newFixedThreadPool(workers)
+    for ( k <- 1 to workers ) {
+      executor.submit {
+        try {
+          buffer.iterator.foreach(_ => count.incrementAndGet)
+        } catch {
+          case e: Throwable =>
+            logger.error("Error writing; shutting down executor", e)
+            executor.shutdownNow()
+            throw e
+        } finally {
+          latch.countDown()
+        }
+      }
     }
+    executor.submit {
+      latch.await(1, TimeUnit.DAYS)
+      logger.debug("Closing buffer")
+      buffer.close()
+      logger.debug("Buffer closed")
+    }
+    executor.shutdown()
+    executor.awaitTermination(1, TimeUnit.DAYS)
+    count.get()
   }
 }
