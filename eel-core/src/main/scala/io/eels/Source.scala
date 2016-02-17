@@ -64,11 +64,7 @@ trait Source extends StrictLogging {
 
         new Buffer {
           override def close(): Unit = executor.shutdownNow()
-          override def iterator: Iterator[Row] = new Iterator[Row] {
-            val iter = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
-            override def hasNext: Boolean = iter.hasNext
-            override def next(): Row = iter.next()
-          }
+          override def iterator: Iterator[Row] = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
         }
 
       } catch {

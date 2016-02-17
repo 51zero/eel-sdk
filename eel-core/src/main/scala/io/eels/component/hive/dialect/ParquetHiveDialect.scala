@@ -33,7 +33,7 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
       avroSchema,
       CompressionCodecName.UNCOMPRESSED,
       ParquetWriter.DEFAULT_BLOCK_SIZE,
-      ParquetWriter.DEFAULT_PAGE_SIZE * 10
+      ParquetWriter.DEFAULT_PAGE_SIZE
     )
     new HiveWriter {
       override def close(): Unit = writer.close()

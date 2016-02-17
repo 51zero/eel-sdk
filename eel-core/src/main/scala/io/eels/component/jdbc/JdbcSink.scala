@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, DriverManager}
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.scalax.jdbc.ResultSetIterator
@@ -14,6 +14,8 @@ import scala.language.implicitConversions
 case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkProps())
   extends Sink
     with StrictLogging {
+
+  private val BufferSize = 1000
 
   private def tableExists(conn: Connection): Boolean = {
     logger.debug("Fetching tables to detect if table exists")
@@ -59,7 +61,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     }
 
     var schema: FrameSchema = null
-    val queue = new LinkedBlockingQueue[Row]()
+    val queue = new ArrayBlockingQueue[Row](BufferSize)
 
     val latch = new CountDownLatch(props.threads)
     val executor = Executors.newFixedThreadPool(props.threads)
