@@ -4,6 +4,7 @@ import java.sql.{DriverManager, ResultSetMetaData}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, FrameSchema, Reader, Row, Source}
+import scala.concurrent.duration._
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source
@@ -19,8 +20,10 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     stmt.setFetchSize(props.fetchSize)
 
     logger.debug(s"Executing query [$query]...")
+    val start = System.currentTimeMillis()
     val rs = stmt.executeQuery(query)
-    logger.debug("Query completed")
+    val duration = (System.currentTimeMillis() - start).millis
+    logger.info(s" === query completed in $duration ===")
 
     val _schema = schema
     logger.debug("Schema=" + _schema)
@@ -68,8 +71,10 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
     val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
     logger.debug(s"Executing query for schema [$schemaQuery]...")
+    val start = System.currentTimeMillis()
     val rs = stmt.executeQuery(query)
-    logger.debug("Query completed")
+    val duration = (System.currentTimeMillis() - start).millis
+    logger.info(s" === schema fetch completed in $duration ===")
 
     val dialect = props.dialect.getOrElse(JdbcDialect(url))
 
