@@ -23,49 +23,59 @@ trait Source extends StrictLogging {
     override def buffer: Buffer = {
       import com.sksamuel.scalax.concurrent.ExecutorImplicits._
 
-      val queue = new ArrayBlockingQueue[Row](DefaultBufferSize)
-
       val executor = Executors.newFixedThreadPool(ioThreads)
       logger.debug(s"Source will read using $ioThreads io threads")
 
-      val readers = self.readers
-      logger.debug(s"Source has ${readers.size} reader(s)")
+      try {
 
-      val count = new AtomicLong(0)
-      val latch = new CountDownLatch(readers.size)
-      for ( reader <- readers ) {
-        executor.submit {
-          try {
-            reader.iterator.foreach(queue.put)
-            logger.debug(s"Completed reader #${count.incrementAndGet}")
-            latch.countDown()
-          } catch {
-            case e: Throwable =>
-              logger.error("Error reading row", e)
-          } finally {
-            reader.close()
+        val readers = self.readers
+        logger.debug(s"Source has ${readers.size} reader(s)")
+
+        val queue = new ArrayBlockingQueue[Row](DefaultBufferSize)
+        val count = new AtomicLong(0)
+        val latch = new CountDownLatch(readers.size)
+
+        for ( reader <- readers ) {
+          executor.submit {
+            try {
+              reader.iterator.foreach(queue.put)
+              logger.debug(s"Completed reader #${count.incrementAndGet}")
+              latch.countDown()
+            } catch {
+              case e: Throwable =>
+                logger.error("Error reading row", e)
+            } finally {
+              reader.close()
+            }
           }
         }
-      }
-      executor.submit {
-        latch.await(1, TimeUnit.DAYS)
-        logger.debug("Readers completed; latch released")
-        try {
-          queue.put(Row.Sentinel)
-        } catch {
-          case e: Throwable =>
-            logger.error("Error adding sentinel", e)
-        }
-        logger.debug("Sentinel added to queue")
-      }
 
-      new Buffer {
-        override def close(): Unit = executor.shutdownNow()
-        override def iterator: Iterator[Row] = new Iterator[Row] {
-          val iter = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
-          override def hasNext: Boolean = iter.hasNext
-          override def next(): Row = iter.next()
+        executor.submit {
+          latch.await(1, TimeUnit.DAYS)
+          logger.debug("Readers completed; latch released")
+          try {
+            queue.put(Row.Sentinel)
+          } catch {
+            case e: Throwable =>
+              logger.error("Error adding sentinel", e)
+          }
+          logger.debug("Sentinel added to queue")
         }
+
+        new Buffer {
+          override def close(): Unit = executor.shutdownNow()
+          override def iterator: Iterator[Row] = new Iterator[Row] {
+            val iter = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
+            override def hasNext: Boolean = iter.hasNext
+            override def next(): Row = iter.next()
+          }
+        }
+
+      } catch {
+        case t: Throwable =>
+          logger.error("Error opening readers", t)
+          executor.shutdownNow()
+          throw t
       }
     }
   }
