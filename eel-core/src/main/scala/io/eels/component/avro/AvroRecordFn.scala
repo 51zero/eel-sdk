@@ -10,11 +10,9 @@ object AvroRecordFn {
   import scala.collection.JavaConverters._
 
   def fromRecord(record: GenericRecord): Row = {
-    val builder = Vector.newBuilder[Any]
-    record.getSchema.getFields.asScala.foreach { field =>
-      builder += record.get(field.name)
-    }
-    builder.result()
+    record.getSchema.getFields.asScala.map { field =>
+      record.get(field.name)
+    }.toVector
   }
 
   def toRecord(row: Row, schema: Schema): GenericRecord = {
