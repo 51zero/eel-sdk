@@ -43,7 +43,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging
   }
 }
 
-object ParquetIterator {
+object ParquetIterator extends StrictLogging {
 
   def createReader(path: Path): ParquetReader[GenericRecord] = {
     AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
@@ -56,8 +56,10 @@ object ParquetIterator {
 
     override def hasNext: Boolean = {
       val hasNext = iter.hasNext
-      if (!hasNext)
+      if (!hasNext) {
+        logger.debug("Closing parquet iterator")
         reader.close()
+      }
       hasNext
     }
     override def next(): Row = iter.next()
