@@ -1,6 +1,6 @@
 package io.eels
 
-import java.util.concurrent.{CountDownLatch, TimeUnit, Executors, LinkedBlockingQueue}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -29,19 +29,20 @@ class FindPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Option[Row]] with
   }
 }
 
-class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with StrictLogging {
+class ToSetPlan(frame: Frame) extends ConcurrentPlan[Set[Row]] with Using with StrictLogging {
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+  import scala.collection.JavaConverters._
 
-  override def runConcurrent(workers: Int): List[Row] = {
-    val queue = new LinkedBlockingQueue[Row]
+  override def runConcurrent(workers: Int): Set[Row] = {
+    val map = new ConcurrentHashMap[Row, Boolean]
     val buffer = frame.buffer
     val latch = new CountDownLatch(workers)
     val executor = Executors.newFixedThreadPool(workers)
     for ( k <- 1 to workers ) {
       executor.submit {
         try {
-          buffer.iterator.foreach(queue.put)
+          buffer.iterator.foreach(map.putIfAbsent(_, true))
         } catch {
           case e: Throwable =>
             logger.error("Error writing; shutting down executor", e)
@@ -54,13 +55,48 @@ class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with
     }
     executor.submit {
       latch.await(1, TimeUnit.DAYS)
-      logger.debug("Closing buffer feed")
+      logger.debug("Closing buffer")
       buffer.close()
-      logger.debug("Buffer feed closed")
+      logger.debug("Buffer closed")
     }
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
-    import scala.collection.JavaConverters._
+    map.keySet.asScala.toSet
+  }
+}
+
+class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with StrictLogging {
+
+  import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+  import scala.collection.JavaConverters._
+
+  override def runConcurrent(workers: Int): List[Row] = {
+    val queue = new ConcurrentLinkedQueue[Row]
+    val buffer = frame.buffer
+    val latch = new CountDownLatch(workers)
+    val executor = Executors.newFixedThreadPool(workers)
+    for ( k <- 1 to workers ) {
+      executor.submit {
+        try {
+          buffer.iterator.foreach(queue.add)
+        } catch {
+          case e: Throwable =>
+            logger.error("Error writing; shutting down executor", e)
+            executor.shutdownNow()
+            throw e
+        } finally {
+          latch.countDown()
+        }
+      }
+    }
+    executor.submit {
+      latch.await(1, TimeUnit.DAYS)
+      logger.debug("Closing buffer")
+      buffer.close()
+      logger.debug("Buffer closed")
+    }
+    executor.shutdown()
+    executor.awaitTermination(1, TimeUnit.DAYS)
     queue.asScala.toList
   }
 }

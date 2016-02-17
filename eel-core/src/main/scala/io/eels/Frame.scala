@@ -290,6 +290,8 @@ trait Frame {
 
   def toList: ConcurrentPlan[List[Row]] = new ToListPlan(this)
 
+  def toSet: ConcurrentPlan[Set[Row]] = new ToSetPlan(this)
+
   def forall(p: (Row) => Boolean): Plan[Boolean] = new ForallPlan(this, p)
 
   def to(sink: Sink): ConcurrentPlan[Long] = new SinkPlan(sink, this)
