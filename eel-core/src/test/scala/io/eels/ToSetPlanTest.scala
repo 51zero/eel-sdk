@@ -1,19 +1,25 @@
 package io.eels
 
-import org.scalatest.{WordSpec, Matchers}
+import org.scalatest.{Matchers, WordSpec}
 
 class ToSetPlanTest extends WordSpec with Matchers {
 
   "ToSetPlan" should {
     "create set from frame" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "sam", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("sam", "aylesbury"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
       frame.toSet.run shouldBe Set(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "sam", "location" -> "buckingham"))
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
     }
   }

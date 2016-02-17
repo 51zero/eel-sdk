@@ -1,8 +1,8 @@
 package io.eels.component.hive
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect, TextHiveDialect, AvroHiveDialect}
-import io.eels.{FrameSchema, Row}
+import io.eels.{Row, FrameSchema}
+import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect, TextHiveDialect}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 trait HiveDialect extends StrictLogging {

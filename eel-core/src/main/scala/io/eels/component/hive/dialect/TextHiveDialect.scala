@@ -5,7 +5,7 @@ import java.io.{BufferedReader, InputStream, InputStreamReader}
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
-import io.eels.{Field, FrameSchema, Row}
+import io.eels.{FrameSchema, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object TextHiveDialect extends HiveDialect with StrictLogging {
@@ -17,10 +17,7 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     lazy val in = fs.open(path)
     lazy val iter = lineIterator(in)
     override def hasNext: Boolean = iter.hasNext
-    override def next(): Row = {
-      val fields = iter.next.split(delimiter).map(Field.apply).toList.padTo(schema.columns.size, null)
-      Row(schema.columns, fields)
-    }
+    override def next(): Row = iter.next.split(delimiter).padTo(schema.columns.size, null).toSeq
   }
 
   def lineIterator(in: InputStream): Iterator[String] = {
@@ -39,7 +36,7 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     })
 
     override def write(row: Row): Unit = {
-      csv.writeRow(row.fields.map(_.value))
+      csv.writeRow(row)
     }
 
     override def close(): Unit = {

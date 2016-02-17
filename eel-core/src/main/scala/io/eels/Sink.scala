@@ -5,6 +5,6 @@ trait Sink {
 }
 
 trait Writer {
-  def write(row: Row): Unit
+  def write(row: Row, schema: FrameSchema): Unit
   def close(): Unit
 }

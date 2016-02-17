@@ -49,7 +49,7 @@ object HiveTestApp extends App with StrictLogging {
   frame.to(sink).run
   logger.info("Write complete")
 
-  val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toList
+  val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toSeq
   logger.info("Result=" + plan.run)
 
   val parts = client.listPartitions("sam", "albums", Short.MaxValue)

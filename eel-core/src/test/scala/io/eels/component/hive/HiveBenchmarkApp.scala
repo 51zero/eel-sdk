@@ -1,15 +1,10 @@
 package io.eels.component.hive
 
-import java.util.UUID
-
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-
-import scala.util.Random
 
 object HiveBenchmarkApp extends App with StrictLogging {
 
@@ -99,7 +94,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   val start = System.currentTimeMillis()
 
-  val result = HiveSource("sam", "people").withPartition("state", "<=", "Iowa").toFrame(4).toList.runConcurrent(4)
+  val result = HiveSource("sam", "people").withPartition("state", "<=", "Iowa").toFrame(4).toSeq.runConcurrent(4)
 
   val end = System.currentTimeMillis()
 

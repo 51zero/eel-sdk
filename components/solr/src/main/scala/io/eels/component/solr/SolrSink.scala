@@ -1,6 +1,6 @@
 package io.eels.component.solr
 
-import io.eels.{Row, Sink, Writer}
+import io.eels.{Row, FrameSchema, Sink, Writer}
 import org.apache.solr.client.solrj.impl.HttpSolrClient
 import org.apache.solr.common.SolrInputDocument
 
@@ -13,10 +13,10 @@ class SolrSink(url: String) extends Sink {
 
     override def close(): Unit = client.close()
 
-    override def write(row: Row): Unit = {
+    override def write(row: Row, schema: FrameSchema): Unit = {
       val doc = new SolrInputDocument()
-      row.toMap.foreach { case (key, value) =>
-        doc.addField(key, value)
+      for ( (field, value) <- schema.columnNames.zip(row) ) {
+        doc.addField(field, value)
       }
       client.add(doc)
       client.commit()

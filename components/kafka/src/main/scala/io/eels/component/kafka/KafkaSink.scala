@@ -3,9 +3,8 @@ package io.eels.component.kafka
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, Sink, Writer}
+import io.eels.{Row, FrameSchema, Sink, Writer}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
@@ -32,8 +31,8 @@ case class KafkaSink(config: KafkaSinkConfig, topic: String, serializer: KafkaSe
       producer.close(config.shutdownTimeout.toNanos, TimeUnit.NANOSECONDS)
     }
 
-    override def write(row: Row): Unit = {
-      val bytes = serializer(row)
+    override def write(row: Row, schema: FrameSchema): Unit = {
+      val bytes = serializer(row, schema)
       val record = new ProducerRecord[Array[Byte], Array[Byte]](topic, bytes)
       producer.send(record)
     }
@@ -41,5 +40,5 @@ case class KafkaSink(config: KafkaSinkConfig, topic: String, serializer: KafkaSe
 }
 
 trait KafkaSerializer {
-  def apply(row: Row): Array[Byte]
+  def apply(row: Row, schema: FrameSchema): Array[Byte]
 }

@@ -2,10 +2,10 @@ package io.eels.component.kafka
 
 import java.io.ByteArrayOutputStream
 
+import io.eels.{Row, FrameSchema}
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
-import io.eels.{FrameSchema, Row}
-import org.apache.avro.file.{DataFileWriter, DataFileReader, SeekableByteArrayInput}
-import org.apache.avro.generic.{GenericDatumWriter, GenericDatumReader, GenericRecord}
+import org.apache.avro.file.{DataFileReader, DataFileWriter, SeekableByteArrayInput}
+import org.apache.avro.generic.{GenericDatumReader, GenericDatumWriter, GenericRecord}
 
 object AvroKafkaDeserializer extends KafkaDeserializer {
   override def apply(bytes: Array[Byte]): Row = {
@@ -17,16 +17,16 @@ object AvroKafkaDeserializer extends KafkaDeserializer {
 }
 
 object AvroKafkaSerializer extends KafkaSerializer {
-  override def apply(row: Row): Array[Byte] = {
+  override def apply(row: Row, schema: FrameSchema): Array[Byte] = {
 
-    val schema = AvroSchemaGen(FrameSchema(row.columns))
-    val record = AvroRecordFn.toRecord(row, schema)
+    val avroSchema = AvroSchemaGen(schema)
+    val record = AvroRecordFn.toRecord(row, avroSchema)
 
-    val datumWriter = new GenericDatumWriter[GenericRecord](schema)
+    val datumWriter = new GenericDatumWriter[GenericRecord](avroSchema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
 
     val out = new ByteArrayOutputStream
-    dataFileWriter.create(schema, out)
+    dataFileWriter.create(avroSchema, out)
     dataFileWriter.append(record)
     out.toByteArray
   }

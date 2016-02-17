@@ -30,35 +30,37 @@ trait Frame {
         val iter1 = buffer1.iterator
         val iter2 = buffer2.iterator
         override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
-        override def next(): Row = iter1.next() join iter2.next()
+        override def next(): Row = iter1.next() ++ iter2.next()
       }
     }
   }
 
-  def replace(from: String, target: String): Frame = new Frame {
+  def replace(from: String, target: Any): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.replace(from, target))
+      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.replace(from, target, _))
     }
   }
 
-  def replace(column: String, from: String, target: String): Frame = new Frame {
+  def replace(columnName: String, from: String, target: Any): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val index = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.replace(column, from, target))
+      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.replace(index, from, target, _))
     }
   }
 
-  def replace(column: String, fn: String => String): Frame = new Frame {
+  def replace(columnName: String, fn: Any => Any): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val index = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.replace(column, fn))
+      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.replaceByFn(index, fn, _))
     }
   }
 
@@ -71,20 +73,25 @@ trait Frame {
     }
   }
 
-  def takeWhile(column: String, pred: (String) => Boolean): Frame = new Frame {
+  def takeWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val index = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.takeWhile(row => pred(row(column)))
+      override def iterator: Iterator[Row] = buffer.iterator.takeWhile(row => p(row(index)))
     }
   }
 
   def except(other: Frame): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+
+    override def schema: FrameSchema = outer.schema.removeColumns(other.schema.columnNames)
+
     override def buffer: Buffer = new Buffer {
       val buffer1 = outer.buffer
       val buffer2 = other.buffer
+      val schema1 = outer.schema
+      val schema2 = other.schema
 
       override def close(): Unit = {
         buffer1.close()
@@ -95,7 +102,7 @@ trait Frame {
         val iter1 = buffer1.iterator
         val iter2 = buffer2.iterator
         override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
-        override def next(): Row = iter1.next except iter2.next
+        override def next(): Row = RowUtils.toMap(schema1, iter1.next).--(schema2.columnNames).values.toSeq
       }
     }
   }
@@ -109,12 +116,13 @@ trait Frame {
     }
   }
 
-  def dropWhile(column: String, p: String => Boolean): Frame = new Frame {
+  def dropWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val index = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.dropWhile(row => p(row(column)))
+      override def iterator: Iterator[Row] = buffer.iterator.dropWhile(row => p(row(index)))
     }
   }
 
@@ -138,26 +146,23 @@ trait Frame {
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.addColumn(name, defaultValue))
+      override def iterator: Iterator[Row] = buffer.iterator.map(_ :+ defaultValue)
     }
   }
 
-  def removeColumn(name: String): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema.removeColumn(name)
+  def removeColumn(columnName: String): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema.removeColumn(columnName)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val removeIndex = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.removeColumn(name))
+      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.removeIndex(removeIndex, _))
     }
   }
 
   def renameColumn(nameFrom: String, nameTo: String): Frame = new Frame {
     override def schema: FrameSchema = outer.schema.renameColumn(nameFrom, nameTo)
-    override def buffer: Buffer = new Buffer {
-      val buffer = outer.buffer
-      override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.renameColumn(nameFrom, nameTo))
-    }
+    override def buffer: Buffer = outer.buffer
   }
 
   def explode(f: Row => Seq[Row]): Frame = new Frame {
@@ -174,7 +179,10 @@ trait Frame {
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(_.fill(defaultValue))
+      override def iterator: Iterator[Row] = buffer.iterator.map(_.map {
+        case null => defaultValue
+        case other => other
+      })
     }
   }
 
@@ -197,13 +205,10 @@ trait Frame {
     override val schema: FrameSchema = FrameSchema(columns.map(Column.apply).toList)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
-      val newColumns = columns.map(Column.apply)
+      val outerSchema = outer.schema
+      val indexes = columns.map(outerSchema.indexOf)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map { row =>
-        val map = row.columns.map(_.name).zip(row.fields.map(_.value)).toMap
-        val fields = newColumns.map(col => Field(map(col.name)))
-        Row(newColumns.toList, fields.toList)
-      }
+      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.projection(indexes, _))
     }
   }
 
@@ -218,9 +223,10 @@ trait Frame {
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map { row =>
-        f(row)
-        row
+      override def iterator: Iterator[Row] = buffer.iterator.map {
+        row =>
+          f(row)
+          row
       }
     }
   }
@@ -267,12 +273,13 @@ trait Frame {
   /**
     * Filters where the given column matches the given predicate.
     */
-  def filter(column: String, p: String => Boolean): Frame = new Frame {
+  def filter(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+      val index = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.filter(row => p(row(column)))
+      override def iterator: Iterator[Row] = buffer.iterator.filter(row => p(row(index)))
     }
   }
 
@@ -281,7 +288,7 @@ trait Frame {
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.filterNot(_.hasNullValue)
+      override def iterator: Iterator[Row] = buffer.iterator.filterNot(_.contains(null))
     }
   }
 
@@ -290,7 +297,7 @@ trait Frame {
 
   def fold[A](a: A)(fn: (A, Row) => A): Plan[A] = new FoldPlan(a, fn, this)
 
-  def toList: ConcurrentPlan[List[Row]] = new ToListPlan(this)
+  def toSeq: ConcurrentPlan[Seq[Row]] = new ToSeqPlan(this)
 
   def toSet: ConcurrentPlan[Set[Row]] = new ToSetPlan(this)
 
@@ -309,21 +316,20 @@ object Frame {
 
   import scala.collection.JavaConverters._
 
-  def apply(first: Map[String, String], rest: Map[String, String]*): Frame = new Frame {
-    override lazy val schema: FrameSchema = FrameSchema(first.keys.map(Column.apply).toList)
+  def apply(_schema: FrameSchema, first: Row, rest: Row*): Frame = apply(_schema, first +: rest)
+  def apply(_schema: FrameSchema, rows: Seq[Row]): Frame = new Frame {
     override def buffer: Buffer = new Buffer {
-      val queue = new ConcurrentLinkedQueue[Row]((first +: rest).map(map => Row(map)).asJava)
+      val queue = new ConcurrentLinkedQueue[Row](rows.asJava)
       override def close(): Unit = ()
       override def iterator: Iterator[Row] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
+    override def schema: FrameSchema = _schema
   }
 
-  def apply(first: Row, rest: Row*): Frame = apply(first +: rest)
-  def apply(rows: Seq[Row]): Frame = new Frame {
-    require(rows.nonEmpty)
-    override lazy val schema: FrameSchema = FrameSchema(rows.head.columns)
+  def apply(first: Map[String, String], rest: Map[String, String]*): Frame = new Frame {
+    override lazy val schema: FrameSchema = FrameSchema(first.keys.map(Column.apply).toList)
     override def buffer: Buffer = new Buffer {
-      val queue = new ConcurrentLinkedQueue[Row](rows.asJava)
+      val queue = new ConcurrentLinkedQueue[Row]((first +: rest).map(_.valuesIterator.toSeq).asJava)
       override def close(): Unit = ()
       override def iterator: Iterator[Row] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }

@@ -12,10 +12,12 @@ class SqlContextTest extends WordSpec with Matchers {
       val sqlContext = SqlContext()
       sqlContext.registerFrame("people", frame)
       val result = sqlContext.sql("select first_name, last_name from people ")
-      result.schema shouldBe FrameSchema(List(
-        Column("FIRST_NAME", SchemaType.String, true, precision = 255, signed = true),
-        Column("LAST_NAME", SchemaType.String, true, precision = 255, signed = true)
-      ))
+      result.schema shouldBe FrameSchema(
+        List(
+          Column("FIRST_NAME", SchemaType.String, true, precision = 255, signed = true),
+          Column("LAST_NAME", SchemaType.String, true, precision = 255, signed = true)
+        )
+      )
       result.size.run shouldBe 500
     }
     "accept group by queries" in {

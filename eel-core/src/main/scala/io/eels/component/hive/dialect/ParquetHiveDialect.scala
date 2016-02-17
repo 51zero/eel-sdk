@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet.{ParquetIterator, ParquetLogMute}
-import io.eels.{Field, FrameSchema, Row}
+import io.eels.{FrameSchema, Row}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
@@ -19,11 +19,7 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
     lazy val iter = ParquetIterator(path)
     override def hasNext: Boolean = iter.hasNext
-    override def next(): Row = {
-      val map = iter.next.toMap
-      val fields = for ( column <- schema.columns ) yield Field(map.getOrElse(column.name, null))
-      Row(schema.columns, fields)
-    }
+    override def next(): Row = iter.next
   }
 
   override def writer(schema: FrameSchema, path: Path)

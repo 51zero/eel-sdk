@@ -13,7 +13,7 @@ class HeadPlan(frame: Frame) extends Plan[Option[Row]] with Using {
   }
 }
 
-class ExistsPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Boolean] with Using {
+class ExistsPlan(frame: Frame, p: Row => Boolean) extends Plan[Boolean] with Using {
   override def run: Boolean = {
     using(frame.buffer) { buffer =>
       buffer.iterator.exists(p)
@@ -21,7 +21,7 @@ class ExistsPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Boolean] with U
   }
 }
 
-class FindPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Option[Row]] with Using {
+class FindPlan(frame: Frame, p: Row => Boolean) extends Plan[Option[Row]] with Using {
   override def run: Option[Row] = {
     using(frame.buffer) { buffer =>
       buffer.iterator.find(p)
@@ -65,12 +65,12 @@ class ToSetPlan(frame: Frame) extends ConcurrentPlan[Set[Row]] with Using with S
   }
 }
 
-class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with StrictLogging {
+class ToSeqPlan(frame: Frame) extends ConcurrentPlan[Seq[Row]] with Using with StrictLogging {
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
   import scala.collection.JavaConverters._
 
-  override def runConcurrent(workers: Int): List[Row] = {
+  override def runConcurrent(workers: Int): Seq[Row] = {
     val queue = new ConcurrentLinkedQueue[Row]
     val buffer = frame.buffer
     val latch = new CountDownLatch(workers)
@@ -97,7 +97,7 @@ class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with
     }
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
-    queue.asScala.toList
+    queue.asScala.toSeq
   }
 }
 

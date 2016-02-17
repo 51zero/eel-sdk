@@ -1,14 +1,15 @@
 package io.eels.component.avro
 
-import io.eels.{Frame, Row}
+import io.eels.Frame
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(
-    Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
-    Row(List("name", "job", "location"), List("elton john", "musician", "pinner")),
-    Row(List("name", "job", "location"), List("issac newton", "scientist", "heaven"))
+    List("name", "job", "location"),
+    List("clint eastwood", "actor", "carmel"),
+    List("elton john", "musician", "pinner"),
+    List("issac newton", "scientist", "heaven")
   )
 
 //  "AvroSink" should {

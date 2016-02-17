@@ -1,7 +1,7 @@
 package io.eels.component.orc
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Row, Sink, Writer}
+import io.eels.{Row, FrameSchema, Sink, Writer}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.ql.io.orc.OrcFile
@@ -27,9 +27,9 @@ case class OrcSink(path: Path) extends Sink with StrictLogging {
 
     override def close(): Unit = if (writer != null) writer.close()
 
-    override def write(row: Row): Unit = {
-      createWriter(FrameSchema(row.columns))
-      writer.addRow(row.fields.map(_.value).toArray)
+    override def write(row: Row, schema: FrameSchema): Unit = {
+      createWriter(schema)
+      writer.addRow(row.toArray)
     }
   }
 }

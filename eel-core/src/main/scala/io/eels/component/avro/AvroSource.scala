@@ -40,7 +40,7 @@ case class AvroSource(path: Path) extends Source with Using {
           hasNext
         }
 
-        override def next: Row = AvroRecordFn.fromRecord(reader.next)
+        override def next: Row = AvroRecordFn.fromRecord(reader.next).map(_.toString)
       }
     }
 

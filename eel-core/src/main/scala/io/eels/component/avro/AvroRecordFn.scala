@@ -10,16 +10,15 @@ object AvroRecordFn {
   import scala.collection.JavaConverters._
 
   def fromRecord(record: GenericRecord): Row = {
-    val map = record.getSchema.getFields.asScala.map { field =>
-      field.name -> record.get(field.name).toString
-    }.toMap
-    Row(map)
+    record.getSchema.getFields.asScala.map { field =>
+      record.get(field.name)
+    }
   }
 
   def toRecord(row: Row, schema: Schema): GenericRecord = {
     val record = new Record(schema)
-    for ( (key, value) <- row.toMap ) {
-      record.put(key, value)
+    for ( (field, value) <- schema.getFields.asScala.zip(row) ) {
+      record.put(field.name, value)
     }
     record
   }

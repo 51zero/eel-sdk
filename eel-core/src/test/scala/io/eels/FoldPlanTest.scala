@@ -7,11 +7,11 @@ class FoldPlanTest extends WordSpec with Matchers {
   "FoldPlan" should {
     "fold!" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "risk" -> "1")),
-        Row(Map("name" -> "sam", "risk" -> "2")),
-        Row(Map("name" -> "sam", "risk" -> "3"))
+        Map("name" -> "sam", "risk" -> "1"),
+        Map("name" -> "sam", "risk" -> "2"),
+        Map("name" -> "sam", "risk" -> "3")
       )
-      frame.fold(0)((a, row) => a + row("risk").toInt).run shouldBe 6
+      frame.fold(0)((a, row) => a + row(1).toString.toInt).run shouldBe 6
     }
   }
 }

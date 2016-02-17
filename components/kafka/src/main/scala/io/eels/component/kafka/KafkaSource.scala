@@ -3,7 +3,7 @@ package io.eels.component.kafka
 import java.util.{Properties, UUID}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Reader, Row, Source}
+import io.eels.{Row, FrameSchema, Reader, Source}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
@@ -33,7 +33,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     consumer.close()
     val row = deserializer(record.value)
 
-    FrameSchema(row.columns)
+    FrameSchema(Seq("todo"))
   }
 
   override def readers: Seq[Reader] = {

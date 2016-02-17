@@ -10,12 +10,11 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 object FrameSchemaFn extends StrictLogging {
 
   def apply(schemas: Seq[FieldSchema]): FrameSchema = {
-
+    logger.debug("Building frame schame from hive field schemas=" + schemas)
     val columns = schemas.map { s =>
       val (schemaType, precision, scale) = toSchemaType(s.getType)
       Column(s.getName, schemaType, false, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
     }
-
     FrameSchema(columns.toList)
   }
 

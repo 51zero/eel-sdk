@@ -1,12 +1,18 @@
 package io.eels
 
+import scala.language.implicitConversions
+
 case class FrameSchema(columns: List[Column]) {
+
+  def indexOf(column: Column): Int = indexOf(column.name)
+  def indexOf(columnName: String): Int = columns.indexWhere(_.name == columnName)
 
   def columnNames: List[String] = columns.map(_.name)
 
   def addColumn(col: Column): FrameSchema = copy(columns :+ col)
 
   def removeColumn(name: String): FrameSchema = copy(columns = columns.filterNot(_.name == name))
+  def removeColumns(names: List[String]): FrameSchema = copy(columns = columns.filterNot(names contains _.name))
 
   def join(other: FrameSchema): FrameSchema = {
     require(
@@ -31,5 +37,5 @@ case class FrameSchema(columns: List[Column]) {
 }
 
 object FrameSchema {
-  def apply(names: Seq[String]): FrameSchema = FrameSchema(names.map(Column.apply).toList)
+  implicit def apply(strs: Seq[String]): FrameSchema = FrameSchema(strs.map(Column.apply).toList)
 }

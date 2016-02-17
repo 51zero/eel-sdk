@@ -4,8 +4,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 class FrameTest extends WordSpec with Matchers {
 
-  val columns = List(Column("a"), Column("b"))
-  val frame = Frame(Row(columns, List("1", "2")), Row(columns, List("3", "4")))
+  val frame = Frame(List("a", "b"), List("1", "2"), List("3", "4"))
 
   "Frame" should {
     "be immutable and repeatable" in {
@@ -33,178 +32,220 @@ class FrameTest extends WordSpec with Matchers {
       frame.drop(2).size.run shouldBe 0
     }
     "be thread safe when using drop" in {
-      val rows = Iterator.tabulate(10000)(k => Row(Map("k" -> k.toString))).toList
-      val frame = Frame(rows)
-      frame.drop(100).toList.runConcurrent(4).size shouldBe 9900
+      val rows = Iterator.tabulate(10000)(k => Seq("1")).toList
+      val frame = Frame(FrameSchema(Seq("k")), rows)
+      frame.drop(100).toSeq.runConcurrent(4).size shouldBe 9900
     }
     "support adding columns" in {
       val f = frame.addColumn("testy", "bibble")
-      f.head.run.get shouldBe Row(List("a", "b", "testy"), List("1", "2", "bibble"))
+      f.head.run.get shouldBe List("1", "2", "bibble")
       f.schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("testy")))
     }
     "support removing columns" in {
-      val columns = List(Column("a"), Column("b"), Column("c"), Column("d"))
-      val frame = Frame(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
-      val f = frame.removeColumn("c")
-      f.head.run.get shouldBe Row(List("a", "b", "d"), List("1", "2", "4"))
-      f.schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("d")))
+      val frame = Frame(
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
+      )
+      val f = frame.removeColumn("name")
+      f.toSeq.run shouldBe List(List("aylesbury"), List("aylesbury"), List("buckingham"))
+      f.schema shouldBe FrameSchema(List(Column("location")))
     }
     "support column projection" in {
-      val columns = List(Column("a"), Column("b"), Column("c"), Column("d"))
-      val frame = Frame(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
-      val f = frame.projection("d", "a", "c", "b")
-      f.head.run.get shouldBe Row(List("d", "a", "c", "b"), List("4", "1", "3", "2"))
-      f.schema shouldBe FrameSchema(List(Column("d"), Column("a"), Column("c"), Column("b")))
+      val frame = Frame(
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
+      )
+      val f = frame.projection("location")
+      f.head.run.get shouldBe Seq("aylesbury")
+      f.schema shouldBe FrameSchema(List(Column("location")))
+    }
+    "support column projection re-ordering" in {
+      val frame = Frame(
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
+      )
+      val f = frame.projection("location", "name")
+      f.schema shouldBe FrameSchema(List(Column("location"), Column("name")))
+      f.head.run.get shouldBe List("aylesbury", "sam")
     }
     "support row filtering by column name and fn" in {
       frame.filter("b", _ == "2").size.run shouldBe 1
     }
     "support union" in {
       frame.union(frame).size.run shouldBe 4
-      frame.union(frame).toList.run shouldBe List(
-        Row(columns, List("1", "2")),
-        Row(columns, List("3", "4")),
-        Row(columns, List("1", "2")),
-        Row(columns, List("3", "4"))
+      frame.union(frame).toSeq.run shouldBe List(
+        List("1", "2"),
+        List("3", "4"),
+        List("1", "2"),
+        List("3", "4")
       )
     }
     "support collect" in {
       frame.collect {
-        case row if row.fields.head.value == "3" => row
+        case row if row.head == "3" => row
       }.size.run shouldBe 1
     }
     "support ++" in {
       frame.++(frame).size.run shouldBe 4
     }
     "support joins" in {
-      val frame1 = Frame(Row(Map("a" -> "sam", "b" -> "bam")))
-      val frame2 = Frame(Row(Map("c" -> "ham", "d" -> "jam")))
+      val frame1 = Frame(List("a", "b"), List("sam", "bam"))
+      val frame2 = Frame(List("c", "d"), List("ham", "jam"))
       frame1.join(frame2).schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("c"), Column("d")))
-      frame1.join(frame2).head.run.get shouldBe Row(Map("a" -> "sam", "b" -> "bam", "c" -> "ham", "d" -> "jam"))
-    }
-    "support multirow joins" in {
-      val frame1 = Frame(Row(Map("a" -> "sam", "b" -> "bam")), Row(Map("a" -> "ham", "b" -> "jam")))
-      val frame2 = Frame(Row(Map("c" -> "gary", "d" -> "harry")), Row(Map("c" -> "barry", "d" -> "larry")))
-      frame1.join(frame2).schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("c"), Column("d")))
-      frame1.join(frame2).toList.run shouldBe List(Row(Map("a" -> "sam", "b" -> "bam", "c" -> "gary", "d" -> "harry")), Row(Map("a" -> "ham", "b" -> "jam", "c" -> "barry", "d" -> "larry")))
+      frame1.join(frame2).head.run.get shouldBe List("sam", "bam", "ham", "jam")
     }
     "support except" in {
-      val frame1 = Frame(Row(Map("name" -> "sam", "location" -> "aylesbury")))
-      val frame2 = Frame(Row(Map("landmark" -> "st pauls", "location" -> "london")))
-      frame1.except(frame2).toList.run shouldBe List(Row(Map("name" -> "sam")))
+      val frame1 = Frame(
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
+      )
+      val frame2 = Frame(
+        List("landmark", "location"),
+        List("x", "aylesbury"),
+        List("y", "aylesbury"),
+        List("z", "buckingham")
+      )
+      frame1.except(frame2).schema shouldBe FrameSchema(Seq("name"))
+      frame1.except(frame2).toSeq.run shouldBe List(
+        List("sam"),
+        List("jam"),
+        List("ham")
+      )
     }
     "support take while with row predicate" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jam", "location" -> "aylesbury")),
-        Row(Map("name" -> "ham", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.takeWhile(_.apply("location") == "aylesbury").toList.run shouldBe List(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jam", "location" -> "aylesbury"))
+      frame.takeWhile(_.apply(1) == "aylesbury").toSeq.run shouldBe List(
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury")
       )
     }
     "support take while with column predicate" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jam", "location" -> "aylesbury")),
-        Row(Map("name" -> "ham", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.takeWhile("location", _ == "aylesbury").toList.run shouldBe List(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jam", "location" -> "aylesbury"))
+      frame.takeWhile("location", _ == "aylesbury").toSeq.run shouldBe List(
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury")
       )
     }
     "support drop while" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jam", "location" -> "aylesbury")),
-        Row(Map("name" -> "ham", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.dropWhile(_.apply("location") == "aylesbury").toList.run shouldBe List(
-        Row(Map("name" -> "ham", "location" -> "buckingham"))
-      )
+      frame.dropWhile(_.apply(1) == "aylesbury").toSeq.run shouldBe List(List("ham", "buckingham"))
     }
     "support drop while with column predicate" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jam", "location" -> "aylesbury")),
-        Row(Map("name" -> "ham", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.dropWhile("location", _ == "aylesbury").toList.run shouldBe List(
-        Row(Map("name" -> "ham", "location" -> "buckingham"))
+      frame.dropWhile("location", _ == "aylesbury").toSeq.run shouldBe List(
+        List("ham", "buckingham")
       )
     }
     "support explode" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "aylesbury")),
-        Row(Map("name" -> "jim", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.explode(row => Seq(row, row)).toList.run shouldBe {
+      frame.explode(row => Seq(row, row)).toSeq.run shouldBe {
         List(
-          Row(Map("name" -> "sam", "location" -> "aylesbury")),
-          Row(Map("name" -> "sam", "location" -> "aylesbury")),
-          Row(Map("name" -> "jim", "location" -> "buckingham")),
-          Row(Map("name" -> "jim", "location" -> "buckingham"))
+          List("sam", "aylesbury"),
+          List("sam", "aylesbury"),
+          List("jam", "aylesbury"),
+          List("jam", "aylesbury"),
+          List("ham", "buckingham"),
+          List("ham", "buckingham")
         )
       }
     }
     "support fill" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> null)),
-        Row(Map("name" -> null, "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", null),
+        List("jam", "aylesbury"),
+        List(null, "buckingham")
       )
-      frame.fill("foo").toList.run shouldBe {
+      frame.fill("foo").toSeq.run shouldBe {
         List(
-          Row(Map("name" -> "sam", "location" -> "foo")),
-          Row(Map("name" -> "foo", "location" -> "buckingham"))
+          List("sam", "foo"),
+          List("jam", "aylesbury"),
+          List("foo", "buckingham")
         )
       }
     }
     "support replace" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> null)),
-        Row(Map("name" -> "bob", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.replace("sam", "ham").toList.run shouldBe {
+      frame.replace("sam", "ham").toSeq.run shouldBe {
         List(
-          Row(Map("name" -> "ham", "location" -> null)),
-          Row(Map("name" -> "bob", "location" -> "buckingham"))
+          List("ham", "aylesbury"),
+          List("ham", "buckingham")
         )
       }
     }
     "support replace by column" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "sam")),
-        Row(Map("name" -> "bob", "location" -> "sam"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.replace("name", "sam", "ham").toList.run shouldBe {
+      frame.replace("name", "sam", "ham").toSeq.run shouldBe {
         List(
-          Row(Map("name" -> "ham", "location" -> "sam")),
-          Row(Map("name" -> "bob", "location" -> "sam"))
+          List("ham", "aylesbury"),
+          List("ham", "buckingham")
         )
       }
     }
     "support replace by column with function" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> "sam")),
-        Row(Map("name" -> "jim", "location" -> "sam"))
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("ham", "buckingham")
       )
-      frame.replace("name", str => str.reverse).toList.run shouldBe {
+      val fn: Any => Any = any => any.toString.reverse
+      frame.replace("name", fn).toSeq.run shouldBe {
         List(
-          Row(Map("name" -> "mas", "location" -> "sam")),
-          Row(Map("name" -> "mij", "location" -> "sam"))
+          List("mas", "aylesbury"),
+          List("mah", "buckingham")
         )
       }
     }
     "support dropNullRows" in {
       val frame = Frame(
-        Row(Map("name" -> "sam", "location" -> null)),
-        Row(Map("name" -> "bob", "location" -> "buckingham"))
+        List("name", "location"),
+        List("sam", null),
+        List("ham", "buckingham")
       )
-      frame.dropNullRows.toList.run shouldBe {
+      frame.dropNullRows.toSeq.run shouldBe {
         List(
-          Row(Map("name" -> "bob", "location" -> "buckingham"))
+          List("ham", "buckingham")
         )
       }
     }

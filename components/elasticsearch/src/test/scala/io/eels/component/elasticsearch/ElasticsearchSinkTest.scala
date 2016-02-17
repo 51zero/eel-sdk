@@ -1,8 +1,9 @@
 package io.eels.component.elasticsearch
 
 import java.nio.file.Files
+
 import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl}
-import io.eels.{Frame, Column, Row}
+import io.eels.Frame
 import org.elasticsearch.common.settings.Settings
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -36,8 +37,9 @@ class ElasticsearchSinkTest extends WordSpec with Matchers with Eventually {
     "persist each row" in {
 
       val frame = Frame(
-        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
-        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner"))
+        List("name", "job", "location"),
+        List("clint eastwood", "actor", "carmel"),
+        List("elton john", "musician", "pinner")
       )
       frame.to(ElasticsearchSink(() => client, "myindex", "mytype", closeClient = false))
       eventually(Timeout(Span(5, Seconds))) {

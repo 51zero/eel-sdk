@@ -1,9 +1,9 @@
 package io.eels.component.jdbc
 
-import java.sql.{ResultSetMetaData, DriverManager}
+import java.sql.{DriverManager, ResultSetMetaData}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Field, FrameSchema, Reader, Row, Source}
+import io.eels.{Column, FrameSchema, Reader, Row, Source}
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source
@@ -50,8 +50,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
         }
 
         override def next: Row = {
-          val fields = for ( k <- 1 to _schema.columns.size ) yield Field(rs.getString(k))
-          Row(schema.columns, fields.toList)
+          for ( k <- 1 to _schema.columns.size ) yield rs.getString(k)
         }
       }
     }

@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{TimeUnit, CountDownLatch, Executors, ArrayBlockingQueue}
+import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -46,8 +46,8 @@ case class HiveSink(dbName: String,
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
 
-    def getOrCreateHiveWriter(row: Row): HiveWriter = {
-      val parts = RowPartitionParts(row, partitionKeyNames)
+    def getOrCreateHiveWriter(row: Row, schema: FrameSchema): HiveWriter = {
+      val parts = RowPartitionParts(row, partitionKeyNames, schema)
       val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
       writers.synchronized {
         writers.getOrElseUpdate(partPath, {
@@ -57,7 +57,7 @@ case class HiveSink(dbName: String,
             HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
           else if (!HiveOps.partitionExists(dbName, tableName, parts))
             sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
-          dialect.writer(FrameSchema(row.columns), filePath)
+          dialect.writer(schema, filePath)
         })
       }
     }
@@ -68,13 +68,14 @@ case class HiveSink(dbName: String,
     val latch = new CountDownLatch(ioThreads)
     val executor = Executors.newFixedThreadPool(ioThreads)
     val count = new AtomicLong(0)
+    var schema: FrameSchema = null
 
     for ( k <- 1 to ioThreads ) {
       executor.submit {
         logger.info(s"HiveSink thread $k started")
         try {
           BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { row =>
-            val writer = getOrCreateHiveWriter(row)
+            val writer = getOrCreateHiveWriter(row, schema)
             writer.synchronized {
               writer.write(row)
             }
@@ -106,7 +107,8 @@ case class HiveSink(dbName: String,
         executor.awaitTermination(1, TimeUnit.HOURS)
       }
 
-      override def write(row: Row): Unit = {
+      override def write(row: Row, _schema: FrameSchema): Unit = {
+        schema = _schema
         queue.put(row)
       }
     }
@@ -156,12 +158,13 @@ object PartitionPart {
 // returns all the partition parts for a given row, if a row doesn't contain a value
 // for a part then an error is thrown
 object RowPartitionParts {
-  def apply(row: Row, partNames: Seq[String]): List[PartitionPart] = {
-    require(partNames.forall(row.contains), "Row must contain all partitions " + partNames)
+  def apply(row: Row, partNames: Seq[String], schema: FrameSchema): List[PartitionPart] = {
+    require(partNames.forall(schema.columnNames.contains), "FrameSchema must contain all partitions " + partNames)
     partNames.map { name =>
-      val value = row(name)
-      require(!value.contains(" "), "Values for partition fields cannot contain spaces")
-      PartitionPart(name, value)
+      val index = schema.indexOf(name)
+      val value = row(index)
+      require(!value.toString.contains(" "), "Values for partition fields cannot contain spaces")
+      PartitionPart(name, value.toString)
     }.toList
   }
 }
