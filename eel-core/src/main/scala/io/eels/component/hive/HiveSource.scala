@@ -16,7 +16,6 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
   extends Source
     with StrictLogging
     with Using {
-
   ParquetLogMute()
 
   def withPartition(name: String, value: String): HiveSource = withPartition(name, "=", value)
@@ -72,7 +71,10 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
       new Reader {
         ParquetLogMute()
         lazy val iterator = dialect.iterator(path, schema)
-        override def close(): Unit = () // todo close dialect
+        override def close(): Unit = {
+          logger.debug("Closing hive reader")
+          // todo close dialect
+        }
       }
     }
   }

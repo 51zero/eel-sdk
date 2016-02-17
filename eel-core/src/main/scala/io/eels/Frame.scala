@@ -200,15 +200,18 @@ trait Frame {
     }
   }
 
+  def projectionExpression(expr: String): Frame = projection(expr.split(',').map(_.trim))
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
-    override val schema: FrameSchema = FrameSchema(columns.map(Column.apply).toList)
+    lazy val outerSchema = outer.schema
+    override lazy val schema: FrameSchema = {
+      require(columns.forall(outerSchema.columnNames.contains), "Source schema must contain all projected columns")
+      FrameSchema(outerSchema.columns.filter(columns contains _.name))
+    }
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
-      val outerSchema = outer.schema
-      val indexes = columns.map(outerSchema.indexOf)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.projection(indexes, _))
+      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.projection(columns, _, outerSchema))
     }
   }
 

@@ -25,8 +25,8 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
   override def writer(schema: FrameSchema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     ParquetLogMute()
-
     logger.debug(s"Creating parquet writer for $path")
+
     val avroSchema = AvroSchemaGen(schema)
     val writer = new AvroParquetWriter[GenericRecord](
       path,
@@ -36,8 +36,6 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
       ParquetWriter.DEFAULT_PAGE_SIZE * 10
     )
     new HiveWriter {
-      ParquetLogMute()
-
       override def close(): Unit = writer.close()
       override def write(row: Row): Unit = {
         val record = AvroRecordFn.toRecord(row, avroSchema)
