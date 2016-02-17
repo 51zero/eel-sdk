@@ -3,7 +3,9 @@ package io.eels.component.hive
 // represents a full partition, which in hive terminlogy is (key1=value1, key2=value2, ...)
 case class Partition(kvs: List[PartitionKeyValue]) {
   // returns the partition in directory representation, eg key1=value1/key2=value2/...
-  def name: String = kvs.map(_.unquoted).mkString("/")
+  def dirName: String = kvs.map(_.unquoted).mkString("/")
+  def keys: List[String] = kvs.map(_.key)
+  def values: List[String] = kvs.map(_.value)
 }
 
 object Partition {

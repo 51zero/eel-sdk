@@ -140,6 +140,7 @@ object HiveSink {
   }
 }
 
+@deprecated("will be replaced with PartitionKeyValue", "0.24.0")
 case class PartitionPart(key: String, value: String) {
   def unquotedDir = s"$key=$value"
 }

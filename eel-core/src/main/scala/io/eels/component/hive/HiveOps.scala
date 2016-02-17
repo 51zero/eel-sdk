@@ -5,18 +5,57 @@ import java.util
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.FrameSchema
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.api.{Partition => HivePartition, FieldSchema, SerDeInfo, StorageDescriptor, Table}
+import org.apache.hadoop.hive.metastore.api.{FieldSchema, Partition => HivePartition, SerDeInfo, StorageDescriptor, Table}
 import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
 
 object HiveOps extends StrictLogging {
 
+  /**
+    * Creates a new partition in Hive in the given database:table in the default location, which will be the
+    * partition key values as a subdirectory of the table location. The values for the serialzation formats are
+    * taken from the values for the table.
+    */
+  def createPartition(dbName: String, tableName: String, partition: Partition)
+                     (implicit client: HiveMetaStoreClient): Unit = {
+    val table = client.getTable(dbName, tableName)
+    val location = new Path(table.getSd.getLocation, partition.dirName)
+    createPartition(dbName, tableName, partition, location)
+  }
+
+  /**
+    * Creates a new partition in Hive in the given database:table. The location of the partition must be
+    * specified. If you want to use the default location then use the other variant that doesn't require the
+    * location path. The values for the serialzation formats are taken from the values for the table.
+    */
+  def createPartition(dbName: String, tableName: String, partition: Partition, location: Path)
+                     (implicit client: HiveMetaStoreClient): Unit = {
+
+    // we fetch the table so we can copy the serde/format values from the table. It makes no sense
+    // to store a partition with different serialization formats to other partitions.
+    val table = client.getTable(dbName, tableName)
+    val sd = new StorageDescriptor(table.getSd)
+    sd.setLocation(location.toString)
+
+    val newPartition = new HivePartition(
+      partition.values.asJava,
+      dbName,
+      tableName,
+      createTimeAsInt,
+      0,
+      sd,
+      new util.HashMap
+    )
+
+    client.add_partition(newPartition)
+  }
+
   def partitions(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[HivePartition] = {
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
   }
 
-  def createTime: Int = (System.currentTimeMillis / 1000).toInt
+  def createTimeAsInt: Int = (System.currentTimeMillis / 1000).toInt
 
   def partitionKeys(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[FieldSchema] = {
     client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
@@ -66,6 +105,7 @@ object HiveOps extends StrictLogging {
   }
 
   // creates (if not existing) the partition for the given partition parts
+  // todo fix this to not use the deprecated classes
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
                                  parts: Seq[PartitionPart])
@@ -83,21 +123,8 @@ object HiveOps extends StrictLogging {
       val path = partitionPath(dbName, tableName, parts)
       logger.debug(s"Creating partition '$partitionName' at $path")
 
-      val table = client.getTable(dbName, tableName)
-      val sd = new StorageDescriptor(table.getSd)
-      sd.setLocation(path.toString)
-
-      val partition = new HivePartition(
-        parts.map(_.value).toList.asJava,
-        dbName,
-        tableName,
-        createTime,
-        0,
-        sd,
-        new util.HashMap
-      )
-
-      client.add_partition(partition)
+      val partition = Partition(parts.map(part => PartitionKeyValue(part.key, part.value)).toList)
+      createPartition(dbName, tableName, partition)
     }
   }
 
@@ -135,7 +162,7 @@ object HiveOps extends StrictLogging {
       val table = new Table()
       table.setDbName(databaseName)
       table.setTableName(tableName)
-      table.setCreateTime(createTime)
+      table.setCreateTime(createTimeAsInt)
       table.setSd(sd)
       table.setPartitionKeys(partitionKeys.map(new FieldSchema(_, "string", null)).asJava)
       table.setTableType(tableType.name)
