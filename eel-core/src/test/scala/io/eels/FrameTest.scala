@@ -63,6 +63,17 @@ class FrameTest extends WordSpec with Matchers {
       f.head.run.get shouldBe Seq("aylesbury")
       f.schema shouldBe FrameSchema(List(Column("location")))
     }
+    "support column projection expressions" in {
+      val frame = Frame(
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("jam", "aylesbury"),
+        List("ham", "buckingham")
+      )
+      val f = frame.projectionExpression("location,name")
+      f.head.run.get shouldBe Seq("aylesbury", "sam")
+      f.schema shouldBe FrameSchema(List(Column("location"), Column("name")))
+    }
     "support column projection re-ordering" in {
       val frame = Frame(
         List("name", "location"),

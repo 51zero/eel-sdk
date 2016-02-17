@@ -203,11 +203,16 @@ trait Frame {
   def projectionExpression(expr: String): Frame = projection(expr.split(',').map(_.trim))
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
   def projection(columns: Seq[String]): Frame = new Frame {
+
     lazy val outerSchema = outer.schema
+
     override lazy val schema: FrameSchema = {
-      require(columns.forall(outerSchema.columnNames.contains), "Source schema must contain all projected columns")
-      FrameSchema(outerSchema.columns.filter(columns contains _.name))
+      val newColumns = columns.map { col =>
+        outerSchema.columns.find(_.name == col).getOrElse(sys.error(s"$col is not in the source frame"))
+      }
+      FrameSchema(newColumns.toList)
     }
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
