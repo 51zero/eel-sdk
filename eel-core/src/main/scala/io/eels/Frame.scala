@@ -312,7 +312,7 @@ trait Frame {
 
   def toSeq: ConcurrentPlan[Seq[Row]] = new ToSeqPlan(this)
 
-  def toSet: ConcurrentPlan[Set[Row]] = new ToSetPlan(this)
+  def toSet: ConcurrentPlan[scala.collection.mutable.Set[Row]] = new ToSetPlan(this)
 
   def forall(p: (Row) => Boolean): Plan[Boolean] = new ForallPlan(this, p)
 

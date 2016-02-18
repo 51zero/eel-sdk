@@ -30,12 +30,12 @@ class FindPlan(frame: Frame, p: Row => Boolean) extends Plan[Option[Row]] with U
   }
 }
 
-class ToSetPlan(frame: Frame) extends ConcurrentPlan[Set[Row]] with Using with StrictLogging {
+class ToSetPlan(frame: Frame) extends ConcurrentPlan[scala.collection.mutable.Set[Row]] with Using with StrictLogging {
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
   import scala.collection.JavaConverters._
 
-  override def runConcurrent(workers: Int): Set[Row] = {
+  override def runConcurrent(workers: Int): scala.collection.mutable.Set[Row] = {
     val map = new ConcurrentHashMap[Row, Boolean]
     val buffer = frame.buffer
     val latch = new CountDownLatch(workers)
@@ -63,7 +63,7 @@ class ToSetPlan(frame: Frame) extends ConcurrentPlan[Set[Row]] with Using with S
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
     logger.debug("Set data is complete into map; building set")
-    map.keySet.asScala.toSet
+    map.keySet.asScala
   }
 }
 
