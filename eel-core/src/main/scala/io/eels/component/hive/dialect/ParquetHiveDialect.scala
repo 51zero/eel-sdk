@@ -13,11 +13,11 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
-  override def iterator(path: Path, schema: FrameSchema)
+  override def iterator(path: Path, schema: FrameSchema, columns: Seq[String])
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
     ParquetLogMute()
 
-    lazy val iter = ParquetIterator(path)
+    lazy val iter = ParquetIterator(path, columns)
     override def hasNext: Boolean = iter.hasNext
     override def next(): Row = iter.next
   }

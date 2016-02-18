@@ -12,7 +12,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 object AvroHiveDialect extends HiveDialect with StrictLogging {
 
-  override def iterator(path: Path, schema: FrameSchema)
+  override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[Row] = {
 
     logger.debug(s"Creating avro iterator for $path")

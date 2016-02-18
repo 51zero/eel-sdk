@@ -11,13 +11,14 @@ import org.apache.hadoop.hive.metastore.api.Table
 
 import scala.collection.JavaConverters._
 
-case class HiveSource(db: String, table: String, partitionExprs: List[PartitionExpr] = Nil)
+case class HiveSource(db: String, table: String, partitionExprs: List[PartitionExpr] = Nil, columns: Seq[String] = Nil)
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
     with StrictLogging
     with Using {
   ParquetLogMute()
 
+  def withColumns(columns: Seq[String]): HiveSource = copy(columns = columns)
   def withPartition(name: String, value: String): HiveSource = withPartition(name, "=", value)
   def withPartition(name: String, op: String, value: String): HiveSource = {
     val expr = op match {
@@ -70,7 +71,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
     paths.map { path =>
       new Reader {
         ParquetLogMute()
-        lazy val iterator = dialect.iterator(path, schema)
+        lazy val iterator = dialect.iterator(path, schema, columns)
         override def close(): Unit = {
           logger.debug("Closing hive reader")
           // todo close dialect

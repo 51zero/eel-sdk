@@ -15,6 +15,12 @@ object AvroRecordFn {
     }.toVector
   }
 
+  def fromRecord(record: GenericRecord, columns: Seq[String]): Row = {
+    columns.map { column =>
+      record.get(column)
+    }.toVector
+  }
+
   def toRecord(row: Row, schema: Schema): GenericRecord = {
     val record = new Record(schema)
     for ( (field, value) <- schema.getFields.asScala.zip(row) ) {

@@ -49,10 +49,10 @@ object ParquetIterator extends StrictLogging {
     AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 
-  def apply(path: Path): Iterator[Row] = new Iterator[Row] {
+  def apply(path: Path, columns: Seq[String]): Iterator[Row] = new Iterator[Row] {
 
     val reader = createReader(path)
-    val iter = Iterator.continually(reader.read).takeWhile(_ != null).map(AvroRecordFn.fromRecord)
+    val iter = Iterator.continually(reader.read).takeWhile(_ != null).map(AvroRecordFn.fromRecord(_, columns))
 
     override def hasNext: Boolean = {
       val hasNext = iter.hasNext

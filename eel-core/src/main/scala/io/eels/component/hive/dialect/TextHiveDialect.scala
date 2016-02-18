@@ -12,7 +12,7 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
 
   val delimiter = '\u0001'
 
-  override def iterator(path: Path, schema: FrameSchema)
+  override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
     lazy val in = fs.open(path)
     lazy val iter = lineIterator(in)

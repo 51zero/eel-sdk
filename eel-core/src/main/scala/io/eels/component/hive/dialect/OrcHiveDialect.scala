@@ -12,7 +12,8 @@ import scala.collection.JavaConverters._
 
 object OrcHiveDialect extends HiveDialect with StrictLogging {
 
-  override def iterator(path: Path, schema: FrameSchema)
+  // todo implement column pushdown
+  override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[Row] = {
     logger.debug(s"Creating orc iterator for $path")
 
