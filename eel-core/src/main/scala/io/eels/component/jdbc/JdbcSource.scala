@@ -1,14 +1,17 @@
 package io.eels.component.jdbc
 
-import java.sql.{DriverManager, ResultSetMetaData}
+import java.sql.DriverManager
 
+import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, FrameSchema, Reader, Row, Source}
+import io.eels.{FrameSchema, Reader, Row, Source}
+
 import scala.concurrent.duration._
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source
-    with StrictLogging {
+    with StrictLogging
+    with Using {
 
   override def readers: Seq[Reader] = {
 
@@ -25,8 +28,12 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     val duration = (System.currentTimeMillis() - start).millis
     logger.info(s" === query completed in $duration ===")
 
-    val _schema = schema
-    logger.debug("Schema=" + _schema)
+    val dialect = props.dialect.getOrElse(JdbcDialect(url))
+    val schema = SchemaBuilder(rs, dialect)
+    logger.debug("Fetched schema: ")
+    logger.debug(schema.print)
+
+    val columnCount = schema.columns.size
 
     val part = new Reader {
 
@@ -40,7 +47,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
       var created = false
 
       override def iterator: Iterator[Row] = new Iterator[Row] {
-        require(!created, "Cannot create more than one iterator for a jdbc source")
+        require(!created, "!Cannot create more than one iterator for a jdbc source!")
         created = true
 
         override def hasNext: Boolean = {
@@ -53,7 +60,9 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
         }
 
         override def next: Row = {
-          for ( k <- 1 to _schema.columns.size ) yield rs.getString(k)
+          for ( k <- 1 to columnCount ) yield {
+            rs.getString(k)
+          }.toVector
         }
       }
     }
@@ -64,42 +73,28 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
   lazy val schema: FrameSchema = {
 
     logger.info(s"Connecting to jdbc source $url...")
-    val conn = DriverManager.getConnection(url)
-    logger.debug(s"Connected to $url")
+    using(DriverManager.getConnection(url)) { conn =>
+      logger.debug(s"Connected to $url")
 
-    val stmt = conn.createStatement()
+      val stmt = conn.createStatement()
 
-    val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
-    logger.debug(s"Executing query for schema [$schemaQuery]...")
-    val start = System.currentTimeMillis()
-    val rs = stmt.executeQuery(query)
-    val duration = (System.currentTimeMillis() - start).millis
-    logger.info(s" === schema fetch completed in $duration ===")
+      val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
+      logger.debug(s"Executing query for schema [$schemaQuery]...")
+      val start = System.currentTimeMillis()
+      val rs = stmt.executeQuery(query)
+      val duration = (System.currentTimeMillis() - start).millis
+      logger.info(s" === schema fetch completed in $duration ===")
 
-    val dialect = props.dialect.getOrElse(JdbcDialect(url))
+      val dialect = props.dialect.getOrElse(JdbcDialect(url))
+      val schema = SchemaBuilder(rs, dialect)
+      rs.close()
+      stmt.close()
 
-    val md: ResultSetMetaData = rs.getMetaData
-    val columnCount = md.getColumnCount
-    logger.debug(s"Resultset column count is $columnCount")
+      logger.debug("Fetched schema: ")
+      logger.debug(schema.print)
 
-    val cols = for ( k <- 1 to columnCount ) yield {
-      Column(
-        name = md.getColumnLabel(k),
-        `type` = dialect.fromJdbcType(md.getColumnType(k)),
-        nullable = md.isNullable(k) == 1,
-        precision = md.getPrecision(k),
-        scale = md.getScale(k),
-        signed = md.isSigned(k),
-        None
-      )
+      schema
     }
-
-    val schema = FrameSchema(cols.toList)
-
-    logger.debug("Fetched schema: ")
-    logger.debug(schema.print)
-
-    schema
   }
 }
 
