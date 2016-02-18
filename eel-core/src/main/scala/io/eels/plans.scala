@@ -99,7 +99,7 @@ class ToSeqPlan(frame: Frame) extends ConcurrentPlan[Seq[Row]] with Using with S
     }
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
-    queue.asScala.toSeq
+    queue.asScala.toVector
   }
 }
 

@@ -154,9 +154,11 @@ trait Frame {
     override def schema: FrameSchema = outer.schema.removeColumn(columnName)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
-      val removeIndex = outer.schema.indexOf(columnName)
+      val index = outer.schema.indexOf(columnName)
       override def close(): Unit = buffer.close()
-      override def iterator: Iterator[Row] = buffer.iterator.map(RowUtils.removeIndex(removeIndex, _))
+      override def iterator: Iterator[Row] = buffer.iterator.map { row =>
+        row.slice(0, index) ++ row.slice(index + 1, row.length)
+      }
     }
   }
 

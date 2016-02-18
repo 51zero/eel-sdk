@@ -43,14 +43,13 @@ class FrameTest extends WordSpec with Matchers {
     }
     "support removing columns" in {
       val frame = Frame(
-        List("name", "location"),
-        List("sam", "aylesbury"),
-        List("jam", "aylesbury"),
-        List("ham", "buckingham")
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
       )
-      val f = frame.removeColumn("name")
-      f.toSeq.run shouldBe List(List("aylesbury"), List("aylesbury"), List("buckingham"))
-      f.schema shouldBe FrameSchema(List(Column("location")))
+      val f = frame.removeColumn("location")
+      f.schema shouldBe FrameSchema(List(Column("name"), Column("postcode")))
+      f.toSeq.run shouldBe List(List("sam", "hp22"), List("ham", "mk10"))
     }
     "support column projection" in {
       val frame = Frame(
