@@ -1,7 +1,7 @@
 package io.eels
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{ConcurrentLinkedQueue, ConcurrentSkipListSet, CountDownLatch, Executors, TimeUnit}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListMap, ConcurrentLinkedQueue, ConcurrentSkipListSet, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -36,14 +36,14 @@ class ToSetPlan(frame: Frame) extends ConcurrentPlan[scala.collection.mutable.Se
   import scala.collection.JavaConverters._
 
   override def runConcurrent(workers: Int): scala.collection.mutable.Set[Row] = {
-    val set = new ConcurrentSkipListSet[Row]
+    val map = new ConcurrentHashMap[Row, Boolean]
     val buffer = frame.buffer
     val latch = new CountDownLatch(workers)
     val executor = Executors.newFixedThreadPool(workers)
     for ( k <- 1 to workers ) {
       executor.submit {
         try {
-          buffer.iterator.foreach(set.add)
+          buffer.iterator.foreach(map.put(_, true))
         } catch {
           case e: Throwable =>
             logger.error("Error writing; shutting down executor", e)
@@ -62,7 +62,7 @@ class ToSetPlan(frame: Frame) extends ConcurrentPlan[scala.collection.mutable.Se
     }
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
-    set.asScala
+    map.keySet.asScala
   }
 }
 
