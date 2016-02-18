@@ -19,6 +19,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
   ParquetLogMute()
 
   def withColumns(columns: Seq[String]): HiveSource = copy(columns = columns)
+  def withColumns(first: String, rest: String*): HiveSource = withColumns(first +: rest)
   def withPartition(name: String, value: String): HiveSource = withPartition(name, "=", value)
   def withPartition(name: String, op: String, value: String): HiveSource = {
     val expr = op match {

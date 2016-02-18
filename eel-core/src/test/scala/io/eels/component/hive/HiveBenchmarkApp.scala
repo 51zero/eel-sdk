@@ -79,7 +79,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
   val schema = FrameSchema("id", "state")
-  val rows = List.fill(10000000)(List(UUID.randomUUID.toString, Random.nextInt(50)))
+  val rows = List.fill(1000000)(List(UUID.randomUUID.toString, Random.nextInt(50)))
 
   logger.info(s"Generated ${rows.size} rows")
 
@@ -101,7 +101,9 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   val start = System.currentTimeMillis()
 
-  val result = HiveSource("sam", "people").withPartition("state", "<=", "Iowa").toFrame(4).toSeq.runConcurrent(4)
+  val result = HiveSource("sam", "people")
+    .withPartition("state", "<=", "Iowa")
+    .withColumns("id").toFrame(4).toSeq.runConcurrent(4)
 
   val end = System.currentTimeMillis()
 
@@ -111,4 +113,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   logger.info(s"Read complete ${result.size} results")
   logger.info(s"Read took === ${duration.toSeconds} $duration")
+  result.take(100).foreach { row =>
+    logger.info("row=" + row)
+  }
 }

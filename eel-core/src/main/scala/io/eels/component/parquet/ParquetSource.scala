@@ -13,9 +13,13 @@ import scala.collection.JavaConverters._
 
 case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging with Using {
 
+  private def createReader(path: Path): ParquetReader[GenericRecord] = {
+    AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
+  }
+
   override def schema: FrameSchema = {
     val path = pattern.toPaths.head
-    using(ParquetIterator.createReader(path)) { reader =>
+    using(createReader(path)) { reader =>
       val record = reader.read()
       val columns = record.getSchema.getFields.asScala.map(_.name)
       FrameSchema(columns)
@@ -40,28 +44,5 @@ case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging
         override def close(): Unit = if (reader != null) reader.close()
       }
     }
-  }
-}
-
-object ParquetIterator extends StrictLogging {
-
-  def createReader(path: Path): ParquetReader[GenericRecord] = {
-    AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
-  }
-
-  def apply(path: Path, columns: Seq[String]): Iterator[Row] = new Iterator[Row] {
-
-    val reader = createReader(path)
-    val iter = Iterator.continually(reader.read).takeWhile(_ != null).map(AvroRecordFn.fromRecord(_, columns))
-
-    override def hasNext: Boolean = {
-      val hasNext = iter.hasNext
-      if (!hasNext) {
-        logger.debug("Closing parquet iterator")
-        reader.close()
-      }
-      hasNext
-    }
-    override def next(): Row = iter.next()
   }
 }
