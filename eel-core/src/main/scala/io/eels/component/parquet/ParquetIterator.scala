@@ -24,6 +24,7 @@ object ParquetIterator extends StrictLogging {
 
     def configuration: Configuration = {
       val conf = new Configuration
+      AvroReadSupport.setAvroReadSchema(conf, projection)
       AvroReadSupport.setRequestedProjection(conf, projection)
       conf
     }
