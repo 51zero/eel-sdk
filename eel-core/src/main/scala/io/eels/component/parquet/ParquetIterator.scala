@@ -3,23 +3,20 @@ package io.eels.component.parquet
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.Row
 import io.eels.component.avro.AvroRecordFn
-import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
+import org.apache.avro.{Schema, SchemaBuilder}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.parquet.avro.{AvroReadSupport, AvroParquetReader}
+import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
 import org.apache.parquet.hadoop.ParquetReader
-import scala.collection.JavaConverters._
 
 object ParquetIterator extends StrictLogging {
 
   private def createReader(path: Path, columns: Seq[String]): ParquetReader[GenericRecord] = {
 
     def projection: Schema = {
-      val fields = columns.map(name => new Schema.Field(name, Schema.create(Schema.Type.STRING), null, null))
-      val schema = Schema.createRecord("dummy", null, "com", false)
-      schema.setFields(fields.asJava)
-      schema
+      val builder = SchemaBuilder.record("dummy").namespace("com")
+      columns.foldLeft(builder.fields)((fields, name) => fields.optionalString(name)).endRecord()
     }
 
     def configuration: Configuration = {
