@@ -7,7 +7,9 @@ import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceTest extends WordSpec with Matchers {
 
-  val path = Paths.get(getClass.getResource("/csvtest.csv").getFile)
+
+  val file = getClass.getResource("/csvtest.csv").toURI
+  val path = Paths.get(file)
 
   "CsvSource" should {
     "read schema" in {
