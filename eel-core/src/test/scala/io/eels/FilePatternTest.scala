@@ -23,16 +23,18 @@ class FilePatternTest extends WordSpec with Matchers {
     "detect relative local file expansion" in {
       val dir = Files.createTempDirectory("filepatterntest")
       val files = List("a", "b", "c").map(dir.resolve)
-      val hdfsPaths = files.map(path => new Path("file:" + path))
+      val hdfsPaths = files.map(path => new Path("file:/" + path))
       files.foreach(Files.createFile(_))
-      FilePattern("file://" + dir.toAbsolutePath.toString + "/*").toPaths.toSet shouldBe hdfsPaths.toSet
+      FilePattern("file:/" + dir.toAbsolutePath.toString + "/*").toPaths.toSet shouldBe hdfsPaths.toSet
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }
-    "detect relative local file expansion with schema" in {
+
+    //not working on windows
+    "detect relative local file expansion with schema" in  {
       val dir = Files.createTempDirectory("filepatterntest")
       val files = List("a", "b", "c").map(dir.resolve)
-      val hdfsPaths = files.map(file => new Path("file:" + file))
+      val hdfsPaths = files.map(file => new Path("file:/" + file))
       files.foreach(Files.createFile(_))
       FilePattern(dir.toAbsolutePath.toString + "/*").toPaths.toSet shouldBe hdfsPaths.toSet
       files.foreach(Files.deleteIfExists)
@@ -43,7 +45,7 @@ class FilePatternTest extends WordSpec with Matchers {
       val files = List("a", "b", "c").map(dir.resolve)
       files.foreach(Files.createFile(_))
       FilePattern(dir.toAbsolutePath.toString + "/*").withFilter(_.toString.endsWith("a")).toPaths.toSet shouldBe
-        Set(new Path("file:" + dir.resolve("a")))
+        Set(new Path("file:///" + dir.resolve("a")))
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }

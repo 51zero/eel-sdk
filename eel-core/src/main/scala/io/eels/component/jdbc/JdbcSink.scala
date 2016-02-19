@@ -63,17 +63,28 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     var schema: FrameSchema = null
     val queue = new ArrayBlockingQueue[Row](BufferSize)
 
+    import com.sksamuel.scalax.concurrent.ExecutorImplicits._
+
     val latch = new CountDownLatch(props.threads)
     val executor = Executors.newFixedThreadPool(props.threads)
-    for ( k <- 1 to props.threads ) {
+    for (k <- 1 to props.threads) {
       executor.submit {
-        BlockingQueueConcurrentIterator(queue, Row.Sentinel)
-          .grouped(props.batchSize)
-          .withPartial(true)
-          .foreach { rows =>
-            doBatch(rows, schema)
-          }
-        latch.countDown()
+        try {
+          BlockingQueueConcurrentIterator(queue, Row.Sentinel)
+            .grouped(props.batchSize)
+            .withPartial(true)
+            .foreach { rows =>
+              doBatch(rows, schema)
+            }
+        }
+        catch {
+          case t: Throwable =>
+            logger.error("Fatal error occurred", t)
+            executor.shutdownNow()
+        }
+        finally {
+          latch.countDown()
+        }
       }
     }
     executor.submit {

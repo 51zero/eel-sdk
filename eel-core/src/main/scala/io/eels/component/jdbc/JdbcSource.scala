@@ -61,8 +61,8 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
         override def next: Row = {
           for ( k <- 1 to columnCount ) yield {
-            rs.getString(k)
-          }.toVector
+            rs.getObject(k)
+          }
         }
       }
     }
