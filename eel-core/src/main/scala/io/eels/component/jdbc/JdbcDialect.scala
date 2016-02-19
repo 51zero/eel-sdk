@@ -1,11 +1,11 @@
 package io.eels.component.jdbc
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, FrameSchema, Row, SchemaType}
+import io.eels.{Row, Column, FrameSchema, SchemaType}
 
 trait JdbcDialect {
   def create(schema: FrameSchema, table: String): String
-  def insert(row: Row, table: String): String
+  def insert(row: Row, schema: FrameSchema, table: String): String
   def toJdbcType(column: Column): String
   def fromJdbcType(i: Int): SchemaType
 }
@@ -78,9 +78,9 @@ trait GenericJdbcDialect extends JdbcDialect with StrictLogging {
     s"CREATE TABLE $table $columns"
   }
 
-  override def insert(row: Row, table: String): String = {
-    val columns = row.columns.map(_.name).mkString(",")
-    val values = row.fields.map(_.value).mkString("'", "','", "'")
+  override def insert(row: Row, schema: FrameSchema, table: String): String = {
+    val columns = schema.columnNames.mkString(",")
+    val values = row.mkString("'", "','", "'")
     s"INSERT INTO $table ($columns) VALUES ($values)"
   }
 }

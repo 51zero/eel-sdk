@@ -5,7 +5,8 @@ import java.nio.file.{Files, Path}
 
 import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
+import org.apache.avro.generic
+import org.apache.avro.generic.GenericRecord
 
 case class AvroSink(out: OutputStream) extends Sink {
 
@@ -13,11 +14,11 @@ case class AvroSink(out: OutputStream) extends Sink {
 
     var writer: DataFileWriter[GenericRecord] = null
 
-    override def write(row: Row): Unit = {
+    override def write(row: Row, schema: FrameSchema): Unit = {
       if (writer == null)
-        writer = createWriter(row)
-      val schema = AvroSchemaGen(FrameSchema(row.columns))
-      val record = AvroRecordFn.toRecord(row, schema)
+        writer = createWriter(row, schema)
+      val avroSchema = AvroSchemaGen(schema)
+      val record = AvroRecordFn.toRecord(row, avroSchema)
       writer.append(record)
     }
 
@@ -26,10 +27,11 @@ case class AvroSink(out: OutputStream) extends Sink {
       writer.close()
     }
 
-    private def createWriter(row: Row): DataFileWriter[GenericRecord] = {
-      val datumWriter = new GenericDatumWriter[GenericRecord](AvroSchemaGen(FrameSchema(row.columns)))
+    private def createWriter(row: Row, schema: FrameSchema): DataFileWriter[GenericRecord] = {
+      val avroSchema = AvroSchemaGen(schema)
+      val datumWriter = new generic.GenericDatumWriter[GenericRecord](avroSchema)
       val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
-      dataFileWriter.create(AvroSchemaGen(FrameSchema(row.columns)), out)
+      dataFileWriter.create(avroSchema, out)
       dataFileWriter
     }
   }

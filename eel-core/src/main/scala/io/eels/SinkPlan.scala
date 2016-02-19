@@ -12,6 +12,7 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with Stric
 
     val count = new AtomicLong(0)
     val latch = new CountDownLatch(workers)
+    val schema = frame.schema
     val buffer = frame.buffer
     val writer = sink.writer
     val executors = Executors.newFixedThreadPool(workers)
@@ -19,7 +20,7 @@ class SinkPlan(sink: Sink, frame: Frame) extends ConcurrentPlan[Long] with Stric
       executors.submit {
         try {
           buffer.iterator.foreach { row =>
-            writer.write(row)
+            writer.write(row, schema)
             count.incrementAndGet()
           }
         } catch {

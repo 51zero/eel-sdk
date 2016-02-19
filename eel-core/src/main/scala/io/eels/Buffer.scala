@@ -14,5 +14,5 @@ trait Buffer {
     */
   def close(): Unit
 
-  def iterator: Iterator[Row]
+  def iterator: Iterator[Seq[Any]]
 }

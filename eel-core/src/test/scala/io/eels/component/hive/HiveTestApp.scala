@@ -22,6 +22,9 @@ object HiveTestApp extends App with StrictLogging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
+  val s = client.getSchema("sam", "schematest2")
+  println(s)
+
   val frame = Frame(
     Map("artist" -> "elton", "album" -> "yellow brick road", "year" -> "1972"),
     Map("artist" -> "elton", "album" -> "tumbleweed connection", "year" -> "1974"),
@@ -46,7 +49,10 @@ object HiveTestApp extends App with StrictLogging {
   frame.to(sink).run
   logger.info("Write complete")
 
-  val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toList
+  val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toSeq
   logger.info("Result=" + plan.run)
 
+  val parts = client.listPartitions("sam", "albums", Short.MaxValue)
+  println(parts)
+  val q = parts
 }

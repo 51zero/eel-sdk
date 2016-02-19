@@ -1,21 +1,27 @@
 package io.eels.component.sequence
 
 import com.sksamuel.scalax.io.IO
-import io.eels.{SchemaType, FrameSchema, Column, Frame, Row}
+import io.eels.{Column, Frame, FrameSchema, SchemaType}
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSourceTest extends WordSpec with Matchers {
 
-  val columns = List(Column("a"), Column("b"), Column("c"), Column("d"))
-  val frame = Frame(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
+  val frame = Frame(
+    List("name", "location"),
+    List("sam", "aylesbury"),
+    List("jam", "aylesbury"),
+    List("ham", "buckingham")
+  )
 
   "SequenceSource" should {
     "read sequence files" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)
-      val rows = SequenceSource(path).toList.run
-      println(rows)
-      rows shouldBe List(Row(columns, List("1", "2", "3", "4")), Row(columns, List("5", "6", "7", "8")))
+      val rows = SequenceSource(path).toSeq.run
+      rows shouldBe List(
+        List("1", "2", "3", "4"),
+        List("5", "6", "7", "8")
+      )
     }
     "read header as schema" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)

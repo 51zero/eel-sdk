@@ -3,7 +3,7 @@ package io.eels.component.hive.dialect
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcStructInspector, StandardStructInspector}
-import io.eels.{Column, Field, FrameSchema, Row}
+import io.eels.{FrameSchema, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcFile, OrcStruct}
@@ -12,7 +12,8 @@ import scala.collection.JavaConverters._
 
 object OrcHiveDialect extends HiveDialect with StrictLogging {
 
-  override def iterator(path: Path, schema: FrameSchema)
+  // todo implement column pushdown
+  override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[Row] = {
     logger.debug(s"Creating orc iterator for $path")
 
@@ -22,8 +23,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
     new Iterator[Row] {
       override def hasNext: Boolean = reader.hasNext
       override def next(): Row = {
-
-        val fields = reader.next(null) match {
+        reader.next(null) match {
 
           case al: java.util.List[_] =>
             al.asScala.map(_.toString)
@@ -35,8 +35,6 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
             logger.warn(s"Uknown fields type ${other.getClass}; defaulting to splitting on ','")
             toString.split(",").toSeq
         }
-
-        Row(fields.map(Column.apply).toList, fields.map(Field.apply).toList)
       }
     }
   }
@@ -51,7 +49,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: Row): Unit = {
-        writer.addRow(row.fields.map(_.value).toArray)
+        writer.addRow(row.toArray)
       }
     }
   }

@@ -3,7 +3,7 @@ package io.eels.component.sequence
 import java.io.StringWriter
 
 import com.github.tototoshi.csv.CSVWriter
-import io.eels.{Column, Row, Sink, Writer}
+import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
@@ -21,13 +21,13 @@ case class SequenceSink(path: Path) extends Sink {
     var _writtenHeader = false
     val key = new IntWritable(0)
 
-    def writeHeader(columns: Seq[Column]): Unit = {
-      val csv = valuesToCsv(columns.map(_.name))
+    def writeHeader(schema: FrameSchema): Unit = {
+      val csv = valuesToCsv(schema.columnNames)
       writer.append(key, new BytesWritable(csv.getBytes("UTF8")))
       _writtenHeader = true
     }
 
-    def valuesToCsv(values: Seq[String]): String = {
+    def valuesToCsv(values: Seq[Any]): String = {
       val swriter = new StringWriter
       val csv = CSVWriter.open(swriter)
       csv.writeRow(values)
@@ -36,9 +36,9 @@ case class SequenceSink(path: Path) extends Sink {
     }
 
     override def close(): Unit = writer.close()
-    override def write(row: Row): Unit = {
-      if (!_writtenHeader) writeHeader(row.columns)
-      val csv = valuesToCsv(row.fields.map(_.value))
+    override def write(row: Row, schema: FrameSchema): Unit = {
+      if (!_writtenHeader) writeHeader(schema)
+      val csv = valuesToCsv(row)
       writer.append(key, new BytesWritable(csv.getBytes("UTF8")))
       key.set(key.get + 1)
     }

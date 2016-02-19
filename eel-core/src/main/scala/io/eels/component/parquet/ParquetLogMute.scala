@@ -6,10 +6,12 @@ import scala.util.Try
 
 object ParquetLogMute {
 
-  val packages = Seq("org.apache.parquet", "parquet", "org.apache.parquet.hadoop")
-
+  // the handler is in a static init block so we must force loading of the class before we unapply it, otherwise
+  // when the class is later on loaded, it will just add it back
   def apply(): Unit = {
-    for ( pack <- packages ) {
+    Try { Class.forName("org.apache.parquet.Log") }
+    Try { Class.forName("parquet.Log") }
+    for ( pack <- Seq("org.apache.parquet", "parquet") ) {
       Try {
         val logger = Logger.getLogger(pack)
         logger.getHandlers.foreach(logger.removeHandler)

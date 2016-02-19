@@ -1,6 +1,6 @@
 package io.eels.component.parquet
 
-import io.eels.{Column, Field, Frame, FrameSchema, Row, SchemaType}
+import io.eels.{Column, Frame, FrameSchema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
@@ -8,8 +8,9 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(
-    Row(List("name", "job", "location"), List("clint eastwood", "actor", "carmel")),
-    Row(List("name", "job", "location"), List("elton john", "musician", "pinner"))
+    List("name", "job", "location"),
+    List("clint eastwood", "actor", "carmel"),
+    List("elton john", "musician", "pinner")
   )
 
   val fs = FileSystem.get(new Configuration)
@@ -29,28 +30,10 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path)).run
       val people = ParquetSource(path)
-      people.toList.run shouldBe
+      people.toSeq.run.map(_.map(_.toString)) shouldBe
         List(
-          Row(
-            List(
-              Column("name", SchemaType.String, false),
-              Column("job", SchemaType.String, false),
-              Column("location", SchemaType.String, false)
-            ),
-            List(
-              Field("clint eastwood"), Field("actor"), Field("carmel")
-            )
-          ),
-          Row(
-            List(
-              Column("name", SchemaType.String, false),
-              Column("job", SchemaType.String, false),
-              Column("location", SchemaType.String, false)
-            ),
-            List(
-              Field("elton john"), Field("musician"), Field("pinner")
-            )
-          )
+          List("clint eastwood", "actor", "carmel"),
+          List("elton john", "musician", "pinner")
         )
       fs.delete(path, false)
     }

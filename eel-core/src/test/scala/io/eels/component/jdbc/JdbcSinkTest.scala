@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.{Column, Frame, Row}
+import io.eels.{Column, Frame}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
@@ -13,9 +13,10 @@ class JdbcSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
   val columns = List(Column("a"), Column("b"), Column("c"))
   def frame: Frame = Frame(
-    Row(columns, List("1", "2", "3")),
-    Row(columns, List("4", "5", "6")),
-    Row(columns, List("7", "8", "9"))
+    List("a", "b", "c"),
+    List("1", "2", "3"),
+    List("4", "5", "6"),
+    List("7", "8", "9")
   )
 
   override protected def afterAll(): Unit = {

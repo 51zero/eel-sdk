@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import java.io.File
 
-import io.eels.{Column, FrameSchema, Row}
+import io.eels.{Column, FrameSchema}
 import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSourceTest extends WordSpec with Matchers {
@@ -16,19 +16,19 @@ class ParquetSourceTest extends WordSpec with Matchers {
       people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.getAbsolutePath).toList.run
+      val people = ParquetSource(personFile.getAbsolutePath).toSeq.run.map(_.map(_.toString))
       people shouldBe List(
-        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
-        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner"))
+        List("clint eastwood", "actor", "carmel"),
+        List("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir + "/*").toList.run
+      val people = ParquetSource(resourcesDir + "/*").toSeq.run.map(_.map(_.toString))
       people shouldBe List(
-        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
-        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner")),
-        Row(List(Column("name"), Column("job"), Column("location")), List("clint eastwood", "actor", "carmel")),
-        Row(List(Column("name"), Column("job"), Column("location")), List("elton john", "musician", "pinner"))
+        List("clint eastwood", "actor", "carmel"),
+        List("elton john", "musician", "pinner"),
+        List("clint eastwood", "actor", "carmel"),
+        List("elton john", "musician", "pinner")
       )
     }
   }

@@ -2,18 +2,20 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, DriverManager}
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{TimeUnit, CountDownLatch, Executors, LinkedBlockingQueue}
+import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Row, Sink, Writer}
+import io.eels.{Row, FrameSchema, Sink, Writer}
 
 import scala.language.implicitConversions
 
 case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkProps())
   extends Sink
     with StrictLogging {
+
+  private val BufferSize = 1000
 
   private def tableExists(conn: Connection): Boolean = {
     logger.debug("Fetching tables to detect if table exists")
@@ -33,13 +35,13 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
     val created = new AtomicBoolean(false)
 
-    def createTable(row: Row): Unit = {
+    def createTable(row: Row, schema: FrameSchema): Unit = {
       if (!created.get) {
         JdbcSink.this.synchronized {
           if (!created.get && props.createTable && !tableExists(conn)) {
             logger.info(s"Creating sink table $table")
 
-            val sql = dialect.create(FrameSchema(row.columns), table)
+            val sql = dialect.create(schema, table)
             logger.debug(s"Executing [$sql]")
 
             val stmt = conn.createStatement()
@@ -58,7 +60,8 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       override def run(): Unit = thunk
     }
 
-    val queue = new LinkedBlockingQueue[Row]()
+    var schema: FrameSchema = null
+    val queue = new ArrayBlockingQueue[Row](BufferSize)
 
     val latch = new CountDownLatch(props.threads)
     val executor = Executors.newFixedThreadPool(props.threads)
@@ -68,7 +71,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
           .grouped(props.batchSize)
           .withPartial(true)
           .foreach { rows =>
-            doBatch(rows)
+            doBatch(rows, schema)
           }
         latch.countDown()
       }
@@ -80,10 +83,10 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     }
     executor.shutdown()
 
-    def doBatch(rows: Seq[Row]): Unit = {
+    def doBatch(rows: Seq[Row], schema: FrameSchema): Unit = {
       logger.info(s"Inserting batch [${rows.size} rows]")
       val stmt = conn.createStatement()
-      rows.map(dialect.insert(_, table)).foreach(stmt.addBatch)
+      rows.map(dialect.insert(_, schema, table)).foreach(stmt.addBatch)
       try {
         stmt.executeBatch()
         logger.info("Batch complete")
@@ -102,8 +105,9 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       executor.awaitTermination(1, TimeUnit.DAYS)
     }
 
-    override def write(row: Row): Unit = {
-      createTable(row)
+    override def write(row: Row, schema: FrameSchema): Unit = {
+      createTable(row, schema)
+      this.schema = schema
       queue.put(row)
     }
   }

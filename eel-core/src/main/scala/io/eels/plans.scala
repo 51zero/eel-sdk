@@ -1,6 +1,7 @@
 package io.eels
 
-import java.util.concurrent.{CountDownLatch, TimeUnit, Executors, LinkedBlockingQueue}
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListMap, ConcurrentLinkedQueue, ConcurrentSkipListSet, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -13,7 +14,7 @@ class HeadPlan(frame: Frame) extends Plan[Option[Row]] with Using {
   }
 }
 
-class ExistsPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Boolean] with Using {
+class ExistsPlan(frame: Frame, p: Row => Boolean) extends Plan[Boolean] with Using {
   override def run: Boolean = {
     using(frame.buffer) { buffer =>
       buffer.iterator.exists(p)
@@ -21,7 +22,7 @@ class ExistsPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Boolean] with U
   }
 }
 
-class FindPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Option[Row]] with Using {
+class FindPlan(frame: Frame, p: Row => Boolean) extends Plan[Option[Row]] with Using {
   override def run: Option[Row] = {
     using(frame.buffer) { buffer =>
       buffer.iterator.find(p)
@@ -29,19 +30,20 @@ class FindPlan(frame: Frame, p: (Row) => Boolean) extends Plan[Option[Row]] with
   }
 }
 
-class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with StrictLogging {
+class ToSetPlan(frame: Frame) extends ConcurrentPlan[scala.collection.mutable.Set[Row]] with Using with StrictLogging {
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+  import scala.collection.JavaConverters._
 
-  override def runConcurrent(workers: Int): List[Row] = {
-    val queue = new LinkedBlockingQueue[Row]
+  override def runConcurrent(workers: Int): scala.collection.mutable.Set[Row] = {
+    val map = new ConcurrentHashMap[Row, Boolean]
     val buffer = frame.buffer
     val latch = new CountDownLatch(workers)
     val executor = Executors.newFixedThreadPool(workers)
     for ( k <- 1 to workers ) {
       executor.submit {
         try {
-          buffer.iterator.foreach(queue.put)
+          buffer.iterator.foreach(map.put(_, true))
         } catch {
           case e: Throwable =>
             logger.error("Error writing; shutting down executor", e)
@@ -54,14 +56,49 @@ class ToListPlan(frame: Frame) extends ConcurrentPlan[List[Row]] with Using with
     }
     executor.submit {
       latch.await(1, TimeUnit.DAYS)
-      logger.debug("Closing buffer feed")
+      logger.debug("Closing buffer")
       buffer.close()
-      logger.debug("Buffer feed closed")
+      logger.debug("Buffer closed")
     }
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.DAYS)
-    import scala.collection.JavaConverters._
-    queue.asScala.toList
+    map.keySet.asScala
+  }
+}
+
+class ToSeqPlan(frame: Frame) extends ConcurrentPlan[Seq[Row]] with Using with StrictLogging {
+
+  import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+  import scala.collection.JavaConverters._
+
+  override def runConcurrent(workers: Int): Seq[Row] = {
+    val queue = new ConcurrentLinkedQueue[Row]
+    val buffer = frame.buffer
+    val latch = new CountDownLatch(workers)
+    val executor = Executors.newFixedThreadPool(workers)
+    for ( k <- 1 to workers ) {
+      executor.submit {
+        try {
+          buffer.iterator.foreach(queue.add)
+        } catch {
+          case e: Throwable =>
+            logger.error("Error writing; shutting down executor", e)
+            executor.shutdownNow()
+            throw e
+        } finally {
+          latch.countDown()
+        }
+      }
+    }
+    executor.submit {
+      latch.await(1, TimeUnit.DAYS)
+      logger.debug("Closing buffer")
+      buffer.close()
+      logger.debug("Buffer closed")
+    }
+    executor.shutdown()
+    executor.awaitTermination(1, TimeUnit.DAYS)
+    queue.asScala.toVector
   }
 }
 
@@ -73,10 +110,38 @@ class ForallPlan(frame: Frame, p: Row => Boolean) extends Plan[Boolean] with Usi
   }
 }
 
-class ToSizePlan(frame: Frame) extends Plan[Long] with Using {
-  override def run: Long = {
-    using(frame.buffer) { buffer =>
-      buffer.iterator.size
+class ToSizePlan(frame: Frame) extends ConcurrentPlan[Long] with StrictLogging {
+
+  import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
+
+  override def runConcurrent(workers: Int): Long = {
+
+    val count = new AtomicLong(0)
+    val buffer = frame.buffer
+    val latch = new CountDownLatch(workers)
+    val executor = Executors.newFixedThreadPool(workers)
+    for ( k <- 1 to workers ) {
+      executor.submit {
+        try {
+          buffer.iterator.foreach(_ => count.incrementAndGet)
+        } catch {
+          case e: Throwable =>
+            logger.error("Error writing; shutting down executor", e)
+            executor.shutdownNow()
+            throw e
+        } finally {
+          latch.countDown()
+        }
+      }
     }
+    executor.submit {
+      latch.await(1, TimeUnit.DAYS)
+      logger.debug("Closing buffer")
+      buffer.close()
+      logger.debug("Buffer closed")
+    }
+    executor.shutdown()
+    executor.awaitTermination(1, TimeUnit.DAYS)
+    count.get()
   }
 }

@@ -3,7 +3,7 @@ package io.eels.component.csv
 import java.nio.file.Path
 
 import com.github.tototoshi.csv.{CSVFormat, CSVWriter, QUOTE_MINIMAL, Quoting}
-import io.eels.{Row, Sink, Writer}
+import io.eels.{FrameSchema, Row, Sink, Writer}
 
 case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sink {
 
@@ -22,8 +22,8 @@ case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sin
 
     override def close(): Unit = writer.close
 
-    override def write(row: Row): Unit = {
-      writer.writeRow(row.fields.map(_.value))
+    override def write(row: Row, schema: FrameSchema): Unit = {
+      writer.writeRow(row)
     }
   }
 
