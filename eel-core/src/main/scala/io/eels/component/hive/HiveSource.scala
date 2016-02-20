@@ -37,14 +37,8 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
 
   override def schema: FrameSchema = {
     using(createClient) { client =>
-
-      val s = client.getSchema(db, table).asScala
-      logger.debug("Loaded hive schema " + s.mkString(", "))
-
-      val frameSchema = FrameSchemaFn(s)
-      logger.debug("Generated frame schema=" + frameSchema)
-
-      frameSchema
+      val s = client.getSchema(db, table).asScala.filter(columns contains _.getName)
+      FrameSchemaFn(s)
     }
   }
 
