@@ -4,6 +4,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class FrameTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val frame = Frame(List("a", "b"), List("1", "2"), List("3", "4"))
 
   "Frame" should {
@@ -34,7 +36,7 @@ class FrameTest extends WordSpec with Matchers {
     "be thread safe when using drop" in {
       val rows = Iterator.tabulate(10000)(k => Seq("1")).toList
       val frame = Frame(FrameSchema(Seq("k")), rows)
-      frame.drop(100).toSeq.runConcurrent(4).size shouldBe 9900
+      frame.drop(100).toSeq.size shouldBe 9900
     }
     "support adding columns" in {
       val f = frame.addColumn("testy", "bibble")
@@ -49,7 +51,7 @@ class FrameTest extends WordSpec with Matchers {
       )
       val f = frame.removeColumn("location")
       f.schema shouldBe FrameSchema(List(Column("name"), Column("postcode")))
-      f.toSeq.run shouldBe List(List("sam", "hp22"), List("ham", "mk10"))
+      f.toSeq.toSet shouldBe Set(Seq("sam", "hp22"), Seq("ham", "mk10"))
     }
     "support column projection" in {
       val frame = Frame(
@@ -89,7 +91,7 @@ class FrameTest extends WordSpec with Matchers {
     }
     "support union" in {
       frame.union(frame).size.run shouldBe 4
-      frame.union(frame).toSeq.run shouldBe List(
+      frame.union(frame).toSeq.toSet shouldBe Set(
         List("1", "2"),
         List("3", "4"),
         List("1", "2"),
@@ -124,10 +126,10 @@ class FrameTest extends WordSpec with Matchers {
         List("z", "buckingham")
       )
       frame1.except(frame2).schema shouldBe FrameSchema(Seq("name"))
-      frame1.except(frame2).toSeq.run shouldBe List(
-        List("sam"),
-        List("jam"),
-        List("ham")
+      frame1.except(frame2).toSeq.toSet shouldBe Set(
+        Seq("sam"),
+        Seq("jam"),
+        Seq("ham")
       )
     }
     "support take while with row predicate" in {
@@ -137,7 +139,7 @@ class FrameTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.takeWhile(_.apply(1) == "aylesbury").toSeq.run shouldBe List(
+      frame.takeWhile(_.apply(1) == "aylesbury").toSeq.toSet shouldBe Set(
         List("sam", "aylesbury"),
         List("jam", "aylesbury")
       )
@@ -149,7 +151,7 @@ class FrameTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.takeWhile("location", _ == "aylesbury").toSeq.run shouldBe List(
+      frame.takeWhile("location", _ == "aylesbury").toSeq.toSet shouldBe Set(
         List("sam", "aylesbury"),
         List("jam", "aylesbury")
       )
@@ -161,7 +163,7 @@ class FrameTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.dropWhile(_.apply(1) == "aylesbury").toSeq.run shouldBe List(List("ham", "buckingham"))
+      frame.dropWhile(_.apply(1) == "aylesbury").toSeq shouldBe List(List("ham", "buckingham"))
     }
     "support drop while with column predicate" in {
       val frame = Frame(
@@ -170,7 +172,7 @@ class FrameTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.dropWhile("location", _ == "aylesbury").toSeq.run shouldBe List(
+      frame.dropWhile("location", _ == "aylesbury").toSeq shouldBe List(
         List("ham", "buckingham")
       )
     }
@@ -181,14 +183,14 @@ class FrameTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.explode(row => Seq(row, row)).toSeq.run shouldBe {
-        List(
-          List("sam", "aylesbury"),
-          List("sam", "aylesbury"),
-          List("jam", "aylesbury"),
-          List("jam", "aylesbury"),
-          List("ham", "buckingham"),
-          List("ham", "buckingham")
+      frame.explode(row => Seq(row, row)).toSeq.toSet shouldBe {
+        Set(
+          Seq("sam", "aylesbury"),
+          Seq("sam", "aylesbury"),
+          Seq("jam", "aylesbury"),
+          Seq("jam", "aylesbury"),
+          Seq("ham", "buckingham"),
+          Seq("ham", "buckingham")
         )
       }
     }
@@ -199,8 +201,8 @@ class FrameTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List(null, "buckingham")
       )
-      frame.fill("foo").toSeq.run shouldBe {
-        List(
+      frame.fill("foo").toSeq.toSet shouldBe {
+        Set(
           List("sam", "foo"),
           List("jam", "aylesbury"),
           List("foo", "buckingham")
@@ -213,8 +215,8 @@ class FrameTest extends WordSpec with Matchers {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.replace("sam", "ham").toSeq.run shouldBe {
-        List(
+      frame.replace("sam", "ham").toSeq.toSet shouldBe {
+        Set(
           List("ham", "aylesbury"),
           List("ham", "buckingham")
         )
@@ -226,8 +228,8 @@ class FrameTest extends WordSpec with Matchers {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.replace("name", "sam", "ham").toSeq.run shouldBe {
-        List(
+      frame.replace("name", "sam", "ham").toSeq.toSet shouldBe {
+        Set(
           List("ham", "aylesbury"),
           List("ham", "buckingham")
         )
@@ -240,8 +242,8 @@ class FrameTest extends WordSpec with Matchers {
         List("ham", "buckingham")
       )
       val fn: Any => Any = any => any.toString.reverse
-      frame.replace("name", fn).toSeq.run shouldBe {
-        List(
+      frame.replace("name", fn).toSeq.toSet shouldBe {
+        Set(
           List("mas", "aylesbury"),
           List("mah", "buckingham")
         )
@@ -253,7 +255,7 @@ class FrameTest extends WordSpec with Matchers {
         List("sam", null),
         List("ham", "buckingham")
       )
-      frame.dropNullRows.toSeq.run shouldBe {
+      frame.dropNullRows.toSeq shouldBe {
         List(
           List("ham", "buckingham")
         )

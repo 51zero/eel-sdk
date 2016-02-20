@@ -13,6 +13,8 @@ import scala.util.Random
 
 object HiveBenchmarkApp extends App with StrictLogging {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val states = List(
     "Alabama",
     "Alaska",
@@ -103,7 +105,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   val result = HiveSource("sam", "people")
     .withPartition("state", "<=", "Iowa")
-    .withColumns("id", "foo", "woo").toFrame(4).toSeq.runConcurrent(4)
+    .withColumns("id", "foo", "woo").toFrame(4).toSeq
 
   val end = System.currentTimeMillis()
 

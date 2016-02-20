@@ -11,6 +11,8 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val config = EmbeddedKafkaConfig(zookeeperPort = 2401, kafkaPort = 9405)
   val kafka = new EmbeddedKafka(config)
   kafka.start()
@@ -33,7 +35,7 @@ class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
       val sourceConfig = KafkaSourceConfig("localhost:" + config.kafkaPort, "myconsumer2")
       val source = KafkaSource(sourceConfig, Set(topic), JsonKafkaDeserializer)
-      val rows = source.toSeq.run
+      val rows = source.toSeq
       rows.size shouldBe 100
       rows.head shouldBe Seq("sam", "london")
     }

@@ -9,6 +9,8 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 object HiveTestApp extends App with StrictLogging {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
@@ -50,7 +52,7 @@ object HiveTestApp extends App with StrictLogging {
   logger.info("Write complete")
 
   val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toSeq
-  logger.info("Result=" + plan.run)
+  logger.info("Result=" + plan)
 
   val parts = client.listPartitions("sam", "albums", Short.MaxValue)
   println(parts)

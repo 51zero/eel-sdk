@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val frame = Frame(
     List("name", "job", "location"),
     List("clint eastwood", "actor", "carmel"),
@@ -30,7 +32,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path)).run
       val people = ParquetSource(path)
-      people.toSeq.run.map(_.map(_.toString)) shouldBe
+      people.toSeq.map(_.map(_.toString)) shouldBe
         List(
           List("clint eastwood", "actor", "carmel"),
           List("elton john", "musician", "pinner")

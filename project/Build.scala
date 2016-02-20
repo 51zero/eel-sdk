@@ -8,7 +8,7 @@ object Build extends Build {
   val org = "io.eels"
 
   val ScalaVersion = "2.11.7"
-  val ScalatestVersion = "2.2.4"
+  val ScalatestVersion = "3.0.0-M12"
   val Slf4jVersion = "1.7.5"
   val Log4jVersion = "1.2.17"
   val HadoopVersion = "2.6.1"
@@ -29,18 +29,18 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "com.github.tototoshi"  %% "scala-csv"       % "1.2.2",
-      "org.scala-lang"        % "scala-reflect"    % scalaVersion.value,
-      "com.sksamuel.scalax"   %% "scalax"          % "0.16.0",
-      "com.typesafe"          % "config"           % "1.2.1",
-      "org.apache.hadoop"     % "hadoop-common"    % HadoopVersion % "provided",
-      "org.apache.hadoop"     % "hadoop-hdfs"      % HadoopVersion % "provided",
-      "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
-      "com.google.guava"      % "guava"            % "18.0",
-      "com.h2database"        % "h2"               % "1.4.191",
-      "org.scalatest"         %% "scalatest"       % ScalatestVersion % "test",
-      "org.slf4j"             % "slf4j-log4j12"    % Slf4jVersion % "test",
-      "log4j"                 % "log4j"            % Log4jVersion % "test"
+      "com.github.tototoshi"        %% "scala-csv"            % "1.2.2",
+      "org.scala-lang"              % "scala-reflect"         % scalaVersion.value,
+      "com.sksamuel.scalax"         %% "scalax"               % "0.18.0",
+      "com.typesafe"                % "config"                %  "1.2.1",
+      "org.apache.hadoop"           % "hadoop-common"         % HadoopVersion          % "provided",
+      "org.apache.hadoop"           % "hadoop-hdfs"           % HadoopVersion          % "provided",
+      "com.typesafe.scala-logging"  %% "scala-logging-slf4j"  % "2.1.2",
+      "com.google.guava"            % "guava"                 % "18.0",
+      "com.h2database"              % "h2"                    % "1.4.191",
+      "org.scalatest"               %% "scalatest"            % ScalatestVersion  % "test",
+      "org.slf4j"                   % "slf4j-log4j12"         % Slf4jVersion      % "test",
+      "log4j"                       % "log4j"                 % Log4jVersion      % "test"
     ),
     publishTo <<= version {
       (v: String) =>
@@ -85,7 +85,6 @@ object Build extends Build {
     .settings(libraryDependencies ++= Seq(
       "io.dropwizard.metrics" %  "metrics-core"     % "3.1.2",
       "io.dropwizard.metrics" %  "metrics-jvm"      % "3.1.2",
-      "com.sksamuel.avro4s"   %% "avro4s-core"      % "1.2.2",
       "org.apache.parquet"    % "parquet-avro"      % "1.8.1",
       "org.apache.hadoop"     % "hadoop-common"     % HadoopVersion,
       "org.apache.hadoop"     % "hadoop-client"     % HadoopVersion,

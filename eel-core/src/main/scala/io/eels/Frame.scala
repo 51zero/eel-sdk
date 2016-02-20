@@ -4,6 +4,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
+import io.eels.plan.ToSeqPlan
+
+import scala.concurrent.ExecutionContext
 
 trait Frame {
   outer =>
@@ -102,7 +105,7 @@ trait Frame {
         val iter1 = buffer1.iterator
         val iter2 = buffer2.iterator
         override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
-        override def next(): Row = RowUtils.toMap(schema1, iter1.next).--(schema2.columnNames).values.toSeq
+        override def next(): Row = RowUtils.toMap(schema1, iter1.next).--(schema2.columnNames).values.toList
       }
     }
   }
@@ -310,7 +313,7 @@ trait Frame {
 
   def fold[A](a: A)(fn: (A, Row) => A): Plan[A] = new FoldPlan(a, fn, this)
 
-  def toSeq: ConcurrentPlan[Seq[Row]] = new ToSeqPlan(this)
+  def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan(this)
 
   def toSet: ConcurrentPlan[scala.collection.mutable.Set[Row]] = new ToSetPlan(this)
 
