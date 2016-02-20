@@ -21,8 +21,10 @@ object ParquetIterator extends StrictLogging {
 
     def configuration: Configuration = {
       val conf = new Configuration
-      AvroReadSupport.setAvroReadSchema(conf, projection)
-      AvroReadSupport.setRequestedProjection(conf, projection)
+      if (columns.nonEmpty) {
+        AvroReadSupport.setAvroReadSchema(conf, projection)
+        AvroReadSupport.setRequestedProjection(conf, projection)
+      }
       conf
     }
 
@@ -33,7 +35,9 @@ object ParquetIterator extends StrictLogging {
   def apply(path: Path, columns: Seq[String]): Iterator[Row] = {
 
     lazy val reader = createReader(path, columns)
-    lazy val iter = Iterator.continually(reader.read).takeWhile(_ != null).map(AvroRecordFn.fromRecord(_, columns))
+    lazy val iter = Iterator.continually(reader.read).takeWhile(_ != null).map { record =>
+      if (columns.isEmpty) AvroRecordFn.fromRecord(record) else AvroRecordFn.fromRecord(record, columns)
+    }
 
     new Iterator[Row] {
       override def hasNext: Boolean = {

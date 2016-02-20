@@ -18,8 +18,13 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
     with Using {
   ParquetLogMute()
 
-  def withColumns(columns: Seq[String]): HiveSource = copy(columns = columns)
+  def withColumns(columns: Seq[String]): HiveSource = {
+    require(columns.nonEmpty)
+    copy(columns = columns)
+  }
+
   def withColumns(first: String, rest: String*): HiveSource = withColumns(first +: rest)
+
   def withPartition(name: String, value: String): HiveSource = withPartition(name, "=", value)
   def withPartition(name: String, op: String, value: String): HiveSource = {
     val expr = op match {
@@ -37,7 +42,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
 
   override def schema: FrameSchema = {
     using(createClient) { client =>
-      val s = client.getSchema(db, table).asScala.filter(columns contains _.getName)
+      val s = client.getSchema(db, table).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))
       FrameSchemaFn(s)
     }
   }

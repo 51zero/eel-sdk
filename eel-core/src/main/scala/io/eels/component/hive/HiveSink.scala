@@ -53,10 +53,12 @@ case class HiveSink(dbName: String,
         writers.getOrElseUpdate(partPath, {
           val filePath = new Path(partPath, "eel_" + System.nanoTime)
           logger.debug(s"Creating hive writer for $filePath")
-          if (dynamicPartitioning)
-            HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
-          else if (!HiveOps.partitionExists(dbName, tableName, parts))
+          if (dynamicPartitioning) {
+            if (parts.nonEmpty)
+              HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+          } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
             sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
+          }
           dialect.writer(schema, filePath)
         })
       }
