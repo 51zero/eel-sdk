@@ -11,7 +11,7 @@ class FoldPlanTest extends WordSpec with Matchers {
         Map("name" -> "sam", "risk" -> "2"),
         Map("name" -> "sam", "risk" -> "3")
       )
-      frame.fold(0)((a, row) => a + row(1).toString.toInt).run shouldBe 6
+      frame.fold(0)((a, row) => a + row(1).toString.toInt) shouldBe 6
     }
   }
 }

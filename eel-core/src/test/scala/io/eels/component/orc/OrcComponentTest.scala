@@ -22,12 +22,12 @@ class OrcComponentTest extends WordSpec with Matchers {
       )
 
       val path = new Path("test.orc")
-      frame.to(OrcSink(path)).run
+      frame.to(OrcSink(path))
 
-      val rows = OrcSource(path).toSeq
+      val rows = OrcSource(path).toSet
       fs.delete(path, false)
 
-      rows shouldBe Seq(
+      rows shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner"),
         List("david bowie", "musician", "surrey")

@@ -8,6 +8,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSinkTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val frame = Frame(
     List("a", "b", "c", "d"),
     List("1", "2", "3", "4"),
@@ -23,21 +25,23 @@ class SequenceSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, true)
 
-      frame.to(SequenceSink(path)).run
+      frame.to(SequenceSink(path))
 
       val reader = new SequenceFile.Reader(new Configuration, SequenceFile.Reader.file(path))
 
       val k = new IntWritable
       val v = new BytesWritable
 
-      reader.next(k, v)
-      new String(v.copyBytes) shouldBe "a,b,c,d"
+      val set = for (_ <- 1 to 3) yield {
+        reader.next(k, v)
+        new String(v.copyBytes)
+      }
 
-      reader.next(k, v)
-      new String(v.copyBytes) shouldBe "1,2,3,4"
-
-      reader.next(k, v)
-      new String(v.copyBytes) shouldBe "5,6,7,8"
+      set.toSet shouldBe Set(
+        "a,b,c,d",
+        "1,2,3,4",
+        "5,6,7,8"
+      )
 
       reader.close()
 

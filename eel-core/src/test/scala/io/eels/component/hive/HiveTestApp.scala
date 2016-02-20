@@ -48,7 +48,7 @@ object HiveTestApp extends App with StrictLogging {
   )
 
   val sink = HiveSink("sam", "albums").withIOThreads(2)
-  frame.to(sink).run
+  frame.to(sink)
   logger.info("Write complete")
 
   val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toSeq

@@ -4,6 +4,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class ToSetPlanTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   "ToSetPlan" should {
     "create set from frame" in {
       val frame = Frame(
@@ -16,7 +18,7 @@ class ToSetPlanTest extends WordSpec with Matchers {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.toSet.run shouldBe Set(
+      frame.toSet shouldBe Set(
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")

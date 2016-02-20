@@ -6,6 +6,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SqlContextTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   "SqlContext" should {
     "accept simple queries" in {
       val frame = CsvSource(IO.pathFromResource("/us-500.csv"))
@@ -18,7 +20,7 @@ class SqlContextTest extends WordSpec with Matchers {
           Column("LAST_NAME", SchemaType.String, true, precision = 255, signed = true)
         )
       )
-      result.size.run shouldBe 500
+      result.size shouldBe 500
     }
     "accept group by queries" in {
       val frame = CsvSource(IO.pathFromResource("/us-500.csv"))
@@ -29,7 +31,7 @@ class SqlContextTest extends WordSpec with Matchers {
         Column("STATE", SchemaType.String, true, precision = 255, signed = true),
         Column("COUNT(*)", SchemaType.Long, false, 19, signed = true)
       ))
-      result.size.run shouldBe 47
+      result.size shouldBe 47
     }
   }
 }

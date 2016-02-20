@@ -1,8 +1,9 @@
 package io.eels
 
+import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
 
-class FrameTest extends WordSpec with Matchers {
+class FrameTest extends WordSpec with Matchers with Eventually {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -11,27 +12,29 @@ class FrameTest extends WordSpec with Matchers {
   "Frame" should {
     "be immutable and repeatable" in {
       val f = frame.drop(1)
-      f.drop(1).size.run shouldBe 0
-      f.size.run shouldBe 1
+      f.drop(1).size shouldBe 0
+      f.size shouldBe 1
     }
     "support foreach" in {
       var count = 0
       val f = frame.foreach(_ => count = count + 1)
-      f.size.run
-      count shouldBe 2
+      f.size
+      eventually {
+        count shouldBe 2
+      }
     }
     "support forall" in {
-      frame.forall(_.size == 1).run shouldBe false
-      frame.forall(_.size == 2).run shouldBe true
+      frame.forall(_.size == 1) shouldBe false
+      frame.forall(_.size == 2) shouldBe true
     }
     "support exists" in {
-      frame.exists(_.size == 1).run shouldBe false
-      frame.exists(_.size == 2).run shouldBe true
+      frame.exists(_.size == 1) shouldBe false
+      frame.exists(_.size == 2) shouldBe true
     }
     "support drop" in {
-      frame.drop(1).size.run shouldBe 1
-      frame.drop(0).size.run shouldBe 2
-      frame.drop(2).size.run shouldBe 0
+      frame.drop(1).size shouldBe 1
+      frame.drop(0).size shouldBe 2
+      frame.drop(2).size shouldBe 0
     }
     "be thread safe when using drop" in {
       val rows = Iterator.tabulate(10000)(k => Seq("1")).toList
@@ -40,7 +43,7 @@ class FrameTest extends WordSpec with Matchers {
     }
     "support adding columns" in {
       val f = frame.addColumn("testy", "bibble")
-      f.head.run.get shouldBe List("1", "2", "bibble")
+      f.head.get shouldBe List("1", "2", "bibble")
       f.schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("testy")))
     }
     "support removing columns" in {
@@ -61,7 +64,7 @@ class FrameTest extends WordSpec with Matchers {
         List("ham", "buckingham")
       )
       val f = frame.projection("location")
-      f.head.run.get shouldBe Seq("aylesbury")
+      f.head.get shouldBe Seq("aylesbury")
       f.schema shouldBe FrameSchema(List(Column("location")))
     }
     "support column projection expressions" in {
@@ -72,7 +75,7 @@ class FrameTest extends WordSpec with Matchers {
         List("ham", "buckingham")
       )
       val f = frame.projectionExpression("location,name")
-      f.head.run.get shouldBe Seq("aylesbury", "sam")
+      f.head.get shouldBe Seq("aylesbury", "sam")
       f.schema shouldBe FrameSchema(List(Column("location"), Column("name")))
     }
     "support column projection re-ordering" in {
@@ -84,13 +87,13 @@ class FrameTest extends WordSpec with Matchers {
       )
       val f = frame.projection("location", "name")
       f.schema shouldBe FrameSchema(List(Column("location"), Column("name")))
-      f.head.run.get shouldBe List("aylesbury", "sam")
+      f.head.get shouldBe List("aylesbury", "sam")
     }
     "support row filtering by column name and fn" in {
-      frame.filter("b", _ == "2").size.run shouldBe 1
+      frame.filter("b", _ == "2").size shouldBe 1
     }
     "support union" in {
-      frame.union(frame).size.run shouldBe 4
+      frame.union(frame).size shouldBe 4
       frame.union(frame).toSeq.toSet shouldBe Set(
         List("1", "2"),
         List("3", "4"),
@@ -101,16 +104,16 @@ class FrameTest extends WordSpec with Matchers {
     "support collect" in {
       frame.collect {
         case row if row.head == "3" => row
-      }.size.run shouldBe 1
+      }.size shouldBe 1
     }
     "support ++" in {
-      frame.++(frame).size.run shouldBe 4
+      frame.++(frame).size shouldBe 4
     }
     "support joins" in {
       val frame1 = Frame(List("a", "b"), List("sam", "bam"))
       val frame2 = Frame(List("c", "d"), List("ham", "jam"))
       frame1.join(frame2).schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("c"), Column("d")))
-      frame1.join(frame2).head.run.get shouldBe List("sam", "bam", "ham", "jam")
+      frame1.join(frame2).head.get shouldBe List("sam", "bam", "ham", "jam")
     }
     "support except" in {
       val frame1 = Frame(

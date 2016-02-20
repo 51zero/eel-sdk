@@ -12,6 +12,8 @@ import scala.collection.JavaConverters._
 
 class KafkaSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val config = EmbeddedKafkaConfig()
   val kafka = new EmbeddedKafka(config)
   kafka.start()
@@ -28,7 +30,7 @@ class KafkaSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
       )
 
       val kafkaSinkConfig = KafkaSinkConfig("localhost:" + config.kafkaPort)
-      frame.to(KafkaSink(kafkaSinkConfig, topic, JsonKafkaSerializer)).run
+      frame.to(KafkaSink(kafkaSinkConfig, topic, JsonKafkaSerializer))
 
       val consumerProps = new Properties
       consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:" + config.kafkaPort)

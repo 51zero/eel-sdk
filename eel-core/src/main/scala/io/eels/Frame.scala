@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
-import io.eels.plan.ToSeqPlan
+import io.eels.plan._
 
 import scala.concurrent.ExecutionContext
 
@@ -309,23 +309,16 @@ trait Frame {
   }
 
   // -- actions --
-  def size: ConcurrentPlan[Long] = new ToSizePlan(this)
+  def fold[A](a: A)(fn: (A, Row) => A): A = FoldPlan(this, a)(fn)
+  def forall(p: (Row) => Boolean): Boolean = ForallPlan(this, p)
+  def exists(p: (Row) => Boolean): Boolean = ExistsPlan(this, p)
+  def find(p: (Row) => Boolean): Option[Row] = FindPlan(this, p)
+  def head: Option[Row] = HeadPlan(this)
 
-  def fold[A](a: A)(fn: (A, Row) => A): Plan[A] = new FoldPlan(a, fn, this)
-
+  def to(sink: Sink)(implicit executor: ExecutionContext): Long = SinkPlan(sink, this)
+  def size(implicit executor: ExecutionContext): Long = ToSizePlan(this)
   def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan(this)
-
-  def toSet: ConcurrentPlan[scala.collection.mutable.Set[Row]] = new ToSetPlan(this)
-
-  def forall(p: (Row) => Boolean): Plan[Boolean] = new ForallPlan(this, p)
-
-  def to(sink: Sink): ConcurrentPlan[Long] = new SinkPlan(sink, this)
-
-  def exists(p: (Row) => Boolean): Plan[Boolean] = new ExistsPlan(this, p)
-
-  def find(p: (Row) => Boolean): Plan[Option[Row]] = new FindPlan(this, p)
-
-  def head: Plan[Option[Row]] = new HeadPlan(this)
+  def toSet(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = ToSetPlan(this)
 }
 
 object Frame {

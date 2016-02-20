@@ -4,7 +4,6 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 import com.sksamuel.kafka.embedded.{EmbeddedKafka, EmbeddedKafkaConfig}
-import io.eels.{Column, SchemaType}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}

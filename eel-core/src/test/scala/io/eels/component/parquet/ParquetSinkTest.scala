@@ -22,7 +22,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     "write schema" in {
       if (fs.exists(path))
         fs.delete(path, false)
-      frame.to(ParquetSink(path)).run
+      frame.to(ParquetSink(path))
       val people = ParquetSource(path)
       people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
       fs.delete(path, false)
@@ -30,10 +30,10 @@ class ParquetSinkTest extends WordSpec with Matchers {
     "write data" in {
       if (fs.exists(path))
         fs.delete(path, false)
-      frame.to(ParquetSink(path)).run
+      frame.to(ParquetSink(path))
       val people = ParquetSource(path)
-      people.toSeq.map(_.map(_.toString)) shouldBe
-        List(
+      people.toSet.map(_.map(_.toString)) shouldBe
+        Set(
           List("clint eastwood", "actor", "carmel"),
           List("elton john", "musician", "pinner")
         )

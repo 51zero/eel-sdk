@@ -5,6 +5,8 @@ import io.eels.Frame
 
 object MongoTestApp extends App with StrictLogging {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val frame = Frame(
     Map("artist" -> "elton", "album" -> "yellow brick road", "year" -> "1972"),
     Map("artist" -> "elton", "album" -> "tumbleweed connection", "year" -> "1974"),
@@ -17,6 +19,6 @@ object MongoTestApp extends App with StrictLogging {
   )
 
   val sink = MongoSink(MongoSinkConfig("mongodb://localhost:27017", "samdb", "albums2"))
-  frame.to(sink).run
+  frame.to(sink)
   logger.info("Write complete")
 }

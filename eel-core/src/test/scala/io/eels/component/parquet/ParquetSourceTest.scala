@@ -18,15 +18,15 @@ class ParquetSourceTest extends WordSpec with Matchers {
       people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.getAbsolutePath).toSeq.map(_.map(_.toString))
-      people shouldBe List(
+      val people = ParquetSource(personFile.getAbsolutePath).toSet.map(_.map(_.toString))
+      people shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir + "/*").toSeq.map(_.map(_.toString))
-      people shouldBe List(
+      val people = ParquetSource(resourcesDir + "/*").toSet.map(_.map(_.toString))
+      people shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner"),
         List("clint eastwood", "actor", "carmel"),

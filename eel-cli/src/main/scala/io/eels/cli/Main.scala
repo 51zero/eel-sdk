@@ -9,6 +9,8 @@ import org.apache.hadoop.hive.conf.HiveConf
 
 object Main extends App {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   implicit val fs = FileSystem.get(new Configuration)
   implicit val hiveConf = new HiveConf
 
@@ -36,7 +38,7 @@ object Main extends App {
     case Some(options) =>
       val source = SourceFn(options.from)
       val sink = SinkFn(options.to)
-      val result = source.toFrame(options.sourceIOThreads).to(sink).runConcurrent(options.workerThreads)
+      val result = source.toFrame(options.sourceIOThreads).to(sink)
       println(s"Completed with $result rows")
     case _ =>
 

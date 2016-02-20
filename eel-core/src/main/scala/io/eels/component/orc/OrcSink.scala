@@ -9,6 +9,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory
 
 case class OrcSink(path: Path) extends Sink with StrictLogging {
+  self =>
+
   logger.debug(s"Created orc sink from $path")
 
   override def writer: Writer = new Writer {
@@ -28,8 +30,10 @@ case class OrcSink(path: Path) extends Sink with StrictLogging {
     override def close(): Unit = if (writer != null) writer.close()
 
     override def write(row: Row, schema: FrameSchema): Unit = {
-      createWriter(schema)
-      writer.addRow(row.toArray)
+      self.synchronized {
+        createWriter(schema)
+        writer.addRow(row.toArray)
+      }
     }
   }
 }

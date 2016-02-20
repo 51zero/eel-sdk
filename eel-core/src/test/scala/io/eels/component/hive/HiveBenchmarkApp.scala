@@ -97,7 +97,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
   logger.info("Table created")
 
   val sink = HiveSink("sam", "people").withDynamicPartitioning(true).withIOThreads(4)
-  Frame(schema, rows).to(sink).runConcurrent(2)
+  Frame(schema, rows).to(sink)
 
   logger.info("Write complete")
 

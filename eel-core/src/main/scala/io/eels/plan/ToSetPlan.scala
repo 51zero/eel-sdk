@@ -1,7 +1,7 @@
 package io.eels.plan
 
+import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch, TimeUnit}
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -10,12 +10,12 @@ import io.eels._
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
-object ToSeqPlan extends Plan with Using with StrictLogging {
+object ToSetPlan extends Plan with Using with StrictLogging {
 
-  def apply(frame: Frame)(implicit executor: ExecutionContext): Seq[Row] = {
-    logger.info(s"Executing toSeq on frame [tasks=$slices]")
+  def apply(frame: Frame)(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = {
+    logger.info(s"Executing toSet on frame [tasks=$slices]")
 
-    val queue = new ConcurrentLinkedQueue[Row]
+    val map = new ConcurrentHashMap[Row, Boolean]
     val buffer = frame.buffer
     val latch = new CountDownLatch(slices)
     val running = new AtomicBoolean(true)
@@ -23,7 +23,7 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
     for (k <- 1 to slices) {
       Future {
         try {
-          buffer.iterator.takeWhile(_ => running.get).foreach(queue.add)
+          buffer.iterator.takeWhile(_ => running.get).foreach(map.putIfAbsent(_, true))
         } catch {
           case e: Throwable =>
             logger.error("Error writing; aborting tasks", e)
@@ -40,6 +40,6 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    queue.asScala.toVector
+    map.keySet.asScala
   }
 }
