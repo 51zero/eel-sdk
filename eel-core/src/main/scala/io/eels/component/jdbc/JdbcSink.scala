@@ -2,12 +2,13 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, DriverManager}
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.scalax.jdbc.ResultSetIterator
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, FrameSchema, Sink, Writer}
+import io.eels.{FrameSchema, Row, Sink, Writer}
 
 import scala.language.implicitConversions
 
@@ -16,6 +17,15 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     with StrictLogging {
 
   private val BufferSize = 1000
+  private val config = ConfigFactory.load()
+  private val warnIfMissingRewriteBatchedStatements = config.getBoolean("eel.jdbc.warnIfMissingRewriteBatchedStatements")
+
+  if (!url.contains("rewriteBatchedStatements")) {
+    if (warnIfMissingRewriteBatchedStatements) {
+      logger.warn("JDBC connection string does not contain the property 'rewriteBatchedStatements=true' which can be a major performance boost when writing data via JDBC. " +
+        "To remove this warning, add the property to your connection string, or set eel.jdbc.warnIfMissingRewriteBatchedStatements=false")
+    }
+  }
 
   private def tableExists(conn: Connection): Boolean = {
     logger.debug("Fetching tables to detect if table exists")
