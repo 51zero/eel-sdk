@@ -39,16 +39,19 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def writer(schema: FrameSchema, path: Path)
+  override def writer(sourceSchema: FrameSchema, targetSchema: FrameSchema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating orc writer for $path")
 
-    val inspector = StandardStructInspector(schema)
+    val inspector = StandardStructInspector(targetSchema)
     val writer = OrcFile.createWriter(path, OrcFile.writerOptions(new Configuration).inspector(inspector))
 
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: Row): Unit = {
+        // builds a map of the column names to the row values (by using the source schema), then generates
+        // a new sequence of values ordered by the columns in the target schema
+        val map = sourceSchema.columnNames.zip(row).map { case (columName, value) => columName -> value }.toMap
         writer.addRow(row.toArray)
       }
     }

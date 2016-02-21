@@ -1,6 +1,6 @@
 package io.eels.component.avro
 
-import io.eels.Row
+import io.eels.{FrameSchema, Row}
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.GenericRecord
@@ -21,10 +21,23 @@ object AvroRecordFn {
     }.toVector
   }
 
+  @deprecated
   def toRecord(row: Row, schema: Schema): GenericRecord = {
     val record = new Record(schema)
     for ( (field, value) <- schema.getFields.asScala.zip(row) ) {
       record.put(field.name, value)
+    }
+    record
+  }
+
+  /**
+    * Builds an avro record for the given avro schema, using the given frame schema
+    * to determine the correct ordering from the row.
+    */
+  def toRecord(row: Row, avroSchema: Schema, sourceSchema: FrameSchema): GenericRecord = {
+    val record = new Record(avroSchema)
+    for ((columnName, value) <- sourceSchema.columnNames.zip(row)) {
+      record.put(columnName, value)
     }
     record
   }

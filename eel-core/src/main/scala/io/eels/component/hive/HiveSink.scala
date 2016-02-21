@@ -9,7 +9,7 @@ import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 case class HiveSink(dbName: String,
@@ -25,6 +25,14 @@ case class HiveSink(dbName: String,
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
+
+  /**
+    * Returns the schema for the hive destination as an Eel format schema object.
+    */
+  def schema(implicit client: HiveMetaStoreClient): FrameSchema = {
+    val schema = client.getSchema(dbName, tableName)
+    FrameSchemaFn(schema.asScala)
+  }
 
   override def writer: Writer = {
     logger.debug(s"HiveSinkWriter created")
@@ -42,12 +50,14 @@ case class HiveSink(dbName: String,
     val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
     logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
+    val targetSchema = HiveSink.this.schema
+
     // we need an output stream per partition. Since the data can come in unordered, we need to
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
 
-    def getOrCreateHiveWriter(row: Row, schema: FrameSchema): HiveWriter = {
-      val parts = RowPartitionParts(row, partitionKeyNames, schema)
+    def getOrCreateHiveWriter(row: Row, sourceSchema: FrameSchema): HiveWriter = {
+      val parts = RowPartitionParts(row, partitionKeyNames, sourceSchema)
       val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
       writers.synchronized {
         writers.getOrElseUpdate(partPath, {
@@ -59,7 +69,7 @@ case class HiveSink(dbName: String,
           } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
             sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
           }
-          dialect.writer(schema, filePath)
+          dialect.writer(sourceSchema, targetSchema, filePath)
         })
       }
     }
