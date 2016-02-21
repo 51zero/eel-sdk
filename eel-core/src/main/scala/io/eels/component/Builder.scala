@@ -1,5 +1,5 @@
 package io.eels.component
 
-trait SourceBuilder[+T] {
+trait Builder[+T] {
   def apply: T
 }
