@@ -104,8 +104,41 @@ Eel integrates with [Kafka](http://kafka.apache.org/) to read messages from a to
 To create a KafkaSource that uses the default Json message deserialier, we can do: 
 `KafkaSource(KafkaSourceConfig("localhost:12345", "consumer"), Set("topic1"), JsonKafkaDeserializer)`
 
+### Command Line Interface
+
+Eel comes with a handy cli interace.
+
+Supports
+
+--source <sourceurl> --sink <sinkurl>
+
+##### Hive Source Url
+
+In general:
+hive:<db>:<table>(/col1,col2,col3..,coln)(?options)
+
+Examples:
+hive:prod:customers
+hive:prod:orders/orderid,date,customerid
+hive:prod:accounts?threads=4
+
+##### Csv Source Url
+
+In general:
+csv:<path>(/col1,col2,col3..,coln)(?options)
+
+Examples:
+csv:/some/path
+csv:/some/path:orderid,customerid
+csv:/some/path?a=b
+
 ### Changelog
 
+* 0.27.0 21/02/15 
+ - jdbc auto commit and warn on re-write options
+ - fix for parquet projections when no columns specified (default to all)
+ - added dataset url parsers
+ - removed plans from external api and updated actions to accept scala execution context
 * 0.26.0 18/02/15 - Projection pushdowns in Parquet
 * 0.25.0 17/02/15 - Removed lots of boxing artifacts
 * 0.23.0 16/02/15 - Added mongo sink. Added replace, fill, dropNull and explode methods to frame. Added Avro serializer/deserializer to kafka components.
