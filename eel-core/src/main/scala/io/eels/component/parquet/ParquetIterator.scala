@@ -1,5 +1,6 @@
 package io.eels.component.parquet
 
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.Row
 import io.eels.component.avro.AvroRecordFn
@@ -14,6 +15,10 @@ object ParquetIterator extends StrictLogging {
 
   private def createReader(path: Path, columns: Seq[String]): ParquetReader[GenericRecord] = {
 
+    val config = ConfigFactory.load()
+    val parallelism = config.getInt("eel.parquet.parallelism")
+    logger.debug(s"Creating parquet reader with parallelism=$parallelism")
+
     def projection: Schema = {
       val builder = SchemaBuilder.record("dummy").namespace("com")
       columns.foldLeft(builder.fields)((fields, name) => fields.optionalString(name)).endRecord()
@@ -24,6 +29,7 @@ object ParquetIterator extends StrictLogging {
       if (columns.nonEmpty) {
         AvroReadSupport.setAvroReadSchema(conf, projection)
         AvroReadSupport.setRequestedProjection(conf, projection)
+        conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism.toString)
       }
       conf
     }
