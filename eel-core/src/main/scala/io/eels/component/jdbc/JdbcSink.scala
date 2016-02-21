@@ -19,6 +19,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
   private val BufferSize = 1000
   private val config = ConfigFactory.load()
   private val warnIfMissingRewriteBatchedStatements = config.getBoolean("eel.jdbc.warnIfMissingRewriteBatchedStatements")
+  private val autoCommit = config.getBoolean("eel.jdbc.autoCommit")
 
   if (!url.contains("rewriteBatchedStatements")) {
     if (warnIfMissingRewriteBatchedStatements) {
@@ -41,6 +42,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
 
     logger.debug(s"Connecting to jdbc sink $url...")
     val conn = DriverManager.getConnection(url)
+    conn.setAutoCommit(autoCommit)
     logger.debug(s"Connected to $url")
 
     val created = new AtomicBoolean(false)
@@ -110,12 +112,16 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
       rows.map(dialect.insert(_, schema, table)).foreach(stmt.addBatch)
       try {
         stmt.executeBatch()
+        if (!autoCommit)
+          conn.commit()
         logger.info("Batch complete")
       } catch {
         case e: Exception =>
           logger.error("Batch failure", e)
           throw e
       } finally {
+        if (!autoCommit)
+          conn.rollback()
         stmt.close()
       }
     }
