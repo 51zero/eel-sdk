@@ -19,8 +19,8 @@ class SequenceSourceTest extends WordSpec with Matchers {
   "SequenceSource" should {
     "read sequence files" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)
-      val rows = SequenceSource(path).toSeq
-      rows shouldBe List(
+      val rows = SequenceSource(path).toSet
+      rows shouldBe Set(
         List("1", "2", "3", "4"),
         List("5", "6", "7", "8")
       )
