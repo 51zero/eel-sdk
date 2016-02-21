@@ -31,9 +31,9 @@ case class FrameSchema(columns: List[Column]) {
 
   def print: String = {
     columns.map { column =>
-      val str = s"- ${column.name} [${column.`type`}]"
-      if (column.nullable) str + " (nullable)"
-      else str
+      val signedString = if (column.signed) "signed" else "unsigned"
+      val nullString = if (column.nullable) "null" else "not null"
+      s"- ${column.name} [${column.`type`} $nullString scale=${column.scale} precision=${column.precision} $signedString]"
     }.mkString("\n")
   }
 }
