@@ -115,11 +115,11 @@ Supports
 ##### Hive Source Url
 
 In general:
-hive:<db>:<table>(/col1,col2,col3..,coln)(?options)
+hive:<db>:<table>(:col1,col2,col3..,coln)(?options)
 
 Examples:
 hive:prod:customers
-hive:prod:orders/orderid,date,customerid
+hive:prod:orders:orderid,date,customerid
 hive:prod:accounts?threads=4
 
 ##### Csv Source Url
