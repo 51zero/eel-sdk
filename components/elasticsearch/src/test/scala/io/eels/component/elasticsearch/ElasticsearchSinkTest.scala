@@ -12,6 +12,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class ElasticsearchSinkTest extends WordSpec with Matchers with Eventually {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   import ElasticDsl._
 
   val client = ElasticClient
