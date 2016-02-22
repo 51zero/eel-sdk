@@ -34,8 +34,9 @@ object ParquetIterator extends StrictLogging {
       conf
     }
 
-    val conf = configuration
-    AvroParquetReader.builder[GenericRecord](path).withConf(conf).build().asInstanceOf[ParquetReader[GenericRecord]]
+    AvroParquetReader.builder[GenericRecord](path)
+      .withConf(configuration)
+      .build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 
   def apply(path: Path, columns: Seq[String]): Iterator[Row] = {
