@@ -24,6 +24,7 @@ case class OrcSink(path: Path) extends Sink with StrictLogging {
           PrimitiveObjectInspectorFactory.javaStringObjectInspector
         )
         writer = OrcFile.createWriter(path, OrcFile.writerOptions(new Configuration).inspector(inspector))
+        writer.addRow(schema.columnNames.toArray)
       }
     }
 

@@ -59,13 +59,16 @@ trait Source extends StrictLogging {
             case e: Throwable =>
               logger.error("Error adding sentinel", e)
           }
-          logger.debug("Sentinel added to queue")
+          logger.debug("Sentinel added to downstream queue from source")
         }
 
         executor.shutdown()
 
         new Buffer {
-          override def close(): Unit = executor.shutdownNow()
+          override def close(): Unit = {
+            logger.debug("Closing source")
+            executor.shutdownNow()
+          }
           override def iterator: Iterator[InternalRow] = BlockingQueueConcurrentIterator(queue, InternalRow.Sentinel)
         }
 

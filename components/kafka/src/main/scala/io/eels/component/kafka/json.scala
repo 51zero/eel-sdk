@@ -11,7 +11,7 @@ object JsonKafkaDeserializer extends KafkaDeserializer {
     val node = mapper.readTree(bytes)
     //    val columns = node.fieldNames.asScala.map(Column.apply).toList
     //    val fields = node.fieldNames.asScala.map { name => Field(node.get(name).textValue) }.toList
-    node.elements.asScala.map(_.textValue).toSeq
+    node.elements.asScala.map(_.textValue).toList
   }
 }
 

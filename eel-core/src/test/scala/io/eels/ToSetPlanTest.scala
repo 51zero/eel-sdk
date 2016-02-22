@@ -19,9 +19,9 @@ class ToSetPlanTest extends WordSpec with Matchers {
         List("ham", "buckingham")
       )
       frame.toSet shouldBe Set(
-        List("sam", "aylesbury"),
-        List("jam", "aylesbury"),
-        List("ham", "buckingham")
+        Row(frame.schema, "sam", "aylesbury"),
+        Row(frame.schema, "jam", "aylesbury"),
+        Row(frame.schema, "ham", "buckingham")
       )
     }
   }

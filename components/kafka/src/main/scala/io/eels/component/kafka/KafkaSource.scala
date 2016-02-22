@@ -22,6 +22,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     val consumerProps = new Properties
     consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.brokerList)
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "schema-consumer_" + UUID.randomUUID)
+    consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     val consumer = new KafkaConsumer[Array[Byte], Array[Byte]](
       consumerProps,
       new ByteArrayDeserializer,
@@ -29,11 +30,12 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     )
     consumer.subscribe(topics.toList.asJava)
 
+    logger.debug("Polling kafka for schema")
     val record = consumer.poll(10000).asScala.take(1).toList.head
     consumer.close()
     val row = deserializer(record.value)
-
-    FrameSchema(Seq("todo"))
+    val columns = List.tabulate(row.size)(_.toString)
+    FrameSchema(columns)
   }
 
   override def readers: Seq[Reader] = {

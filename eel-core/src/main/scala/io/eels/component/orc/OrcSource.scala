@@ -23,6 +23,7 @@ case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Us
   override def readers: Seq[Reader] = {
 
     val reader = OrcFile.createReader(fs, path).rows()
+    reader.next(null)
 
     val part = new Reader {
       override def close(): Unit = reader.close()
