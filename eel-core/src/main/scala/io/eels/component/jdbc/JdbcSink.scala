@@ -32,7 +32,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     }
   }
 
-  override lazy val writer = new JdbcWriter(url, table, dialect, props, autoCommit, bufferSize)
+  override def writer = new JdbcWriter(url, table, dialect, props, autoCommit, bufferSize)
 }
 
 class BoundedThreadPoolExecutor(poolSize: Int, queueSize: Int)
