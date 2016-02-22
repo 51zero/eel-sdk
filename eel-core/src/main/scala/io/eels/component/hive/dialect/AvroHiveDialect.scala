@@ -1,7 +1,8 @@
 package io.eels.component.hive.dialect
 
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, FrameSchema}
+import io.eels.{FrameSchema, InternalRow}
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
@@ -11,6 +12,8 @@ import org.apache.commons.io.IOUtils
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object AvroHiveDialect extends HiveDialect with StrictLogging {
+
+  val config = ConfigFactory.load()
 
   override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[InternalRow] = {
@@ -43,7 +46,7 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: InternalRow): Unit = {
-        val record = AvroRecordFn.toRecord(row, avroSchema, sourceSchema)
+        val record = AvroRecordFn.toRecord(row, avroSchema, sourceSchema, config)
         writer.append(record)
       }
     }

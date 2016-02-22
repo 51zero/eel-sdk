@@ -1,5 +1,6 @@
 package io.eels.component.parquet
 
+import com.typesafe.config.ConfigFactory
 import io.eels.Frame
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import org.apache.hadoop.conf.Configuration
@@ -38,7 +39,7 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
     "rollover on record count" in {
       val avroSchema = AvroSchemaGen(frame.schema)
       val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0)
-      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema)))
+      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.empty)))
       writer.close()
       ParquetSource(path0).toSet.map(_.values.map(_.toString)) shouldBe
         Set(

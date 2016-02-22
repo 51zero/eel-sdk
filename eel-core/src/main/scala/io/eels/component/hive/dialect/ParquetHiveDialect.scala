@@ -29,7 +29,7 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging with RollingPar
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: InternalRow): Unit = {
-        val record = AvroRecordFn.toRecord(row, avroSchema, sourceSchema)
+        val record = AvroRecordFn.toRecord(row, avroSchema, sourceSchema, config)
         writer.write(record)
       }
     }

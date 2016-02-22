@@ -3,12 +3,15 @@ package io.eels.component.avro
 import java.io.{File, OutputStream}
 import java.nio.file.{Files, Path}
 
+import com.typesafe.config.ConfigFactory
 import io.eels.{FrameSchema, InternalRow, Sink, Writer}
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic
 import org.apache.avro.generic.GenericRecord
 
 case class AvroSink(out: OutputStream) extends Sink {
+
+  val config = ConfigFactory.load()
 
   def writer: Writer = new Writer {
 
@@ -18,7 +21,7 @@ case class AvroSink(out: OutputStream) extends Sink {
       if (writer == null)
         writer = createWriter(row, schema)
       val avroSchema = AvroSchemaGen(schema)
-      val record = AvroRecordFn.toRecord(row, avroSchema, schema)
+      val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
       writer.append(record)
     }
 

@@ -27,7 +27,7 @@ class ParquetWriter(path: Path)
         avroSchema = AvroSchemaGen(schema)
         writer = createRollingParquetWriter(path, avroSchema)
       }
-      val record = AvroRecordFn.toRecord(row, avroSchema, schema)
+      val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
       writer.write(record)
     }
   }
