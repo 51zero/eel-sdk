@@ -3,6 +3,7 @@ package io.eels
 import scala.language.implicitConversions
 
 case class FrameSchema(columns: List[Column]) {
+  require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
 
   def apply(name: String): Column = columns.find(_.name == name).get
 
@@ -11,7 +12,10 @@ case class FrameSchema(columns: List[Column]) {
 
   def columnNames: List[String] = columns.map(_.name)
 
-  def addColumn(col: Column): FrameSchema = copy(columns :+ col)
+  def addColumn(col: Column): FrameSchema = {
+    require(!columnNames.contains(col.name), s"Column ${col.name} already exists")
+    copy(columns :+ col)
+  }
 
   def removeColumn(name: String): FrameSchema = copy(columns = columns.filterNot(_.name == name))
   def removeColumns(names: List[String]): FrameSchema = copy(columns = columns.filterNot(names contains _.name))
@@ -22,6 +26,14 @@ case class FrameSchema(columns: List[Column]) {
       "Cannot join two frames which have duplicated column names"
     )
     FrameSchema(columns ++ other.columns)
+  }
+
+  def updateColumn(column: Column): FrameSchema = {
+    val cols = columns.map {
+      case col if col.name == column.name => column
+      case col => col
+    }
+    FrameSchema(cols)
   }
 
   def renameColumn(from: String, to: String): FrameSchema = FrameSchema(columns.map {
@@ -39,6 +51,7 @@ case class FrameSchema(columns: List[Column]) {
 }
 
 object FrameSchema {
+  def apply(first: Column, rest: Column*): FrameSchema = apply((first +: rest).toList)
   def apply(first: String, rest: String*): FrameSchema = apply(first +: rest)
   implicit def apply(strs: Seq[String]): FrameSchema = FrameSchema(strs.map(Column.apply).toList)
 }

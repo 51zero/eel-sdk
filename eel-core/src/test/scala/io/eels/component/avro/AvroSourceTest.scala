@@ -17,7 +17,7 @@ class AvroSourceTest extends WordSpec with Matchers {
     }
     "read avro files" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath)).toSet
-      people.map(_.map(_.toString)) shouldBe Set(
+      people.map(_.values.map(_.toString)) shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner"),
         List("issac newton", "scientist", "heaven")

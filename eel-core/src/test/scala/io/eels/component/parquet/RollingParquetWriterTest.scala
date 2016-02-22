@@ -40,12 +40,12 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
       val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0)
       frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema)))
       writer.close()
-      ParquetSource(path0).toSet.map(_.map(_.toString)) shouldBe
+      ParquetSource(path0).toSet.map(_.values.map(_.toString)) shouldBe
         Set(
           List("clint eastwood", "actor", "carmel"),
           List("elton john", "musician", "pinner")
         )
-      ParquetSource(path1).toSet.map(_.map(_.toString)) shouldBe
+      ParquetSource(path1).toSet.map(_.values.map(_.toString)) shouldBe
         Set(
           List("david bowie", "musician", "london"),
           List("jack bruce", "musician", "glasgow")

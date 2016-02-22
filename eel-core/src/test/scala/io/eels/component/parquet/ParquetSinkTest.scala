@@ -32,7 +32,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path))
       val people = ParquetSource(path)
-      people.toSet.map(_.map(_.toString)) shouldBe
+      people.toSet.map(_.values.map(_.toString)) shouldBe
         Set(
           List("clint eastwood", "actor", "carmel"),
           List("elton john", "musician", "pinner")

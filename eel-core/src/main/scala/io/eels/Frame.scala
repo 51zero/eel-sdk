@@ -145,7 +145,8 @@ trait Frame {
   }
 
   def addColumn(name: String, defaultValue: String): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema.addColumn(name)
+    require(!outer.schema.columnNames.contains(name), s"Column $name already exists")
+    override lazy val schema: FrameSchema = outer.schema.addColumn(name)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -154,7 +155,7 @@ trait Frame {
   }
 
   def removeColumn(columnName: String): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema.removeColumn(columnName)
+    override lazy val schema: FrameSchema = outer.schema.removeColumn(columnName)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -165,8 +166,18 @@ trait Frame {
     }
   }
 
+  def updateColumn(column: Column): Frame = new Frame {
+    override lazy val schema: FrameSchema = outer.schema.updateColumn(column)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      val index = outer.schema.indexOf(column)
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[InternalRow] = buffer.iterator
+    }
+  }
+
   def renameColumn(nameFrom: String, nameTo: String): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema.renameColumn(nameFrom, nameTo)
+    override lazy val schema: FrameSchema = outer.schema.renameColumn(nameFrom, nameTo)
     override def buffer: Buffer = outer.buffer
   }
 
@@ -180,7 +191,7 @@ trait Frame {
   }
 
   def fill(defaultValue: String): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override lazy val schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -193,7 +204,7 @@ trait Frame {
 
   def ++(frame: Frame): Frame = union(frame)
   def union(other: Frame): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override lazy val schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer1 = outer.buffer
       val buffer2 = other.buffer
@@ -317,8 +328,8 @@ trait Frame {
 
   def to(sink: Sink)(implicit executor: ExecutionContext): Long = SinkPlan(sink, this)
   def size(implicit executor: ExecutionContext): Long = ToSizePlan(this)
-  def toSeq(implicit executor: ExecutionContext): Seq[InternalRow] = ToSeqPlan(this)
-  def toSet(implicit executor: ExecutionContext): scala.collection.mutable.Set[InternalRow] = ToSetPlan(this)
+  def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan(this)
+  def toSet(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = ToSetPlan(this)
 }
 
 object Frame {

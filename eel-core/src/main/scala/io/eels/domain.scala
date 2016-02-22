@@ -36,3 +36,7 @@ object InternalRow {
 }
 
 case class Row(schema: FrameSchema, values: Seq[Any])
+
+object Row {
+  def apply(schema: FrameSchema, first: Any, rest: Any*): Row = Row(schema, first +: rest)
+}
