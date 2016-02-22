@@ -4,7 +4,7 @@ import java.sql.DriverManager
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Reader, Row, Source}
+import io.eels.{FrameSchema, Reader, InternalRow, Source}
 
 import scala.concurrent.duration._
 
@@ -46,7 +46,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
 
       var created = false
 
-      override def iterator: Iterator[Row] = new Iterator[Row] {
+      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
         require(!created, "!Cannot create more than one iterator for a jdbc source!")
         created = true
 
@@ -59,7 +59,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
           hasNext
         }
 
-        override def next: Row = {
+        override def next: InternalRow = {
           for ( k <- 1 to columnCount ) yield {
             rs.getObject(k)
           }

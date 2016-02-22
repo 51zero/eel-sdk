@@ -3,7 +3,7 @@ package io.eels.component.kafka
 import java.util.{Properties, UUID}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, FrameSchema, Reader, Source}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
@@ -58,7 +58,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
       logger.debug("Closed kafka consumer")
 
       override def close(): Unit = ()
-      override def iterator: Iterator[Row] = records.iterator.map { record =>
+      override def iterator: Iterator[InternalRow] = records.iterator.map { record =>
         val bytes = record.value()
         deserializer(bytes)
       }
@@ -68,6 +68,6 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
 }
 
 trait KafkaDeserializer {
-  def apply(bytes: Array[Byte]): Row
+  def apply(bytes: Array[Byte]): InternalRow
 }
 

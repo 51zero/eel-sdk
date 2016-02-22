@@ -5,7 +5,7 @@ import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, Time
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Row, Sink, Writer}
+import io.eels.{FrameSchema, InternalRow, Sink, Writer}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -56,7 +56,7 @@ case class HiveSink(dbName: String,
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
 
-    def getOrCreateHiveWriter(row: Row, sourceSchema: FrameSchema): HiveWriter = {
+    def getOrCreateHiveWriter(row: InternalRow, sourceSchema: FrameSchema): HiveWriter = {
       val parts = RowPartitionParts(row, partitionKeyNames, sourceSchema)
       val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
       writers.synchronized {
@@ -76,7 +76,7 @@ case class HiveSink(dbName: String,
 
     import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
 
-    val queue = new ArrayBlockingQueue[Row](bufferSize)
+    val queue = new ArrayBlockingQueue[InternalRow](bufferSize)
     val latch = new CountDownLatch(ioThreads)
     val executor = Executors.newFixedThreadPool(ioThreads)
     val count = new AtomicLong(0)
@@ -86,7 +86,7 @@ case class HiveSink(dbName: String,
       executor.submit {
         logger.info(s"HiveSink thread $k started")
         try {
-          BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { row =>
+          BlockingQueueConcurrentIterator(queue, InternalRow.Sentinel).foreach { row =>
             val writer = getOrCreateHiveWriter(row, schema)
             writer.synchronized {
               writer.write(row)
@@ -115,11 +115,11 @@ case class HiveSink(dbName: String,
     new Writer {
       override def close(): Unit = {
         logger.debug("Request to close hive sink writer")
-        queue.put(Row.Sentinel)
+        queue.put(InternalRow.Sentinel)
         executor.awaitTermination(1, TimeUnit.HOURS)
       }
 
-      override def write(row: Row, _schema: FrameSchema): Unit = {
+      override def write(row: InternalRow, _schema: FrameSchema): Unit = {
         schema = _schema
         queue.put(row)
       }
@@ -170,7 +170,7 @@ object PartitionPart {
 // returns all the partition parts for a given row, if a row doesn't contain a value
 // for a part then an error is thrown
 object RowPartitionParts {
-  def apply(row: Row, partNames: Seq[String], schema: FrameSchema): List[PartitionPart] = {
+  def apply(row: InternalRow, partNames: Seq[String], schema: FrameSchema): List[PartitionPart] = {
     require(partNames.forall(schema.columnNames.contains), "FrameSchema must contain all partitions " + partNames)
     partNames.map { name =>
       val index = schema.indexOf(name)

@@ -15,8 +15,9 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
   def apply(frame: Frame)(implicit executor: ExecutionContext): Seq[Row] = {
     logger.info(s"Executing toSeq on frame [tasks=$slices]")
 
-    val queue = new ConcurrentLinkedQueue[Row]
+    val queue = new ConcurrentLinkedQueue[InternalRow]
     val buffer = frame.buffer
+    val schema = frame.schema
     val latch = new CountDownLatch(slices)
     val running = new AtomicBoolean(true)
 
@@ -40,6 +41,6 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    queue.asScala.toVector
+    queue.asScala.map(internal => Row(schema, internal)).toVector
   }
 }

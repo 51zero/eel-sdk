@@ -8,7 +8,7 @@ import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Row, Sink, Writer}
+import io.eels.{FrameSchema, InternalRow, Sink, Writer}
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -90,7 +90,7 @@ class JdbcWriter(url: String,
   // the buffer is a concurrent receiver for the write method. It needs to hold enough elements to keep the
   // frame threads busy until the coordinator thread gets a time slice and empties it via its iterator.
   // controlled by eel.jdbc.sink.bufferSize
-  private val buffer = new ArrayBlockingQueue[Row](bufferSize)
+  private val buffer = new ArrayBlockingQueue[InternalRow](bufferSize)
 
   // We use a bounded executor because otherwise the executor would very quickly fill up with pending tasks
   // for all rows in the source. Then effectively we would have loaded the entire frame into memory and stored it
@@ -103,7 +103,7 @@ class JdbcWriter(url: String,
 
   coordinator.submit {
     logger.debug("Starting Jdbc Writer Coordinator")
-    BlockingQueueConcurrentIterator(buffer, Row.Sentinel)
+    BlockingQueueConcurrentIterator(buffer, InternalRow.Sentinel)
       .grouped(props.batchSize)
       .withPartial(true)
       .foreach { batch =>
@@ -139,12 +139,12 @@ class JdbcWriter(url: String,
   }
 
   override def close(): Unit = {
-    buffer.put(Row.Sentinel)
+    buffer.put(InternalRow.Sentinel)
     logger.debug("Closing JDBC Writer... blocking until workers completed")
     workers.awaitTermination(1, TimeUnit.DAYS)
   }
 
-  override def write(row: Row, schema: FrameSchema): Unit = {
+  override def write(row: InternalRow, schema: FrameSchema): Unit = {
     // need an atomic ref here as this method will be called by multiple threads, and we need
     // to ensure the schema is visible to the coordinator thread when it calls ensureInserterCreated()
     if (schemaRef.get == null) schemaRef.set(schema)
@@ -163,7 +163,7 @@ class JdbcInserter(url: String,
   conn.setAutoCommit(autoCommit)
   logger.debug(s"Connected to $url")
 
-  def insertBatch(batch: Seq[Row]): Unit = {
+  def insertBatch(batch: Seq[InternalRow]): Unit = {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
     try {
       batch.foreach { row =>

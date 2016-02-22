@@ -31,6 +31,8 @@ object Column {
   implicit def apply(str: String): Column = Column(str, SchemaType.String, false)
 }
 
-object Row {
-  val Sentinel: Row = List(new {})
+object InternalRow {
+  val Sentinel: InternalRow = List(new {})
 }
+
+case class Row(schema: FrameSchema, values: Seq[Any])

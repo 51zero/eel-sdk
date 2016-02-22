@@ -15,8 +15,9 @@ object ToSetPlan extends Plan with Using with StrictLogging {
   def apply(frame: Frame)(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = {
     logger.info(s"Executing toSet on frame [tasks=$slices]")
 
-    val map = new ConcurrentHashMap[Row, Boolean]
+    val map = new ConcurrentHashMap[InternalRow, Boolean]
     val buffer = frame.buffer
+    val schema = frame.schema
     val latch = new CountDownLatch(slices)
     val running = new AtomicBoolean(true)
 
@@ -40,6 +41,6 @@ object ToSetPlan extends Plan with Using with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    map.keySet.asScala
+    map.keySet.asScala.map(internal => Row(schema, internal))
   }
 }

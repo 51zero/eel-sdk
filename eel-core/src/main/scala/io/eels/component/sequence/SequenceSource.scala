@@ -5,7 +5,7 @@ import java.io.StringReader
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, Column, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, Column, FrameSchema, Reader, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
@@ -57,9 +57,9 @@ case class SequenceSource(path: Path) extends Source with Using with StrictLoggi
 
       override def close(): Unit = reader.close()
 
-      override def iterator: Iterator[Row] = new Iterator[Row] {
+      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
         override def hasNext: Boolean = reader.next(k, v)
-        override def next(): Row = toValues(v)
+        override def next(): InternalRow = toValues(v)
       }
     }
 

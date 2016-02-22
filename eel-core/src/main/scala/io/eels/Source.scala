@@ -31,7 +31,7 @@ trait Source extends StrictLogging {
         val readers = self.readers
         logger.debug(s"Source has ${readers.size} reader(s)")
 
-        val queue = new ArrayBlockingQueue[Row](DefaultBufferSize)
+        val queue = new ArrayBlockingQueue[InternalRow](DefaultBufferSize)
         val count = new AtomicLong(0)
         val latch = new CountDownLatch(readers.size)
 
@@ -54,7 +54,7 @@ trait Source extends StrictLogging {
           latch.await(1, TimeUnit.DAYS)
           logger.debug("Readers completed; latch released")
           try {
-            queue.put(Row.Sentinel)
+            queue.put(InternalRow.Sentinel)
           } catch {
             case e: Throwable =>
               logger.error("Error adding sentinel", e)
@@ -66,7 +66,7 @@ trait Source extends StrictLogging {
 
         new Buffer {
           override def close(): Unit = executor.shutdownNow()
-          override def iterator: Iterator[Row] = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
+          override def iterator: Iterator[InternalRow] = BlockingQueueConcurrentIterator(queue, InternalRow.Sentinel)
         }
 
       } catch {
@@ -94,7 +94,7 @@ trait Part {
   */
 trait Reader {
   def close(): Unit
-  def iterator: Iterator[Row]
+  def iterator: Iterator[InternalRow]
 }
 
 object Source {
