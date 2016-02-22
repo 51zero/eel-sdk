@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class OrcComponentTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   "OrcComponent" should {
     "read and write orc files" in {
 
@@ -20,12 +22,12 @@ class OrcComponentTest extends WordSpec with Matchers {
       )
 
       val path = new Path("test.orc")
-      frame.to(OrcSink(path)).run
+      frame.to(OrcSink(path))
 
-      val rows = OrcSource(path).toSeq.run
+      val rows = OrcSource(path).toSet
       fs.delete(path, false)
 
-      rows shouldBe Seq(
+      rows shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner"),
         List("david bowie", "musician", "surrey")

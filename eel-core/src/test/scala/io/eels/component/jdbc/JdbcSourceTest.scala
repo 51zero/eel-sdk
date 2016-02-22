@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   Class.forName("org.h2.Driver")
   val conn = DriverManager.getConnection("jdbc:h2:mem:test")
   conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
@@ -24,10 +26,10 @@ class JdbcSourceTest extends WordSpec with Matchers {
       }
     }
     "read from jdbc" in {
-      JdbcSource("jdbc:h2:mem:test", "select * from mytable").size.run shouldBe 2
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable").size shouldBe 2
     }
     "use supplied query" in {
-      JdbcSource("jdbc:h2:mem:test", "select * from mytable where a=4").size.run shouldBe 1
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable where a=4").size shouldBe 1
     }
   }
 }

@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSourceTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   val frame = Frame(
     List("name", "location"),
     List("sam", "aylesbury"),
@@ -17,8 +19,8 @@ class SequenceSourceTest extends WordSpec with Matchers {
   "SequenceSource" should {
     "read sequence files" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)
-      val rows = SequenceSource(path).toSeq.run
-      rows shouldBe List(
+      val rows = SequenceSource(path).toSet
+      rows shouldBe Set(
         List("1", "2", "3", "4"),
         List("5", "6", "7", "8")
       )

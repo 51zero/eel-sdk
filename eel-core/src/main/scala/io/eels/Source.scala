@@ -40,11 +40,11 @@ trait Source extends StrictLogging {
             try {
               reader.iterator.foreach(queue.put)
               logger.debug(s"Completed reader #${count.incrementAndGet}")
-              latch.countDown()
             } catch {
               case e: Throwable =>
-                logger.error("Error reading row", e)
+                logger.error("Error reading row; aborting", e)
             } finally {
+              latch.countDown()
               reader.close()
             }
           }
@@ -61,6 +61,8 @@ trait Source extends StrictLogging {
           }
           logger.debug("Sentinel added to queue")
         }
+
+        executor.shutdown()
 
         new Buffer {
           override def close(): Unit = executor.shutdownNow()

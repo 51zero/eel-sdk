@@ -8,6 +8,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class JsonSinkTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   "JsonSink" should {
     "write multiple json docs to a file" in {
 
@@ -23,12 +25,11 @@ class JsonSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, false)
 
-      frame.to(JsonSink(path)).run
-      IOUtils.toString(fs.open(path)) shouldBe
-        """{"name":"sam","location":"aylesbury"}
-          |{"name":"jam","location":"aylesbury"}
-          |{"name":"ham","location":"buckingham"}
-          |""".stripMargin
+      frame.to(JsonSink(path))
+      val input = IOUtils.toString(fs.open(path))
+      input should include ("""{"name":"sam","location":"aylesbury"}""")
+      input should include ("""{"name":"jam","location":"aylesbury"}""")
+      input should include ("""{"name":"ham","location":"buckingham"}""")
       fs.delete(path, false)
     }
   }

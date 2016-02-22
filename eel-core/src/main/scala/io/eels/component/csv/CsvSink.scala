@@ -6,6 +6,7 @@ import com.github.tototoshi.csv.{CSVFormat, CSVWriter, QUOTE_MINIMAL, Quoting}
 import io.eels.{FrameSchema, Row, Sink, Writer}
 
 case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sink {
+  self =>
 
   override def writer: Writer = new Writer {
 
@@ -23,7 +24,9 @@ case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sin
     override def close(): Unit = writer.close
 
     override def write(row: Row, schema: FrameSchema): Unit = {
-      writer.writeRow(row)
+      self.synchronized {
+        writer.writeRow(row)
+      }
     }
   }
 

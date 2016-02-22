@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
 
 case class ParquetSink(path: Path) extends Sink with StrictLogging {
+  self =>
   logger.debug(s"Sink will write to $path")
 
   override def writer: Writer = new Writer {
@@ -16,7 +17,7 @@ case class ParquetSink(path: Path) extends Sink with StrictLogging {
     var writer: AvroParquetWriter[GenericRecord] = null
     var avroSchema: Schema = null
 
-    def ensureWriterCreated(row: Row): Unit = {
+    private def ensureWriterCreated(row: Row): Unit = {
       if (writer == null) {
         writer = new AvroParquetWriter[GenericRecord](path, avroSchema)
       }
@@ -26,9 +27,11 @@ case class ParquetSink(path: Path) extends Sink with StrictLogging {
 
     override def write(row: Row, schema: FrameSchema): Unit = {
       avroSchema = AvroSchemaGen(schema)
-      ensureWriterCreated(row)
-      val record = AvroRecordFn.toRecord(row, avroSchema)
-      writer.write(record)
+      self.synchronized {
+        ensureWriterCreated(row)
+        val record = AvroRecordFn.toRecord(row, avroSchema)
+        writer.write(record)
+      }
     }
   }
 }

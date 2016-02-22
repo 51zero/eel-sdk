@@ -6,6 +6,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class JsonSink(path: Path) extends Sink {
+  self =>
 
   import scala.collection.JavaConverters._
 
@@ -21,8 +22,10 @@ case class JsonSink(path: Path) extends Sink {
     override def write(row: Row, schema: FrameSchema): Unit = {
       val map = schema.columnNames.zip(row).toMap.asJava
       val json = mapper.writeValueAsString(map)
-      out.writeBytes(json)
-      out.writeBytes("\n")
+      self.synchronized {
+        out.writeBytes(json)
+        out.writeBytes("\n")
+      }
     }
   }
 }

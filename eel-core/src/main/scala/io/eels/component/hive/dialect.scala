@@ -6,8 +6,15 @@ import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetH
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 trait HiveDialect extends StrictLogging {
-  def iterator(path: Path, schema: FrameSchema, columns: Seq[String])(implicit fs: FileSystem): Iterator[Row]
-  def writer(schema: FrameSchema, path: Path)(implicit fs: FileSystem): HiveWriter
+
+  def iterator(path: Path, schema: FrameSchema,
+               columns: Seq[String])
+              (implicit fs: FileSystem): Iterator[Row]
+
+  def writer(sourceSchema: FrameSchema,
+             targetSchema: FrameSchema,
+             path: Path)
+            (implicit fs: FileSystem): HiveWriter
 }
 
 object HiveDialect {

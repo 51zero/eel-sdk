@@ -30,11 +30,11 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def writer(schema: FrameSchema, path: Path)
+  override def writer(sourceSchema: FrameSchema, targetSchema: FrameSchema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating avro writer for $path")
 
-    val avroSchema = AvroSchemaGen(schema)
+    val avroSchema = AvroSchemaGen(targetSchema)
     val datumWriter = new GenericDatumWriter[GenericRecord](avroSchema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
     val out = fs.create(path, false)
@@ -43,7 +43,7 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: Row): Unit = {
-        val record = AvroRecordFn.toRecord(row, avroSchema)
+        val record = AvroRecordFn.toRecord(row, avroSchema, sourceSchema)
         writer.append(record)
       }
     }

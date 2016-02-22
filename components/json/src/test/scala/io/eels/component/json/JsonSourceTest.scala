@@ -6,10 +6,12 @@ import org.scalatest.{Matchers, WordSpec}
 
 class JsonSourceTest extends WordSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   "JsonSource" should {
     "read multiple json docs from a file" in {
-      JsonSource(new Path(IO.fileFromResource("/test.json").getAbsolutePath)).toSeq.run shouldBe
-        List(
+      JsonSource(new Path(IO.fileFromResource("/test.json").getAbsolutePath)).toSet shouldBe
+        Set(
           List("sammy", "aylesbury"),
           List("ant", "greece")
         )

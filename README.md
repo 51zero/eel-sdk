@@ -2,9 +2,7 @@
 
 [![Build Status](https://travis-ci.org/eel-sdk/eel.svg?branch=master)](https://travis-ci.org/eel-sdk/eel)
 
-![Logo](eel-core/src/main/graphics/eel.png)
-
-Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel operates on a single machine. It is aimed at those problems which can be solved simply and quickly by iterating over data row by row. Or when the size of the data fits into memory and shuffling data between nodes adds overhead and complexity. This turns out to be quite a common use case.
+<img src="https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png" width="140px" align="left"> Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel operates on a single machine. It is aimed at those problems which can be solved simply and quickly by iterating over data row by row. Or when the size of the data fits into memory and shuffling data between nodes adds overhead and complexity. This turns out to be quite a common use case.
 
 Latest release [here](http://search.maven.org/#search|ga|1|io-eels)
 
@@ -104,8 +102,41 @@ Eel integrates with [Kafka](http://kafka.apache.org/) to read messages from a to
 To create a KafkaSource that uses the default Json message deserialier, we can do: 
 `KafkaSource(KafkaSourceConfig("localhost:12345", "consumer"), Set("topic1"), JsonKafkaDeserializer)`
 
+### Command Line Interface
+
+Eel comes with a handy cli interace.
+
+Supports
+
+--source <sourceurl> --sink <sinkurl>
+
+##### Hive Source Url
+
+In general:
+hive:<db>:<table>(:col1,col2,col3..,coln)(?options)
+
+Examples:
+hive:prod:customers
+hive:prod:orders:orderid,date,customerid
+hive:prod:accounts?threads=4
+
+##### Csv Source Url
+
+In general:
+csv:<path>(/col1,col2,col3..,coln)(?options)
+
+Examples:
+csv:/some/path
+csv:/some/path:orderid,customerid
+csv:/some/path?a=b
+
 ### Changelog
 
+* 0.27.0 21/02/15 
+ - jdbc auto commit and warn on re-write options
+ - fix for parquet projections when no columns specified (default to all)
+ - added dataset url parsers
+ - removed plans from external api and updated actions to accept scala execution context
 * 0.26.0 18/02/15 - Projection pushdowns in Parquet
 * 0.25.0 17/02/15 - Removed lots of boxing artifacts
 * 0.23.0 16/02/15 - Added mongo sink. Added replace, fill, dropNull and explode methods to frame. Added Avro serializer/deserializer to kafka components.
