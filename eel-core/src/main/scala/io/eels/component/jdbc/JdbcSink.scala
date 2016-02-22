@@ -83,7 +83,7 @@ class JdbcWriter(url: String,
                  props: JdbcSinkProps = JdbcSinkProps(),
                  autoCommit: Boolean = false,
                  bufferSize: Int) extends Writer with StrictLogging {
-  logger.info(s"Creating Jdbc writer with ${props.threads} threads, batche size ${props.batchSize}, autoCommit=$autoCommit")
+  logger.info(s"Creating Jdbc writer with ${props.threads} threads, batch size ${props.batchSize}, autoCommit=$autoCommit")
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
 
@@ -164,10 +164,16 @@ class JdbcInserter(url: String,
   logger.debug(s"Connected to $url")
 
   def insertBatch(batch: Seq[Row]): Unit = {
-    val stmt = conn.createStatement()
+    val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
     try {
-      batch.map(dialect.insert(_, schema, table)).foreach(stmt.addBatch)
-      stmt.executeBatch()
+      batch.foreach { row =>
+        row.zipWithIndex foreach { case (value, k) =>
+          stmt.setObject(k + 1, value)
+        }
+        stmt.addBatch()
+      }
+      val result = stmt.executeBatch()
+      logger.debug(s"Batch completed; $result rows updated")
       if (!autoCommit) conn.commit()
     } catch {
       case e: Exception =>

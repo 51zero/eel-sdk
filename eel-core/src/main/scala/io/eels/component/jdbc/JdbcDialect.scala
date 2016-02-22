@@ -8,10 +8,15 @@ trait JdbcDialect {
   def insert(row: Row, schema: FrameSchema, table: String): String
   def toJdbcType(column: Column): String
   def fromJdbcType(i: Int): SchemaType
+
+  /**
+    * Returns a parameterized insert query
+    */
+  def insertQuery(schema: FrameSchema, table: String): String
+
 }
 
 object JdbcDialect {
-
   /**
     * Detect dialect from the connection string
     */
@@ -76,6 +81,12 @@ trait GenericJdbcDialect extends JdbcDialect with StrictLogging {
   override def create(schema: FrameSchema, table: String): String = {
     val columns = schema.columns.map(c => s"${c.name} ${toJdbcType(c)}").mkString("(", ",", ")")
     s"CREATE TABLE $table $columns"
+  }
+
+  override def insertQuery(schema: FrameSchema, table: String): String = {
+    val columns = schema.columnNames.mkString(",")
+    val parameters = List.fill(schema.columns.size)("?").mkString(",")
+    s"INSERT INTO $table ($columns) VALUES ($parameters)"
   }
 
   override def insert(row: Row, schema: FrameSchema, table: String): String = {
