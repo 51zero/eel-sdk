@@ -31,7 +31,7 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "com.github.tototoshi"        %% "scala-csv"            % "1.2.2",
       "org.scala-lang"              % "scala-reflect"         % scalaVersion.value,
-      "com.sksamuel.scalax"         %% "scalax"               % "0.20.0",
+      "com.sksamuel.scalax"         %% "scalax"               % "1.23.0",
       "com.typesafe"                % "config"                %  "1.2.1",
       "org.apache.hadoop"           % "hadoop-common"         % HadoopVersion          % "provided",
       "org.apache.hadoop"           % "hadoop-hdfs"           % HadoopVersion          % "provided",
