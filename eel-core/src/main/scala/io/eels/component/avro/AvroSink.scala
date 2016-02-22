@@ -18,7 +18,7 @@ case class AvroSink(out: OutputStream) extends Sink {
       if (writer == null)
         writer = createWriter(row, schema)
       val avroSchema = AvroSchemaGen(schema)
-      val record = AvroRecordFn.toRecord(row, avroSchema)
+      val record = AvroRecordFn.toRecord(row, avroSchema, schema)
       writer.append(record)
     }
 

@@ -20,7 +20,7 @@ object AvroKafkaSerializer extends KafkaSerializer {
   override def apply(row: Row, schema: FrameSchema): Array[Byte] = {
 
     val avroSchema = AvroSchemaGen(schema)
-    val record = AvroRecordFn.toRecord(row, avroSchema)
+    val record = AvroRecordFn.toRecord(row, avroSchema, schema)
 
     val datumWriter = new GenericDatumWriter[GenericRecord](avroSchema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)

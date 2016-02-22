@@ -16,7 +16,7 @@ trait ParquetWriterSupport extends StrictLogging {
   val ParquetPageSizeKey = "eel.parquet.pageSize"
 
   protected def compressionCodec: CompressionCodecName = {
-    val codec = config.getString("eel.hive.sink.compressionCodec").toLowerCase match {
+    val codec = config.getString("eel.parquet.compressionCodec").toLowerCase match {
       case "gzip" => CompressionCodecName.GZIP
       case "lzo" => CompressionCodecName.LZO
       case "snappy" => CompressionCodecName.SNAPPY
@@ -50,3 +50,6 @@ trait ParquetWriterSupport extends StrictLogging {
     )
   }
 }
+
+
+

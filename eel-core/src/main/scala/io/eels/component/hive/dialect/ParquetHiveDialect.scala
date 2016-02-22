@@ -3,11 +3,11 @@ package io.eels.component.hive.dialect
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
-import io.eels.component.parquet.{ParquetIterator, ParquetLogMute, ParquetWriterSupport}
+import io.eels.component.parquet.{ParquetIterator, ParquetLogMute, RollingParquetWriterSupport}
 import io.eels.{FrameSchema, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-object ParquetHiveDialect extends HiveDialect with StrictLogging with ParquetWriterSupport {
+object ParquetHiveDialect extends HiveDialect with StrictLogging with RollingParquetWriterSupport {
 
   override def iterator(path: Path, schema: FrameSchema, columns: Seq[String])
                        (implicit fs: FileSystem): Iterator[Row] = new Iterator[Row] {
@@ -24,7 +24,7 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging with ParquetWri
     logger.debug(s"Creating parquet writer for $path")
 
     val avroSchema = AvroSchemaGen(targetSchema)
-    val writer = createParquetWriter(path, avroSchema)
+    val writer = createRollingParquetWriter(path, avroSchema)
 
     new HiveWriter {
       override def close(): Unit = writer.close()

@@ -21,15 +21,6 @@ object AvroRecordFn {
     }.toVector
   }
 
-  @deprecated
-  def toRecord(row: Row, schema: Schema): GenericRecord = {
-    val record = new Record(schema)
-    for ( (field, value) <- schema.getFields.asScala.zip(row) ) {
-      record.put(field.name, value)
-    }
-    record
-  }
-
   /**
     * Builds an avro record for the given avro schema, using the given frame schema
     * to determine the correct ordering from the row.

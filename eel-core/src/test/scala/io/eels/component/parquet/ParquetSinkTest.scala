@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import io.eels.{Column, Frame, FrameSchema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
 
@@ -15,7 +15,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     List("elton john", "musician", "pinner")
   )
 
-  val fs = FileSystem.get(new Configuration)
+  implicit val fs = FileSystem.get(new Configuration)
   val path = new Path("test.pq")
 
   "ParquetSink" should {

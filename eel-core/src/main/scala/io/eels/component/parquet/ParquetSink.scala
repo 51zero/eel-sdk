@@ -4,18 +4,17 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import io.eels.{FrameSchema, Row, Sink, Writer}
 import org.apache.avro.Schema
-import org.apache.avro.generic.GenericRecord
-import org.apache.hadoop.fs.Path
-import org.apache.parquet.avro.AvroParquetWriter
+import org.apache.hadoop.fs.{FileSystem, Path}
 
-case class ParquetSink(path: Path) extends Sink with StrictLogging {
+case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with StrictLogging {
   override def writer: Writer = new ParquetWriter(path)
 }
 
-class ParquetWriter(path: Path) extends Writer with ParquetWriterSupport with StrictLogging {
+class ParquetWriter(path: Path)
+                   (implicit fs: FileSystem) extends Writer with RollingParquetWriterSupport with StrictLogging {
 
   logger.debug(s"Parquet will write to $path")
-  var writer: AvroParquetWriter[GenericRecord] = _
+  var writer: RollingParquetWriter = _
   var avroSchema: Schema = _
 
   override def close(): Unit = {
@@ -26,9 +25,9 @@ class ParquetWriter(path: Path) extends Writer with ParquetWriterSupport with St
     this.synchronized {
       if (writer == null) {
         avroSchema = AvroSchemaGen(schema)
-        writer = createParquetWriter(path, avroSchema)
+        writer = createRollingParquetWriter(path, avroSchema)
       }
-      val record = AvroRecordFn.toRecord(row, avroSchema)
+      val record = AvroRecordFn.toRecord(row, avroSchema, schema)
       writer.write(record)
     }
   }
