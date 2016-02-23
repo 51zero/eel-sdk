@@ -144,7 +144,7 @@ trait Frame {
     }
   }
 
-  def addColumn(name: String, defaultValue: String): Frame = new Frame {
+  def addColumn(name: String, defaultValue: Any): Frame = new Frame {
     require(!outer.schema.columnNames.contains(name), s"Column $name already exists")
     override lazy val schema: FrameSchema = outer.schema.addColumn(name)
     override def buffer: Buffer = new Buffer {
