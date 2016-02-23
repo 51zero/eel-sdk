@@ -24,6 +24,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
   private val bufferSize = config.getInt("eel.jdbc.sink.bufferSize")
   private val autoCommit = config.getBoolean("eel.jdbc.sink.autoCommit")
   private val warnIfMissingRewriteBatchedStatements = config.getBoolean("eel.jdbc.sink.warnIfMissingRewriteBatchedStatements")
+  private val swallowExceptions = config.getBoolean("eel.jdbc.sink.swallowExceptions")
 
   if (!url.contains("rewriteBatchedStatements")) {
     if (warnIfMissingRewriteBatchedStatements) {
@@ -32,7 +33,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     }
   }
 
-  override def writer = new JdbcWriter(url, table, dialect, props, autoCommit, bufferSize)
+  override def writer = new JdbcWriter(url, table, dialect, props, autoCommit, bufferSize, swallowExceptions)
 }
 
 class BoundedThreadPoolExecutor(poolSize: Int, queueSize: Int)
@@ -81,8 +82,9 @@ class JdbcWriter(url: String,
                  table: String,
                  dialect: JdbcDialect,
                  props: JdbcSinkProps = JdbcSinkProps(),
-                 autoCommit: Boolean = false,
-                 bufferSize: Int) extends Writer with StrictLogging {
+                 autoCommit: Boolean,
+                 bufferSize: Int,
+                 swallowExceptions: Boolean) extends Writer with StrictLogging {
   logger.info(s"Creating Jdbc writer with ${props.threads} threads, batch size ${props.batchSize}, autoCommit=$autoCommit")
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
@@ -115,9 +117,13 @@ class JdbcWriter(url: String,
             inserter.insertBatch(batch)
           } catch {
             case t: Throwable =>
-              logger.error("Exception when inserting batch; aborting writers", t)
-              workers.shutdownNow()
-              coordinator.shutdownNow()
+              if (swallowExceptions) {
+                logger.error("Exception when inserting batch; continuing", t)
+              } else {
+                logger.error("Exception when inserting batch; aborting writers", t)
+                workers.shutdownNow()
+                coordinator.shutdownNow()
+              }
           }
         }
       }
