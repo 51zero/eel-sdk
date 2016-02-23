@@ -7,7 +7,9 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 class RollingParquetWriter(basePath: Path,
                            avroSchema: Schema,
                            maxRecordsPerFile: Int,
-                           maxFileSize: Long)(implicit fs: FileSystem) extends ParquetWriterSupport {
+                           maxFileSize: Long,
+                           skipCrc: Boolean)(implicit fs: FileSystem) extends ParquetWriterSupport {
+  logger.debug(s"Created rolling parquet writer; maxRecordsPerFile = $maxRecordsPerFile; maxFileSize = $maxFileSize; skipCrc = $skipCrc")
 
   private val isRolling = maxRecordsPerFile > 0 || maxFileSize > 0
   private var filecount = -1
@@ -26,7 +28,7 @@ class RollingParquetWriter(basePath: Path,
 
   private def rollover(): Unit = {
     logger.debug(s"Rolling parquet file [$records records]")
-    writer.close()
+    close()
     path = nextPath()
     writer = createParquetWriter(path, avroSchema)
     records = 0
@@ -49,5 +51,11 @@ class RollingParquetWriter(basePath: Path,
 
   def close(): Unit = {
     writer.close()
+    if (skipCrc) {
+      val crc = new Path(path.toString + ".crc")
+      logger.debug(s"Deleting crc $crc")
+      if (fs.exists(crc))
+        fs.delete(crc, false)
+    }
   }
 }

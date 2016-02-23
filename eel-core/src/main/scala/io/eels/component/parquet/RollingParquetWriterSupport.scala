@@ -10,16 +10,14 @@ trait RollingParquetWriterSupport extends StrictLogging {
   protected val config = ConfigFactory.load()
   protected val MaxRecordsPerFileKey = "eel.parquet.maxRecordsPerFile"
   protected val MaxFileSizeKey = "eel.parquet.maxFileSize"
+  protected val SkipCrcKey = "eel.parquet.skipCrc"
+  protected val skipCrc = config.getBoolean(SkipCrcKey)
 
   protected def createRollingParquetWriter(path: Path, avroSchema: Schema)
                                           (implicit fs: FileSystem): RollingParquetWriter = {
-
     val maxRecordsPerFile = config.getInt(MaxRecordsPerFileKey)
-    logger.debug(s"Parquet writer will use maxRecordsPerFile = $maxRecordsPerFile")
-
     val maxFileSize = config.getInt(MaxFileSizeKey)
-    logger.debug(s"Parquet writer will use maxFileSize = $maxFileSize")
-
-    new RollingParquetWriter(path, avroSchema, maxFileSize, maxRecordsPerFile)
+    val skipCrc = config.getBoolean(SkipCrcKey)
+    new RollingParquetWriter(path, avroSchema, maxFileSize, maxRecordsPerFile, skipCrc)
   }
 }

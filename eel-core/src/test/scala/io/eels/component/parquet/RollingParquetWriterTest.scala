@@ -40,7 +40,7 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
   "RollingParquetWriter" should {
     "rollover on record count" in {
       val avroSchema = AvroSchemaGen(frame.schema)
-      val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0)
+      val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, true)
       frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load())))
       writer.close()
       ParquetSource(path0).toSet.map(_.values.map(_.toString)) shouldBe
