@@ -123,6 +123,16 @@ object Build extends Build {
     ))
     .dependsOn(core)
 
+  lazy val jms = Project("eel-jms", file("components/jms"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-jms")
+    .settings(libraryDependencies ++= Seq(
+      "javax.jms" % "jms" % "1.1",
+      "org.apache.activemq" % "activemq-broker"       % "5.13.1" % "test",
+      "org.apache.activemq" % "activemq-kahadb-store" % "5.13.1" % "test"
+    ))
+    .dependsOn(core)
+
   lazy val solr = Project("eel-solr", file("components/solr"))
     .settings(rootSettings: _*)
     .settings(name := "eel-solr")

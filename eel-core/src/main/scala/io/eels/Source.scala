@@ -54,7 +54,7 @@ trait Source extends StrictLogging {
           latch.await(1, TimeUnit.DAYS)
           logger.debug("Readers completed; latch released")
           try {
-            queue.put(InternalRow.Sentinel)
+            queue.put(InternalRow.PoisonPill)
           } catch {
             case e: Throwable =>
               logger.error("Error adding sentinel", e)
@@ -69,7 +69,7 @@ trait Source extends StrictLogging {
             logger.debug("Closing source")
             executor.shutdownNow()
           }
-          override def iterator: Iterator[InternalRow] = BlockingQueueConcurrentIterator(queue, InternalRow.Sentinel)
+          override def iterator: Iterator[InternalRow] = BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill)
         }
 
       } catch {

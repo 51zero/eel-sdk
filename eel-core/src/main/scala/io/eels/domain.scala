@@ -32,7 +32,7 @@ object Column {
 }
 
 object InternalRow {
-  val Sentinel: InternalRow = List(new {})
+  val PoisonPill: InternalRow = List(new {})
 }
 
 case class Row(schema: FrameSchema, values: Seq[Any])

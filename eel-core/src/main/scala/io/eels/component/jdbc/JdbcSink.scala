@@ -103,7 +103,7 @@ class JdbcWriter(url: String,
 
   coordinator.submit {
     logger.debug("Starting Jdbc Writer Coordinator")
-    BlockingQueueConcurrentIterator(buffer, InternalRow.Sentinel)
+    BlockingQueueConcurrentIterator(buffer, InternalRow.PoisonPill)
       .grouped(props.batchSize)
       .withPartial(true)
       .foreach { batch =>
@@ -139,7 +139,7 @@ class JdbcWriter(url: String,
   }
 
   override def close(): Unit = {
-    buffer.put(InternalRow.Sentinel)
+    buffer.put(InternalRow.PoisonPill)
     logger.debug("Closing JDBC Writer... blocking until workers completed")
     workers.awaitTermination(1, TimeUnit.DAYS)
   }

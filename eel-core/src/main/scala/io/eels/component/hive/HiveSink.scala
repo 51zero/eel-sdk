@@ -86,7 +86,7 @@ case class HiveSink(dbName: String,
       executor.submit {
         logger.info(s"HiveSink thread $k started")
         try {
-          BlockingQueueConcurrentIterator(queue, InternalRow.Sentinel).foreach { row =>
+          BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).foreach { row =>
             val writer = getOrCreateHiveWriter(row, schema)
             writer.synchronized {
               writer.write(row)
@@ -115,7 +115,7 @@ case class HiveSink(dbName: String,
     new Writer {
       override def close(): Unit = {
         logger.debug("Request to close hive sink writer")
-        queue.put(InternalRow.Sentinel)
+        queue.put(InternalRow.PoisonPill)
         executor.awaitTermination(1, TimeUnit.HOURS)
       }
 
