@@ -9,6 +9,8 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
+  ParquetLogMute()
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val frame = Frame(

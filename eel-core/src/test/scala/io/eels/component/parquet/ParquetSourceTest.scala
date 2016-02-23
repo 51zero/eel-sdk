@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSourceTest extends WordSpec with Matchers {
 
+  ParquetLogMute()
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val personFile = new File(getClass.getResource("/parquetfiles/person.pq").getFile)

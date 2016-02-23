@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
 
+  ParquetLogMute()
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val frame = Frame(
