@@ -78,7 +78,14 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, mongo, solr, cli)
+    .aggregate(macros, core, json, kafka, mongo, solr, cli)
+
+  lazy val macros = Project("eel-macros", file("eel-macros"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-macros")
+    .settings(libraryDependencies ++= Seq(
+      "org.scala-lang"        % "scala-reflect"         % scalaVersion.value,
+    ))
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -96,6 +103,7 @@ object Build extends Build {
       "mysql"                 % "mysql-connector-java" % "5.1.38"
     ))
     .settings(name := "eel-core")
+    .dependsOn(macros)
 
   lazy val json = Project("eel-json", file("components/json"))
     .settings(rootSettings: _*)
