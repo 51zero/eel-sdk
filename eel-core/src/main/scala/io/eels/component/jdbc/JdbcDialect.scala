@@ -1,17 +1,22 @@
 package io.eels.component.jdbc
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Row, Column, FrameSchema, SchemaType}
+import io.eels.{InternalRow, Column, FrameSchema, SchemaType}
 
 trait JdbcDialect {
   def create(schema: FrameSchema, table: String): String
-  def insert(row: Row, schema: FrameSchema, table: String): String
+  def insert(row: InternalRow, schema: FrameSchema, table: String): String
   def toJdbcType(column: Column): String
   def fromJdbcType(i: Int): SchemaType
+
+  /**
+    * Returns a parameterized insert query
+    */
+  def insertQuery(schema: FrameSchema, table: String): String
+
 }
 
 object JdbcDialect {
-
   /**
     * Detect dialect from the connection string
     */
@@ -78,7 +83,13 @@ trait GenericJdbcDialect extends JdbcDialect with StrictLogging {
     s"CREATE TABLE $table $columns"
   }
 
-  override def insert(row: Row, schema: FrameSchema, table: String): String = {
+  override def insertQuery(schema: FrameSchema, table: String): String = {
+    val columns = schema.columnNames.mkString(",")
+    val parameters = List.fill(schema.columns.size)("?").mkString(",")
+    s"INSERT INTO $table ($columns) VALUES ($parameters)"
+  }
+
+  override def insert(row: InternalRow, schema: FrameSchema, table: String): String = {
     val columns = schema.columnNames.mkString(",")
     val values = row.mkString("'", "','", "'")
     s"INSERT INTO $table ($columns) VALUES ($values)"

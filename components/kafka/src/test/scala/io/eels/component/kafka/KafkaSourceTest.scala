@@ -4,6 +4,7 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 import com.sksamuel.kafka.embedded.{EmbeddedKafka, EmbeddedKafkaConfig}
+import io.eels.{Column, FrameSchema, Row, SchemaType}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
@@ -12,7 +13,7 @@ class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val config = EmbeddedKafkaConfig(zookeeperPort = 2401, kafkaPort = 9405)
+  val config = EmbeddedKafkaConfig(zookeeperPort = 2402, kafkaPort = 9406)
   val kafka = new EmbeddedKafka(config)
   kafka.start()
 
@@ -36,7 +37,11 @@ class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
       val source = KafkaSource(sourceConfig, Set(topic), JsonKafkaDeserializer)
       val rows = source.toSeq
       rows.size shouldBe 100
-      rows.head shouldBe Seq("sam", "london")
+      rows.head shouldBe
+        Row(FrameSchema(List(
+          Column("0", SchemaType.String, false, 0, 0, true, None),
+          Column("1", SchemaType.String, false, 0, 0, true, None)
+        )), List("sam", "london"))
     }
   }
 

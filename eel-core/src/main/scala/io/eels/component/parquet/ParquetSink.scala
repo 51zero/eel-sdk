@@ -2,36 +2,33 @@ package io.eels.component.parquet
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
-import io.eels.{FrameSchema, Row, Sink, Writer}
+import io.eels.{FrameSchema, InternalRow, Sink, Writer}
 import org.apache.avro.Schema
-import org.apache.avro.generic.GenericRecord
-import org.apache.hadoop.fs.Path
-import org.apache.parquet.avro.AvroParquetWriter
+import org.apache.hadoop.fs.{FileSystem, Path}
 
-case class ParquetSink(path: Path) extends Sink with StrictLogging {
-  self =>
-  logger.debug(s"Sink will write to $path")
+case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with StrictLogging {
+  override def writer: Writer = new ParquetWriter(path)
+}
 
-  override def writer: Writer = new Writer {
+class ParquetWriter(path: Path)
+                   (implicit fs: FileSystem) extends Writer with RollingParquetWriterSupport with StrictLogging {
 
-    var writer: AvroParquetWriter[GenericRecord] = null
-    var avroSchema: Schema = null
+  logger.debug(s"Parquet will write to $path")
+  var writer: RollingParquetWriter = _
+  var avroSchema: Schema = _
 
-    private def ensureWriterCreated(row: Row): Unit = {
+  override def close(): Unit = {
+    if (writer != null) writer.close()
+  }
+
+  override def write(row: InternalRow, schema: FrameSchema): Unit = {
+    this.synchronized {
       if (writer == null) {
-        writer = new AvroParquetWriter[GenericRecord](path, avroSchema)
+        avroSchema = AvroSchemaGen(schema)
+        writer = createRollingParquetWriter(path, avroSchema)
       }
-    }
-
-    override def close(): Unit = writer.close()
-
-    override def write(row: Row, schema: FrameSchema): Unit = {
-      avroSchema = AvroSchemaGen(schema)
-      self.synchronized {
-        ensureWriterCreated(row)
-        val record = AvroRecordFn.toRecord(row, avroSchema)
-        writer.write(record)
-      }
+      val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
+      writer.write(record)
     }
   }
 }

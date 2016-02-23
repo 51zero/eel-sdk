@@ -31,6 +31,12 @@ object Column {
   implicit def apply(str: String): Column = Column(str, SchemaType.String, false)
 }
 
+object InternalRow {
+  val PoisonPill: InternalRow = List(new {})
+}
+
+case class Row(schema: FrameSchema, values: Seq[Any])
+
 object Row {
-  val Sentinel: Row = List(new {})
+  def apply(schema: FrameSchema, first: Any, rest: Any*): Row = Row(schema, (first +: rest).toIndexedSeq)
 }

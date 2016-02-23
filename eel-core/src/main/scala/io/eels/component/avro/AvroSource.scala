@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.nio.file.Path
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{Row, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, FrameSchema, Reader, Source}
 import org.apache.avro.file.{DataFileReader, SeekableFileInput}
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 
@@ -31,7 +31,7 @@ case class AvroSource(path: Path) extends Source with Using {
 
       override def close(): Unit = reader.close()
 
-      override def iterator: Iterator[Row] = new Iterator[Row] {
+      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
 
         override def hasNext: Boolean = {
           val hasNext = reader.hasNext
@@ -40,7 +40,7 @@ case class AvroSource(path: Path) extends Source with Using {
           hasNext
         }
 
-        override def next: Row = AvroRecordFn.fromRecord(reader.next)
+        override def next: InternalRow = AvroRecordFn.fromRecord(reader.next)
       }
     }
 

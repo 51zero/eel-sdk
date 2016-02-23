@@ -2,7 +2,7 @@ package io.eels.component.json
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.sksamuel.scalax.io.Using
-import io.eels.{Row, Column, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, Column, FrameSchema, Reader, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 
@@ -31,13 +31,13 @@ case class JsonSource(path: Path) extends Source with Using {
 
   override def readers: Seq[Reader] = {
     val part = new Reader {
-      override def iterator: Iterator[Row] = new Iterator[Row] {
+      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
 
         val iter = roots.asScala
         override def hasNext: Boolean = iter.hasNext
-        override def next(): Row = nodeToRow(iter.next)
+        override def next(): InternalRow = nodeToRow(iter.next)
 
-        def nodeToRow(node: JsonNode): Row = {
+        def nodeToRow(node: JsonNode): InternalRow = {
           //val columns = node.fieldNames.asScala.map(Column.apply).toList
           //val fields = node.fieldNames.asScala.map { name => Field(node.get(name).textValue) }.toList
           //Row(columns, fields)

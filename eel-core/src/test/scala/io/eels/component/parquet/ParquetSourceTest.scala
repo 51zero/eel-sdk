@@ -7,6 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSourceTest extends WordSpec with Matchers {
 
+  ParquetLogMute()
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val personFile = new File(getClass.getResource("/parquetfiles/person.pq").getFile)
@@ -18,14 +20,14 @@ class ParquetSourceTest extends WordSpec with Matchers {
       people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.getAbsolutePath).toSet.map(_.map(_.toString))
+      val people = ParquetSource(personFile.getAbsolutePath).toSet.map(_.values.map(_.toString))
       people shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir + "/*").toSet.map(_.map(_.toString))
+      val people = ParquetSource(resourcesDir + "/*").toSet.map(_.values.map(_.toString))
       people shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner"),

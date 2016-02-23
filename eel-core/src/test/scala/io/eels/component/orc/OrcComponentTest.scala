@@ -1,8 +1,8 @@
 package io.eels.component.orc
 
-import io.eels.Frame
+import io.eels.{Frame, FrameSchema, Row}
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
 
 class OrcComponentTest extends WordSpec with Matchers {
@@ -15,22 +15,22 @@ class OrcComponentTest extends WordSpec with Matchers {
       implicit val fs = FileSystem.get(new Configuration)
 
       val frame = Frame(
-        List("name", "job", "location"),
-        List("clint eastwood", "actor", "carmel"),
-        List("elton john", "musician", "pinner"),
-        List("david bowie", "musician", "surrey")
+        FrameSchema("name", "job", "location"),
+        Vector("clint eastwood", "actor", "carmel"),
+        Vector("elton john", "musician", "pinner"),
+        Vector("david bowie", "musician", "surrey")
       )
 
       val path = new Path("test.orc")
       frame.to(OrcSink(path))
 
-      val rows = OrcSource(path).toSet
+      val rows = OrcSource(path).toSet.toSet
       fs.delete(path, false)
 
       rows shouldBe Set(
-        List("clint eastwood", "actor", "carmel"),
-        List("elton john", "musician", "pinner"),
-        List("david bowie", "musician", "surrey")
+        Row(frame.schema, "clint eastwood", "actor", "carmel"),
+        Row(frame.schema, "elton john", "musician", "pinner"),
+        Row(frame.schema, "david bowie", "musician", "surrey")
       )
 
     }

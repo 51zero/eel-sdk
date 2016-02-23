@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.AvroRecordFn
-import io.eels.{FilePattern, FrameSchema, Reader, Row, Source}
+import io.eels.{FilePattern, FrameSchema, Reader, InternalRow, Source}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetReader
@@ -36,7 +36,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging
 
         var reader: ParquetReader[GenericRecord] = null
 
-        override def iterator: Iterator[Row] = {
+        override def iterator: Iterator[InternalRow] = {
           reader = AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
           Iterator.continually(reader.read).takeWhile(_ != null).map(AvroRecordFn.fromRecord)
         }

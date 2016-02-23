@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.Row
+import io.eels.InternalRow
 import io.eels.component.avro.AvroRecordFn
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.{Schema, SchemaBuilder}
@@ -34,18 +34,19 @@ object ParquetIterator extends StrictLogging {
       conf
     }
 
-    val conf = configuration
-    AvroParquetReader.builder[GenericRecord](path).withConf(conf).build().asInstanceOf[ParquetReader[GenericRecord]]
+    AvroParquetReader.builder[GenericRecord](path)
+      .withConf(configuration)
+      .build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 
-  def apply(path: Path, columns: Seq[String]): Iterator[Row] = {
+  def apply(path: Path, columns: Seq[String]): Iterator[InternalRow] = {
 
     lazy val reader = createReader(path, columns)
     lazy val iter = Iterator.continually(reader.read).takeWhile(_ != null).map { record =>
       if (columns.isEmpty) AvroRecordFn.fromRecord(record) else AvroRecordFn.fromRecord(record, columns)
     }
 
-    new Iterator[Row] {
+    new Iterator[InternalRow] {
       override def hasNext: Boolean = {
         val hasNext = iter.hasNext
         if (!hasNext) {
@@ -54,7 +55,7 @@ object ParquetIterator extends StrictLogging {
         }
         hasNext
       }
-      override def next(): Row = iter.next()
+      override def next(): InternalRow = iter.next()
     }
   }
 }

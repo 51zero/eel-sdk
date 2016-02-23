@@ -1,7 +1,7 @@
 package io.eels.component.orc
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{FrameSchema, Reader, Row, Source}
+import io.eels.{FrameSchema, Reader, InternalRow, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcFile, RecordReader}
 
@@ -23,13 +23,14 @@ case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Us
   override def readers: Seq[Reader] = {
 
     val reader = OrcFile.createReader(fs, path).rows()
+    reader.next(null)
 
     val part = new Reader {
       override def close(): Unit = reader.close()
-      override def iterator: Iterator[Row] = new Iterator[Row] {
+      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
 
         override def hasNext: Boolean = reader.hasNext
-        override def next(): Row = {
+        override def next(): InternalRow = {
           reader.next(null) match {
             case al: java.util.List[_] => al.asScala.map(_.toString)
             case _ => toString.split(",").toList

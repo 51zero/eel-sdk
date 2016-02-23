@@ -3,9 +3,11 @@ package io.eels.component.parquet
 import io.eels.{Column, Frame, FrameSchema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
+
+  ParquetLogMute()
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -15,7 +17,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     List("elton john", "musician", "pinner")
   )
 
-  val fs = FileSystem.get(new Configuration)
+  implicit val fs = FileSystem.get(new Configuration)
   val path = new Path("test.pq")
 
   "ParquetSink" should {
@@ -32,7 +34,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path))
       val people = ParquetSource(path)
-      people.toSet.map(_.map(_.toString)) shouldBe
+      people.toSet.map(_.values.map(_.toString)) shouldBe
         Set(
           List("clint eastwood", "actor", "carmel"),
           List("elton john", "musician", "pinner")

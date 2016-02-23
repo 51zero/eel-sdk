@@ -1,5 +1,5 @@
 package io
 
 package object eels {
-  type Row = Seq[Any]
+  type InternalRow = Seq[Any]
 }
