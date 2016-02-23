@@ -1,7 +1,9 @@
 package io.eels
 
+import com.typesafe.scalalogging.slf4j.StrictLogging
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
+import Frame._
 
 class FrameTest extends WordSpec with Matchers with Eventually {
 
@@ -264,5 +266,40 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         )
       }
     }
+    "convert from a Seq[T<:Product]" in {
+      val p1 = PersonA("name1", 2, 1.2, true, 11, 3, 1)
+      val p2 = PersonA("name2", 3, 11.2, true, 11111, 3121, 436541)
+      val seq = Seq(p1, p2)
+
+      val rows = Frame.from(seq).toSeq
+      rows.size shouldBe 2
+      rows shouldBe Seq(
+        Seq("name1", 2, 1.2, true, 11, 3, 1),
+        Seq("name2", 3, 11.2, true, 11111, 3121, 436541)
+      )
+      var row = rows.head
+      row(0) shouldBe p1.name
+      row(1) shouldBe p1.age
+      row(2) shouldBe p1.salary
+      row(3) shouldBe p1.isPartTime
+      row(4) shouldBe p1.value1
+      row(5) shouldBe p1.value2
+      row(6) shouldBe p1.value3
+
+
+      row = rows.tail.head
+      row(0) shouldBe p2.name
+      row(1) shouldBe p2.age
+      row(2) shouldBe p2.salary
+      row(3) shouldBe p2.isPartTime
+      row(4) shouldBe p2.value1
+      row(5) shouldBe p2.value2
+      row(6) shouldBe p2.value3
+    }
+
+
   }
+
+  case class PersonA(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long) extends StrictLogging
+
 }
