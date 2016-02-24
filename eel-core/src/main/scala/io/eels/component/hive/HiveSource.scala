@@ -43,7 +43,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
   override def schema: FrameSchema = {
     using(createClient) { client =>
       val s = client.getSchema(db, table).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))
-      FrameSchemaFn(s)
+      HiveSchemaFns.toFrameSchema(s)
     }
   }
 

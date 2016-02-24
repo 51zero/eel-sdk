@@ -1,19 +1,23 @@
 package io.eels.component.hive
 
 import com.sksamuel.scalax.NonEmptyString
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, FrameSchema, SchemaType}
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
-object FrameSchemaFn extends StrictLogging {
+object HiveSchemaFns extends StrictLogging {
 
-  def apply(schemas: Seq[FieldSchema]): FrameSchema = {
+  val config = ConfigFactory.load()
+  val schemaNulls = config.getBoolean("eel.hive.schemaNulls")
+
+  def toFrameSchema(schemas: Seq[FieldSchema]): FrameSchema = {
     logger.debug("Building frame schame from hive field schemas=" + schemas)
     val columns = schemas.map { s =>
       val (schemaType, precision, scale) = toSchemaType(s.getType)
-      Column(s.getName, schemaType, false, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
+      Column(s.getName, schemaType, schemaNulls, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
     }
     FrameSchema(columns.toList)
   }
