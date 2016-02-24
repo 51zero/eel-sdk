@@ -9,8 +9,7 @@ class HiveSourceParserTest extends WordSpec with Matchers {
       val url = "hive:sam:ham"
       HiveSourceParser(url).get shouldBe HiveSourceBuilder("sam", "ham", Map.empty)
     }
-    // fix in scalax
-    "parse hive url with trailing ?" ignore {
+    "parse hive url with trailing ?" in {
       val url = "hive:sam:ham?"
       HiveSourceParser(url).get shouldBe HiveSourceBuilder("sam", "ham", Map.empty)
     }
