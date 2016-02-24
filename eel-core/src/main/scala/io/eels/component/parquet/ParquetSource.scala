@@ -19,7 +19,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging
     val paths = pattern.toPaths
     val schemas = paths.map { path =>
       using(createReader(path)) { reader =>
-        reader.read.getSchema
+        Option(reader.read).getOrElse(sys.error(s"Cannot read $path for schema; file contains no records")).getSchema
       }
     }
     val avroSchema = AvroSchemaMerge("dummy", "com.dummy", schemas)
