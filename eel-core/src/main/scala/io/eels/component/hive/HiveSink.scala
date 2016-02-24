@@ -55,8 +55,6 @@ case class HiveSink(dbName: String,
     val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
     logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
-    val targetSchema = HiveSink.this.schema
-
     // we need an output stream per partition. Since the data can come in unordered, we need to
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
@@ -73,6 +71,11 @@ case class HiveSink(dbName: String,
               HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
           } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
             sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
+          }
+          val targetSchema = if (includePartitionsInData) {
+            HiveSink.this.schema
+          } else {
+            partitionKeyNames.foldLeft(HiveSink.this.schema)((schema, name) => schema.removeColumn(name))
           }
           dialect.writer(sourceSchema, targetSchema, filePath)
         })
