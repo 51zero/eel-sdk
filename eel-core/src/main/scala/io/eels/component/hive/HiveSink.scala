@@ -26,7 +26,7 @@ case class HiveSink(dbName: String,
   logger.info(s"Created HiveSink; createTable=$createTable, overwriteTable=$overwriteTable; format=$format")
 
   val config = ConfigFactory.load()
-  val includePartitionsInData = config.getBoolean("hive.includePartitionsInData")
+  val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)

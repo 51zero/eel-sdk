@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet.{ParquetIterator, ParquetLogMute, RollingParquetWriterSupport}
 import io.eels.{FrameSchema, InternalRow}
@@ -23,7 +23,7 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging with RollingPar
     ParquetLogMute()
     logger.debug(s"Creating parquet writer for $path")
 
-    val avroSchema = AvroSchemaGen(targetSchema)
+    val avroSchema = AvroSchemaFn.toAvro(targetSchema)
     val writer = createRollingParquetWriter(path, avroSchema)
 
     new HiveWriter {

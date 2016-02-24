@@ -1,5 +1,7 @@
 package io.eels
 
+import java.io.File
+
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -10,11 +12,23 @@ case class FilePattern(pattern: String, filter: Option[Path => Boolean] = None) 
   val FileExpansionRegex = "(file:|hdfs:)?(?://)?(.*?)/\\*".r
   def toPaths: Seq[Path] = {
     pattern match {
+
       case pat if pat.endsWith("/*") =>
         val path = new Path(pattern.stripSuffix("/*"))
         logger.debug("File expansion will check path: " + path)
         val fs = FileSystem.get(new Configuration)
         HdfsIterator(fs.listFiles(path, false)).toList.map(_.getPath).filter(filter.getOrElse(_ => true))
+
+      case pat if pat.endsWith("*") =>
+        val path = new Path(pattern.stripSuffix("*")).getParent
+        val regex = new File(pat).getName.replace("*", ".*")
+        logger.debug("File expansion will check path: " + path)
+        val fs = FileSystem.get(new Configuration)
+        HdfsIterator(fs.listFiles(path, false)).toList
+          .map(_.getPath)
+          .filter(_.getName.matches(regex))
+          .filter(filter.getOrElse(_ => true))
+
       case str => Seq(new Path(str))
     }
   }

@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import io.eels.{FrameSchema, InternalRow, Sink, Writer}
 import org.apache.avro.Schema
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -24,7 +24,7 @@ class ParquetWriter(path: Path)
   override def write(row: InternalRow, schema: FrameSchema): Unit = {
     this.synchronized {
       if (writer == null) {
-        avroSchema = AvroSchemaGen(schema)
+        avroSchema = AvroSchemaFn.toAvro(schema)
         writer = createRollingParquetWriter(path, avroSchema)
       }
       val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
