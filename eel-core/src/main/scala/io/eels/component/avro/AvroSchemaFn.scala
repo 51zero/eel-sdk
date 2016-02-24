@@ -3,6 +3,7 @@ package io.eels.component.avro
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, FrameSchema, SchemaType}
 import org.apache.avro.{Schema, SchemaBuilder}
+import org.codehaus.jackson.node.NullNode
 
 import scala.collection.JavaConverters._
 
@@ -37,7 +38,7 @@ object AvroSchemaFn extends StrictLogging {
   }
 
   def toAvroField(column: Column): Schema.Field = {
-    val columnSchema = column.`type` match {
+    val schema = column.`type` match {
       case SchemaType.String => SchemaBuilder.builder().stringType()
       case SchemaType.Int => SchemaBuilder.builder().intType()
       case SchemaType.Boolean => Schema.create(Schema.Type.BOOLEAN)
@@ -48,11 +49,12 @@ object AvroSchemaFn extends StrictLogging {
         logger.warn("Unknown column type; defaulting to string")
         Schema.create(Schema.Type.STRING)
     }
-    val schema = if (column.nullable) {
-      SchemaBuilder.unionOf().nullType().and().`type`(columnSchema).endUnion()
+
+    if (column.nullable) {
+      val union = SchemaBuilder.unionOf().nullType().and().`type`(schema).endUnion()
+      new Schema.Field(column.name, union, null, NullNode.getInstance())
     } else {
-      columnSchema
+      new Schema.Field(column.name, schema, null, null)
     }
-    new Schema.Field(column.name, schema, null, null)
   }
 }
