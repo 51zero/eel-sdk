@@ -5,13 +5,34 @@ import io.eels.{SchemaType, Column, FrameSchema}
 import org.apache.avro.Schema
 import scala.collection.JavaConverters._
 
-object AvroSchemaGen extends StrictLogging {
+object AvroSchemaFn extends StrictLogging {
 
-  def apply(fs: FrameSchema): Schema = {
+  def toAvro(fs: FrameSchema): Schema = {
     val schema = Schema.createRecord("row", "", "io.eels.avro.generated", false)
     val fields = fs.columns.map(toSchemaField)
     schema.setFields(fields.asJava)
     schema
+  }
+
+  def fromAvro(schema: Schema): FrameSchema = {
+    val cols = schema.getFields.asScala.map { field =>
+      Column(field.name, toColumn(field), true)
+    }
+    FrameSchema(cols.toList)
+  }
+
+  def toColumn(field: Schema.Field): SchemaType = {
+    field.schema.getType match {
+      case Schema.Type.BOOLEAN => SchemaType.Boolean
+      case Schema.Type.DOUBLE => SchemaType.Double
+      case Schema.Type.FLOAT => SchemaType.Float
+      case Schema.Type.INT => SchemaType.Int
+      case Schema.Type.LONG => SchemaType.Long
+      case Schema.Type.STRING => SchemaType.String
+      case other =>
+        logger.warn(s"Unrecognized avro type $other; defaulting to string")
+        SchemaType.String
+    }
   }
 
   def toSchemaField(column: Column): Schema.Field = column.`type` match {

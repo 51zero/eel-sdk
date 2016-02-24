@@ -1,12 +1,11 @@
 package io.eels.component.parquet
 
-import io.eels.{Column, Frame, FrameSchema}
+import io.eels.{Column, Frame, FrameSchema, SchemaType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
+import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
-
   ParquetLogMute()
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,7 +25,12 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path))
       val people = ParquetSource(path)
-      people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
+      people.schema shouldBe {
+        FrameSchema(List(
+          Column("name", SchemaType.String, true, 0, 0, true, None),
+          Column("job", SchemaType.String, true, 0, 0, true, None),
+          Column("location", SchemaType.String, true, 0, 0, true, None)))
+      }
       fs.delete(path, false)
     }
     "write data" in {

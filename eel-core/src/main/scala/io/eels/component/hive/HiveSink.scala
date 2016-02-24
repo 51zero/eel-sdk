@@ -4,11 +4,13 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, InternalRow, Sink, Writer}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -22,6 +24,9 @@ case class HiveSink(dbName: String,
                     bufferSize: Int = 1000)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
   logger.info(s"Created HiveSink; createTable=$createTable, overwriteTable=$overwriteTable; format=$format")
+
+  val config = ConfigFactory.load()
+  val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
@@ -50,8 +55,6 @@ case class HiveSink(dbName: String,
     val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
     logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
-    val targetSchema = HiveSink.this.schema
-
     // we need an output stream per partition. Since the data can come in unordered, we need to
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
@@ -69,6 +72,11 @@ case class HiveSink(dbName: String,
           } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
             sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
           }
+          val targetSchema = if (includePartitionsInData) {
+            HiveSink.this.schema
+          } else {
+            partitionKeyNames.foldLeft(HiveSink.this.schema)((schema, name) => schema.removeColumn(name))
+          }
           dialect.writer(sourceSchema, targetSchema, filePath)
         })
       }
@@ -82,6 +90,7 @@ case class HiveSink(dbName: String,
     val count = new AtomicLong(0)
     var schema: FrameSchema = null
 
+
     for ( k <- 1 to ioThreads ) {
       executor.submit {
         logger.info(s"HiveSink thread $k started")
@@ -89,7 +98,15 @@ case class HiveSink(dbName: String,
           BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).foreach { row =>
             val writer = getOrCreateHiveWriter(row, schema)
             writer.synchronized {
-              writer.write(row)
+              // need to strip out any partition information from the written data
+              // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
+              if (includePartitionsInData) {
+                writer.write(row)
+              } else {
+                val zipped = schema.columnNames.zip(row)
+                val rowWithoutPartitions = zipped.filterNot(partitionKeyNames contains _._1)
+                writer.write(rowWithoutPartitions.unzip._2)
+              }
             }
             val k = count.incrementAndGet()
             if (k % 10000 == 0)

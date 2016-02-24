@@ -52,7 +52,7 @@ class RollingParquetWriter(basePath: Path,
   def close(): Unit = {
     writer.close()
     if (skipCrc) {
-      val crc = new Path(path.toString + ".crc")
+      val crc = new Path("." + path.toString + ".crc")
       logger.debug(s"Deleting crc $crc")
       if (fs.exists(crc))
         fs.delete(crc, false)

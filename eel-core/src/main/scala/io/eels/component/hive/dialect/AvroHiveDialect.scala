@@ -3,7 +3,7 @@ package io.eels.component.hive.dialect
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{FrameSchema, InternalRow}
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
@@ -37,7 +37,7 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating avro writer for $path")
 
-    val avroSchema = AvroSchemaGen(targetSchema)
+    val avroSchema = AvroSchemaFn.toAvro(targetSchema)
     val datumWriter = new GenericDatumWriter[GenericRecord](avroSchema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
     val out = fs.create(path, false)

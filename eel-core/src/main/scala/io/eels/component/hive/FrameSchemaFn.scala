@@ -36,28 +36,4 @@ object FrameSchemaFn extends StrictLogging {
       logger.warn(s"Unknown schema type $other; defaulting to string")
       (SchemaType.String, 0, 0)
   }
-
-  def toSchemaType(clz: Class[_]): SchemaType = {
-    val intClass = classOf[Int]
-    val floatClass = classOf[Float]
-    val stringClass = classOf[String]
-    val charClass = classOf[Char]
-    val bigIntClass = classOf[BigInt]
-    val booleanClass = classOf[Boolean]
-    val doubleClass = classOf[Double]
-    val bigdecimalClass = classOf[BigDecimal]
-    val longClass = classOf[Long]
-    clz match {
-      case `intClass` => SchemaType.Int
-      case `floatClass` => SchemaType.Float
-      case `stringClass` => SchemaType.String
-      case `charClass` => SchemaType.String
-      case `bigIntClass` => SchemaType.BigInt
-      case `booleanClass` => SchemaType.Boolean
-      case `doubleClass` => SchemaType.Double
-      case `longClass` => SchemaType.Long
-      case `bigdecimalClass` => SchemaType.Decimal
-      case _ => sys.error(s"Can not map $clz to SchemaType value.")
-    }
-  }
 }

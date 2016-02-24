@@ -20,7 +20,7 @@ case class AvroSink(out: OutputStream) extends Sink {
     override def write(row: InternalRow, schema: FrameSchema): Unit = {
       if (writer == null)
         writer = createWriter(row, schema)
-      val avroSchema = AvroSchemaGen(schema)
+      val avroSchema = AvroSchemaFn.toAvro(schema)
       val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
       writer.append(record)
     }
@@ -31,7 +31,7 @@ case class AvroSink(out: OutputStream) extends Sink {
     }
 
     private def createWriter(row: InternalRow, schema: FrameSchema): DataFileWriter[GenericRecord] = {
-      val avroSchema = AvroSchemaGen(schema)
+      val avroSchema = AvroSchemaFn.toAvro(schema)
       val datumWriter = new generic.GenericDatumWriter[GenericRecord](avroSchema)
       val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
       dataFileWriter.create(avroSchema, out)

@@ -1,10 +1,6 @@
 package io.eels
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.hive.FrameSchemaFn
-
 import scala.language.implicitConversions
-import scala.reflect.ClassTag
 
 case class FrameSchema(columns: List[Column]) {
   require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
@@ -64,13 +60,39 @@ object FrameSchema {
 
   import scala.reflect.runtime.universe._
 
-  def from[T <: Product]()(implicit classTag: ClassTag[T], ttag: TypeTag[T]): FrameSchema = {
-
-    val columns = typeOf[T].decls.collect { case m: MethodSymbol if m.isCaseAccessor =>
-      val (schemaType, _, _) = FrameSchemaFn.toSchemaType(m.returnType.toString)
-      Column(m.name.toString, schemaType, true)
+  def from[T <: Product](implicit tag: TypeTag[T]): FrameSchema = {
+    val columns = tag.tpe.decls.collect {
+      case m: MethodSymbol if m.isCaseAccessor =>
+        val javaClass = tag.mirror.runtimeClass(m.returnType.typeSymbol.asClass)
+        val schemaType = FrameSchemaFn.toSchemaType(javaClass)
+        Column(m.name.toString, schemaType, true)
     }
-
     FrameSchema(columns.toList)
+  }
+}
+
+object FrameSchemaFn {
+  def toSchemaType(clz: Class[_]): SchemaType = {
+    val intClass = classOf[Int]
+    val floatClass = classOf[Float]
+    val stringClass = classOf[String]
+    val charClass = classOf[Char]
+    val bigIntClass = classOf[BigInt]
+    val booleanClass = classOf[Boolean]
+    val doubleClass = classOf[Double]
+    val bigdecimalClass = classOf[BigDecimal]
+    val longClass = classOf[Long]
+    clz match {
+      case `intClass` => SchemaType.Int
+      case `floatClass` => SchemaType.Float
+      case `stringClass` => SchemaType.String
+      case `charClass` => SchemaType.String
+      case `bigIntClass` => SchemaType.BigInt
+      case `booleanClass` => SchemaType.Boolean
+      case `doubleClass` => SchemaType.Double
+      case `longClass` => SchemaType.Long
+      case `bigdecimalClass` => SchemaType.Decimal
+      case _ => sys.error(s"Can not map $clz to SchemaType value.")
+    }
   }
 }
