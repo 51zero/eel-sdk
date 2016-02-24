@@ -5,9 +5,9 @@ import io.eels.Frame
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaGen}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
 
-class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfterAll {
+class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfterEach {
 
   ParquetLogMute()
 
@@ -35,13 +35,12 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
       fs.delete(path1, true)
   }
 
-  cleanup()
+  val avroSchema = AvroSchemaGen(frame.schema)
 
   "RollingParquetWriter" should {
     "rollover on record count" in {
-      val avroSchema = AvroSchemaGen(frame.schema)
       val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, true)
-      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load())))
+      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
       writer.close()
       ParquetSource(path0).toSet.map(_.values.map(_.toString)) shouldBe
         Set(
@@ -54,7 +53,22 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
           List("jack bruce", "musician", "glasgow")
         )
     }
+    "write crc" in {
+      val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, false)
+      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
+      writer.close()
+      fs.exists(new Path(".parquet_0.crc")) shouldBe true
+    }
+    "skip crc if option set" in {
+      val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, true)
+      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
+      writer.close()
+      fs.exists(new Path(".parquet_0.crc")) shouldBe false
+    }
   }
-  override protected def afterAll(): Unit = cleanup()
+
+
+  override protected def afterEach(): Unit = cleanup()
+  override protected def beforeEach(): Unit = cleanup()
 }
 
