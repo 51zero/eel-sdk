@@ -11,20 +11,35 @@ case class Column(name: String,
                   comment: Option[String] = None)
 
 sealed trait SchemaType
+
 object SchemaType {
+
   case object BigInt extends SchemaType
+
   case object Binary extends SchemaType
+
   case object Boolean extends SchemaType
+
   case object Date extends SchemaType
+
   case object Decimal extends SchemaType
+
   case object Double extends SchemaType
+
   case object Float extends SchemaType
+
   case object Int extends SchemaType
+
   case object Long extends SchemaType
+
   case object Short extends SchemaType
+
   case object String extends SchemaType
+
   case object Timestamp extends SchemaType
+
   case object Unsupported extends SchemaType
+
 }
 
 object Column {
@@ -35,7 +50,11 @@ object InternalRow {
   val PoisonPill: InternalRow = List(new {})
 }
 
-case class Row(schema: FrameSchema, values: Seq[Any])
+case class Row(schema: FrameSchema, values: Seq[Any]) {
+  override def toString(): String = {
+    schema.columnNames.zip(values).map { case (column, value) => s"$column = ${if (value == null) "" else value.toString}" }.mkString("[", ",", "]")
+  }
+}
 
 object Row {
   def apply(schema: FrameSchema, first: Any, rest: Any*): Row = Row(schema, (first +: rest).toIndexedSeq)
