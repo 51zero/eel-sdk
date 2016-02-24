@@ -36,7 +36,7 @@ case class HiveSink(dbName: String,
     */
   def schema(implicit client: HiveMetaStoreClient): FrameSchema = {
     val schema = client.getSchema(dbName, tableName)
-    HiveSchemaFns.toFrameSchema(schema.asScala)
+    HiveSchemaFns.fromHiveFields(schema.asScala)
   }
 
   override def writer: Writer = {

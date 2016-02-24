@@ -149,7 +149,8 @@ object HiveOps extends StrictLogging {
       logger.info(s"Creating table $databaseName.$tableName with partitionKeys=${partitionKeys.mkString(",")}")
 
       val sd = new StorageDescriptor()
-      sd.setCols(HiveSchemaFieldsFn(schema.columns.filterNot(col => partitionKeys.contains(col.name))).asJava)
+      val fields = HiveSchemaFns.toHiveFields(schema.columns.filterNot(col => partitionKeys.contains(col.name))).asJava
+      sd.setCols(fields)
       sd.setSerdeInfo(new SerDeInfo(
         null,
         format.serdeClass,

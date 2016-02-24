@@ -1,15 +1,16 @@
 package io.eels.component.avro
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{SchemaType, Column, FrameSchema}
-import org.apache.avro.Schema
+import io.eels.{Column, FrameSchema, SchemaType}
+import org.apache.avro.{Schema, SchemaBuilder}
+
 import scala.collection.JavaConverters._
 
 object AvroSchemaFn extends StrictLogging {
 
   def toAvro(fs: FrameSchema): Schema = {
-    val schema = Schema.createRecord("row", "", "io.eels.avro.generated", false)
-    val fields = fs.columns.map(toSchemaField)
+    val schema = Schema.createRecord("row", null, "io.eels.component.avro", false)
+    val fields = fs.columns.map(toAvroField)
     schema.setFields(fields.asJava)
     schema
   }
@@ -35,15 +36,23 @@ object AvroSchemaFn extends StrictLogging {
     }
   }
 
-  def toSchemaField(column: Column): Schema.Field = column.`type` match {
-    case SchemaType.String => new Schema.Field(column.name, Schema.create(Schema.Type.STRING), "", null)
-    case SchemaType.Int => new Schema.Field(column.name, Schema.create(Schema.Type.INT), "", null)
-    case SchemaType.Boolean => new Schema.Field(column.name, Schema.create(Schema.Type.BOOLEAN), "", null)
-    case SchemaType.Double => new Schema.Field(column.name, Schema.create(Schema.Type.DOUBLE), "", null)
-    case SchemaType.Float => new Schema.Field(column.name, Schema.create(Schema.Type.FLOAT), "", null)
-    case SchemaType.Long => new Schema.Field(column.name, Schema.create(Schema.Type.LONG), "", null)
-    case other =>
-      logger.warn("Unknown column type; defaulting to string")
-      new Schema.Field(column.name, Schema.create(Schema.Type.STRING), "", null)
+  def toAvroField(column: Column): Schema.Field = {
+    val columnSchema = column.`type` match {
+      case SchemaType.String => SchemaBuilder.builder().stringType()
+      case SchemaType.Int => SchemaBuilder.builder().intType()
+      case SchemaType.Boolean => Schema.create(Schema.Type.BOOLEAN)
+      case SchemaType.Double => Schema.create(Schema.Type.DOUBLE)
+      case SchemaType.Float => Schema.create(Schema.Type.FLOAT)
+      case SchemaType.Long => Schema.create(Schema.Type.LONG)
+      case other =>
+        logger.warn("Unknown column type; defaulting to string")
+        Schema.create(Schema.Type.STRING)
+    }
+    val schema = if (column.nullable) {
+      SchemaBuilder.unionOf().nullType().and().`type`(columnSchema).endUnion()
+    } else {
+      columnSchema
+    }
+    new Schema.Field(column.name, schema, null, null)
   }
 }
