@@ -7,7 +7,7 @@ import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
 import io.eels.plan._
 
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
+import scala.language.implicitConversions
 import scala.reflect.runtime.universe._
 
 trait Frame {
@@ -359,7 +359,7 @@ object Frame {
     }
   }
 
-  implicit def from[T <: Product](seq: Seq[T])(implicit classTag: ClassTag[T], typeTag: TypeTag[T]): Frame = {
-    apply(FrameSchema.from[T](), seq.map { item => item.productIterator.toSeq })
+  implicit def from[T <: Product : TypeTag](seq: Seq[T]): Frame = {
+    apply(FrameSchema.from[T], seq.map { item => item.productIterator.toSeq })
   }
 }

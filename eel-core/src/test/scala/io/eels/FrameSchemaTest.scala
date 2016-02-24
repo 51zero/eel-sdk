@@ -15,12 +15,30 @@ class FrameSchemaTest extends WordSpec with Matchers {
       schema.print shouldBe "- a [Boolean null scale=22 precision=0 signed]\n- b [String not null scale=0 precision=14 unsigned]"
     }
     "be inferred from the inner Person case class" in {
-      val s = FrameSchema.from[Person]()
-      s.columnNames shouldBe List("name", "age", "salary", "isPartTime", "value1", "value2", "value3")
+      FrameSchema.from[Person] shouldBe {
+        FrameSchema(List(
+          Column("name", SchemaType.String, true, 0, 0, true, None),
+          Column("age", SchemaType.Int, true, 0, 0, true, None),
+          Column("salary", SchemaType.Double, true, 0, 0, true, None),
+          Column("isPartTime", SchemaType.Boolean, true, 0, 0, true, None),
+          Column("value1", SchemaType.Decimal, true, 0, 0, true, None),
+          Column("value2", SchemaType.Float, true, 0, 0, true, None),
+          Column("value3", SchemaType.Long, true, 0, 0, true, None)
+        ))
+      }
     }
     "be inferred from the outer Person case class" in {
-      val s = FrameSchema.from[Person]()
-      s.columnNames shouldBe List("name", "age", "salary", "isPartTime", "value1", "value2", "value3")
+      FrameSchema.from[Person] shouldBe {
+        FrameSchema(List(
+          Column("name", SchemaType.String, true, 0, 0, true, None),
+          Column("age", SchemaType.Int, true, 0, 0, true, None),
+          Column("salary", SchemaType.Double, true, 0, 0, true, None),
+          Column("isPartTime", SchemaType.Boolean, true, 0, 0, true, None),
+          Column("value1", SchemaType.Decimal, true, 0, 0, true, None),
+          Column("value2", SchemaType.Float, true, 0, 0, true, None),
+          Column("value3", SchemaType.Long, true, 0, 0, true, None)
+        ))
+      }
     }
   }
 
