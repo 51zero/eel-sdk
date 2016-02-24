@@ -18,7 +18,7 @@ trait Source extends StrictLogging {
 
   def toFrame(ioThreads: Int): Frame = new Frame {
 
-    override def schema: FrameSchema = self.schema
+    override lazy val schema: FrameSchema = self.schema
 
     override def buffer: Buffer = {
       import com.sksamuel.scalax.concurrent.ExecutorImplicits._
