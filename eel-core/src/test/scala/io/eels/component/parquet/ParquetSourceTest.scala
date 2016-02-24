@@ -81,6 +81,20 @@ class ParquetSourceTest extends WordSpec with Matchers {
           Column("c", SchemaType.Boolean, true, 0, 0, true, None)
         ))
       }
+
+      Try {
+        fs.delete(new Path(".merge1.pq.crc"), false)
+      }
+      Try {
+        fs.delete(new Path(".merge2.pq.crc"), false)
+      }
+      Try {
+        fs.delete(new Path("merge1.pq"), false)
+      }
+      Try {
+        fs.delete(new Path("merge2.pq"), false)
+      }
+
     }
   }
 }
