@@ -7,13 +7,18 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
-object FrameSchemaFn extends StrictLogging {
+object HiveSchemaFns extends StrictLogging {
 
-  def apply(schemas: Seq[FieldSchema]): FrameSchema = {
+  def toHiveFields(schema: FrameSchema): Seq[FieldSchema] = toHiveFields(schema.columns)
+  def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map { column =>
+    new FieldSchema(column.name, toHiveType(column), "Created by eel")
+  }
+
+  def fromHiveFields(schemas: Seq[FieldSchema]): FrameSchema = {
     logger.debug("Building frame schame from hive field schemas=" + schemas)
     val columns = schemas.map { s =>
       val (schemaType, precision, scale) = toSchemaType(s.getType)
-      Column(s.getName, schemaType, false, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
+      Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
     }
     FrameSchema(columns.toList)
   }
@@ -35,5 +40,15 @@ object FrameSchemaFn extends StrictLogging {
     case other =>
       logger.warn(s"Unknown schema type $other; defaulting to string")
       (SchemaType.String, 0, 0)
+  }
+
+
+  def toHiveType(column: Column): String = column.`type` match {
+    case SchemaType.String => "string"
+    case SchemaType.Int => "int"
+    case SchemaType.Short => "smallint"
+    case _ =>
+      logger.warn(s"No conversion from schema type ${column.`type`} to hive type; defaulting to string")
+      "string"
   }
 }

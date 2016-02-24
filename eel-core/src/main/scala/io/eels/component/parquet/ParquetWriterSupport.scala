@@ -6,7 +6,6 @@ import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
-import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 trait ParquetWriterSupport extends StrictLogging {
@@ -28,14 +27,14 @@ trait ParquetWriterSupport extends StrictLogging {
 
   protected def blockSize: Int = {
     val blockSize = if (config.hasPath(ParquetBlockSizeKey)) config.getInt(ParquetBlockSizeKey)
-    else ParquetWriter.DEFAULT_BLOCK_SIZE
+    else org.apache.parquet.hadoop.ParquetWriter.DEFAULT_BLOCK_SIZE
     logger.debug(s"Parquet writer will use blockSize = $blockSize")
     blockSize
   }
 
   protected def pageSize: Int = {
     val pageSize = if (config.hasPath(ParquetPageSizeKey)) config.getInt(ParquetPageSizeKey)
-    else ParquetWriter.DEFAULT_PAGE_SIZE
+    else org.apache.parquet.hadoop.ParquetWriter.DEFAULT_PAGE_SIZE
     logger.debug(s"Parquet writer will use pageSize = $pageSize")
     pageSize
   }

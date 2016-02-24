@@ -8,6 +8,7 @@ import io.eels.plan._
 
 import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
 trait Frame {
@@ -359,7 +360,7 @@ object Frame {
     }
   }
 
-  implicit def from[T <: Product : TypeTag](seq: Seq[T]): Frame = {
+  implicit def from[T <: Product : TypeTag : ClassTag](seq: Seq[T]): Frame = {
     apply(FrameSchema.from[T], seq.map { item => item.productIterator.toSeq })
   }
 }

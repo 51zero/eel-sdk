@@ -10,8 +10,7 @@ class KafkaSourceParserTest extends WordSpec with Matchers {
       val url = "kafka:localhost:9000,localhost:9001/topic1,topic2"
       KafkaSourceParser(url).get shouldBe KafkaSourceBuilder("localhost:9000,localhost:9001", Set("topic1", "topic2"), Map.empty)
     }
-    // fix in scalax
-    "parse url with trailing ?" ignore {
+    "parse url with trailing" in {
       val url = "kafka:localhost:9000,localhost:9001/topic1,topic2?"
       KafkaSourceParser(url).get shouldBe KafkaSourceBuilder("localhost:9000,localhost:9001", Set("topic1", "topic2"), Map.empty)
     }

@@ -1,6 +1,7 @@
 package io.eels
 
 import scala.language.implicitConversions
+import scala.reflect.ClassTag
 
 case class FrameSchema(columns: List[Column]) {
   require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
@@ -60,10 +61,10 @@ object FrameSchema {
 
   import scala.reflect.runtime.universe._
 
-  def from[T <: Product](implicit tag: TypeTag[T]): FrameSchema = {
-    val columns = tag.tpe.decls.collect {
+  def from[T <: Product : TypeTag : ClassTag]: FrameSchema = {
+    val columns = typeOf[T].declarations.collect {
       case m: MethodSymbol if m.isCaseAccessor =>
-        val javaClass = tag.mirror.runtimeClass(m.returnType.typeSymbol.asClass)
+        val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
         val schemaType = FrameSchemaFn.toSchemaType(javaClass)
         Column(m.name.toString, schemaType, true)
     }
