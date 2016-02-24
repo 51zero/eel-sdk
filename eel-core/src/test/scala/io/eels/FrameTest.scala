@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
 import Frame._
+import Frame._
 
 class FrameTest extends WordSpec with Matchers with Eventually {
 
@@ -289,7 +290,8 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       val p2 = PersonA("name2", 3, 11.2, true, 11111, 3121, 436541)
       val seq = Seq(p1, p2)
 
-      val frame = Frame.from(seq)
+      val frame: Frame = seq
+
       val rows = frame.toSeq
       rows.size shouldBe 2
       rows shouldBe Seq(
