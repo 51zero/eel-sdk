@@ -1,9 +1,12 @@
 package io.eels
 
+import com.typesafe.scalalogging.slf4j.StrictLogging
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
+import Frame._
+import Frame._
 
 class FrameTest extends WordSpec with Matchers with Eventually {
 
@@ -282,5 +285,22 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
       frame.renameColumn("name", "blame").schema shouldBe FrameSchema("blame", "location")
     }
+    "convert from a Seq[T<:Product]" in {
+      val p1 = PersonA("name1", 2, 1.2, true, 11, 3, 1)
+      val p2 = PersonA("name2", 3, 11.2, true, 11111, 3121, 436541)
+      val seq = Seq(p1, p2)
+
+      val frame: Frame = seq
+
+      val rows = frame.toSeq
+      rows.size shouldBe 2
+      rows shouldBe Seq(
+        Row(frame.schema, Seq("name1", 2, 1.2, true, 11, 3, 1)),
+        Row(frame.schema, Seq("name2", 3, 11.2, true, 11111, 3121, 436541))
+      )
+    }
   }
+
+  case class PersonA(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long) extends StrictLogging
+
 }

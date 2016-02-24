@@ -7,6 +7,8 @@ import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
 import io.eels.plan._
 
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
+import scala.reflect.runtime.universe._
 
 trait Frame {
   outer =>
@@ -19,6 +21,7 @@ trait Frame {
 
   def join(other: Frame): Frame = new Frame {
     override def schema: FrameSchema = outer.schema.join(other.schema)
+
     override def buffer: Buffer = new Buffer {
 
       val buffer1 = outer.buffer
@@ -32,6 +35,7 @@ trait Frame {
       override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
         val iter1 = buffer1.iterator
         val iter2 = buffer2.iterator
+
         override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
         override def next(): InternalRow = iter1.next() ++ iter2.next()
       }
@@ -353,5 +357,9 @@ object Frame {
       override def close(): Unit = ()
       override def iterator: Iterator[InternalRow] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
+  }
+
+  implicit def from[T <: Product](seq: Seq[T])(implicit classTag: ClassTag[T], typeTag: TypeTag[T]): Frame = {
+    apply(FrameSchema.from[T](), seq.map { item => item.productIterator.toSeq })
   }
 }
