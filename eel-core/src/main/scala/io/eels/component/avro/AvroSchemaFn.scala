@@ -54,8 +54,9 @@ object AvroSchemaFn extends StrictLogging {
       case SchemaType.Double => Schema.create(Schema.Type.DOUBLE)
       case SchemaType.Float => Schema.create(Schema.Type.FLOAT)
       case SchemaType.Long => Schema.create(Schema.Type.LONG)
+      case SchemaType.BigInt => Schema.create(Schema.Type.LONG)
       case other =>
-        logger.warn(s"Unknown column type ${column.name}; defaulting to string")
+        logger.warn(s"Unknown column type ${column.name}= ${column.`type`}; defaulting to string")
         Schema.create(Schema.Type.STRING)
     }
 
