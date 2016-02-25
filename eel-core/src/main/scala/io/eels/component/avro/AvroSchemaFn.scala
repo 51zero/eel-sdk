@@ -17,14 +17,12 @@ object AvroSchemaFn extends StrictLogging {
   }
 
   def fromAvro(schema: Schema): FrameSchema = {
-    val cols = schema.getFields.asScala.map { field =>
-      Column(field.name, toColumn(field), true)
-    }
+    val cols = schema.getFields.asScala.map(toColumn)
     FrameSchema(cols.toList)
   }
 
-  def toColumn(field: Schema.Field): SchemaType = {
-    field.schema.getType match {
+  def toSchemaType(schema: Schema): SchemaType = {
+    schema.getType match {
       case Schema.Type.BOOLEAN => SchemaType.Boolean
       case Schema.Type.DOUBLE => SchemaType.Double
       case Schema.Type.FLOAT => SchemaType.Float
@@ -37,6 +35,17 @@ object AvroSchemaFn extends StrictLogging {
     }
   }
 
+  def toColumn(field: Schema.Field): Column = {
+    val schemaType = field.schema.getType match {
+      case Schema.Type.UNION =>
+         field.schema.getTypes.asScala.filter(_.getType != Schema.Type.NULL).collectFirst {
+          case schema => toSchemaType(schema)
+        }.getOrElse(sys.error("Union types must define a non null type"))
+      case _ => toSchemaType(field.schema)
+    }
+    Column(field.name, schemaType, true)
+  }
+
   def toAvroField(column: Column): Schema.Field = {
     val schema = column.`type` match {
       case SchemaType.String => SchemaBuilder.builder().stringType()
@@ -46,7 +55,7 @@ object AvroSchemaFn extends StrictLogging {
       case SchemaType.Float => Schema.create(Schema.Type.FLOAT)
       case SchemaType.Long => Schema.create(Schema.Type.LONG)
       case other =>
-        logger.warn("Unknown column type; defaulting to string")
+        logger.warn(s"Unknown column type ${column.name}; defaulting to string")
         Schema.create(Schema.Type.STRING)
     }
 
