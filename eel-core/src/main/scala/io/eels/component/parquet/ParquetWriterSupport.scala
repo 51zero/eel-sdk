@@ -6,6 +6,7 @@ import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
+import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 trait ParquetWriterSupport extends StrictLogging {
@@ -39,14 +40,13 @@ trait ParquetWriterSupport extends StrictLogging {
     pageSize
   }
 
-  protected def createParquetWriter(path: Path, avroSchema: Schema): AvroParquetWriter[GenericRecord] = {
-    new AvroParquetWriter[GenericRecord](
-      path,
-      avroSchema,
-      compressionCodec,
-      blockSize,
-      pageSize
-    )
+  protected def createParquetWriter(path: Path, avroSchema: Schema): ParquetWriter[GenericRecord] = {
+    AvroParquetWriter.builder[GenericRecord](path)
+      .withSchema(avroSchema)
+      .withCompressionCodec(compressionCodec)
+      .withPageSize(pageSize)
+      .withRowGroupSize(blockSize)
+      .build()
   }
 }
 

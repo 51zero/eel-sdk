@@ -10,14 +10,15 @@ import scala.collection.JavaConverters._
 object AvroSchemaFn extends StrictLogging {
 
   def toAvro(fs: Schema): AvroSchema = {
-    val schema = AvroSchema.createRecord("row", null, "io.eels.component.avro", false)
+    val avro = AvroSchema.createRecord("row", null, "io.eels.component.avro", false)
     val fields = fs.columns.map(toAvroField)
-    schema.setFields(fields.asJava)
-    schema
+    avro.setFields(fields.asJava)
+    avro
   }
 
-  def fromAvro(schema: AvroSchema): Schema = {
-    val cols = schema.getFields.asScala.map(toColumn)
+  def fromAvro(avro: AvroSchema): Schema = {
+    require(avro.getType == AvroSchema.Type.RECORD, "Can only convert avro records to eel schemas")
+    val cols = avro.getFields.asScala.map(toColumn)
     Schema(cols.toList)
   }
 
@@ -25,10 +26,12 @@ object AvroSchemaFn extends StrictLogging {
     schema.getType match {
       case AvroSchema.Type.BOOLEAN => SchemaType.Boolean
       case AvroSchema.Type.DOUBLE => SchemaType.Double
+      case AvroSchema.Type.ENUM => SchemaType.String
+      case AvroSchema.Type.FIXED => SchemaType.String
       case AvroSchema.Type.FLOAT => SchemaType.Float
       case AvroSchema.Type.INT => SchemaType.Int
       case AvroSchema.Type.LONG => SchemaType.Long
-      case AvroSchema.Type.STRING => SchemaType.String
+      case AvroSchema.Type.ENUM => SchemaType.String
       case other =>
         logger.warn(s"Unrecognized avro type $other; defaulting to string")
         SchemaType.String
@@ -36,14 +39,16 @@ object AvroSchemaFn extends StrictLogging {
   }
 
   def toColumn(field: AvroSchema.Field): Column = {
-    val schemaType = field.schema.getType match {
+    field.schema.getType match {
       case AvroSchema.Type.UNION =>
-         field.schema.getTypes.asScala.filter(_.getType != AvroSchema.Type.NULL).collectFirst {
+        val schemaType = field.schema.getTypes.asScala.filter(_.getType != AvroSchema.Type.NULL).collectFirst {
           case schema => toSchemaType(schema)
         }.getOrElse(sys.error("Union types must define a non null type"))
-      case _ => toSchemaType(field.schema)
+        Column(field.name, schemaType, true)
+      case _ =>
+        val schemaType = toSchemaType(field.schema)
+        Column(field.name, schemaType, false)
     }
-    Column(field.name, schemaType, true)
   }
 
   def toAvroField(column: Column): AvroSchema.Field = {
