@@ -31,7 +31,6 @@ object AvroSchemaFn extends StrictLogging {
       case AvroSchema.Type.FLOAT => SchemaType.Float
       case AvroSchema.Type.INT => SchemaType.Int
       case AvroSchema.Type.LONG => SchemaType.Long
-      case AvroSchema.Type.ENUM => SchemaType.String
       case other =>
         logger.warn(s"Unrecognized avro type $other; defaulting to string")
         SchemaType.String

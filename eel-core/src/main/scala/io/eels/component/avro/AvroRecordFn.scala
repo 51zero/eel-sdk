@@ -29,10 +29,10 @@ object AvroRecordFn extends Logging {
     */
   def toRecord(row: InternalRow, avroSchema: AvroSchema, sourceSchema: Schema, config: Config): GenericRecord = {
 
-    val replaceMissing = config.getBoolean("eel.avro.fillMissingValues")
+    val fillMissingValues = config.getBoolean("eel.avro.fillMissingValues")
 
     def default(field: AvroSchema.Field) = {
-      if (replaceMissing) null
+      if (fillMissingValues) null
       else sys.error(s"Record is missing value for column $field")
     }
 

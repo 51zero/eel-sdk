@@ -9,13 +9,13 @@ import org.apache.parquet.avro.AvroParquetWriter
 import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
-trait ParquetWriterSupport extends StrictLogging {
+object ParquetWriterSupport extends StrictLogging {
 
   val config = ConfigFactory.load()
   val ParquetBlockSizeKey = "eel.parquet.blockSize"
   val ParquetPageSizeKey = "eel.parquet.pageSize"
 
-  protected def compressionCodec: CompressionCodecName = {
+  private def compressionCodec: CompressionCodecName = {
     val codec = config.getString("eel.parquet.compressionCodec").toLowerCase match {
       case "gzip" => CompressionCodecName.GZIP
       case "lzo" => CompressionCodecName.LZO
@@ -26,21 +26,21 @@ trait ParquetWriterSupport extends StrictLogging {
     codec
   }
 
-  protected def blockSize: Int = {
+  private def blockSize: Int = {
     val blockSize = if (config.hasPath(ParquetBlockSizeKey)) config.getInt(ParquetBlockSizeKey)
     else org.apache.parquet.hadoop.ParquetWriter.DEFAULT_BLOCK_SIZE
     logger.debug(s"Parquet writer will use blockSize = $blockSize")
     blockSize
   }
 
-  protected def pageSize: Int = {
+  private def pageSize: Int = {
     val pageSize = if (config.hasPath(ParquetPageSizeKey)) config.getInt(ParquetPageSizeKey)
     else org.apache.parquet.hadoop.ParquetWriter.DEFAULT_PAGE_SIZE
     logger.debug(s"Parquet writer will use pageSize = $pageSize")
     pageSize
   }
 
-  protected def createParquetWriter(path: Path, avroSchema: Schema): ParquetWriter[GenericRecord] = {
+  def apply(path: Path, avroSchema: Schema): ParquetWriter[GenericRecord] = {
     AvroParquetWriter.builder[GenericRecord](path)
       .withSchema(avroSchema)
       .withCompressionCodec(compressionCodec)

@@ -27,9 +27,9 @@ class ParquetSinkTest extends WordSpec with Matchers {
       val people = ParquetSource(path)
       people.schema shouldBe {
         Schema(List(
-          Column("name", SchemaType.String, true, 0, 0, true, None),
-          Column("job", SchemaType.String, true, 0, 0, true, None),
-          Column("location", SchemaType.String, true, 0, 0, true, None)))
+          Column("name", SchemaType.String, false),
+          Column("job", SchemaType.String, false),
+          Column("location", SchemaType.String, false)))
       }
       fs.delete(path, false)
     }

@@ -4,17 +4,25 @@ import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
-import io.eels.{Schema, InternalRow, Reader, Source}
+import io.eels._
 
-case class CsvSource(path: Path, overrideSchema: Option[Schema] = None) extends Source with Using {
+case class CsvSource(path: Path,
+                     overrideSchema: Option[Schema] = None,
+                     inferrer: SchemaInferrer = StringInferrer,
+                     hasHeader: Boolean = true) extends Source with Using {
 
+  def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
+  def withHeader(header: Boolean): CsvSource = copy(hasHeader = header)
   def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
 
   override def schema: Schema = overrideSchema.getOrElse {
     val reader = CSVReader.open(path.toFile)
     using(reader) { reader =>
       val headers = reader.readNext().get
-      Schema(headers)
+      if (hasHeader)
+        inferrer(headers)
+      else
+        inferrer(List.tabulate(headers.size)(_.toString))
     }
   }
 
@@ -23,9 +31,10 @@ case class CsvSource(path: Path, overrideSchema: Option[Schema] = None) extends 
     val reader = CSVReader.open(path.toFile)
     val iter = reader.iterator
 
-    // throw away header
-    if (iter.hasNext)
-      iter.next
+    if (hasHeader) {
+      if (iter.hasNext)
+        iter.next
+    }
 
     val part = new Reader {
 
@@ -45,5 +54,36 @@ case class CsvSource(path: Path, overrideSchema: Option[Schema] = None) extends 
     }
 
     Seq(part)
+  }
+}
+
+trait SchemaInferrer {
+  def apply(headers: Seq[String]): Schema
+}
+
+object StringInferrer extends SchemaInferrer {
+  def apply(headers: Seq[String]): Schema = Schema(headers.map(header => Column(header, SchemaType.String, true)).toList)
+}
+
+case class SchemaRule(pattern: String, schemaType: SchemaType, nullable: Boolean = true) {
+  def apply(header: String): Option[Column] = {
+    if (header.matches(pattern)) Some(Column(header, schemaType, nullable)) else None
+  }
+}
+
+object SchemaInferrer {
+
+  import com.sksamuel.scalax.OptionImplicits._
+
+  def apply(default: SchemaType, first: SchemaRule, rest: SchemaRule*): SchemaInferrer = new SchemaInferrer {
+    val rules = first +: rest
+    override def apply(headers: Seq[String]): Schema = {
+      val columns = headers.map { header =>
+        rules.foldLeft(none[Column]) { (schemaType, rule) =>
+          schemaType.orElse(rule(header))
+        }.getOrElse(Column(header, default, true))
+      }
+      Schema(columns.toList)
+    }
   }
 }

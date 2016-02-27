@@ -27,9 +27,9 @@ class ParquetSourceTest extends WordSpec with Matchers {
     "read schema" in {
       val people = ParquetSource(personFile.getAbsolutePath)
       people.schema shouldBe Schema(List(
-        Column("name", SchemaType.String, true, 0, 0, true, None),
-        Column("job", SchemaType.String, true, 0, 0, true, None),
-        Column("location", SchemaType.String, true, 0, 0, true, None)
+        Column("name", SchemaType.String, false, 0, 0, true, None),
+        Column("job", SchemaType.String, false, 0, 0, true, None),
+        Column("location", SchemaType.String, false, 0, 0, true, None)
       ))
     }
     "read parquet files" in {
@@ -60,14 +60,14 @@ class ParquetSourceTest extends WordSpec with Matchers {
       val schema1 = SchemaBuilder.builder().record("schema1").fields().requiredString("a").requiredDouble("b").endRecord()
       val schema2 = SchemaBuilder.builder().record("schema2").fields().requiredInt("a").requiredBoolean("c").endRecord()
 
-      val writer1 = new AvroParquetWriter[GenericRecord](new Path("merge1.pq"), schema1)
+      val writer1 = AvroParquetWriter.builder[GenericRecord](new Path("merge1.pq")).withSchema(schema1).build()
       val record1 = new Record(schema1)
       record1.put("a", "aaaaa")
       record1.put("b", 124.3)
       writer1.write(record1)
       writer1.close()
 
-      val writer2 = new AvroParquetWriter[GenericRecord](new Path("merge2.pq"), schema2)
+      val writer2 = AvroParquetWriter.builder[GenericRecord](new Path("merge2.pq")).withSchema(schema2).build()
       val record2 = new Record(schema2)
       record2.put("a", 111)
       record2.put("c", true)
@@ -76,9 +76,9 @@ class ParquetSourceTest extends WordSpec with Matchers {
 
       ParquetSource("merge*").schema shouldBe {
         Schema(List(
-          Column("a", SchemaType.String, true, 0, 0, true, None),
-          Column("b", SchemaType.Double, true, 0, 0, true, None),
-          Column("c", SchemaType.Boolean, true, 0, 0, true, None)
+          Column("a", SchemaType.String, false, 0, 0, true, None),
+          Column("b", SchemaType.Double, false, 0, 0, true, None),
+          Column("c", SchemaType.Boolean, false, 0, 0, true, None)
         ))
       }
 
