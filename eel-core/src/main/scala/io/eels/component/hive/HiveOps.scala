@@ -12,8 +12,13 @@ import scala.collection.JavaConverters._
 
 object HiveOps extends StrictLogging {
 
+  def partitions(dbName: String, tableName: String)
+                (implicit client: HiveMetaStoreClient): List[Partition] = {
+    client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala.map(Partition.apply).toList
+  }
+
   /**
-    * Returns a map of all partitions to their values.
+    * Returns a map of all partition keys to their values.
     * This operation is optimized, in that it does not need to scan files, but can retrieve the information
     * directly from the hive metastore.
     */
@@ -84,7 +89,7 @@ object HiveOps extends StrictLogging {
     client.add_partition(newPartition)
   }
 
-  def partitions(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[HivePartition] = {
+  def hivePartitions(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[HivePartition] = {
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
   }
 

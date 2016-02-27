@@ -28,7 +28,7 @@ object HiveTestApp extends App with StrictLogging {
     Map("artist" -> "elton", "album" -> "yellow brick road", "year" -> "1972"),
     Map("artist" -> "elton", "album" -> "tumbleweed connection", "year" -> "1974"),
     Map("artist" -> "elton", "album" -> "empty sky", "year" -> "1969"),
-    Map("artist" -> "beatles", "album" -> "white album", "year" -> "1696"),
+    Map("artist" -> "beatles", "album" -> "white album", "year" -> "1969"),
     Map("artist" -> "beatles", "album" -> "tumbleweed connection", "year" -> "1966"),
     Map("artist" -> "pinkfloyd", "album" -> "the wall", "year" -> "1979"),
     Map("artist" -> "pinkfloyd", "album" -> "dark side of the moon", "year" -> "1974"),
@@ -48,10 +48,10 @@ object HiveTestApp extends App with StrictLogging {
   frame.to(sink)
   logger.info("Write complete")
 
-  val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toSeq
-  logger.info("Result=" + plan)
+  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
+  logger.info("Result=" + result)
 
-  val parts = client.listPartitions("sam", "albums", Short.MaxValue)
-  println(parts)
-  val q = parts
+  val years = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1970").withColumns("year", "artist").toSeq
+  logger.info("years=" + years)
+
 }
