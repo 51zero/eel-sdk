@@ -170,3 +170,17 @@ object HiveSink {
     )
   }
 }
+
+// returns all the partition parts for a given row, if a row doesn't contain a value
+// for a part then an error is thrown
+object RowPartitionParts {
+  def apply(row: InternalRow, partNames: Seq[String], schema: Schema): List[PartitionPart] = {
+    require(partNames.forall(schema.columnNames.contains), "FrameSchema must contain all partitions " + partNames)
+    partNames.map { name =>
+      val index = schema.indexOf(name)
+      val value = row(index)
+      require(!value.toString.contains(" "), "Values for partition fields cannot contain spaces")
+      PartitionPart(name, value.toString)
+    }.toList
+  }
+}

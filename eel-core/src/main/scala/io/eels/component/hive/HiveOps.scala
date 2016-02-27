@@ -13,6 +13,39 @@ import scala.collection.JavaConverters._
 object HiveOps extends StrictLogging {
 
   /**
+    * Returns a map of all partitions to their values.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
+    */
+  def partitionMap(dbName: String, tableName: String)
+                  (implicit client: HiveMetaStoreClient): Map[String, Set[String]] = {
+    client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala
+      .flatMap(p => Partition(p).parts)
+      .groupBy(_.key)
+      .map { case (key, values) => key -> values.map(_.value).toSet }
+  }
+
+  /**
+    * Returns all partition values for the given partition keys.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
+    */
+  def partitionValues(dbName: String, tableName: String, keys: Seq[String])
+                     (implicit client: HiveMetaStoreClient): List[Set[String]] = {
+    partitionMap(dbName, tableName).collect { case (key, values) if keys contains key => values }.toList
+  }
+
+  /**
+    * Returns all partition values for a given partition key.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
+    */
+  def partitionValues(dbName: String, tableName: String, key: String)
+                     (implicit client: HiveMetaStoreClient): Set[String] = {
+    partitionMap(dbName, tableName).getOrElse(key, Set.empty)
+  }
+
+  /**
     * Creates a new partition in Hive in the given database:table in the default location, which will be the
     * partition key values as a subdirectory of the table location. The values for the serialzation formats are
     * taken from the values for the table.
@@ -20,7 +53,7 @@ object HiveOps extends StrictLogging {
   def createPartition(dbName: String, tableName: String, partition: Partition)
                      (implicit client: HiveMetaStoreClient): Unit = {
     val table = client.getTable(dbName, tableName)
-    val location = new Path(table.getSd.getLocation, partition.dirName)
+    val location = new Path(table.getSd.getLocation, partition.name)
     createPartition(dbName, tableName, partition, location)
   }
 
@@ -87,7 +120,9 @@ object HiveOps extends StrictLogging {
   }
 
   def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): Path = {
-    parts.foldLeft(tablePath) { (path, part) => new Path(path, part.unquotedDir) }
+    parts.foldLeft(tablePath) {
+      (path, part) => new Path(path, part.unquoted)
+    }
   }
 
   // creates (if not existing) the partition for the given partition parts
@@ -95,7 +130,7 @@ object HiveOps extends StrictLogging {
                       tableName: String,
                       parts: Seq[PartitionPart])
                      (implicit client: HiveMetaStoreClient): Boolean = {
-    val partitionName = parts.map(_.unquotedDir).mkString("/")
+    val partitionName = parts.map(_.unquoted).mkString("/")
     logger.debug(s"Checking if partition exists '$partitionName'")
     try {
       client.getPartition(dbName, tableName, partitionName) != null
@@ -110,7 +145,7 @@ object HiveOps extends StrictLogging {
                                  tableName: String,
                                  parts: Seq[PartitionPart])
                                 (implicit client: HiveMetaStoreClient): Unit = {
-    val partitionName = parts.map(_.unquotedDir).mkString("/")
+    val partitionName = parts.map(_.unquoted).mkString("/")
     logger.debug(s"Ensuring partition exists '$partitionName'")
     val exists = try {
       client.getPartition(dbName, tableName, partitionName) != null
@@ -123,7 +158,7 @@ object HiveOps extends StrictLogging {
       val path = partitionPath(dbName, tableName, parts)
       logger.debug(s"Creating partition '$partitionName' at $path")
 
-      val partition = Partition(parts.map(part => PartitionKeyValue(part.key, part.value)).toList)
+      val partition = Partition(parts.toList)
       createPartition(dbName, tableName, partition)
     }
   }

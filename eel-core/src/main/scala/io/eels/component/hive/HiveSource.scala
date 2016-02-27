@@ -11,7 +11,10 @@ import org.apache.hadoop.hive.metastore.api.Table
 
 import scala.collection.JavaConverters._
 
-case class HiveSource(db: String, table: String, partitionExprs: List[PartitionExpr] = Nil, columns: Seq[String] = Nil)
+case class HiveSource(dbName: String,
+                      tableName: String,
+                      partitionExprs: List[PartitionExpr] = Nil,
+                      columns: Seq[String] = Nil)
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
     with StrictLogging
@@ -40,13 +43,37 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
 
   private def createClient: HiveMetaStoreClient = new HiveMetaStoreClient(hive)
 
-  def listPartitions(name: String): Seq[String] = {
-    Nil
+  /**
+    * Returns all partition values for a given partition key.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
+    */
+  def partitionValues(key: String): Set[String] = {
+    using(createClient) { client =>
+      HiveOps.partitionValues(dbName, tableName, key)(client)
+    }
+  }
+
+  /**
+    * Returns all partition values for a given partition key.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
+    */
+  def partitionValues(keys: Seq[String]): Seq[Set[String]] = {
+    using(createClient) { client =>
+      HiveOps.partitionValues(dbName, tableName, keys)(client)
+    }
+  }
+
+  def partitionMap: Map[String, Set[String]] = {
+    using(createClient) { client =>
+      HiveOps.partitionMap(dbName, tableName)(client)
+    }
   }
 
   override def schema: Schema = {
     using(createClient) { client =>
-      val s = client.getSchema(db, table).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))
+      val s = client.getSchema(dbName, tableName).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))
       HiveSchemaFns.fromHiveFields(s)
     }
   }
@@ -65,7 +92,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
   override def readers: Seq[Reader] = {
 
     val (schema, dialect, paths) = using(createClient) { client =>
-      val t = client.getTable(db, table)
+      val t = client.getTable(dbName, tableName)
       val schema = this.schema
       val dialect = this.dialect(t)
       val paths = HiveFileScanner(t, partitionExprs)
