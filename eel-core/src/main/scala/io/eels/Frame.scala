@@ -81,6 +81,11 @@ trait Frame {
     }
   }
 
+  def updateSchemaType(columnName: String, schemaType: SchemaType): Frame = new Frame {
+    override def schema: FrameSchema = outer.schema.updateSchemaType(columnName, schemaType)
+    override def buffer: Buffer = outer.buffer
+  }
+
   def takeWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: FrameSchema = outer.schema
     override def buffer: Buffer = new Buffer {
