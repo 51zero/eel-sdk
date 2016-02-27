@@ -40,6 +40,10 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
 
   private def createClient: HiveMetaStoreClient = new HiveMetaStoreClient(hive)
 
+  def listPartitions(name: String): Seq[String] = {
+    Nil
+  }
+
   override def schema: Schema = {
     using(createClient) { client =>
       val s = client.getSchema(db, table).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))

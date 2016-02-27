@@ -51,7 +51,7 @@ object InternalRow {
 }
 
 case class Row(schema: Schema, values: Seq[Any]) {
-  override def toString(): String = {
+  override def toString: String = {
     schema.columnNames.zip(values).map { case (column, value) => s"$column = ${if (value == null) "" else value.toString}" }.mkString("[", ",", "]")
   }
 }

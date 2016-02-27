@@ -7,13 +7,10 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 trait HiveDialect extends StrictLogging {
 
-  def iterator(path: Path, schema: Schema,
-               columns: Seq[String])
+  def iterator(path: Path, schema: Schema, columns: Seq[String])
               (implicit fs: FileSystem): Iterator[InternalRow]
 
-  def writer(sourceSchema: Schema,
-             targetSchema: Schema,
-             path: Path)
+  def writer(schema: Schema, path: Path)
             (implicit fs: FileSystem): HiveWriter
 }
 

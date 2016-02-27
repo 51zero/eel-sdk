@@ -25,7 +25,7 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     Iterator.continually(buff.readLine).takeWhile(_ != null)
   }
 
-  override def writer(sourceSchema: Schema, targetSchema: Schema, path: Path)
+  override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = new HiveWriter {
     logger.debug(s"Creating text writer for $path with delimiter=${TextHiveDialect.delimiter}")
 
@@ -38,8 +38,8 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     override def write(row: InternalRow): Unit = {
       // builds a map of the column names to the row values (by using the source schema), then generates
       // a new sequence of values ordered by the columns in the target schema
-      val map = sourceSchema.columnNames.zip(row).map { case (columName, value) => columName -> value }.toMap
-      val seq = targetSchema.columnNames.map(map.apply)
+      val map = schema.columnNames.zip(row).map { case (columName, value) => columName -> value }.toMap
+      val seq = schema.columnNames.map(map.apply)
       csv.writeRow(seq)
     }
 

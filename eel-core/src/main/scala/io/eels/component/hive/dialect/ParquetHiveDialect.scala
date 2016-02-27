@@ -18,18 +18,18 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging with RollingPar
     override def next(): InternalRow = iter.next
   }
 
-  override def writer(sourceSchema: Schema, targetSchema: Schema, path: Path)
+  override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     ParquetLogMute()
     logger.debug(s"Creating parquet writer for $path")
 
-    val avroSchema = AvroSchemaFn.toAvro(targetSchema)
+    val avroSchema = AvroSchemaFn.toAvro(schema)
     val writer = createRollingParquetWriter(path, avroSchema)
 
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: InternalRow): Unit = {
-        val record = AvroRecordFn.toRecord(row, avroSchema, sourceSchema, config)
+        val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
         logger.trace(record.toString)
         writer.write(record)
       }

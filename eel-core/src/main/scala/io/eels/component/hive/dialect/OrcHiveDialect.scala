@@ -29,7 +29,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
             al.asScala.map(_.toString)
 
           case struct: OrcStruct =>
-            inspector.getStructFieldsDataAsList(struct).asScala.map(_.toString).toSeq
+            inspector.getStructFieldsDataAsList(struct).asScala.map(_.toString)
 
           case other =>
             logger.warn(s"Uknown fields type ${other.getClass}; defaulting to splitting on ','")
@@ -39,11 +39,11 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def writer(sourceSchema: Schema, targetSchema: Schema, path: Path)
+  override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating orc writer for $path")
 
-    val inspector = StandardStructInspector(targetSchema)
+    val inspector = StandardStructInspector(schema)
     val writer = OrcFile.createWriter(path, OrcFile.writerOptions(new Configuration).inspector(inspector))
 
     new HiveWriter {
@@ -51,7 +51,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
       override def write(row: InternalRow): Unit = {
         // builds a map of the column names to the row values (by using the source schema), then generates
         // a new sequence of values ordered by the columns in the target schema
-        val map = sourceSchema.columnNames.zip(row).map { case (columName, value) => columName -> value }.toMap
+        val map = schema.columnNames.zip(row).map { case (columName, value) => columName -> value }.toMap
         writer.addRow(row.toArray)
       }
     }

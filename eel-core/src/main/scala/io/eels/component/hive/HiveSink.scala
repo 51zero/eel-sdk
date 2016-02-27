@@ -77,7 +77,7 @@ case class HiveSink(dbName: String,
           } else {
             partitionKeyNames.foldLeft(HiveSink.this.schema)((schema, name) => schema.removeColumn(name))
           }
-          dialect.writer(sourceSchema, targetSchema, filePath)
+          dialect.writer(targetSchema, filePath)
         })
       }
     }
@@ -168,32 +168,5 @@ object HiveSink {
       dynamicPartitioning = dynamicPartitioning,
       format = format
     )
-  }
-}
-
-@deprecated("will be replaced with PartitionKeyValue", "0.24.0")
-case class PartitionPart(key: String, value: String) {
-  def unquotedDir = s"$key=$value"
-}
-
-object PartitionPart {
-  def unapply(path: Path): Option[(String, String)] = unapply(path.getName)
-  def unapply(str: String): Option[(String, String)] = str.split('=') match {
-    case Array(a, b) => Some((a, b))
-    case _ => None
-  }
-}
-
-// returns all the partition parts for a given row, if a row doesn't contain a value
-// for a part then an error is thrown
-object RowPartitionParts {
-  def apply(row: InternalRow, partNames: Seq[String], schema: Schema): List[PartitionPart] = {
-    require(partNames.forall(schema.columnNames.contains), "FrameSchema must contain all partitions " + partNames)
-    partNames.map { name =>
-      val index = schema.indexOf(name)
-      val value = row(index)
-      require(!value.toString.contains(" "), "Values for partition fields cannot contain spaces")
-      PartitionPart(name, value.toString)
-    }.toList
   }
 }
