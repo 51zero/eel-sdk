@@ -94,7 +94,17 @@ Simple example of writing to a Hive database `frame.to(HiveSink("mydb", "mytable
 
 We can specify the number of concurrent writes, by using the ioThreads parameter `frame.to(HiveSink("mydb", "mytable").withIOThreads(4))`
  
- Kafka Source
+Csv Source
+----
+
+If the schema you need is in the form of the CSV headers, then we can easily parse those to create the schema. But obviously CSV won't encode any type information. Therefore, we can specify an instance of a `SchemaInferrer` which can be customized with rules to determine the correct schema type for each header. So for example, you might say that "name" is a SchemaType.String, or that anything matching "*_id" is a SchemaType.Long. You can also specify the nullability, scale, precision and unsigned. A quick example:
+
+```scala
+val inferrer = SchemaInferrer(SchemaType.String, SchemaRule("qty", SchemaType.Int, false), SchemaRule(".*_id", SchemaType.Int))
+CsvSource("myfile").withSchemaInferrer(inferrer)
+```
+
+Kafka Source
 ---
 
 Eel integrates with [Kafka](http://kafka.apache.org/) to read messages from a topic or topics into a Frame. To connect to a Kafka server we need an instance of `KafkaSource` with an instance of `KafkaSourceConfig`. The config requires the broker list (host:port,host:port,..), the consumer group to connect as, as well as the topic or topics to read from. In addition we must specify a `KafkaDeserializer` that can convert the incoming byte array from Kafka into an eel Row. 
