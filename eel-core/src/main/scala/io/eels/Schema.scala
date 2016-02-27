@@ -3,7 +3,7 @@ package io.eels
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
-case class FrameSchema(columns: List[Column]) {
+case class Schema(columns: List[Column]) {
 
   require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
 
@@ -15,39 +15,39 @@ case class FrameSchema(columns: List[Column]) {
 
   def columnNames: List[String] = columns.map(_.name)
 
-  def addColumn(col: Column): FrameSchema = {
+  def addColumn(col: Column): Schema = {
     require(!columnNames.contains(col.name), s"Column ${col.name} already exists")
     copy(columns :+ col)
   }
 
-  def updateSchemaType(columnName: String, schemaType: SchemaType): FrameSchema = {
-    FrameSchema(columns.map {
+  def updateSchemaType(columnName: String, schemaType: SchemaType): Schema = {
+    Schema(columns.map {
       case col@Column(`columnName`, _, _, _, _, _, _) => col.copy(`type` = schemaType)
       case col => col
     })
   }
 
-  def removeColumn(name: String): FrameSchema = copy(columns = columns.filterNot(_.name == name))
+  def removeColumn(name: String): Schema = copy(columns = columns.filterNot(_.name == name))
 
-  def removeColumns(names: List[String]): FrameSchema = copy(columns = columns.filterNot(names contains _.name))
+  def removeColumns(names: List[String]): Schema = copy(columns = columns.filterNot(names contains _.name))
 
-  def join(other: FrameSchema): FrameSchema = {
+  def join(other: Schema): Schema = {
     require(
       columns.map(_.name).intersect(other.columns.map(_.name)).isEmpty,
       "Cannot join two frames which have duplicated column names"
     )
-    FrameSchema(columns ++ other.columns)
+    Schema(columns ++ other.columns)
   }
 
-  def updateColumn(column: Column): FrameSchema = {
+  def updateColumn(column: Column): Schema = {
     val cols = columns.map {
       case col if col.name == column.name => column
       case col => col
     }
-    FrameSchema(cols)
+    Schema(cols)
   }
 
-  def renameColumn(from: String, to: String): FrameSchema = FrameSchema(columns.map {
+  def renameColumn(from: String, to: String): Schema = Schema(columns.map {
     case col@Column(`from`, _, _, _, _, _, _) => col.copy(name = to)
     case other => other
   })
@@ -61,26 +61,26 @@ case class FrameSchema(columns: List[Column]) {
   }
 }
 
-object FrameSchema {
-  def apply(first: Column, rest: Column*): FrameSchema = apply((first +: rest).toList)
-  def apply(first: String, rest: String*): FrameSchema = apply(first +: rest)
+object Schema {
+  def apply(first: Column, rest: Column*): Schema = apply((first +: rest).toList)
+  def apply(first: String, rest: String*): Schema = apply(first +: rest)
 
-  implicit def apply(strs: Seq[String]): FrameSchema = FrameSchema(strs.map(Column.apply).toList)
+  implicit def apply(strs: Seq[String]): Schema = Schema(strs.map(Column.apply).toList)
 
   import scala.reflect.runtime.universe._
 
-  def from[T <: Product : TypeTag : ClassTag]: FrameSchema = {
+  def from[T <: Product : TypeTag : ClassTag]: Schema = {
     val columns = typeOf[T].declarations.collect {
       case m: MethodSymbol if m.isCaseAccessor =>
         val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
-        val schemaType = FrameSchemaFn.toSchemaType(javaClass)
+        val schemaType = SchemaFn.toSchemaType(javaClass)
         Column(m.name.toString, schemaType, true)
     }
-    FrameSchema(columns.toList)
+    Schema(columns.toList)
   }
 }
 
-object FrameSchemaFn {
+object SchemaFn {
   def toSchemaType(clz: Class[_]): SchemaType = {
     val intClass = classOf[Int]
     val floatClass = classOf[Float]

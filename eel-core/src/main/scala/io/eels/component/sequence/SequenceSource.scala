@@ -5,7 +5,7 @@ import java.io.StringReader
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Column, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, Column, Schema, Reader, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
@@ -25,7 +25,7 @@ case class SequenceSource(path: Path) extends Source with Using with StrictLoggi
     row
   }
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
     logger.debug(s"Fetching sequence schema for $path")
     using(createReader) { reader =>
       val k = new IntWritable
@@ -34,7 +34,7 @@ case class SequenceSource(path: Path) extends Source with Using with StrictLoggi
         reader.next(k, v)
         toValues(v).map(Column.apply)
       }.toList
-      FrameSchema(columns)
+      Schema(columns)
     }
   }
 

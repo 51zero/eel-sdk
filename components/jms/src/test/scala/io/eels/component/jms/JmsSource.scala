@@ -37,5 +37,5 @@ case class JmsSource(consumer: MessageConsumer, limit: Int = 1) extends Source {
     Seq(reader)
   }
 
-  override def schema: FrameSchema = FrameSchema(Seq.empty[String])
+  override def schema: Schema = Schema(Seq.empty[String])
 }

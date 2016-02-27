@@ -3,7 +3,7 @@ package io.eels.component.kafka
 import java.util.{Properties, UUID}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, Schema, Reader, Source}
 import org.apache.kafka.clients.consumer.{ConsumerConfig, KafkaConsumer}
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
@@ -17,7 +17,7 @@ case class KafkaSourceConfig(brokerList: String,
 case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deserializer: KafkaDeserializer)
   extends Source with StrictLogging {
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
 
     val consumerProps = new Properties
     consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.brokerList)
@@ -35,7 +35,7 @@ case class KafkaSource(config: KafkaSourceConfig, topics: Set[String], deseriali
     consumer.close()
     val row = deserializer(record.value)
     val columns = List.tabulate(row.size)(_.toString)
-    FrameSchema(columns)
+    Schema(columns)
   }
 
   override def readers: Seq[Reader] = {

@@ -5,14 +5,14 @@ import java.io.{BufferedReader, InputStream, InputStreamReader}
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
-import io.eels.{FrameSchema, InternalRow}
+import io.eels.{Schema, InternalRow}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object TextHiveDialect extends HiveDialect with StrictLogging {
 
   val delimiter = '\u0001'
 
-  override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
+  override def iterator(path: Path, schema: Schema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[InternalRow] = new Iterator[InternalRow] {
     lazy val in = fs.open(path)
     lazy val iter = lineIterator(in)
@@ -25,7 +25,7 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     Iterator.continually(buff.readLine).takeWhile(_ != null)
   }
 
-  override def writer(sourceSchema: FrameSchema, targetSchema: FrameSchema, path: Path)
+  override def writer(sourceSchema: Schema, targetSchema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = new HiveWriter {
     logger.debug(s"Creating text writer for $path with delimiter=${TextHiveDialect.delimiter}")
 

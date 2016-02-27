@@ -2,8 +2,8 @@ package io.eels.component.parquet
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
-import org.apache.avro.Schema
+import io.eels.{Schema, InternalRow, Sink, Writer}
+import org.apache.avro.{Schema => AvroSchema}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with StrictLogging {
@@ -15,13 +15,13 @@ class ParquetWriter(path: Path)
 
   logger.debug(s"Parquet will write to $path")
   var writer: RollingParquetWriter = _
-  var avroSchema: Schema = _
+  var avroSchema: AvroSchema = _
 
   override def close(): Unit = {
     if (writer != null) writer.close()
   }
 
-  override def write(row: InternalRow, schema: FrameSchema): Unit = {
+  override def write(row: InternalRow, schema: Schema): Unit = {
     this.synchronized {
       if (writer == null) {
         avroSchema = AvroSchemaFn.toAvro(schema)

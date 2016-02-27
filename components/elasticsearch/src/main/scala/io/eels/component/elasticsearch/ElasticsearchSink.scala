@@ -3,7 +3,7 @@ package io.eels.component.elasticsearch
 import com.sksamuel.elastic4s.source.Indexable
 import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl, ElasticsearchClientUri}
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
+import io.eels.{Schema, InternalRow, Sink, Writer}
 
 case class ElasticsearchSink(clientFn: () => ElasticClient,
                              indexName: String,
@@ -18,7 +18,7 @@ case class ElasticsearchSink(clientFn: () => ElasticClient,
 
     override def close(): Unit = if (closeClient) client.close() else ()
 
-    override def write(row: InternalRow, schema: FrameSchema): Unit = {
+    override def write(row: InternalRow, schema: Schema): Unit = {
 
       import ElasticDsl._
       implicit val indexable = IndexableImplicits.RowIndexable

@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.{FrameSchema, Reader, Source}
+import io.eels.{Schema, Reader, Source}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -40,7 +40,7 @@ case class HiveSource(db: String, table: String, partitionExprs: List[PartitionE
 
   private def createClient: HiveMetaStoreClient = new HiveMetaStoreClient(hive)
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
     using(createClient) { client =>
       val s = client.getSchema(db, table).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))
       HiveSchemaFns.fromHiveFields(s)

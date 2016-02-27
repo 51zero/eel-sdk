@@ -2,7 +2,7 @@ package io.eels.component.json
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.sksamuel.scalax.io.Using
-import io.eels.{InternalRow, Column, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, Column, Schema, Reader, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 
@@ -17,12 +17,12 @@ case class JsonSource(path: Path) extends Source with Using {
     fs.open(path)
   }
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
     using(createInputStream) { in =>
       val roots = reader.readValues[JsonNode](in)
       val node = roots.next()
       val columns = node.fieldNames.asScala.map(Column.apply).toList
-      FrameSchema(columns)
+      Schema(columns)
     }
   }
 

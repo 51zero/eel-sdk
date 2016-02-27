@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn, AvroSchemaMerge}
-import io.eels.{FilePattern, FrameSchema, InternalRow, Reader, Source}
+import io.eels.{FilePattern, Schema, InternalRow, Reader, Source}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetReader
@@ -15,7 +15,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with StrictLogging
     AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
     val paths = pattern.toPaths
     val schemas = paths.map { path =>
       using(createReader(path)) { reader =>

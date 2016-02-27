@@ -2,25 +2,25 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.NonEmptyString
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, FrameSchema, SchemaType}
+import io.eels.{Column, Schema, SchemaType}
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends StrictLogging {
 
-  def toHiveFields(schema: FrameSchema): Seq[FieldSchema] = toHiveFields(schema.columns)
+  def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
   def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map { column =>
     new FieldSchema(column.name, toHiveType(column), "Created by eel")
   }
 
-  def fromHiveFields(schemas: Seq[FieldSchema]): FrameSchema = {
+  def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {
     logger.debug("Building frame schame from hive field schemas=" + schemas)
     val columns = schemas.map { s =>
       val (schemaType, precision, scale) = toSchemaType(s.getType)
       Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
     }
-    FrameSchema(columns.toList)
+    Schema(columns.toList)
   }
 
   val VarcharRegex = "varchar\\((\\d+\\))".r

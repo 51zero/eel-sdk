@@ -13,12 +13,12 @@ trait Source extends StrictLogging {
 
   val DefaultBufferSize = 1000
 
-  def schema: FrameSchema
+  def schema: Schema
   def readers: Seq[Reader]
 
   def toFrame(ioThreads: Int): Frame = new Frame {
 
-    override lazy val schema: FrameSchema = self.schema
+    override lazy val schema: Schema = self.schema
 
     override def buffer: Buffer = {
       import com.sksamuel.scalax.concurrent.ExecutorImplicits._

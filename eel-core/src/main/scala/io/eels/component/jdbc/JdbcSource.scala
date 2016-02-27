@@ -4,7 +4,7 @@ import java.sql.DriverManager
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Reader, InternalRow, Source}
+import io.eels.{Schema, Reader, InternalRow, Source}
 
 import scala.concurrent.duration._
 
@@ -70,7 +70,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     Seq(part)
   }
 
-  lazy val schema: FrameSchema = {
+  lazy val schema: Schema = {
 
     logger.info(s"Connecting to jdbc source $url...")
     using(DriverManager.getConnection(url)) { conn =>

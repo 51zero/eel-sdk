@@ -18,7 +18,7 @@ object RowUtils {
     })) ++ row.slice(index + 1, row.length)
   }
 
-  def toMap(schema: FrameSchema, row: InternalRow): Map[String, Any] = {
+  def toMap(schema: Schema, row: InternalRow): Map[String, Any] = {
     schema.columnNames.zip(row).map { case (field, value) => field -> value }.toMap
   }
 }

@@ -16,12 +16,12 @@ trait Frame {
 
   val DefaultBufferSize = 1000
 
-  def schema: FrameSchema
+  def schema: Schema
 
   def buffer: Buffer
 
   def join(other: Frame): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema.join(other.schema)
+    override def schema: Schema = outer.schema.join(other.schema)
 
     override def buffer: Buffer = new Buffer {
 
@@ -44,7 +44,7 @@ trait Frame {
   }
 
   def replace(from: String, target: Any): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -53,7 +53,7 @@ trait Frame {
   }
 
   def replace(columnName: String, from: String, target: Any): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -63,7 +63,7 @@ trait Frame {
   }
 
   def replace(columnName: String, fn: Any => Any): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -73,7 +73,7 @@ trait Frame {
   }
 
   def takeWhile(pred: InternalRow => Boolean): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -82,12 +82,12 @@ trait Frame {
   }
 
   def updateSchemaType(columnName: String, schemaType: SchemaType): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema.updateSchemaType(columnName, schemaType)
+    override def schema: Schema = outer.schema.updateSchemaType(columnName, schemaType)
     override def buffer: Buffer = outer.buffer
   }
 
   def takeWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -98,7 +98,7 @@ trait Frame {
 
   def except(other: Frame): Frame = new Frame {
 
-    override def schema: FrameSchema = outer.schema.removeColumns(other.schema.columnNames)
+    override def schema: Schema = outer.schema.removeColumns(other.schema.columnNames)
 
     override def buffer: Buffer = new Buffer {
       val buffer1 = outer.buffer
@@ -121,7 +121,7 @@ trait Frame {
   }
 
   def dropWhile(p: InternalRow => Boolean): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -130,7 +130,7 @@ trait Frame {
   }
 
   def dropWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -146,7 +146,7 @@ trait Frame {
     * workers pull through the rows. Each iterator (thread) uses its own count for the sample.
     */
   def sample(k: Int): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -156,7 +156,7 @@ trait Frame {
 
   def addColumn(name: String, defaultValue: Any): Frame = new Frame {
     require(!outer.schema.columnNames.contains(name), s"Column $name already exists")
-    override lazy val schema: FrameSchema = outer.schema.addColumn(name)
+    override lazy val schema: Schema = outer.schema.addColumn(name)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -165,7 +165,7 @@ trait Frame {
   }
 
   def removeColumn(columnName: String): Frame = new Frame {
-    override lazy val schema: FrameSchema = outer.schema.removeColumn(columnName)
+    override lazy val schema: Schema = outer.schema.removeColumn(columnName)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -177,7 +177,7 @@ trait Frame {
   }
 
   def updateColumn(column: Column): Frame = new Frame {
-    override lazy val schema: FrameSchema = outer.schema.updateColumn(column)
+    override lazy val schema: Schema = outer.schema.updateColumn(column)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(column)
@@ -187,12 +187,12 @@ trait Frame {
   }
 
   def renameColumn(nameFrom: String, nameTo: String): Frame = new Frame {
-    override lazy val schema: FrameSchema = outer.schema.renameColumn(nameFrom, nameTo)
+    override lazy val schema: Schema = outer.schema.renameColumn(nameFrom, nameTo)
     override def buffer: Buffer = outer.buffer
   }
 
   def explode(f: InternalRow => Seq[InternalRow]): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -201,7 +201,7 @@ trait Frame {
   }
 
   def fill(defaultValue: String): Frame = new Frame {
-    override lazy val schema: FrameSchema = outer.schema
+    override lazy val schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -214,7 +214,7 @@ trait Frame {
 
   def ++(frame: Frame): Frame = union(frame)
   def union(other: Frame): Frame = new Frame {
-    override lazy val schema: FrameSchema = outer.schema
+    override lazy val schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer1 = outer.buffer
       val buffer2 = other.buffer
@@ -232,11 +232,11 @@ trait Frame {
 
     lazy val outerSchema = outer.schema
 
-    override lazy val schema: FrameSchema = {
+    override lazy val schema: Schema = {
       val newColumns = columns.map { col =>
         outerSchema.columns.find(_.name == col).getOrElse(sys.error(s"$col is not in the source frame"))
       }
-      FrameSchema(newColumns.toList)
+      Schema(newColumns.toList)
     }
 
     override def buffer: Buffer = new Buffer {
@@ -256,7 +256,7 @@ trait Frame {
     * @return this frame, to allow for builder style chaining
     */
   def foreach[U](f: (InternalRow) => U): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -269,7 +269,7 @@ trait Frame {
   }
 
   def collect(pf: PartialFunction[InternalRow, InternalRow]): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -278,7 +278,7 @@ trait Frame {
   }
 
   def drop(k: Int): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val count = new AtomicInteger(0)
@@ -288,7 +288,7 @@ trait Frame {
   }
 
   def map(f: InternalRow => InternalRow): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -299,7 +299,7 @@ trait Frame {
   def filterNot(p: InternalRow => Boolean): Frame = filter(str => !p(str))
 
   def filter(p: InternalRow => Boolean): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -311,7 +311,7 @@ trait Frame {
     * Filters where the given column matches the given predicate.
     */
   def filter(columnName: String, p: Any => Boolean): Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
@@ -321,7 +321,7 @@ trait Frame {
   }
 
   def dropNullRows: Frame = new Frame {
-    override def schema: FrameSchema = outer.schema
+    override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
@@ -346,18 +346,18 @@ object Frame {
 
   import scala.collection.JavaConverters._
 
-  def apply(_schema: FrameSchema, first: InternalRow, rest: InternalRow*): Frame = apply(_schema, first +: rest)
-  def apply(_schema: FrameSchema, rows: Seq[InternalRow]): Frame = new Frame {
+  def apply(_schema: Schema, first: InternalRow, rest: InternalRow*): Frame = apply(_schema, first +: rest)
+  def apply(_schema: Schema, rows: Seq[InternalRow]): Frame = new Frame {
     override def buffer: Buffer = new Buffer {
       val queue = new ConcurrentLinkedQueue[InternalRow](rows.asJava)
       override def close(): Unit = ()
       override def iterator: Iterator[InternalRow] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
-    override def schema: FrameSchema = _schema
+    override def schema: Schema = _schema
   }
 
   def apply(first: Map[String, String], rest: Map[String, String]*): Frame = new Frame {
-    override lazy val schema: FrameSchema = FrameSchema(first.keys.map(Column.apply).toList)
+    override lazy val schema: Schema = Schema(first.keys.map(Column.apply).toList)
     override def buffer: Buffer = new Buffer {
       val queue = new ConcurrentLinkedQueue[InternalRow]((first +: rest).map(_.valuesIterator.toSeq).asJava)
       override def close(): Unit = ()
@@ -366,6 +366,6 @@ object Frame {
   }
 
   implicit def from[T <: Product : TypeTag : ClassTag](seq: Seq[T]): Frame = {
-    apply(FrameSchema.from[T], seq.map { item => item.productIterator.toSeq })
+    apply(Schema.from[T], seq.map { item => item.productIterator.toSeq })
   }
 }

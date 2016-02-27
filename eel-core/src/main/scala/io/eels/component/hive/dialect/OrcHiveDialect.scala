@@ -3,7 +3,7 @@ package io.eels.component.hive.dialect
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcStructInspector, StandardStructInspector}
-import io.eels.{FrameSchema, InternalRow}
+import io.eels.{Schema, InternalRow}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcFile, OrcStruct}
@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 object OrcHiveDialect extends HiveDialect with StrictLogging {
 
   // todo implement column pushdown
-  override def iterator(path: Path, schema: FrameSchema, ignored: Seq[String])
+  override def iterator(path: Path, schema: Schema, ignored: Seq[String])
                        (implicit fs: FileSystem): Iterator[InternalRow] = {
     logger.debug(s"Creating orc iterator for $path")
 
@@ -39,7 +39,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def writer(sourceSchema: FrameSchema, targetSchema: FrameSchema, path: Path)
+  override def writer(sourceSchema: Schema, targetSchema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating orc writer for $path")
 

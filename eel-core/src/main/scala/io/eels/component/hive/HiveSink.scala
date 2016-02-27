@@ -6,7 +6,7 @@ import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, Time
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
+import io.eels.{Schema, InternalRow, Sink, Writer}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -34,7 +34,7 @@ case class HiveSink(dbName: String,
   /**
     * Returns the schema for the hive destination as an Eel format schema object.
     */
-  def schema(implicit client: HiveMetaStoreClient): FrameSchema = {
+  def schema(implicit client: HiveMetaStoreClient): Schema = {
     val schema = client.getSchema(dbName, tableName)
     HiveSchemaFns.fromHiveFields(schema.asScala)
   }
@@ -59,7 +59,7 @@ case class HiveSink(dbName: String,
     // keep open a stream per partition path. This shouldn't be shared amongst threads until its made thread safe.
     val writers = mutable.Map.empty[Path, HiveWriter]
 
-    def getOrCreateHiveWriter(row: InternalRow, sourceSchema: FrameSchema): HiveWriter = {
+    def getOrCreateHiveWriter(row: InternalRow, sourceSchema: Schema): HiveWriter = {
       val parts = RowPartitionParts(row, partitionKeyNames, sourceSchema)
       val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
       writers.synchronized {
@@ -88,7 +88,7 @@ case class HiveSink(dbName: String,
     val latch = new CountDownLatch(ioThreads)
     val executor = Executors.newFixedThreadPool(ioThreads)
     val count = new AtomicLong(0)
-    var schema: FrameSchema = null
+    var schema: Schema = null
 
 
     for ( k <- 1 to ioThreads ) {
@@ -136,7 +136,7 @@ case class HiveSink(dbName: String,
         executor.awaitTermination(1, TimeUnit.HOURS)
       }
 
-      override def write(row: InternalRow, _schema: FrameSchema): Unit = {
+      override def write(row: InternalRow, _schema: Schema): Unit = {
         schema = _schema
         queue.put(row)
       }
@@ -187,7 +187,7 @@ object PartitionPart {
 // returns all the partition parts for a given row, if a row doesn't contain a value
 // for a part then an error is thrown
 object RowPartitionParts {
-  def apply(row: InternalRow, partNames: Seq[String], schema: FrameSchema): List[PartitionPart] = {
+  def apply(row: InternalRow, partNames: Seq[String], schema: Schema): List[PartitionPart] = {
     require(partNames.forall(schema.columnNames.contains), "FrameSchema must contain all partitions " + partNames)
     partNames.map { name =>
       val index = schema.indexOf(name)

@@ -3,7 +3,7 @@ package io.eels.component.sequence
 import java.io.StringWriter
 
 import com.github.tototoshi.csv.CSVWriter
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
+import io.eels.{Schema, InternalRow, Sink, Writer}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
@@ -22,7 +22,7 @@ case class SequenceSink(path: Path) extends Sink {
     var _writtenHeader = false
     val key = new IntWritable(0)
 
-    private def writeHeader(schema: FrameSchema): Unit = {
+    private def writeHeader(schema: Schema): Unit = {
       val csv = valuesToCsv(schema.columnNames)
       writer.append(key, new BytesWritable(csv.getBytes("UTF8")))
       _writtenHeader = true
@@ -37,7 +37,7 @@ case class SequenceSink(path: Path) extends Sink {
     }
 
     override def close(): Unit = writer.close()
-    override def write(row: InternalRow, schema: FrameSchema): Unit = {
+    override def write(row: InternalRow, schema: Schema): Unit = {
       self.synchronized {
         if (!_writtenHeader) writeHeader(schema)
         val csv = valuesToCsv(row)

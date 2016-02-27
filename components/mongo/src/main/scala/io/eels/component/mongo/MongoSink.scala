@@ -2,7 +2,7 @@ package io.eels.component.mongo
 
 import com.mongodb.{MongoClient, MongoClientURI}
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, FrameSchema, Sink, Writer}
+import io.eels.{InternalRow, Schema, Sink, Writer}
 import org.bson.Document
 
 case class MongoSinkConfig(uri: String, db: String, collection: String)
@@ -27,7 +27,7 @@ case class MongoSink(config: MongoSinkConfig)
       client.close()
     }
 
-    override def write(row: InternalRow, schema: FrameSchema): Unit = {
+    override def write(row: InternalRow, schema: Schema): Unit = {
       val doc = schema.columnNames.zip(row).foldLeft(new Document) { case (d, (key, value)) => d.append(key, value) }
       coll.insertOne(doc)
     }

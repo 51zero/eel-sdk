@@ -4,17 +4,17 @@ import java.nio.file.Path
 
 import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
-import io.eels.{FrameSchema, InternalRow, Reader, Source}
+import io.eels.{Schema, InternalRow, Reader, Source}
 
-case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) extends Source with Using {
+case class CsvSource(path: Path, overrideSchema: Option[Schema] = None) extends Source with Using {
 
-  def withSchema(schema: FrameSchema): CsvSource = copy(overrideSchema = Some(schema))
+  def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
 
-  override def schema: FrameSchema = overrideSchema.getOrElse {
+  override def schema: Schema = overrideSchema.getOrElse {
     val reader = CSVReader.open(path.toFile)
     using(reader) { reader =>
       val headers = reader.readNext().get
-      FrameSchema(headers)
+      Schema(headers)
     }
   }
 

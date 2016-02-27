@@ -50,12 +50,12 @@ object InternalRow {
   val PoisonPill: InternalRow = List(new {})
 }
 
-case class Row(schema: FrameSchema, values: Seq[Any]) {
+case class Row(schema: Schema, values: Seq[Any]) {
   override def toString(): String = {
     schema.columnNames.zip(values).map { case (column, value) => s"$column = ${if (value == null) "" else value.toString}" }.mkString("[", ",", "]")
   }
 }
 
 object Row {
-  def apply(schema: FrameSchema, first: Any, rest: Any*): Row = Row(schema, (first +: rest).toIndexedSeq)
+  def apply(schema: Schema, first: Any, rest: Any*): Row = Row(schema, (first +: rest).toIndexedSeq)
 }

@@ -8,7 +8,7 @@ import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
+import io.eels.{Schema, InternalRow, Sink, Writer}
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -100,7 +100,7 @@ class JdbcWriter(url: String,
   private val workers = new BoundedThreadPoolExecutor(props.threads, props.threads)
   private val batchCount = new AtomicLong(0)
   private val coordinator = Executors.newSingleThreadExecutor()
-  private val schemaRef = new AtomicReference[FrameSchema](null)
+  private val schemaRef = new AtomicReference[Schema](null)
   private var inserter: JdbcInserter = null
 
   coordinator.submit {
@@ -150,7 +150,7 @@ class JdbcWriter(url: String,
     workers.awaitTermination(1, TimeUnit.DAYS)
   }
 
-  override def write(row: InternalRow, schema: FrameSchema): Unit = {
+  override def write(row: InternalRow, schema: Schema): Unit = {
     // need an atomic ref here as this method will be called by multiple threads, and we need
     // to ensure the schema is visible to the coordinator thread when it calls ensureInserterCreated()
     if (schemaRef.get == null) schemaRef.set(schema)
@@ -160,7 +160,7 @@ class JdbcWriter(url: String,
 
 class JdbcInserter(url: String,
                    table: String,
-                   schema: FrameSchema,
+                   schema: Schema,
                    autoCommit: Boolean,
                    dialect: JdbcDialect) extends StrictLogging {
 

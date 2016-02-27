@@ -3,9 +3,9 @@ package io.eels.component.hive
 import java.util
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.FrameSchema
+import io.eels.Schema
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.api.{FieldSchema, Partition => HivePartition, SerDeInfo, StorageDescriptor, Table}
+import org.apache.hadoop.hive.metastore.api.{FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
 import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
@@ -130,7 +130,7 @@ object HiveOps extends StrictLogging {
 
   def createTable(databaseName: String,
                   tableName: String,
-                  schema: FrameSchema,
+                  schema: Schema,
                   partitionKeys: List[String] = Nil,
                   format: HiveFormat = HiveFormat.Text,
                   props: Map[String, String] = Map.empty,

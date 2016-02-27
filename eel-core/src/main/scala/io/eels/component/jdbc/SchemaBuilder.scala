@@ -3,11 +3,11 @@ package io.eels.component.jdbc
 import java.sql.{ResultSetMetaData, ResultSet}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Column}
+import io.eels.{Schema, Column}
 
 object SchemaBuilder extends StrictLogging {
 
-  def apply(rs: ResultSet, dialect: JdbcDialect): FrameSchema = {
+  def apply(rs: ResultSet, dialect: JdbcDialect): Schema = {
     logger.debug("Building frame schema from resultset")
 
     val md: ResultSetMetaData = rs.getMetaData
@@ -26,6 +26,6 @@ object SchemaBuilder extends StrictLogging {
       )
     }
 
-    FrameSchema(cols.toList)
+    Schema(cols.toList)
   }
 }

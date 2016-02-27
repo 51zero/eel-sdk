@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.nio.file.Path
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{InternalRow, FrameSchema, Reader, Source}
+import io.eels.{InternalRow, Schema, Reader, Source}
 import org.apache.avro.file.{DataFileReader, SeekableFileInput}
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 
@@ -16,11 +16,11 @@ case class AvroSource(path: Path) extends Source with Using {
     new DataFileReader[GenericRecord](new SeekableFileInput(path.toFile), datumReader)
   }
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
     using(createReader) { reader =>
       val record = reader.next()
       val columns = record.getSchema.getFields.asScala.map(_.name)
-      FrameSchema(columns)
+      Schema(columns)
     }
   }
   override def readers: Seq[Reader] = {

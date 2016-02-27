@@ -1,7 +1,7 @@
 package io.eels.component.kafka
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.eels.{FrameSchema, InternalRow}
+import io.eels.{Schema, InternalRow}
 
 import scala.collection.JavaConverters._
 
@@ -17,5 +17,5 @@ object JsonKafkaDeserializer extends KafkaDeserializer {
 
 object JsonKafkaSerializer extends KafkaSerializer {
   val mapper = new ObjectMapper
-  override def apply(row: InternalRow, schema: FrameSchema): Array[Byte] = mapper.writeValueAsBytes(row)
+  override def apply(row: InternalRow, schema: Schema): Array[Byte] = mapper.writeValueAsBytes(row)
 }

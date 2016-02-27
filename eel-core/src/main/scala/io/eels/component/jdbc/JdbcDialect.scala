@@ -1,18 +1,18 @@
 package io.eels.component.jdbc
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Column, FrameSchema, SchemaType}
+import io.eels.{InternalRow, Column, Schema, SchemaType}
 
 trait JdbcDialect {
-  def create(schema: FrameSchema, table: String): String
-  def insert(row: InternalRow, schema: FrameSchema, table: String): String
+  def create(schema: Schema, table: String): String
+  def insert(row: InternalRow, schema: Schema, table: String): String
   def toJdbcType(column: Column): String
   def fromJdbcType(i: Int): SchemaType
 
   /**
     * Returns a parameterized insert query
     */
-  def insertQuery(schema: FrameSchema, table: String): String
+  def insertQuery(schema: Schema, table: String): String
 
 }
 
@@ -78,18 +78,18 @@ trait GenericJdbcDialect extends JdbcDialect with StrictLogging {
     case _                            => SchemaType.Unsupported
   }
 
-  override def create(schema: FrameSchema, table: String): String = {
+  override def create(schema: Schema, table: String): String = {
     val columns = schema.columns.map(c => s"${c.name} ${toJdbcType(c)}").mkString("(", ",", ")")
     s"CREATE TABLE $table $columns"
   }
 
-  override def insertQuery(schema: FrameSchema, table: String): String = {
+  override def insertQuery(schema: Schema, table: String): String = {
     val columns = schema.columnNames.mkString(",")
     val parameters = List.fill(schema.columns.size)("?").mkString(",")
     s"INSERT INTO $table ($columns) VALUES ($parameters)"
   }
 
-  override def insert(row: InternalRow, schema: FrameSchema, table: String): String = {
+  override def insert(row: InternalRow, schema: Schema, table: String): String = {
     val columns = schema.columnNames.mkString(",")
     val values = row.mkString("'", "','", "'")
     s"INSERT INTO $table ($columns) VALUES ($values)"

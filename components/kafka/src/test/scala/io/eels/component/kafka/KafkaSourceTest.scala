@@ -4,7 +4,7 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 import com.sksamuel.kafka.embedded.{EmbeddedKafka, EmbeddedKafkaConfig}
-import io.eels.{Column, FrameSchema, Row, SchemaType}
+import io.eels.{Column, Schema, Row, SchemaType}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
@@ -38,7 +38,7 @@ class KafkaSourceTest extends WordSpec with Matchers with BeforeAndAfterAll {
       val rows = source.toSeq
       rows.size shouldBe 100
       rows.head shouldBe
-        Row(FrameSchema(List(
+        Row(Schema(List(
           Column("0", SchemaType.String, false, 0, 0, true, None),
           Column("1", SchemaType.String, false, 0, 0, true, None)
         )), List("sam", "london"))

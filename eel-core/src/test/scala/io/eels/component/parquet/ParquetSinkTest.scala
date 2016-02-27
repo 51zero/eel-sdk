@@ -1,6 +1,6 @@
 package io.eels.component.parquet
 
-import io.eels.{Column, Frame, FrameSchema, SchemaType}
+import io.eels.{Column, Frame, Schema, SchemaType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
@@ -26,7 +26,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
       frame.to(ParquetSink(path))
       val people = ParquetSource(path)
       people.schema shouldBe {
-        FrameSchema(List(
+        Schema(List(
           Column("name", SchemaType.String, true, 0, 0, true, None),
           Column("job", SchemaType.String, true, 0, 0, true, None),
           Column("location", SchemaType.String, true, 0, 0, true, None)))
