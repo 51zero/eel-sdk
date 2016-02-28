@@ -6,14 +6,14 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.Schema
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.{FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
-import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
+import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
 
 object HiveOps extends StrictLogging {
 
   def partitions(dbName: String, tableName: String)
-                (implicit client: HiveMetaStoreClient): List[Partition] = {
+                (implicit client: IMetaStoreClient): List[Partition] = {
     client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala.map(Partition.apply).toList
   }
 
@@ -23,7 +23,7 @@ object HiveOps extends StrictLogging {
     * directly from the hive metastore.
     */
   def partitionMap(dbName: String, tableName: String)
-                  (implicit client: HiveMetaStoreClient): Map[String, Set[String]] = {
+                  (implicit client: IMetaStoreClient): Map[String, Set[String]] = {
     client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala
       .flatMap(p => Partition(p).parts)
       .groupBy(_.key)
@@ -36,7 +36,7 @@ object HiveOps extends StrictLogging {
     * directly from the hive metastore.
     */
   def partitionValues(dbName: String, tableName: String, keys: Seq[String])
-                     (implicit client: HiveMetaStoreClient): List[Set[String]] = {
+                     (implicit client: IMetaStoreClient): List[Set[String]] = {
     partitionMap(dbName, tableName).collect { case (key, values) if keys contains key => values }.toList
   }
 
@@ -46,7 +46,7 @@ object HiveOps extends StrictLogging {
     * directly from the hive metastore.
     */
   def partitionValues(dbName: String, tableName: String, key: String)
-                     (implicit client: HiveMetaStoreClient): Set[String] = {
+                     (implicit client: IMetaStoreClient): Set[String] = {
     partitionMap(dbName, tableName).getOrElse(key, Set.empty)
   }
 
@@ -56,7 +56,7 @@ object HiveOps extends StrictLogging {
     * taken from the values for the table.
     */
   def createPartition(dbName: String, tableName: String, partition: Partition)
-                     (implicit client: HiveMetaStoreClient): Unit = {
+                     (implicit client: IMetaStoreClient): Unit = {
     val table = client.getTable(dbName, tableName)
     val location = new Path(table.getSd.getLocation, partition.name)
     createPartition(dbName, tableName, partition, location)
@@ -68,7 +68,7 @@ object HiveOps extends StrictLogging {
     * location path. The values for the serialzation formats are taken from the values for the table.
     */
   def createPartition(dbName: String, tableName: String, partition: Partition, location: Path)
-                     (implicit client: HiveMetaStoreClient): Unit = {
+                     (implicit client: IMetaStoreClient): Unit = {
 
     // we fetch the table so we can copy the serde/format values from the table. It makes no sense
     // to store a partition with different serialization formats to other partitions.
@@ -89,38 +89,38 @@ object HiveOps extends StrictLogging {
     client.add_partition(newPartition)
   }
 
-  def hivePartitions(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[HivePartition] = {
+  def hivePartitions(dbName: String, tableName: String)(implicit client: IMetaStoreClient): List[HivePartition] = {
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
   }
 
   def createTimeAsInt: Int = (System.currentTimeMillis / 1000).toInt
 
-  def partitionKeys(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[FieldSchema] = {
+  def partitionKeys(dbName: String, tableName: String)(implicit client: IMetaStoreClient): List[FieldSchema] = {
     client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
   }
 
-  def partitionKeyNames(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): List[String] = {
+  def partitionKeyNames(dbName: String, tableName: String)(implicit client: IMetaStoreClient): List[String] = {
     partitionKeys(dbName, tableName).map(_.getName)
   }
 
-  def tableExists(databaseName: String, tableName: String)(implicit client: HiveMetaStoreClient): Boolean = {
+  def tableExists(databaseName: String, tableName: String)(implicit client: IMetaStoreClient): Boolean = {
     client.tableExists(databaseName, tableName)
   }
 
-  def tableFormat(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): String = {
+  def tableFormat(dbName: String, tableName: String)(implicit client: IMetaStoreClient): String = {
     client.getTable(dbName, tableName).getSd.getInputFormat
   }
 
-  def location(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): String = {
+  def location(dbName: String, tableName: String)(implicit client: IMetaStoreClient): String = {
     client.getTable(dbName, tableName).getSd.getLocation
   }
 
-  def tablePath(dbName: String, tableName: String)(implicit client: HiveMetaStoreClient): Path = {
+  def tablePath(dbName: String, tableName: String)(implicit client: IMetaStoreClient): Path = {
     new Path(location(dbName, tableName))
   }
 
   def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart])
-                   (implicit client: HiveMetaStoreClient): Path = {
+                   (implicit client: IMetaStoreClient): Path = {
     partitionPath(dbName, tableName, parts, tablePath(dbName, tableName))
   }
 
@@ -134,7 +134,7 @@ object HiveOps extends StrictLogging {
   def partitionExists(dbName: String,
                       tableName: String,
                       parts: Seq[PartitionPart])
-                     (implicit client: HiveMetaStoreClient): Boolean = {
+                     (implicit client: IMetaStoreClient): Boolean = {
     val partitionName = parts.map(_.unquoted).mkString("/")
     logger.debug(s"Checking if partition exists '$partitionName'")
     try {
@@ -149,7 +149,7 @@ object HiveOps extends StrictLogging {
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
                                  parts: Seq[PartitionPart])
-                                (implicit client: HiveMetaStoreClient): Unit = {
+                                (implicit client: IMetaStoreClient): Unit = {
     val partitionName = parts.map(_.unquoted).mkString("/")
     logger.debug(s"Ensuring partition exists '$partitionName'")
     val exists = try {
@@ -177,7 +177,7 @@ object HiveOps extends StrictLogging {
                   tableType: TableType = TableType.MANAGED_TABLE,
                   location: Option[String] = None,
                   overwrite: Boolean = false)
-                 (implicit client: HiveMetaStoreClient): Boolean = {
+                 (implicit client: IMetaStoreClient): Boolean = {
 
     if (overwrite) {
       logger.debug("Removing table if exists (overwrite mode = true)")
