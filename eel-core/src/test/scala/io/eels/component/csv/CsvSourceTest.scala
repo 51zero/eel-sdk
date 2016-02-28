@@ -47,5 +47,11 @@ class CsvSourceTest extends WordSpec with Matchers {
         Column("c", SchemaType.String, true)
       ))
     }
+    "support delimiters" in {
+      val file = getClass.getResource("/psv.psv").toURI
+      val path = Paths.get(file)
+      CsvSource(path).withDelimiter('|').toSeq.map(_.values) shouldBe Seq(Seq("e", "f", "g"))
+      CsvSource(path).withDelimiter('|').withHeader(false).toSet.map(_.values) shouldBe Set(Seq("a", "b", "c"), Seq("e", "f", "g"))
+    }
   }
 }

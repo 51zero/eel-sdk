@@ -2,18 +2,52 @@ package io.eels.component.csv
 
 import java.nio.file.Path
 
-import com.github.tototoshi.csv.CSVReader
+import com.github.tototoshi.csv.{CSVFormat, CSVReader, QUOTE_MINIMAL, Quoting}
 import com.sksamuel.scalax.io.Using
 import io.eels._
 
+trait CsvFormat {
+  val delimiter: Char
+  val quoteChar: Char
+  val escapeChar: Char
+  val lineTerminator: String
+}
+
+trait DefaultCsvFormat extends CsvFormat {
+  override val delimiter: Char = ','
+  override val quoteChar: Char = '"'
+  override val escapeChar: Char = '"'
+  override val lineTerminator: String = "\r\n"
+}
+
+object DefaultCsvFormat extends DefaultCsvFormat
+
 case class CsvSource(path: Path,
                      overrideSchema: Option[Schema] = None,
+                     format: CsvFormat = DefaultCsvFormat,
                      inferrer: SchemaInferrer = StringInferrer,
                      hasHeader: Boolean = true) extends Source with Using {
+
+  def withDelimiter(c: Char): CsvSource = copy(format = new CsvFormat {
+    override val delimiter: Char = c
+    override val quoteChar: Char = format.quoteChar
+    override val escapeChar: Char = format.escapeChar
+    override val lineTerminator: String = format.lineTerminator
+  })
+
+  implicit val csvFormat: CSVFormat = new CSVFormat {
+    override val delimiter: Char = format.delimiter
+    override val quoteChar: Char = format.quoteChar
+    override val treatEmptyLineAsNil: Boolean = false
+    override val escapeChar: Char = format.escapeChar
+    override val lineTerminator: String = format.lineTerminator
+    override val quoting: Quoting = QUOTE_MINIMAL
+  }
 
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
   def withHeader(header: Boolean): CsvSource = copy(hasHeader = header)
   def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
+  def withFormat(format: CsvFormat): CsvSource = copy(format = format)
 
   override def schema: Schema = overrideSchema.getOrElse {
     val reader = CSVReader.open(path.toFile)
