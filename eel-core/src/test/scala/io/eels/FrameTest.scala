@@ -13,18 +13,55 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   val frame = Frame(List("a", "b"), List("1", "2"), List("3", "4"))
 
-  "Frame" should {
-    "be immutable and repeatable" in {
-      val f = frame.drop(1)
-      f.drop(1).size shouldBe 0
-      f.size shouldBe 1
+  "Frame.addColumnIfNotExists" should {
+    "not add column if already exists" in {
+      val f = frame.addColumnIfNotExists("a", "bibble")
+      f.schema shouldBe Schema(List(Column("a"), Column("b")))
+      f.head.get shouldBe List("1", "2")
     }
-    "support foreach" in {
+    "add column if it does not exist" in {
+      val f = frame.addColumnIfNotExists("testy", "bibble")
+      f.schema shouldBe Schema(List(Column("a"), Column("b"), Column("testy")))
+      f.head.get shouldBe List("1", "2", "bibble")
+    }
+  }
+
+  "Frame.addColumn" should {
+    "support adding columns" in {
+      val f = frame.addColumn("testy", "bibble")
+      f.schema shouldBe Schema(List(Column("a"), Column("b"), Column("testy")))
+      f.head.get shouldBe List("1", "2", "bibble")
+    }
+  }
+
+  "Frame.foreach" should {
+    "execute for every row" in {
       val count = new AtomicInteger(0)
       frame.foreach(_ => count.incrementAndGet).size
       eventually {
         count.get() shouldBe 2
       }
+    }
+  }
+
+  "Frame.removeColumn" should {
+    "remove column" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      val f = frame.removeColumn("location")
+      f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
+      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
+    }
+  }
+
+  "Frame" should {
+    "be immutable and repeatable" in {
+      val f = frame.drop(1)
+      f.drop(1).size shouldBe 0
+      f.size shouldBe 1
     }
     "support forall" in {
       frame.forall(_.size == 1) shouldBe false
@@ -43,21 +80,6 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       val rows = Iterator.tabulate(10000)(k => Seq("1")).toList
       val frame = Frame(Schema(Seq("k")), rows)
       frame.drop(100).toSeq.size shouldBe 9900
-    }
-    "support adding columns" in {
-      val f = frame.addColumn("testy", "bibble")
-      f.head.get shouldBe List("1", "2", "bibble")
-      f.schema shouldBe Schema(List(Column("a"), Column("b"), Column("testy")))
-    }
-    "support removing columns" in {
-      val frame = Frame(
-        List("name", "location", "postcode"),
-        List("sam", "aylesbury", "hp22"),
-        List("ham", "buckingham", "mk10")
-      )
-      val f = frame.removeColumn("location")
-      f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
-      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
     "support column projection" in {
       val frame = Frame(

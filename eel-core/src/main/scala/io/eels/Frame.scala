@@ -154,13 +154,27 @@ trait Frame {
     }
   }
 
-  def addColumn(name: String, defaultValue: Any): Frame = new Frame {
-    require(!outer.schema.columnNames.contains(name), s"Column $name already exists")
-    override lazy val schema: Schema = outer.schema.addColumn(name)
+  def addColumn(name: String, defaultValue: Any): Frame = addColumn(Column(name), defaultValue)
+  def addColumn(column: Column, defaultValue: Any): Frame = new Frame {
+    require(!outer.schema.columnNames.contains(column.name), s"Column $column already exists")
+    override lazy val schema: Schema = outer.schema.addColumn(column)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       override def close(): Unit = buffer.close()
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(_ :+ defaultValue)
+    }
+  }
+
+  def addColumnIfNotExists(name: String, defaultValue: Any): Frame = addColumnIfNotExists(Column(name), defaultValue)
+  def addColumnIfNotExists(column: Column, defaultValue: Any): Frame = new Frame {
+    override lazy val schema: Schema = outer.schema.addColumnIfNotExists(column)
+    override def buffer: Buffer = new Buffer {
+      val buffer = outer.buffer
+      val exists = outer.schema.columnNames.contains(column.name)
+      override def close(): Unit = buffer.close()
+      override def iterator: Iterator[InternalRow] = {
+        if (exists) buffer.iterator else buffer.iterator.map(_ :+ defaultValue)
+      }
     }
   }
 
