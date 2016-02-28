@@ -4,8 +4,6 @@ import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
 case class Schema(columns: List[Column]) {
-
-
   require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
 
   def apply(name: String): Column = columns.find(_.name == name).get
@@ -66,6 +64,10 @@ case class Schema(columns: List[Column]) {
       val nullString = if (column.nullable) "null" else "not null"
       s"- ${column.name} [${column.`type`} $nullString scale=${column.scale} precision=${column.precision} $signedString]"
     }.mkString("\n")
+  }
+
+  def ddl(table: String): String = {
+    s"CREATE TABLE $table " + columns.map(col => col.name + " " + col.`type`).mkString("(", ", ", ")")
   }
 }
 
