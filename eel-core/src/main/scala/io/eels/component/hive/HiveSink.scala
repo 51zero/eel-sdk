@@ -59,9 +59,14 @@ case class HiveSink(dbName: String,
     val writers = mutable.Map.empty[String, HiveWriter]
 
     def getOrCreateHiveWriter(row: InternalRow, sourceSchema: Schema, k: Long): HiveWriter = {
+
       val parts = RowPartitionParts(row, partitionKeyNames, sourceSchema)
       val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
       writers.getOrElseUpdate(partPath.toString + "_" + k, {
+
+        // this is not thread safe, so each thread needs its own copy when in here
+        implicit val client = new HiveMetaStoreClient(hiveConf)
+
         val filePath = new Path(partPath, "part_" + System.nanoTime + "_" + k)
         logger.debug(s"Creating hive writer for $filePath")
         if (dynamicPartitioning) {
