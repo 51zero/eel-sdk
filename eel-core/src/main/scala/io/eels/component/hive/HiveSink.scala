@@ -14,11 +14,11 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-case class HiveSink(dbName: String,
-                    tableName: String,
-                    ioThreads: Int = 4,
-                    dynamicPartitioning: Boolean = true,
-                    bufferSize: Int = 1000)
+case class HiveSink(private val dbName: String,
+                    private val tableName: String,
+                    private val ioThreads: Int = 4,
+                    private val dynamicPartitioning: Boolean = true,
+                    private val bufferSize: Int = 1000)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
 
   val config = ConfigFactory.load()
@@ -26,6 +26,7 @@ case class HiveSink(dbName: String,
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
+  def withBufferSize(bufferSize: Int): HiveSink = copy(bufferSize = bufferSize)
 
   /**
     * Returns the schema for the hive destination as an Eel format schema object.
