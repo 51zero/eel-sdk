@@ -205,6 +205,11 @@ trait Frame {
     override def buffer: Buffer = outer.buffer
   }
 
+  def stripFromColumnName(chars: Seq[Char]): Frame = new Frame {
+    override lazy val schema: Schema = outer.schema.stripFromColumnName(chars)
+    override def buffer: Buffer = outer.buffer
+  }
+
   def explode(f: InternalRow => Seq[InternalRow]): Frame = new Frame {
     override def schema: Schema = outer.schema
     override def buffer: Buffer = new Buffer {

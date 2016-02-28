@@ -44,6 +44,19 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
+
+  "Frame.stripFromColumnName" should {
+    "remove offending characters" in {
+      val frame = Frame(
+        List("name", "#location", "!postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      frame.stripFromColumnName(Seq('#', '!', 'p')).schema shouldBe
+        Schema(List(Column("name"), Column("location"),Column("ostcode")))
+    }
+  }
+
   "Frame.removeColumn" should {
     "remove column" in {
       val frame = Frame(

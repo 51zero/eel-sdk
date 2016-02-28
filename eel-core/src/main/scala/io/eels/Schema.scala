@@ -4,6 +4,8 @@ import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
 case class Schema(columns: List[Column]) {
+
+
   require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
 
   def apply(name: String): Column = columns.find(_.name == name).get
@@ -17,6 +19,11 @@ case class Schema(columns: List[Column]) {
   def addColumn(col: Column): Schema = {
     require(!columnNames.contains(col.name), s"Column ${col.name} already exists")
     copy(columns :+ col)
+  }
+
+  def stripFromColumnName(chars: Seq[Char]): Schema = {
+    def strip(name: String): String = chars.foldLeft(name) { (str, char) => str.replace(char.toString, "") }
+    Schema(columns.map(col => col.copy(name = strip(col.name))))
   }
 
   def addColumnIfNotExists(col: Column): Schema = if (columnNames.contains(col.name)) this else addColumn(col)
