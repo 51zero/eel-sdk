@@ -45,6 +45,7 @@ object Main extends App {
   }
 }
 
+@deprecated("will use the new source and sink parsers", "0.33.0")
 object SinkFn {
   val HiveRegex = "hive:(.*?):(.*?)(\\?.*?)?".r
   def apply(uri: String)(implicit fs: FileSystem, hiveConf: HiveConf): Sink = uri match {
@@ -56,6 +57,7 @@ object SinkFn {
   }
 }
 
+@deprecated("will use the new source and sink parsers", "0.33.0")
 object SourceFn {
   val HiveRegex = "hive:(.*?):(.*?)".r
   def apply(uri: String)(implicit fs: FileSystem, hiveConf: HiveConf): Source = uri match {

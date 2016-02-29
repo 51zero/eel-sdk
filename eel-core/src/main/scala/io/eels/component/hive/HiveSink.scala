@@ -6,13 +6,14 @@ import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, Time
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Schema, InternalRow, Sink, Writer}
+import io.eels.{InternalRow, Schema, Sink, Writer}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.util.control.NonFatal
 
 case class HiveSink(private val dbName: String,
                     private val tableName: String,
@@ -131,7 +132,14 @@ case class HiveSink(private val dbName: String,
     executor.submit {
       latch.await(1, TimeUnit.DAYS)
       logger.debug(s"Latch released; closing ${writers.size} hive writers")
-      writers.values.foreach(_.close)
+      writers.values.foreach { writer =>
+        try {
+          writer.close()
+        } catch {
+          case NonFatal(e) =>
+            logger.warn("Could not close writer", e)
+        }
+      }
     }
 
     executor.shutdown()
@@ -153,6 +161,7 @@ case class HiveSink(private val dbName: String,
 
 object HiveSink {
 
+  @deprecated("functionality should move to the HiveSinkBuilder", "0.33.0")
   def apply(dbName: String, tableName: String, params: Map[String, List[String]])
            (implicit fs: FileSystem, hiveConf: HiveConf): HiveSink = {
     val dynamicPartitioning = params.get("dynamicPartitioning").map(_.head).getOrElse("false") == "true"
@@ -168,11 +177,11 @@ object HiveSink {
 // for a part then an error is thrown
 object RowPartitionParts {
   def apply(row: InternalRow, partNames: Seq[String], schema: Schema): List[PartitionPart] = {
-    require(partNames.forall(schema.columnNames.contains), "FrameSchema must contain all partitions " + partNames)
+    require(partNames.forall(schema.columnNames.contains), "Schema must contain all partitions " + partNames)
     partNames.map { name =>
       val index = schema.indexOf(name)
       val value = row(index)
-      require(!value.toString.contains(" "), "Values for partition fields cannot contain spaces")
+      require(!value.toString.contains(" "), s"Values for partitions cannot contain spaces $name=$value (index $index)")
       PartitionPart(name, value.toString)
     }.toList
   }
