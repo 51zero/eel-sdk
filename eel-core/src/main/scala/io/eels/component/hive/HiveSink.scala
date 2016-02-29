@@ -49,6 +49,7 @@ case class HiveSink(private val dbName: String,
     }
 
     val tablePath = HiveOps.tablePath(dbName, tableName)
+    val lock = new Object {}
 
     val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
     logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
@@ -71,10 +72,16 @@ case class HiveSink(private val dbName: String,
         val filePath = new Path(partPath, "part_" + System.nanoTime + "_" + k)
         logger.debug(s"Creating hive writer for $filePath")
         if (dynamicPartitioning) {
-          if (parts.nonEmpty)
-            HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+          if (parts.nonEmpty) {
+            // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
+            // trying to create a partition at the same time. This is virtually guaranteed to happen if the data
+            // is in any way sorted
+            lock.synchronized {
+              HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+            }
+          }
         } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
-          sys.error(s"Partition $partPath does not exist and dynamicPartitioning=false")
+          sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
         }
         val targetSchema = if (includePartitionsInData) {
           HiveSink.this.schema

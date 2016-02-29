@@ -24,10 +24,11 @@ object Partition {
   }
 }
 
-// represents part of a partition, eg a single key value pair, which is what people might think a partition
-// is normally. For example, name=sam is not a partition in hive speak, doesn't seem to have a name in hive.
-// So here we call it PartitionPart
+// represents part of a partition, eg a single key=value pair, which is what people might think a partition
+// is normally. For example, name=sam is not a partition in hive speak (it doesn't seem to have a name in hive)
+// so I've decided to call it PartitionPart
 case class PartitionPart(key: String, value: String) {
+  // returns the key value part in the standard hive key=value format
   def unquoted: String = s"$key=$value"
 }
 
