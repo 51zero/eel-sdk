@@ -29,7 +29,8 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "com.github.tototoshi"        %% "scala-csv"            % "1.2.2",
+      "com.github.tototoshi"        %% "scala-csv"            % "1.3.0",
+      "com.univocity"               % "univocity-parsers"     % "2.0.0",
       "org.scala-lang"              % "scala-reflect"         % scalaVersion.value,
       "com.sksamuel.scalax"         %% "scalax"               % "1.23.1",
       "com.typesafe"                % "config"                % "1.2.1",

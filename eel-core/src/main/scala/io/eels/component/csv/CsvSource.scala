@@ -2,8 +2,8 @@ package io.eels.component.csv
 
 import java.nio.file.Path
 
-import com.github.tototoshi.csv.{CSVFormat, CSVReader, QUOTE_MINIMAL, Quoting}
 import com.sksamuel.scalax.io.Using
+import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 import io.eels._
 
 trait CsvFormat {
@@ -28,6 +28,16 @@ case class CsvSource(path: Path,
                      inferrer: SchemaInferrer = StringInferrer,
                      hasHeader: Boolean = true) extends Source with Using {
 
+  private def createParser: CsvParser = {
+    val settings = new CsvParserSettings()
+    settings.getFormat.setDelimiter(format.delimiter)
+    settings.getFormat.setQuote(format.quoteChar)
+    settings.getFormat.setQuoteEscape(format.escapeChar)
+    settings.setDelimiterDetectionEnabled(true)
+    settings.setHeaderExtractionEnabled(false)
+    new com.univocity.parsers.csv.CsvParser(settings)
+  }
+
   def withDelimiter(c: Char): CsvSource = copy(format = new CsvFormat {
     override val delimiter: Char = c
     override val quoteChar: Char = format.quoteChar
@@ -35,59 +45,33 @@ case class CsvSource(path: Path,
     override val lineTerminator: String = format.lineTerminator
   })
 
-  implicit val csvFormat: CSVFormat = new CSVFormat {
-    override val delimiter: Char = format.delimiter
-    override val quoteChar: Char = format.quoteChar
-    override val treatEmptyLineAsNil: Boolean = false
-    override val escapeChar: Char = format.escapeChar
-    override val lineTerminator: String = format.lineTerminator
-    override val quoting: Quoting = QUOTE_MINIMAL
-  }
-
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
   def withHeader(header: Boolean): CsvSource = copy(hasHeader = header)
   def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
   def withFormat(format: CsvFormat): CsvSource = copy(format = format)
 
   override def schema: Schema = overrideSchema.getOrElse {
-    val reader = CSVReader.open(path.toFile)
-    using(reader) { reader =>
-      val headers = reader.readNext().get
-      if (hasHeader)
-        inferrer(headers)
-      else
-        inferrer(List.tabulate(headers.size)(_.toString))
-    }
+    val parser = createParser
+    parser.beginParsing(path.toFile)
+    val headers = parser.parseNext.toSeq
+    parser.stopParsing()
+    if (hasHeader)
+      inferrer(headers)
+    else
+      inferrer(List.tabulate(headers.size)(_.toString))
   }
 
   override def readers: Seq[Reader] = {
-
-    val reader = CSVReader.open(path.toFile)
-    val iter = reader.iterator
-
-    if (hasHeader) {
-      if (iter.hasNext)
-        iter.next
-    }
-
-    val part = new Reader {
-
-      override def close(): Unit = reader.close()
-
-      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
-
-        override def hasNext: Boolean = {
-          val hasNext = iter.hasNext
-          if (!hasNext)
-            reader.close()
-          hasNext
-        }
-
-        override def next: InternalRow = iter.next
+    val parser = createParser
+    parser.beginParsing(path.toFile)
+    val reader = new Reader {
+      override def close(): Unit = parser.stopParsing()
+      override def iterator: Iterator[InternalRow] = {
+        val k = if (hasHeader) 1 else 0
+        Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(k).map(_.toSeq)
       }
     }
-
-    Seq(part)
+    Seq(reader)
   }
 }
 

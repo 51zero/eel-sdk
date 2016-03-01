@@ -117,7 +117,7 @@ case class HiveSink(private val dbName: String,
               writer.write(rowWithoutPartitions.unzip._2)
             }
             val j = count.incrementAndGet()
-            if (j % 10000 == 0)
+            if (j % 100000 == 0)
               logger.debug(s"Written $j / ? =>")
           }
         } catch {

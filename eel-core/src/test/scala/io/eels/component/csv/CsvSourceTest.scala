@@ -21,7 +21,8 @@ class CsvSourceTest extends WordSpec with Matchers {
       ))
     }
     "read from path" in {
-      CsvSource(path).size shouldBe 3
+      CsvSource(path).withHeader(false).size shouldBe 4
+      CsvSource(path).withHeader(true).size shouldBe 3
     }
     "allow specifying manual schema" in {
       val schema = Schema(List(
