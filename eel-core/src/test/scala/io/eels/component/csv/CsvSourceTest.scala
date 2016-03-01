@@ -20,6 +20,16 @@ class CsvSourceTest extends WordSpec with Matchers {
         Column("c", SchemaType.String, true)
       ))
     }
+    "support reading empty values as null" in {
+      val file = getClass.getResource("/csvwithempty.csv").toURI
+      val path = Paths.get(file)
+      CsvSource(path).withEmptyCellValue(null).toSet.map(_.values) shouldBe Set(Seq("1", null, "3"))
+    }
+    "support reading empty values with replacement value" in {
+      val file = getClass.getResource("/csvwithempty.csv").toURI
+      val path = Paths.get(file)
+      CsvSource(path).withEmptyCellValue("foo").toSet.map(_.values) shouldBe Set(Seq("1", "foo", "3"))
+    }
     "read from path" in {
       CsvSource(path).withHeader(Header.FirstRow).size shouldBe 3
       CsvSource(path).withHeader(Header.None).size shouldBe 4

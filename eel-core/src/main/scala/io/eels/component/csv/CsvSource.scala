@@ -22,6 +22,7 @@ case class CsvSource(path: Path,
                      ignoreLeadingWhitespaces: Boolean = true,
                      ignoreTrailingWhitespaces: Boolean = true,
                      skipEmptyLines: Boolean = true,
+                     emptyCellValue: Option[String] = None,
                      header: Header = Header.FirstRow) extends Source with Using {
 
   private def createParser: CsvParser = {
@@ -36,6 +37,8 @@ case class CsvSource(path: Path,
     settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
     settings.setSkipEmptyLines(skipEmptyLines)
     settings.setCommentCollectionEnabled(true)
+    settings.setEmptyValue(emptyCellValue.orNull)
+    settings.setNullValue(emptyCellValue.orNull)
     new com.univocity.parsers.csv.CsvParser(settings)
   }
 
@@ -46,13 +49,17 @@ case class CsvSource(path: Path,
   def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
   def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
   def withFormat(format: CsvFormat): CsvSource = copy(format = format)
+  def withEmptyCellValue(emptyCellValue: String): CsvSource = copy(emptyCellValue = Some(emptyCellValue))
+  def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
+  def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
+  def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
 
   override def schema: Schema = overrideSchema.getOrElse {
     val parser = createParser
     parser.beginParsing(path.toFile)
     val headers = header match {
       case Header.None =>
-        val headers = parser.parseNext.toSeq
+        val headers = parser.parseNext
         List.tabulate(headers.size)(_.toString)
       case Header.FirstComment =>
         while (parser.getContext.lastComment == null) {
