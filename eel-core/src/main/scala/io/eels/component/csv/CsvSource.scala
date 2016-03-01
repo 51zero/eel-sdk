@@ -6,25 +6,11 @@ import com.sksamuel.scalax.io.Using
 import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 import io.eels._
 
-trait CsvFormat {
-  val delimiter: Char
-  val quoteChar: Char
-  val escapeChar: Char
-  val lineTerminator: String
-}
-
-trait DefaultCsvFormat extends CsvFormat {
-  override val delimiter: Char = ','
-  override val quoteChar: Char = '"'
-  override val escapeChar: Char = '"'
-  override val lineTerminator: String = "\n"
-}
-
-object DefaultCsvFormat extends DefaultCsvFormat
+case class CsvFormat(delimiter: Char = ',', quoteChar: Char = '"', quoteEscape: Char = '"', lineSeparator: String = "\n")
 
 case class CsvSource(path: Path,
                      overrideSchema: Option[Schema] = None,
-                     format: CsvFormat = DefaultCsvFormat,
+                     format: CsvFormat = CsvFormat(),
                      inferrer: SchemaInferrer = StringInferrer,
                      hasHeader: Boolean = true) extends Source with Using {
 
@@ -32,22 +18,18 @@ case class CsvSource(path: Path,
     val settings = new CsvParserSettings()
     settings.getFormat.setDelimiter(format.delimiter)
     settings.getFormat.setQuote(format.quoteChar)
-    settings.getFormat.setQuoteEscape(format.escapeChar)
+    settings.getFormat.setQuoteEscape(format.quoteEscape)
     settings.setLineSeparatorDetectionEnabled(true)
     settings.setHeaderExtractionEnabled(false)
     new com.univocity.parsers.csv.CsvParser(settings)
   }
 
-  def withDelimiter(c: Char): CsvSource = copy(format = new CsvFormat {
-    override val delimiter: Char = c
-    override val quoteChar: Char = format.quoteChar
-    override val escapeChar: Char = format.escapeChar
-    override val lineTerminator: String = format.lineTerminator
-  })
-
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
   def withHeader(header: Boolean): CsvSource = copy(hasHeader = header)
   def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
+  def withDelimiter(c: Char): CsvSource = copy(format = format.copy(delimiter = c))
+  def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
+  def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
   def withFormat(format: CsvFormat): CsvSource = copy(format = format)
 
   override def schema: Schema = overrideSchema.getOrElse {
@@ -68,7 +50,7 @@ case class CsvSource(path: Path,
       override def close(): Unit = parser.stopParsing()
       override def iterator: Iterator[InternalRow] = {
         val k = if (hasHeader) 1 else 0
-        Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(k).map(_.toSeq)
+        Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map(_.toSeq)
       }
     }
     Seq(reader)
