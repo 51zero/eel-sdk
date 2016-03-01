@@ -11,7 +11,7 @@ object HiveSchemaFns extends StrictLogging {
 
   def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
   def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map { column =>
-    new FieldSchema(column.name, toHiveType(column), "Created by eel")
+    new FieldSchema(column.name, toHiveType(column), null)
   }
 
   def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {

@@ -21,8 +21,8 @@ class CsvSourceTest extends WordSpec with Matchers {
       ))
     }
     "read from path" in {
-      CsvSource(path).withHeader(false).size shouldBe 4
-      CsvSource(path).withHeader(true).size shouldBe 3
+      CsvSource(path).withHeader(Header.FirstRow).size shouldBe 3
+      CsvSource(path).withHeader(Header.None).size shouldBe 4
     }
     "allow specifying manual schema" in {
       val schema = Schema(List(
@@ -33,16 +33,16 @@ class CsvSourceTest extends WordSpec with Matchers {
       CsvSource(path).withSchema(schema).drop(1).schema shouldBe schema
     }
     "support reading header" in {
-      CsvSource(path).withHeader(true).toSet.map(_.values) shouldBe
+      CsvSource(path).withHeader(Header.FirstRow).toSet.map(_.values) shouldBe
         Set(List("e", "f", "g"), List("1", "2", "3"), List("4", "5", "6"))
     }
     "support skipping header" in {
-      CsvSource(path).withHeader(false).toSet.map(_.values) shouldBe
+      CsvSource(path).withHeader(Header.None).toSet.map(_.values) shouldBe
         Set(List("a", "b", "c"), List("e", "f", "g"), List("1", "2", "3"), List("4", "5", "6"))
     }
     "support schema inferrer" in {
       val inferrer = SchemaInferrer(SchemaType.String, SchemaRule("a", SchemaType.Int, false), SchemaRule("b", SchemaType.Boolean))
-      CsvSource(path).withHeader(true).withSchemaInferrer(inferrer).schema shouldBe Schema(List(
+      CsvSource(path).withHeader(Header.FirstRow).withSchemaInferrer(inferrer).schema shouldBe Schema(List(
         Column("a", SchemaType.Int, false),
         Column("b", SchemaType.Boolean, true),
         Column("c", SchemaType.String, true)
@@ -52,7 +52,18 @@ class CsvSourceTest extends WordSpec with Matchers {
       val file = getClass.getResource("/psv.psv").toURI
       val path = Paths.get(file)
       CsvSource(path).withDelimiter('|').toSeq.map(_.values) shouldBe Seq(Seq("e", "f", "g"))
-      CsvSource(path).withDelimiter('|').withHeader(false).toSet.map(_.values) shouldBe Set(Seq("a", "b", "c"), Seq("e", "f", "g"))
+      CsvSource(path).withDelimiter('|').withHeader(Header.None).toSet.map(_.values) shouldBe Set(Seq("a", "b", "c"), Seq("e", "f", "g"))
+    }
+    "support comments for headers" in {
+      val file = getClass.getResource("/comments.csv").toURI
+      val path = Paths.get(file)
+      CsvSource(path).withHeader(Header.FirstComment).schema shouldBe Schema(List(
+        Column("a", SchemaType.String, true),
+        Column("b", SchemaType.String, true),
+        Column("c", SchemaType.String, true)
+      ))
+      CsvSource(path).withHeader(Header.FirstComment).toSet.map(_.values) shouldBe
+        Set(Seq("1", "2", "3"), Seq("e", "f", "g"), Seq("4", "5", "6"))
     }
   }
 }

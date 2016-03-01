@@ -179,7 +179,7 @@ class JdbcInserter(url: String,
         stmt.addBatch()
       }
       val result = stmt.executeBatch()
-      logger.debug(s"Batch completed; $result rows updated")
+      logger.debug(s"Batch completed; ${result.length} rows updated")
       if (!autoCommit) conn.commit()
     } catch {
       case e: Exception =>

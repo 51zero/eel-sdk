@@ -8,11 +8,21 @@ import io.eels._
 
 case class CsvFormat(delimiter: Char = ',', quoteChar: Char = '"', quoteEscape: Char = '"', lineSeparator: String = "\n")
 
+sealed abstract class Header
+object Header {
+  case object None extends Header
+  case object FirstComment extends Header
+  case object FirstRow extends Header
+}
+
 case class CsvSource(path: Path,
                      overrideSchema: Option[Schema] = None,
                      format: CsvFormat = CsvFormat(),
                      inferrer: SchemaInferrer = StringInferrer,
-                     hasHeader: Boolean = true) extends Source with Using {
+                     ignoreLeadingWhitespaces: Boolean = true,
+                     ignoreTrailingWhitespaces: Boolean = true,
+                     skipEmptyLines: Boolean = true,
+                     header: Header = Header.FirstRow) extends Source with Using {
 
   private def createParser: CsvParser = {
     val settings = new CsvParserSettings()
@@ -20,12 +30,17 @@ case class CsvSource(path: Path,
     settings.getFormat.setQuote(format.quoteChar)
     settings.getFormat.setQuoteEscape(format.quoteEscape)
     settings.setLineSeparatorDetectionEnabled(true)
+    // this is always true as we will fetch the headers ourselves by reading first row
     settings.setHeaderExtractionEnabled(false)
+    settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces)
+    settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
+    settings.setSkipEmptyLines(skipEmptyLines)
+    settings.setCommentCollectionEnabled(true)
     new com.univocity.parsers.csv.CsvParser(settings)
   }
 
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
-  def withHeader(header: Boolean): CsvSource = copy(hasHeader = header)
+  def withHeader(header: Header): CsvSource = copy(header = header)
   def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
   def withDelimiter(c: Char): CsvSource = copy(format = format.copy(delimiter = c))
   def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
@@ -35,12 +50,21 @@ case class CsvSource(path: Path,
   override def schema: Schema = overrideSchema.getOrElse {
     val parser = createParser
     parser.beginParsing(path.toFile)
-    val headers = parser.parseNext.toSeq
+    val headers = header match {
+      case Header.None =>
+        val headers = parser.parseNext.toSeq
+        List.tabulate(headers.size)(_.toString)
+      case Header.FirstComment =>
+        while (parser.getContext.lastComment == null) {
+          parser.parseNext
+        }
+        val str = parser.getContext.lastComment
+        str.split(format.delimiter).toSeq
+      case Header.FirstRow =>
+        parser.parseNext.toSeq
+    }
     parser.stopParsing()
-    if (hasHeader)
-      inferrer(headers)
-    else
-      inferrer(List.tabulate(headers.size)(_.toString))
+    inferrer(headers)
   }
 
   override def readers: Seq[Reader] = {
@@ -49,7 +73,10 @@ case class CsvSource(path: Path,
     val reader = new Reader {
       override def close(): Unit = parser.stopParsing()
       override def iterator: Iterator[InternalRow] = {
-        val k = if (hasHeader) 1 else 0
+        val k = header match {
+          case Header.FirstRow => 1
+          case _ => 0
+        }
         Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map(_.toSeq)
       }
     }
