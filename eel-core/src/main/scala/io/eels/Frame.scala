@@ -357,8 +357,11 @@ trait Frame {
 
   def to(sink: Sink)(implicit executor: ExecutionContext): Long = SinkPlan(sink, this)
   def size(implicit executor: ExecutionContext): Long = ToSizePlan(this)
-  def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan(this)
+  def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan.untyped(this)
   def toSet(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = ToSetPlan(this)
+
+  def toSeqAs[T](implicit executor: ExecutionContext, manifest: Manifest[T]): Seq[T] = ToSeqPlan.typed[T](this)
+  def toSetAs[T](implicit executor: ExecutionContext, manifest: Manifest[T]): scala.collection.mutable.Set[T] = ToSetPlan.typed(this)
 }
 
 object Frame {

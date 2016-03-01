@@ -7,6 +7,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
 import Frame._
 
+case class Wibble(name: String, location: String, postcode: String)
+
 class FrameTest extends WordSpec with Matchers with Eventually {
 
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -67,6 +69,27 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       val f = frame.removeColumn("location")
       f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
       f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
+    }
+  }
+
+  "Frame.toSet[T]" should {
+    "marshall result into instances of T" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      frame.toSetAs[Wibble] shouldBe Set(Wibble("sam", "aylesbury", "hp22"), Wibble("ham", "buckingham", "mk10"))
+    }
+  }
+
+  "Frame.toSeq[T]" should {
+    "marshall result into instances of T" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("ham", "buckingham", "mk10")
+      )
+      frame.toSeqAs[Wibble] shouldBe Seq(Wibble("ham", "buckingham", "mk10"))
     }
   }
 

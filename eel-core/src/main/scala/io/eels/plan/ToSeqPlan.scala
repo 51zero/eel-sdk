@@ -12,7 +12,14 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object ToSeqPlan extends Plan with Using with StrictLogging {
 
-  def apply(frame: Frame)(implicit executor: ExecutionContext): Seq[Row] = {
+  def typed[T](frame: Frame)(implicit executor: ExecutionContext, manifest: Manifest[T]): Seq[T] = {
+    val constructor = manifest.runtimeClass.getConstructors.head
+    untyped(frame).map { row =>
+      constructor.newInstance(row.values.asInstanceOf[Seq[Object]]: _*).asInstanceOf[T]
+    }
+  }
+
+  def untyped(frame: Frame)(implicit executor: ExecutionContext): Seq[Row] = {
     logger.info(s"Executing toSeq on frame [tasks=$slices]")
 
     val queue = new ConcurrentLinkedQueue[InternalRow]
