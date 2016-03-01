@@ -17,7 +17,7 @@ trait DefaultCsvFormat extends CsvFormat {
   override val delimiter: Char = ','
   override val quoteChar: Char = '"'
   override val escapeChar: Char = '"'
-  override val lineTerminator: String = "\r\n"
+  override val lineTerminator: String = "\n"
 }
 
 object DefaultCsvFormat extends DefaultCsvFormat
@@ -33,7 +33,7 @@ case class CsvSource(path: Path,
     settings.getFormat.setDelimiter(format.delimiter)
     settings.getFormat.setQuote(format.quoteChar)
     settings.getFormat.setQuoteEscape(format.escapeChar)
-    settings.setDelimiterDetectionEnabled(true)
+    settings.setLineSeparatorDetectionEnabled(true)
     settings.setHeaderExtractionEnabled(false)
     new com.univocity.parsers.csv.CsvParser(settings)
   }
