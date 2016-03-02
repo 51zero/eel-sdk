@@ -32,7 +32,7 @@ object Build extends Build {
       "com.github.tototoshi"        %% "scala-csv"            % "1.3.0",
       "com.univocity"               % "univocity-parsers"     % "2.0.0",
       "org.scala-lang"              % "scala-reflect"         % scalaVersion.value,
-      "com.sksamuel.scalax"         %% "scalax"               % "1.23.1",
+      "com.sksamuel.scalax"         %% "scalax"               % "1.24.1",
       "com.typesafe"                % "config"                % "1.2.1",
       "org.apache.hadoop"           % "hadoop-common"         % HadoopVersion          % "provided",
       "org.apache.hadoop"           % "hadoop-hdfs"           % HadoopVersion          % "provided",

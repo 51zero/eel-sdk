@@ -1,6 +1,6 @@
 package io.eels.component.jms
 
-import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicLong
 import javax.jms.{Message, MessageConsumer, MessageListener, TextMessage}
 
@@ -13,7 +13,7 @@ case class JmsSource(consumer: MessageConsumer, limit: Int = 1) extends Source {
     val count = new AtomicLong(0)
 
     val reader = new Reader {
-      val buffer = new ArrayBlockingQueue[Any](100)
+      val buffer = new LinkedBlockingQueue[Any](100)
       consumer.setMessageListener(new MessageListener {
         override def onMessage(message: Message): Unit = {
           buffer.add(message.asInstanceOf[TextMessage].getText)

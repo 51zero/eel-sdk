@@ -13,13 +13,13 @@ object SinkPlan extends Plan with StrictLogging {
   def apply(sink: Sink, frame: Frame)(implicit execution: ExecutionContext): Long = {
 
     val count = new AtomicLong(0)
-    val latch = new CountDownLatch(slices)
+    val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
     val schema = frame.schema
     val buffer = frame.buffer
     val writer = sink.writer
 
-    for (k <- 1 to slices) {
+    for (k <- 1 to tasks) {
       Future {
         try {
           buffer.iterator.takeWhile(_ => running.get).foreach { row =>

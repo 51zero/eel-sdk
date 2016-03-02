@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, TimeUnit}
+import java.util.concurrent._
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
@@ -95,7 +95,7 @@ case class HiveSink(private val dbName: String,
 
     import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
 
-    val queue = new ArrayBlockingQueue[InternalRow](bufferSize)
+    val queue = new LinkedBlockingQueue[InternalRow](bufferSize)
     val latch = new CountDownLatch(ioThreads)
     val executor = Executors.newFixedThreadPool(ioThreads)
     val count = new AtomicLong(0)

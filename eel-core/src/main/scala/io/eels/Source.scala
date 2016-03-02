@@ -1,7 +1,7 @@
 package io.eels
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{ArrayBlockingQueue, CountDownLatch, Executors, TimeUnit}
+import java.util.concurrent._
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -31,7 +31,9 @@ trait Source extends StrictLogging {
         val readers = self.readers
         logger.debug(s"Source has ${readers.size} reader(s)")
 
-        val queue = new ArrayBlockingQueue[InternalRow](DefaultBufferSize)
+        // faster to use a linked blocking queue than an array one
+        // as maybe the array impl is copying the array and not doing some clever position pointer stuff
+        val queue = new LinkedBlockingQueue[InternalRow](DefaultBufferSize)
         val count = new AtomicLong(0)
         val latch = new CountDownLatch(readers.size)
 

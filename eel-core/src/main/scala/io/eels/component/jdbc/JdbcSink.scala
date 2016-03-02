@@ -92,7 +92,7 @@ class JdbcWriter(url: String,
   // the buffer is a concurrent receiver for the write method. It needs to hold enough elements to keep the
   // frame threads busy until the coordinator thread gets a time slice and empties it via its iterator.
   // controlled by eel.jdbc.sink.bufferSize
-  private val buffer = new ArrayBlockingQueue[InternalRow](bufferSize)
+  private val buffer = new LinkedBlockingQueue[InternalRow](bufferSize)
 
   // We use a bounded executor because otherwise the executor would very quickly fill up with pending tasks
   // for all rows in the source. Then effectively we would have loaded the entire frame into memory and stored it

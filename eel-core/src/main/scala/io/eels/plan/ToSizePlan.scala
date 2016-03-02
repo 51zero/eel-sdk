@@ -14,12 +14,15 @@ object ToSizePlan extends Plan with StrictLogging {
 
     val count = new AtomicLong(0)
     val buffer = frame.buffer
-    val latch = new CountDownLatch(slices)
+    val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
-    for (k <- 1 to slices) {
+
+    logger.info(s"Plan will execute with $tasks tasks")
+    for (k <- 1 to tasks) {
       Future {
         try {
           buffer.iterator.takeWhile(_ => running.get).foreach(_ => count.incrementAndGet)
+          logger.debug(s"Task $k completed")
         } catch {
           case e: Throwable =>
             logger.error("Error writing; aborting tasks", e)
