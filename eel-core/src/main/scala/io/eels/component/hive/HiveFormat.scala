@@ -1,7 +1,5 @@
 package io.eels.component.hive
 
-import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect, TextHiveDialect}
-
 trait HiveFormat {
   def serdeClass: String
   def inputFormatClass: String
@@ -10,11 +8,11 @@ trait HiveFormat {
 
 object HiveFormat {
 
-  def apply(format: String): HiveDialect = format match {
-    case "avro" => AvroHiveDialect
-    case "orc" => OrcHiveDialect
-    case "parquet" => ParquetHiveDialect
-    case "text" => TextHiveDialect
+  def apply(format: String): HiveFormat = format match {
+    case "avro" => HiveFormat.Avro
+    case "orc" => HiveFormat.Orc
+    case "parquet" => HiveFormat.Parquet
+    case "text" => HiveFormat.Text
     case other => sys.error("Unknown hive input format: " + other)
   }
 
