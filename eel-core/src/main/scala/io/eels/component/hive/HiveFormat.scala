@@ -1,11 +1,22 @@
 package io.eels.component.hive
 
+import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect, TextHiveDialect}
+
 trait HiveFormat {
   def serdeClass: String
   def inputFormatClass: String
   def outputFormatClass: String
 }
+
 object HiveFormat {
+
+  def apply(format: String): HiveDialect = format match {
+    case "avro" => AvroHiveDialect
+    case "orc" => OrcHiveDialect
+    case "parquet" => ParquetHiveDialect
+    case "text" => TextHiveDialect
+    case other => sys.error("Unknown hive input format: " + other)
+  }
 
   case object Text extends HiveFormat {
     override def serdeClass: String = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
