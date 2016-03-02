@@ -4,7 +4,7 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Schema, Sink, Writer}
+import io.eels.{InternalRow, Schema, Sink, SinkWriter}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.serialization.ByteArraySerializer
 
@@ -19,7 +19,7 @@ case class KafkaSink(config: KafkaSinkConfig, topic: String, serializer: KafkaSe
   extends Sink
     with StrictLogging {
 
-  override def writer: Writer = new Writer {
+  override def writer(schema: Schema): SinkWriter = new SinkWriter {
 
     val producerProps = new Properties
     producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.brokerList)
@@ -31,7 +31,7 @@ case class KafkaSink(config: KafkaSinkConfig, topic: String, serializer: KafkaSe
       producer.close(config.shutdownTimeout.toNanos, TimeUnit.NANOSECONDS)
     }
 
-    override def write(row: InternalRow, schema: Schema): Unit = {
+    override def write(row: InternalRow): Unit = {
       val bytes = serializer(row, schema)
       val record = new ProducerRecord[Array[Byte], Array[Byte]](topic, bytes)
       producer.send(record)

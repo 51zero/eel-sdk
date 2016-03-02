@@ -17,13 +17,13 @@ object SinkPlan extends Plan with StrictLogging {
     val running = new AtomicBoolean(true)
     val schema = frame.schema
     val buffer = frame.buffer
-    val writer = sink.writer
+    val writer = sink.writer(schema)
 
     for (k <- 1 to tasks) {
       Future {
         try {
           buffer.iterator.takeWhile(_ => running.get).foreach { row =>
-            writer.write(row, schema)
+            writer.write(row)
             count.incrementAndGet()
           }
         } catch {
