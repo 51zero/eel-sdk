@@ -74,20 +74,21 @@ case class CsvSource(path: Path,
     inferrer(headers)
   }
 
-  override def readers: Seq[Reader] = {
-    val parser = createParser
+  override def parts: Seq[Part] = Seq(new CsvPart(createParser, path, header))
+}
+
+class CsvPart(parser: CsvParser, path: Path, header: Header) extends Part {
+
+  override def reader: SourceReader = new SourceReader {
     parser.beginParsing(path.toFile)
-    val reader = new Reader {
-      override def close(): Unit = parser.stopParsing()
-      override def iterator: Iterator[InternalRow] = {
-        val k = header match {
-          case Header.FirstRow => 1
-          case _ => 0
-        }
-        Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map(_.toSeq)
+    override def close(): Unit = parser.stopParsing()
+    override def iterator: Iterator[InternalRow] = {
+      val k = header match {
+        case Header.FirstRow => 1
+        case _ => 0
       }
+      Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map(_.toSeq)
     }
-    Seq(reader)
   }
 }
 

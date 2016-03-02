@@ -3,14 +3,14 @@ package io.eels.component.sequence
 import java.io.StringReader
 
 import com.github.tototoshi.csv.CSVReader
+import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Column, Schema, Reader, Source}
+import io.eels._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
 
-case class SequenceSource(path: Path) extends Source with Using with StrictLogging {
+case class SequenceSource(path: Path) extends Source with Using with Logging {
   logger.debug(s"Creating sequence source from $path")
 
   private def createReader: SequenceFile.Reader = {
@@ -38,31 +38,28 @@ case class SequenceSource(path: Path) extends Source with Using with StrictLoggi
     }
   }
 
-  override def readers: Seq[Reader] = {
-    logger.debug(s"Fetching readers for $path")
+  override def parts: Seq[Part] = Seq(new SequencePart(path))
 
+  class SequencePart(path: Path) extends Part {
+    override def reader: SourceReader = new SequenceSourceReader(path)
+  }
+
+  class SequenceSourceReader(path: Path) extends SourceReader {
+
+    val reader = createReader
     val k = new IntWritable
     val v = new BytesWritable
 
-    val reader = new Reader {
-
-      val reader = createReader
-
-      val columns: Seq[Column] = {
-        reader.next(k, v)
-        toValues(v).map(Column.apply)
-      }
-
-      logger.debug(s"Readers will use schema $columns")
-
-      override def close(): Unit = reader.close()
-
-      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
-        override def hasNext: Boolean = reader.next(k, v)
-        override def next(): InternalRow = toValues(v)
-      }
+    val columns: Seq[Column] = {
+      reader.next(k, v)
+      toValues(v).map(Column.apply)
     }
+    logger.debug(s"Readers will use schema $columns")
 
-    Seq(reader)
+    override def close(): Unit = reader.close()
+    override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
+      override def hasNext: Boolean = reader.next(k, v)
+      override def next(): InternalRow = toValues(v)
+    }
   }
 }

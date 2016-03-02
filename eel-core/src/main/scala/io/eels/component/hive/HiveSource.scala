@@ -1,9 +1,10 @@
 package io.eels.component.hive
 
+import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.{InternalRow, Reader, Schema, Source}
+import io.eels._
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -22,7 +23,7 @@ case class HiveSource(private val dbName: String,
                       private val columns: Seq[String] = Nil)
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
-    with StrictLogging
+    with Logging
     with Using {
   ParquetLogMute()
 
@@ -94,8 +95,7 @@ case class HiveSource(private val dbName: String,
     dialect
   }
 
-  override def readers: Seq[Reader] = {
-
+  override def parts: Seq[Part] = {
     using(createClient) { client =>
 
       val t = client.getTable(dbName, tableName)
@@ -108,23 +108,27 @@ case class HiveSource(private val dbName: String,
       val partitionKeys = partitions.flatMap(_.parts.map(_.key)).toSet
       if (columns.nonEmpty && columns.forall(partitionKeys.contains)) {
         logger.debug("Requested columns are all partitioned - reading directly from metastore")
-        val reader = new Reader {
-          override def close(): Unit = ()
-          // we only want to keep the requested columns
-          override def iterator: Iterator[InternalRow] = partitions.iterator
-            .filter { partition => partitionExprs.isEmpty || partitionExprs.exists(_.eval(partition.parts)) }
-            .map { partition => partition.parts.filter(columns contains _.key).map(_.value) }
+        val part = new Part {
+          override def reader = new SourceReader {
+            override def close(): Unit = ()
+            // we only want to keep the requested columns
+            override def iterator: Iterator[InternalRow] = partitions.iterator
+              .filter { partition => partitionExprs.isEmpty || partitionExprs.exists(_.eval(partition.parts)) }
+              .map { partition => partition.parts.filter(columns contains _.key).map(_.value) }
+          }
         }
-        Seq(reader)
+        Seq(part)
       } else {
         val paths = HiveFileScanner(t, partitionExprs)
         paths.map { path =>
-          new Reader {
-            ParquetLogMute()
-            lazy val iterator = dialect.iterator(path, schema, columns)
-            override def close(): Unit = {
-              logger.debug("Closing hive reader")
-              // todo close dialect
+          new Part {
+            override def reader = new SourceReader {
+              ParquetLogMute()
+              lazy val iterator = dialect.iterator(path, schema, columns)
+              override def close(): Unit = {
+                logger.debug("Closing hive reader")
+                // todo close dialect
+              }
             }
           }
         }

@@ -2,66 +2,68 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
+import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Schema, Reader, InternalRow, Source}
+import io.eels._
 
 import scala.concurrent.duration._
 
 case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
   extends Source
-    with StrictLogging
+    with Logging
     with Using {
 
-  override def readers: Seq[Reader] = {
+  override def parts: Seq[Part] = {
 
-    logger.info(s"Connecting to jdbc source $url...")
-    val conn = DriverManager.getConnection(url)
-    logger.debug(s"Connected to $url")
+    val part = new Part {
+      def reader = new SourceReader {
 
-    val stmt = conn.createStatement()
-    stmt.setFetchSize(props.fetchSize)
+        logger.info(s"Connecting to jdbc source $url...")
+        val conn = DriverManager.getConnection(url)
+        logger.debug(s"Connected to $url")
 
-    logger.debug(s"Executing query [$query]...")
-    val start = System.currentTimeMillis()
-    val rs = stmt.executeQuery(query)
-    val duration = (System.currentTimeMillis() - start).millis
-    logger.info(s" === query completed in $duration ===")
+        val stmt = conn.createStatement()
+        stmt.setFetchSize(props.fetchSize)
 
-    val dialect = props.dialect.getOrElse(JdbcDialect(url))
-    val schema = SchemaBuilder(rs, dialect)
-    logger.debug("Fetched schema: ")
-    logger.debug(schema.print)
+        logger.debug(s"Executing query [$query]...")
+        val start = System.currentTimeMillis()
+        val rs = stmt.executeQuery(query)
+        val duration = (System.currentTimeMillis() - start).millis
+        logger.info(s" === query completed in $duration ===")
 
-    val columnCount = schema.columns.size
+        val dialect = props.dialect.getOrElse(JdbcDialect(url))
+        val schema = SchemaBuilder(rs, dialect)
+        logger.debug("Fetched schema: ")
+        logger.debug(schema.print)
 
-    val part = new Reader {
+        val columnCount = schema.columns.size
 
-      override def close(): Unit = {
-        logger.debug("Closing reader")
-        rs.close()
-        stmt.close()
-        conn.close()
-      }
-
-      var created = false
-
-      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
-        require(!created, "!Cannot create more than one iterator for a jdbc source!")
-        created = true
-
-        override def hasNext: Boolean = {
-          val hasNext = rs.next()
-          if (!hasNext) {
-            logger.debug("Resultset is completed; closing stream")
-            close()
-          }
-          hasNext
+        override def close(): Unit = {
+          logger.debug("Closing reader")
+          rs.close()
+          stmt.close()
+          conn.close()
         }
 
-        override def next: InternalRow = {
-          for ( k <- 1 to columnCount ) yield {
-            rs.getObject(k)
+        var created = false
+
+        override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
+          require(!created, "!Cannot create more than one iterator for a jdbc source!")
+          created = true
+
+          override def hasNext: Boolean = {
+            val hasNext = rs.next()
+            if (!hasNext) {
+              logger.debug("Resultset is completed; closing stream")
+              close()
+            }
+            hasNext
+          }
+
+          override def next: InternalRow = {
+            for (k <- 1 to columnCount) yield {
+              rs.getObject(k)
+            }
           }
         }
       }
