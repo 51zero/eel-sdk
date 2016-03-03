@@ -1,7 +1,8 @@
 package io.eels.component.hive
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 import java.util.concurrent._
+import java.util.function.LongUnaryOperator
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
@@ -88,7 +89,7 @@ class HiveSinkWriter(inputSchema: Schema,
   val queue = new LinkedBlockingQueue[InternalRow](bufferSize)
   val latch = new CountDownLatch(ioThreads)
   val executor = Executors.newFixedThreadPool(ioThreads)
-  val count = new AtomicLong(0)
+  val adder = new LongAdder()
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
 
@@ -96,22 +97,24 @@ class HiveSinkWriter(inputSchema: Schema,
     executor.submit {
       logger.info(s"HiveSink thread $k started")
       try {
-        BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).foreach { row =>
-          val writer = getOrCreateHiveWriter(row, inputSchema, k)
-          // need to strip out any partition information from the written data
-          // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
-          if (indexesToSkip.isEmpty) {
-            writer.write(row)
-          } else {
-            val row2 = new ListBuffer[Any]
-            for (k <- indexesToWrite) {
-              row2.append(row(k))
+        BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).grouped(100000).withPartial(true).foreach { rows =>
+          rows.foreach { row =>
+            val writer = getOrCreateHiveWriter(row, inputSchema, k)
+            // need to strip out any partition information from the written data
+            // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
+            if (indexesToSkip.isEmpty) {
+              writer.write(row)
+            } else {
+              val row2 = new ListBuffer[Any]
+              for (k <- indexesToWrite) {
+                row2.append(row(k))
+              }
+              writer.write(row2)
             }
-            writer.write(row2)
+            adder.increment()
           }
-          val j = count.incrementAndGet()
-          if (j % 100000 == 0)
-            logger.debug(s"Written $j / ? =>")
+          val j = adder.longValue()
+          logger.debug(s"Written $j / ? =>")
         }
       } catch {
         case e: Throwable => logger.error("Error writing row", e)
