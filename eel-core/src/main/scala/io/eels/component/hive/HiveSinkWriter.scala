@@ -1,8 +1,7 @@
 package io.eels.component.hive
 
-import java.util.concurrent.atomic.{AtomicLong, LongAdder}
 import java.util.concurrent._
-import java.util.function.LongUnaryOperator
+import java.util.concurrent.atomic.LongAdder
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
