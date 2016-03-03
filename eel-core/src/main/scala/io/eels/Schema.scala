@@ -12,7 +12,7 @@ case class Schema(columns: List[Column]) {
 
   def indexOf(columnName: String): Int = columns.indexWhere(_.name == columnName)
 
-  def columnNames: List[String] = columns.map(_.name)
+  lazy val columnNames: List[String] = columns.map(_.name)
 
   def addColumn(col: Column): Schema = {
     require(!columnNames.contains(col.name), s"Column ${col.name} already exists")

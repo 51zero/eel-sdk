@@ -15,7 +15,7 @@ object ParquetWriterSupport extends StrictLogging {
   val ParquetBlockSizeKey = "eel.parquet.blockSize"
   val ParquetPageSizeKey = "eel.parquet.pageSize"
 
-  private def compressionCodec: CompressionCodecName = {
+  lazy val compressionCodec: CompressionCodecName = {
     val codec = config.getString("eel.parquet.compressionCodec").toLowerCase match {
       case "gzip" => CompressionCodecName.GZIP
       case "lzo" => CompressionCodecName.LZO
@@ -26,14 +26,14 @@ object ParquetWriterSupport extends StrictLogging {
     codec
   }
 
-  private def blockSize: Int = {
+  lazy val blockSize: Int = {
     val blockSize = if (config.hasPath(ParquetBlockSizeKey)) config.getInt(ParquetBlockSizeKey)
     else org.apache.parquet.hadoop.ParquetWriter.DEFAULT_BLOCK_SIZE
     logger.debug(s"Parquet writer will use blockSize = $blockSize")
     blockSize
   }
 
-  private def pageSize: Int = {
+  lazy val pageSize: Int = {
     val pageSize = if (config.hasPath(ParquetPageSizeKey)) config.getInt(ParquetPageSizeKey)
     else org.apache.parquet.hadoop.ParquetWriter.DEFAULT_PAGE_SIZE
     logger.debug(s"Parquet writer will use pageSize = $pageSize")

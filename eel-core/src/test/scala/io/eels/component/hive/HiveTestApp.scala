@@ -1,13 +1,16 @@
 package io.eels.component.hive
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
+import com.sksamuel.scalax.Logging
+import com.sksamuel.scalax.metrics.Timed
 import io.eels.Frame
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-object HiveTestApp extends App with StrictLogging {
+import scala.util.Random
+
+object HiveTestApp extends App with Logging with Timed {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -24,7 +27,7 @@ object HiveTestApp extends App with StrictLogging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val frame = Frame(
+  val maps = Array(
     Map("artist" -> "elton", "album" -> "yellow brick road", "year" -> "1972"),
     Map("artist" -> "elton", "album" -> "tumbleweed connection", "year" -> "1974"),
     Map("artist" -> "elton", "album" -> "empty sky", "year" -> "1969"),
@@ -35,23 +38,29 @@ object HiveTestApp extends App with StrictLogging {
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  HiveOps.createTable(
-    "sam",
-    "albums",
-    frame.schema,
-    List("year", "artist"),
-    format = HiveFormat.Parquet,
-    overwrite = true
-  )
+  val rows = List.fill(3000000)(maps(Random.nextInt(maps.length)))
+  val frame = Frame(rows)
 
-  val sink = HiveSink("sam", "albums").withIOThreads(2)
-  frame.to(sink)
-  logger.info("Write complete")
+  timed("creating table") {
+    HiveOps.createTable(
+      "sam",
+      "albums",
+      frame.schema,
+      List("year", "artist"),
+      format = HiveFormat.Parquet,
+      overwrite = true
+    )
+  }
 
-  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
-  logger.info("Result=" + result)
+  val sink = HiveSink("sam", "albums").withIOThreads(4)
+  timed("writing data") {
+    frame.to(sink)
+    logger.info("Write complete")
+  }
 
-  val years = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1970").withColumns("year", "artist").toSeq
-  logger.info("years=" + years)
+  //  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
+  //  logger.info("Result=" + result)
 
+  //  val years = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1970").withColumns("year", "artist").toSeq
+  //  logger.info("years=" + years)
 }

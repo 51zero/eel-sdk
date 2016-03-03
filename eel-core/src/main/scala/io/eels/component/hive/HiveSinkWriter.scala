@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent._
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
@@ -11,6 +11,7 @@ import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, IMetaStoreClient}
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
 class HiveSinkWriter(inputSchema: Schema,
@@ -28,18 +29,26 @@ class HiveSinkWriter(inputSchema: Schema,
   val base = System.nanoTime
   logger.debug(s"HiveSinkWriter created; timestamp=$base")
 
-
   val tablePath = HiveOps.tablePath(dbName, tableName)
   val lock = new Object {}
 
   val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
   logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
 
+  // these are the indexes in input rows to skip from writing because they are partition values
+  val indexesToSkip = if (includePartitionsInData) Nil else partitionKeyNames.map(inputSchema.indexOf)
+  // this is simply a list of indexes we want to keep, so we can efficiently iterate over it in the writing loop
+  val indexesToWrite = List.tabulate(inputSchema.columns.size)(k => k).filterNot(indexesToSkip.contains)
+
   // Since the data can come in unordered, we need to keep open a stream per partition path.
   // This shouldn't be shared amongst threads so that we can increase throughput by increasing the number
   // of threads (if it was shared, then if a single path we might only have one writer for all the output).
   // the key should include the thread count so that each thread has its own unique writer
   val writers = mutable.Map.empty[String, HiveWriter]
+
+  // this contains all the partitions we've checked.
+  // No need for multiple threads to keep hitting the meta store
+  val createdPartitions = new ConcurrentSkipListSet[String]
 
   def getOrCreateHiveWriter(row: InternalRow, sourceSchema: Schema, k: Long): HiveWriter = {
 
@@ -57,14 +66,17 @@ class HiveSinkWriter(inputSchema: Schema,
           // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
           // trying to create a partition at the same time. This is virtually guaranteed to happen if the data
           // is in any way sorted
-          lock.synchronized {
-            HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+          if (createdPartitions.contains(partPath.toString)) {
+            lock.synchronized {
+              HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+              createdPartitions.add(partPath.toString)
+            }
           }
         }
       } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
-      val targetSchema = if (includePartitionsInData) {
+      val targetSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) {
         sourceSchema
       } else {
         partitionKeyNames.foldLeft(sourceSchema)((schema, name) => schema.removeColumn(name))
@@ -88,12 +100,14 @@ class HiveSinkWriter(inputSchema: Schema,
           val writer = getOrCreateHiveWriter(row, inputSchema, k)
           // need to strip out any partition information from the written data
           // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
-          if (includePartitionsInData) {
+          if (indexesToSkip.isEmpty) {
             writer.write(row)
           } else {
-            val zipped = inputSchema.columnNames.zip(row)
-            val rowWithoutPartitions = zipped.filterNot(partitionKeyNames contains _._1)
-            writer.write(rowWithoutPartitions.unzip._2)
+            val row2 = new ListBuffer[Any]
+            for (k <- indexesToWrite) {
+              row2.append(row(k))
+            }
+            writer.write(row2)
           }
           val j = count.incrementAndGet()
           if (j % 100000 == 0)
@@ -126,7 +140,7 @@ class HiveSinkWriter(inputSchema: Schema,
   override def close(): Unit = {
     logger.debug("Request to close hive sink writer")
     queue.put(InternalRow.PoisonPill)
-    executor.awaitTermination(1, TimeUnit.HOURS)
+    executor.awaitTermination(1, TimeUnit.DAYS)
   }
 
   override def write(row: InternalRow): Unit = queue.put(row)

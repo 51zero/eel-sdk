@@ -378,10 +378,11 @@ object Frame {
     override def schema: Schema = _schema
   }
 
-  def apply(first: Map[String, String], rest: Map[String, String]*): Frame = new Frame {
-    override lazy val schema: Schema = Schema(first.keys.map(Column.apply).toList)
+  def apply(first: Map[String, String], rest: Map[String, String]*): Frame = apply(first +: rest)
+  def apply(maps: Seq[Map[String, String]]): Frame = new Frame {
+    override lazy val schema: Schema = Schema(maps.head.keys.map(Column.apply).toList)
     override def buffer: Buffer = new Buffer {
-      val queue = new ConcurrentLinkedQueue[InternalRow]((first +: rest).map(_.valuesIterator.toList).asJava)
+      val queue = new ConcurrentLinkedQueue[InternalRow](maps.map(_.valuesIterator.toList).asJava)
       override def close(): Unit = ()
       override def iterator: Iterator[InternalRow] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
