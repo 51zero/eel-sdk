@@ -88,7 +88,6 @@ class HiveSinkWriter(inputSchema: Schema,
   val queue = new LinkedBlockingQueue[InternalRow](bufferSize)
   val latch = new CountDownLatch(ioThreads)
   val executor = Executors.newFixedThreadPool(ioThreads)
-  val adder = new LongAdder()
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
 
@@ -96,24 +95,19 @@ class HiveSinkWriter(inputSchema: Schema,
     executor.submit {
       logger.info(s"HiveSink thread $k started")
       try {
-        BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).grouped(100000).withPartial(true).foreach { rows =>
-          rows.foreach { row =>
-            val writer = getOrCreateHiveWriter(row, inputSchema, k)
-            // need to strip out any partition information from the written data
-            // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
-            if (indexesToSkip.isEmpty) {
-              writer.write(row)
-            } else {
-              val row2 = new ListBuffer[Any]
-              for (k <- indexesToWrite) {
-                row2.append(row(k))
-              }
-              writer.write(row2)
+        BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).foreach { row =>
+          val writer = getOrCreateHiveWriter(row, inputSchema, k)
+          // need to strip out any partition information from the written data
+          // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
+          if (indexesToSkip.isEmpty) {
+            writer.write(row)
+          } else {
+            val row2 = new ListBuffer[Any]
+            for (k <- indexesToWrite) {
+              row2.append(row(k))
             }
-            adder.increment()
+            writer.write(row2)
           }
-          val j = adder.longValue()
-          logger.debug(s"Written $j / ? =>")
         }
       } catch {
         case e: Throwable => logger.error("Error writing row", e)
