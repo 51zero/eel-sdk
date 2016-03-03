@@ -9,10 +9,10 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends StrictLogging {
 
+  def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name, toHiveType(column), null)
+
   def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
-  def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map { column =>
-    new FieldSchema(column.name, toHiveType(column), null)
-  }
+  def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)
 
   def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {
     logger.debug("Building frame schame from hive field schemas=" + schemas)
@@ -43,6 +43,9 @@ object HiveSchemaFns extends StrictLogging {
   }
 
 
+  /**
+    * Returns the hive column type for the given column
+    */
   def toHiveType(column: Column): String = column.`type` match {
     case SchemaType.BigInt => "bigint"
     case SchemaType.Double => "double"

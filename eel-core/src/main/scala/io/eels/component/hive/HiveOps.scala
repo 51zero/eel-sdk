@@ -3,7 +3,7 @@ package io.eels.component.hive
 import java.util
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.Schema
+import io.eels.{Column, Schema}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.{FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -128,6 +128,19 @@ object HiveOps extends StrictLogging {
     parts.foldLeft(tablePath) {
       (path, part) => new Path(path, part.unquoted)
     }
+  }
+
+  /**
+    * Adds this column to the hive schema. This is schema evolution.
+    * The column must be marked as nullable and cannot have the same name as an existing column.
+    */
+  def addColumn(dbName: String, tableName: String, column: Column)
+               (implicit client: IMetaStoreClient): Unit = {
+    require(column.nullable, "Cannot add a non-nullable column to a hive table")
+    val table = client.getTable(dbName, tableName)
+    val sd = table.getSd
+    sd.addToCols(HiveSchemaFns.toHiveField(column))
+    client.alter_table(dbName, tableName, table)
   }
 
   // creates (if not existing) the partition for the given partition parts
