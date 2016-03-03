@@ -38,7 +38,7 @@ object HiveTestApp extends App with Logging with Timed {
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  val rows = List.fill(9000000)(maps(Random.nextInt(maps.length)))
+  val rows = List.fill(3000000)(maps(Random.nextInt(maps.length)))
   val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
 
   timed("creating table") {

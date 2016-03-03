@@ -1,7 +1,6 @@
 package io.eels.component.hive
 
 import java.util.concurrent._
-import java.util.concurrent.atomic.LongAdder
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
@@ -53,8 +52,8 @@ class HiveSinkWriter(inputSchema: Schema,
   def getOrCreateHiveWriter(row: InternalRow, sourceSchema: Schema, k: Long): HiveWriter = {
 
     val parts = RowPartitionParts(row, partitionKeyNames, sourceSchema)
-    val partPath = HiveOps.partitionPath(dbName, tableName, parts, tablePath)
-    writers.getOrElseUpdate(partPath.toString + "_" + k, {
+    val partPath = HiveOps.partitionPathString(dbName, tableName, parts, tablePath)
+    writers.getOrElseUpdate(partPath + "_" + k, {
 
       // this is not thread safe, so each thread needs its own copy when in here
       implicit val client = new HiveMetaStoreClient(hiveConf)
@@ -76,10 +75,13 @@ class HiveSinkWriter(inputSchema: Schema,
       } else if (!HiveOps.partitionExists(dbName, tableName, parts)) {
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
+
+      // the target schema is what we use to write out with. This is generated from the schema taken
+      // from the hive target table, with partition information removed.
       val targetSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) {
-        sourceSchema
+        outputSchema
       } else {
-        partitionKeyNames.foldLeft(sourceSchema)((schema, name) => schema.removeColumn(name))
+        partitionKeyNames.foldLeft(outputSchema)((schema, name) => schema.removeColumn(name))
       }
       dialect.writer(targetSchema, filePath)
     })
@@ -94,6 +96,7 @@ class HiveSinkWriter(inputSchema: Schema,
   for (k <- 0 until ioThreads) {
     executor.submit {
       logger.info(s"HiveSink thread $k started")
+      var count = 0l
       try {
         BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).foreach { row =>
           val writer = getOrCreateHiveWriter(row, inputSchema, k)
@@ -108,11 +111,12 @@ class HiveSinkWriter(inputSchema: Schema,
             }
             writer.write(row2)
           }
+          count = count + 1
         }
       } catch {
         case e: Throwable => logger.error("Error writing row", e)
       } finally {
-        logger.info(s"Sink thread $k completed")
+        logger.info(s"Sink thread $k completed; total $count rows")
         latch.countDown()
       }
     }

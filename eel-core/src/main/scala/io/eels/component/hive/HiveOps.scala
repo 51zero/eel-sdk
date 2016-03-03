@@ -125,9 +125,11 @@ object HiveOps extends StrictLogging {
   }
 
   def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): Path = {
-    parts.foldLeft(tablePath) {
-      (path, part) => new Path(path, part.unquoted)
-    }
+    new Path(partitionPathString(dbName, tableName, parts, tablePath))
+  }
+
+  def partitionPathString(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): String = {
+    tablePath.toString + "/" + parts.map(_.unquoted).mkString("/")
   }
 
   /**
