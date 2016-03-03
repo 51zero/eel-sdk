@@ -5,22 +5,14 @@ import java.io.{BufferedReader, InputStream, InputStreamReader}
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
-import io.eels.{Schema, InternalRow}
+import io.eels.{InternalRow, Schema, SourceReader}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object TextHiveDialect extends HiveDialect with StrictLogging {
 
   val delimiter = '\u0001'
 
-  override def iterator(path: Path, schema: Schema, ignored: Seq[String])
-                       (implicit fs: FileSystem): Iterator[InternalRow] = new Iterator[InternalRow] {
-    lazy val in = fs.open(path)
-    lazy val iter = lineIterator(in)
-    override def hasNext: Boolean = iter.hasNext
-    override def next(): InternalRow = iter.next.split(delimiter).padTo(schema.columns.size, null).toSeq
-  }
-
-  def lineIterator(in: InputStream): Iterator[String] = {
+  private def lineIterator(in: InputStream): Iterator[String] = {
     val buff = new BufferedReader(new InputStreamReader(in))
     Iterator.continually(buff.readLine).takeWhile(_ != null)
   }
@@ -46,6 +38,17 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     override def close(): Unit = {
       csv.close()
       out.close()
+    }
+  }
+
+  override def reader(path: Path, schema: Schema, ignored: Seq[String])
+                     (implicit fs: FileSystem): SourceReader = new SourceReader {
+    val in = fs.open(path)
+    val iter = lineIterator(in)
+    override def close(): Unit = in.close()
+    override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
+      override def hasNext: Boolean = iter.hasNext
+      override def next(): InternalRow = iter.next.split(delimiter).padTo(schema.columns.size, null).toSeq
     }
   }
 }

@@ -5,7 +5,7 @@ import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.parquet.ParquetLogMute
 import io.eels._
-import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.apache.hadoop.hive.metastore.api.Table
@@ -120,19 +120,12 @@ case class HiveSource(private val dbName: String,
         Seq(part)
       } else {
         val paths = HiveFileScanner(t, partitionExprs)
-        paths.map { path =>
-          new Part {
-            override def reader = new SourceReader {
-              ParquetLogMute()
-              lazy val iterator = dialect.iterator(path, schema, columns)
-              override def close(): Unit = {
-                logger.debug("Closing hive reader")
-                // todo close dialect
-              }
-            }
-          }
-        }
+        paths.map(new DialectPart(_, schema, dialect))
       }
     }
+  }
+
+  class DialectPart(path: Path, schema: Schema, dialect: HiveDialect) extends Part {
+    override def reader: SourceReader = dialect.reader(path, schema, columns)
   }
 }

@@ -2,7 +2,7 @@ package io.eels.component.hive.dialect
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Schema, InternalRow}
+import io.eels.{InternalRow, Schema, SourceReader}
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
@@ -14,24 +14,6 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 object AvroHiveDialect extends HiveDialect with StrictLogging {
 
   val config = ConfigFactory.load()
-
-  override def iterator(path: Path, schema: Schema, ignored: Seq[String])
-                       (implicit fs: FileSystem): Iterator[InternalRow] = {
-
-    logger.debug(s"Creating avro iterator for $path")
-
-    val in = fs.open(path)
-    val bytes = IOUtils.toByteArray(in)
-    in.close()
-
-    val datumReader = new generic.GenericDatumReader[GenericRecord]()
-    val reader = new DataFileReader[GenericRecord](new file.SeekableByteArrayInput(bytes), datumReader)
-
-    new Iterator[InternalRow] {
-      override def hasNext: Boolean = reader.hasNext
-      override def next(): InternalRow = AvroRecordFn.fromRecord(reader.next)
-    }
-  }
 
   override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
@@ -48,6 +30,26 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
       override def write(row: InternalRow): Unit = {
         val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
         writer.append(record)
+      }
+    }
+  }
+
+  override def reader(path: Path, schema: Schema, columns: Seq[String])(implicit fs: FileSystem): SourceReader = {
+    logger.debug(s"Creating avro iterator for $path")
+
+    new SourceReader {
+
+      val in = fs.open(path)
+      val bytes = IOUtils.toByteArray(in)
+      in.close()
+
+      val datumReader = new generic.GenericDatumReader[GenericRecord]()
+      val reader = new DataFileReader[GenericRecord](new file.SeekableByteArrayInput(bytes), datumReader)
+
+      override def close(): Unit = ()
+      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
+        override def hasNext: Boolean = reader.hasNext
+        override def next(): InternalRow = AvroRecordFn.fromRecord(reader.next)
       }
     }
   }

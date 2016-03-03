@@ -158,7 +158,6 @@ object HiveOps extends StrictLogging {
   }
 
   // creates (if not existing) the partition for the given partition parts
-  // todo fix this to not use the deprecated classes
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
                                  parts: Seq[PartitionPart])

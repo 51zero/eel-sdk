@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
 import io.eels._
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn, AvroSchemaMerge}
+import io.eels.component.avro.{AvroSchemaFn, AvroSchemaMerge}
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetReader
@@ -38,12 +38,7 @@ class ParquetPart(path: Path) extends Part {
 }
 
 class ParquetSourceReader(path: Path) extends SourceReader {
-
-  val reader = AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
-
-  override def iterator: Iterator[InternalRow] = {
-    Iterator.continually(reader.read).takeWhile(_ != null).map(AvroRecordFn.fromRecord)
-  }
-
+  val reader = ParquetReaderSupport.createReader(path, Nil)
+  override def iterator: Iterator[InternalRow] = ParquetIterator(reader, Nil)
   override def close(): Unit = reader.close()
 }
