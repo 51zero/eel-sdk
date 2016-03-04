@@ -52,7 +52,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/51zero/eel</url>
+      <url>https://github.com/eel-sdk/eel</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -61,8 +61,8 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:51zero/eel.git</url>
-          <connection>scm:git@github.com:51zero/eel.git</connection>
+          <url>git@github.com:eel-sdk/eel.git</url>
+          <connection>scm:git@github.com:eel-sdk/eel.git</connection>
         </scm>
         <developers>
           <developer>

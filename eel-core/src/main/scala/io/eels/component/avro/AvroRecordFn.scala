@@ -31,6 +31,7 @@ object AvroRecordFn extends Logging {
     * The given AcroSchema is for building Record object, as well as for converting types to the
     * right format as expected by the avro writer.
     */
+  @deprecated("use the more performant AvroRecordMarshaller", "0.36.0")
   def toRecord(row: InternalRow, avroSchema: AvroSchema, sourceSchema: Schema, config: Config): GenericRecord = {
 
     def converter(schema: AvroSchema): Converter[_] = {
@@ -66,4 +67,47 @@ object AvroRecordFn extends Logging {
     }
     record
   }
+}
+
+trait AvroRecordMarshaller {
+  def toRecord(row: InternalRow): GenericRecord
+}
+
+class DefaultAvroRecordMarshaller(schema: Schema) extends AvroRecordMarshaller with Logging {
+
+  val avroSchema = AvroSchemaFn.toAvro(schema)
+  val fields = avroSchema.getFields.asScala.toArray
+  val converters = fields.map { field => new OptionalConverter(converter(field.schema)) }
+
+  override def toRecord(row: InternalRow): GenericRecord = {
+    val record = new Record(avroSchema)
+    for (k <- row.indices) {
+      val value = row(k)
+      val converted = converters(k)(value)
+      record.put(fields(k).name, converted)
+    }
+    record
+  }
+
+  private def converter(schema: AvroSchema): Converter[_] = {
+    schema.getType match {
+      case AvroSchema.Type.BOOLEAN => BooleanConverter
+      case AvroSchema.Type.DOUBLE => DoubleConverter
+      case AvroSchema.Type.ENUM => StringConverter
+      case AvroSchema.Type.FLOAT => FloatConverter
+      case AvroSchema.Type.INT => IntConverter
+      case AvroSchema.Type.LONG => LongConverter
+      case AvroSchema.Type.STRING => StringConverter
+      case AvroSchema.Type.UNION => converter(schema.getTypes.asScala.find(_.getType != AvroSchema.Type.NULL).get)
+      case other =>
+        logger.warn(s"No converter exists for fieldType=$other; defaulting to StringConverter")
+        StringConverter
+    }
+  }
+
+  //  def default(field: AvroSchema.Field) = {
+  //    if (field.defaultValue != null) field.defaultValue.getTextValue
+  //    else if (fillMissingValues) null
+  //    else sys.error(s"Record is missing value for column $field")
+  //  }
 }
