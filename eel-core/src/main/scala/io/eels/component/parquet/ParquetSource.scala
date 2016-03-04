@@ -22,7 +22,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with Logging with 
         Option(reader.read).getOrElse(sys.error(s"Cannot read $path for schema; file contains no records")).getSchema
       }
     }
-    val avroSchema = AvroSchemaMerge("dummy", "com.dummy", schemas)
+    val avroSchema = AvroSchemaMerge("record", "namspace", schemas)
     AvroSchemaFn.fromAvro(avroSchema)
   }
 
