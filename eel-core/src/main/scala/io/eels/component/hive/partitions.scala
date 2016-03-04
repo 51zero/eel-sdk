@@ -39,3 +39,6 @@ object PartitionPart {
     case _ => None
   }
 }
+
+// represents a single partition key and its values
+case class PartitionKey(name: String, values: Seq[String])

@@ -1,5 +1,7 @@
 package io.eels
 
+import io.eels.component.hive.PartitionKey
+
 import scala.language.implicitConversions
 
 case class Column(name: String,
@@ -59,3 +61,7 @@ case class Row(schema: Schema, values: Seq[Any]) {
 object Row {
   def apply(schema: Schema, first: Any, rest: Any*): Row = Row(schema, (first +: rest).toIndexedSeq)
 }
+
+case class Database(name: String, tables: Seq[Table])
+
+case class Table(name: String, columns: Column, partitionKeys: Seq[PartitionKey], props: Map[String, String])
