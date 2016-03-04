@@ -12,15 +12,18 @@ import scala.collection.JavaConverters._
 case class HiveSink(private val dbName: String,
                     private val tableName: String,
                     private val ioThreads: Int = 4,
-                    private val dynamicPartitioning: Boolean = true)
+                    private val dynamicPartitioning: Boolean = true,
+                    private val schemaEvolution: Boolean = true)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
 
   val config = ConfigFactory.load()
   val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
   val bufferSize = config.getInt("eel.hive.bufferSize")
+  // val schemaEvolution = config.getBoolean("eel.hive.sink.schemaEvolution")
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
+  def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = schemaEvolution)
 
   private def hiveSchema(implicit client: HiveMetaStoreClient): Schema = {
     val schema = client.getSchema(dbName, tableName)
@@ -36,6 +39,10 @@ case class HiveSink(private val dbName: String,
   override def writer(schema: Schema): SinkWriter = {
 
     implicit val client = new HiveMetaStoreClient(hiveConf)
+
+    if (schemaEvolution) {
+      HiveSchemaEvolve(dbName, tableName, schema)
+    }
 
     new HiveSinkWriter(
       schema,

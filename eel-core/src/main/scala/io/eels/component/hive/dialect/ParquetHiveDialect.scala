@@ -15,7 +15,6 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
   override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     ParquetLogMute()
-    logger.debug(s"Creating parquet writer for $path")
 
     val avroSchema = AvroSchemaFn.toAvro(schema)
     val writer = RollingParquetWriter(path, avroSchema)

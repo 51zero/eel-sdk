@@ -138,7 +138,6 @@ object HiveOps extends StrictLogging {
     */
   def addColumn(dbName: String, tableName: String, column: Column)
                (implicit client: IMetaStoreClient): Unit = {
-    require(column.nullable, "Cannot add a non-nullable column to a hive table")
     val table = client.getTable(dbName, tableName)
     val sd = table.getSd
     sd.addToCols(HiveSchemaFns.toHiveField(column))

@@ -63,8 +63,8 @@ class HiveSinkWriter(inputSchema: Schema,
       if (dynamicPartitioning) {
         if (parts.nonEmpty) {
           // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
-          // trying to create a partition at the same time. This is virtually guaranteed to happen if the data
-          // is in any way sorted
+          // trying to create a partition at the same time. This is virtually guaranteed to happen if
+          // the data is in any way sorted
           if (createdPartitions.contains(partPath.toString)) {
             lock.synchronized {
               HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
