@@ -9,8 +9,8 @@ import scala.collection.JavaConverters._
 
 object AvroSchemaFn extends StrictLogging {
 
-  def toAvro(fs: Schema): AvroSchema = {
-    val avro = AvroSchema.createRecord("row", null, "io.eels.component.avro", false)
+  def toAvro(fs: Schema, name: String = "row", namespace: String = "namespace"): AvroSchema = {
+    val avro = AvroSchema.createRecord(name, null, namespace, false)
     val fields = fs.columns.map(toAvroField)
     avro.setFields(fields.asJava)
     avro

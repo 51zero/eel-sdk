@@ -6,7 +6,7 @@ import com.sksamuel.scalax.net.UrlParamParser
 import io.eels.SourceParser
 import io.eels.component.Builder
 
-object AvroSourceParser extends SourceParser[AvroSource] {
+object AvroSourceParser extends SourceParser {
   val regex = "avro:([^?].*?)(\\?.*)?".r
   override def apply(str: String): Option[Builder[AvroSource]] = str match {
     case regex(path, params) =>
@@ -17,5 +17,5 @@ object AvroSourceParser extends SourceParser[AvroSource] {
 
 case class AvroSourceBuilder(path: String, params: Map[String, List[String]]) extends Builder[AvroSource] {
   require(path != null, "path cannot be null")
-  override def apply: AvroSource = new AvroSource(Paths.get(path))
+  override def apply(): AvroSource = new AvroSource(Paths.get(path))
 }

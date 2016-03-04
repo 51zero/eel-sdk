@@ -6,7 +6,7 @@ import com.sksamuel.scalax.net.UrlParamParser
 import io.eels.SourceParser
 import io.eels.component.Builder
 
-object ParquetSourceParser extends SourceParser[ParquetSource] {
+object ParquetSourceParser extends SourceParser {
   val regex = "parquet:([^?].*?)(\\?.*)?".r
   override def apply(str: String): Option[Builder[ParquetSource]] = str match {
     case regex(path, params) =>
@@ -17,5 +17,5 @@ object ParquetSourceParser extends SourceParser[ParquetSource] {
 
 case class ParquetSourceBuilder(path: String, params: Map[String, List[String]]) extends Builder[ParquetSource] {
   require(path != null, "path cannot be null")
-  override def apply: ParquetSource = new ParquetSource(Paths.get(path))
+  override def apply(): ParquetSource = new ParquetSource(Paths.get(path))
 }

@@ -37,13 +37,4 @@ object SinkFn {
   }
 }
 
-@deprecated("will use the new source and sink parsers", "0.33.0")
-object SourceFn {
-  val HiveRegex = "hive:(.*?):(.*?)".r
-  def apply(uri: String)(implicit fs: FileSystem, hiveConf: HiveConf): Source = uri match {
-    case HiveRegex(database, table) => HiveSource(database, table)
-    case _ => sys.error(s"Unsupported source $uri")
-  }
-}
-
 case class Options(from: String = "", to: String = "", workerThreads: Int = 1, sourceIOThreads: Int = 1)
