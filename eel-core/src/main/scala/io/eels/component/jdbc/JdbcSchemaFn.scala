@@ -5,7 +5,7 @@ import java.sql.{ResultSetMetaData, ResultSet}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Schema, Column}
 
-object SchemaBuilder extends StrictLogging {
+object JdbcSchemaFn extends StrictLogging {
 
   def apply(rs: ResultSet, dialect: JdbcDialect): Schema = {
     logger.debug("Building frame schema from resultset")
