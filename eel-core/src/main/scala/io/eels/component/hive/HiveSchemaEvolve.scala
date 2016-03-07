@@ -12,13 +12,17 @@ object HiveSchemaEvolve extends Logging {
   def apply(dbName: String, tableName: String, schema: Schema)
            (implicit fs: FileSystem, hiveConf: HiveConf, client: IMetaStoreClient): Unit = {
     logger.debug(s"Checking hive:$dbName:$tableName schema for evolution")
+
     val fields = client.getSchema(dbName, tableName).asScala
-    val fieldNames = fields.map(_.getName)
-    val required = schema.columns.filterNot(fieldNames contains _.name)
-    if (required.nonEmpty)
-      logger.debug("Columns to be added for evolution=" + required.mkString(","))
+    val partitionKeys = HiveOps.partitionKeys(dbName, tableName)
+    val existingColumns = (fields ++ partitionKeys).map(_.getName)
+    logger.debug(s"hive:$dbName:$tableName contains these columns: " + existingColumns.mkString(","))
+
+    val missingColumns = schema.columns.filterNot(existingColumns contains _.name)
+    if (missingColumns.nonEmpty)
+      logger.debug("Columns to be added for evolution: " + missingColumns.mkString(","))
     else
       logger.debug("Hive schema is up to date - no evolution required")
-    required.foreach(HiveOps.addColumn(dbName, tableName, _))
+    missingColumns.foreach(HiveOps.addColumn(dbName, tableName, _))
   }
 }
