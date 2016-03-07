@@ -75,5 +75,10 @@ class CsvSourceTest extends WordSpec with Matchers {
       CsvSource(path).withHeader(Header.FirstComment).toSet.map(_.values) shouldBe
         Set(Seq("1", "2", "3"), Seq("e", "f", "g"), Seq("4", "5", "6"))
     }
+    "terminate if asking for first comment but no comments" in {
+      CsvSource(path).withHeader(Header.FirstComment).schema shouldBe Schema(List(
+        Column("", SchemaType.String, true)
+      ))
+    }
   }
 }

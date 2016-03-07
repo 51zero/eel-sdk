@@ -62,10 +62,8 @@ case class CsvSource(path: Path,
         val headers = parser.parseNext
         List.tabulate(headers.size)(_.toString)
       case Header.FirstComment =>
-        while (parser.getContext.lastComment == null) {
-          parser.parseNext
-        }
-        val str = parser.getContext.lastComment
+        while (parser.getContext.lastComment == null && parser.parseNext != null) {}
+        val str = Option(parser.getContext.lastComment).getOrElse("")
         str.split(format.delimiter).toSeq
       case Header.FirstRow =>
         parser.parseNext.toSeq
