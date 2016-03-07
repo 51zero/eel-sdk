@@ -1,5 +1,7 @@
 package io.eels.component.hive
 
+import java.util.Date
+
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -17,7 +19,7 @@ object HiveSpecFn {
       PartitionSpec(
         partition.getValues.asScala.toList,
         partition.getSd.getLocation,
-        partition.getParameters.asScala.toMap
+        partition.getParameters.asScala.toMap.filterKeys(_ != "transient_lastDdlTime")
       )
     }.toList
     val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField).toList.map { column =>
@@ -26,11 +28,12 @@ object HiveSpecFn {
     val owner = table.getOwner
     val retention = table.getRetention
     val createTime = table.getCreateTime
+    val createTimeFormatted = new Date(createTime).toString
     val inputFormat = table.getSd.getInputFormat
     val outputFormat = table.getSd.getOutputFormat
-    val serde = table.getSd.getSerdeInfo.getName
-    val params = table.getParameters.asScala.toMap
-    HiveSpec(dbName, tableName, location, columns, tableType, partitions, params, inputFormat, outputFormat, serde, retention, createTime, owner)
+    val serde = table.getSd.getSerdeInfo.getSerializationLib
+    val params = table.getParameters.asScala.toMap.filterKeys(_ != "transient_lastDdlTime")
+    HiveSpec(dbName, tableName, location, columns, tableType, partitions, params, inputFormat, outputFormat, serde, retention, createTime, createTimeFormatted, owner)
   }
 }
 
@@ -46,6 +49,7 @@ case class HiveSpec(dbName: String,
                     serde: String,
                     retention: Int,
                     createTime: Long,
+                    createTimeFormatted: String,
                     owner: String)
 
 case class PartitionSpec(values: List[String], location: String, params: Map[String, String])

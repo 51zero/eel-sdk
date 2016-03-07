@@ -1,6 +1,7 @@
 package io.eels.component.hive
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
@@ -62,6 +63,7 @@ object HiveTestApp extends App with Logging with Timed {
 
   val spec = HiveSource("sam", "albums").spec
   val mapper = new ObjectMapper
+  mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
   mapper.registerModule(DefaultScalaModule)
   println(mapper.writeValueAsString(spec))
 

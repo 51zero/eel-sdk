@@ -3,7 +3,7 @@ package io.eels.component.hive
 import java.util
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Schema}
+import io.eels.{Column, Constants, Schema}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.{FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -220,7 +220,11 @@ object HiveOps extends StrictLogging {
       table.setSd(sd)
       table.setPartitionKeys(partitionKeys.map(new FieldSchema(_, "string", null)).asJava)
       table.setTableType(tableType.name)
-      props.+("generated_by" -> "eel").foreach { case (key, value) => table.putToParameters(key, value) }
+
+      table.putToParameters("generated_by", "eel_" + Constants.EelVersion)
+      props.foreach { case (key, value) =>
+        table.putToParameters(key, value)
+      }
 
       client.createTable(table)
       logger.info(s"Table created $databaseName.$tableName")
