@@ -84,6 +84,8 @@ case class HiveSource(private val dbName: String,
     }
   }
 
+  def spec: HiveSpec = HiveSpecFn(dbName, tableName)
+
   private def dialect(t: Table): HiveDialect = {
 
     val format = t.getSd.getInputFormat

@@ -79,7 +79,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, mongo, solr, cli)
+    .aggregate(core, kafka, mongo, solr, cli)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -94,17 +94,11 @@ object Build extends Build {
       "org.apache.hadoop"     % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hive"       % "hive-common"       % HiveVersion,
       "org.apache.hive"       % "hive-exec"         % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
-      "mysql"                 % "mysql-connector-java" % "5.1.38"
+      "com.fasterxml.jackson.core"      %  "jackson-databind"           % "2.7.2",
+      "com.fasterxml.jackson.module"    %% "jackson-module-scala"       % "2.7.2",
+      "mysql"                           % "mysql-connector-java"        % "5.1.38"
     ))
     .settings(name := "eel-core")
-
-  lazy val json = Project("eel-json", file("components/json"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-json")
-    .settings(libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.0"
-    ))
-    .dependsOn(core)
 
   lazy val kafka = Project("eel-kafka", file("components/kafka"))
     .settings(rootSettings: _*)

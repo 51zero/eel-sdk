@@ -1,5 +1,7 @@
 package io.eels.component.hive
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
 import io.eels.Frame
@@ -38,7 +40,7 @@ object HiveTestApp extends App with Logging with Timed {
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  val rows = List.fill(3000000)(maps(Random.nextInt(maps.length)))
+  val rows = List.fill(30000)(maps(Random.nextInt(maps.length)))
   val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
 
   timed("creating table") {
@@ -57,6 +59,11 @@ object HiveTestApp extends App with Logging with Timed {
     frame.to(sink)
     logger.info("Write complete")
   }
+
+  val spec = HiveSource("sam", "albums").spec
+  val mapper = new ObjectMapper
+  mapper.registerModule(DefaultScalaModule)
+  println(mapper.writeValueAsString(spec))
 
   //  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
   //  logger.info("Result=" + result)

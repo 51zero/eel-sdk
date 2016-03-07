@@ -1,6 +1,6 @@
 package io.eels.cli
 
-import io.eels.SourceParser
+import io.eels.{Sink, SourceParser}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
@@ -38,7 +38,7 @@ object StreamMain {
       case Some(options) =>
         val builder = SourceParser(options.from).orNull
         val source = builder()
-        val sink = SinkFn(options.to)
+        val sink: Sink = null
         val result = source.toFrame(options.sourceIOThreads).to(sink)
         println(s"Completed with $result rows")
       case _ =>

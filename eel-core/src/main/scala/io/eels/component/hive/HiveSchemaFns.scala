@@ -15,12 +15,14 @@ object HiveSchemaFns extends StrictLogging {
   def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)
 
   def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {
-    logger.debug("Building frame schame from hive field schemas=" + schemas)
-    val columns = schemas.map { s =>
-      val (schemaType, precision, scale) = toSchemaType(s.getType)
-      Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
-    }
+    logger.debug("Building schema from hive fields=" + schemas)
+    val columns = schemas.map(fromHiveField)
     Schema(columns.toList)
+  }
+
+  def fromHiveField(s: FieldSchema): Column = {
+    val (schemaType, precision, scale) = toSchemaType(s.getType)
+    Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
   }
 
   val VarcharRegex = "varchar\\((\\d+\\))".r
