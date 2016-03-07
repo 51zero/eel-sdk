@@ -43,6 +43,8 @@ case class HiveSinkBuilder(db: String, table: String, params: Map[String, List[S
   override def apply(): HiveSink = {
     implicit val fs = FileSystem.get(new Configuration)
     implicit val conf = new HiveConf()
-    HiveSink(db, table, params)
+    val dynamicPartitioning = params.get("dynamicPartitioning").map(_.head.contains("true"))
+    val schemaEvolution = params.get("schemaEvolution").map(_.head.contains("true"))
+    HiveSink(db, table, 4, dynamicPartitioning, schemaEvolution)
   }
 }

@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 case class HiveSink(private val dbName: String,
                     private val tableName: String,
                     private val ioThreads: Int = 4,
-                    private val dynamicPartitioning: Boolean = true,
+                    private val dynamicPartitioning: Option[Boolean] = None,
                     private val schemaEvolution: Option[Boolean] = None)
                    (implicit fs: FileSystem, hiveConf: HiveConf) extends Sink with StrictLogging {
 
@@ -20,9 +20,10 @@ case class HiveSink(private val dbName: String,
   val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
   val bufferSize = config.getInt("eel.hive.bufferSize")
   val SchemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
+  val DynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
-  def withDynamicPartitioning(dynamicPartitioning: Boolean): HiveSink = copy(dynamicPartitioning = dynamicPartitioning)
+  def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
 
   private def hiveSchema(implicit client: HiveMetaStoreClient): Schema = {
@@ -51,23 +52,9 @@ case class HiveSink(private val dbName: String,
       tableName,
       ioThreads,
       dialect,
-      dynamicPartitioning,
+      dynamicPartitioning.getOrElse(DynamicPartitioningDefault),
       includePartitionsInData,
       bufferSize
-    )
-  }
-}
-
-object HiveSink {
-
-  @deprecated("functionality should move to the HiveSinkBuilder", "0.33.0")
-  def apply(dbName: String, tableName: String, params: Map[String, List[String]])
-           (implicit fs: FileSystem, hiveConf: HiveConf): HiveSink = {
-    val dynamicPartitioning = params.get("dynamicPartitioning").map(_.head).getOrElse("false") == "true"
-    HiveSink(
-      dbName,
-      tableName,
-      dynamicPartitioning = dynamicPartitioning
     )
   }
 }
