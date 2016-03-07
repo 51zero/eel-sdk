@@ -13,8 +13,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
-class HiveSinkWriter(inputSchema: Schema,
-                     outputSchema: Schema,
+class HiveSinkWriter(sourceSchema: Schema,
+                     hiveTableSchema: Schema,
                      dbName: String,
                      tableName: String,
                      ioThreads: Int,
@@ -26,18 +26,24 @@ class HiveSinkWriter(inputSchema: Schema,
     with Logging {
 
   val base = System.nanoTime
-  logger.debug(s"HiveSinkWriter created; timestamp=$base")
+  logger.debug(s"HiveSinkWriter created; timestamp=$base; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads; includePartitionsInData=$includePartitionsInData")
 
   val tablePath = HiveOps.tablePath(dbName, tableName)
   val lock = new Object {}
 
   val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
-  logger.debug("Dynamic partitioning enabled: " + partitionKeyNames.mkString(","))
+  logger.debug("Dynamic partitions: " + partitionKeyNames.mkString(","))
+
+  // the target schema is used to determine what data we write. This is generated from the hive table,
+  // with partition columns removed.
+  val targetSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) hiveTableSchema else {
+    partitionKeyNames.foldLeft(hiveTableSchema)((schema, name) => schema.removeColumn(name))
+  }
 
   // these are the indexes in input rows to skip from writing because they are partition values
-  val indexesToSkip = if (includePartitionsInData) Nil else partitionKeyNames.map(inputSchema.indexOf)
+  val indexesToSkip = if (includePartitionsInData) Nil else partitionKeyNames.map(sourceSchema.indexOf)
   // this is simply a list of indexes we want to keep, so we can efficiently iterate over it in the writing loop
-  val indexesToWrite = List.tabulate(inputSchema.columns.size)(k => k).filterNot(indexesToSkip.contains)
+  val indexesToWrite = List.tabulate(sourceSchema.columns.size)(k => k).filterNot(indexesToSkip.contains)
 
   // Since the data can come in unordered, we need to keep open a stream per partition path.
   // This shouldn't be shared amongst threads so that we can increase throughput by increasing the number
@@ -65,7 +71,7 @@ class HiveSinkWriter(inputSchema: Schema,
           // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
           // trying to create a partition at the same time. This is virtually guaranteed to happen if
           // the data is in any way sorted
-          if (createdPartitions.contains(partPath.toString)) {
+          if (!createdPartitions.contains(partPath.toString)) {
             lock.synchronized {
               HiveOps.createPartitionIfNotExists(dbName, tableName, parts)
               createdPartitions.add(partPath.toString)
@@ -76,13 +82,6 @@ class HiveSinkWriter(inputSchema: Schema,
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
 
-      // the target schema is what we use to write out with. This is generated from the schema taken
-      // from the hive target table, with partition information removed.
-      val targetSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) {
-        outputSchema
-      } else {
-        partitionKeyNames.foldLeft(outputSchema)((schema, name) => schema.removeColumn(name))
-      }
       dialect.writer(targetSchema, filePath)
     })
   }
@@ -99,7 +98,7 @@ class HiveSinkWriter(inputSchema: Schema,
       var count = 0l
       try {
         BlockingQueueConcurrentIterator(queue, InternalRow.PoisonPill).foreach { row =>
-          val writer = getOrCreateHiveWriter(row, inputSchema, k)
+          val writer = getOrCreateHiveWriter(row, sourceSchema, k)
           // need to strip out any partition information from the written data
           // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
           val rowToWrite = if (indexesToSkip.isEmpty) row else {
