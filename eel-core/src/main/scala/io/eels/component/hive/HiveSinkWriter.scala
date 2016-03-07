@@ -102,14 +102,19 @@ class HiveSinkWriter(inputSchema: Schema,
           val writer = getOrCreateHiveWriter(row, inputSchema, k)
           // need to strip out any partition information from the written data
           // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
-          if (indexesToSkip.isEmpty) {
-            writer.write(row)
-          } else {
+          val rowToWrite = if (indexesToSkip.isEmpty) row else {
             val row2 = new ListBuffer[Any]
             for (k <- indexesToWrite) {
               row2.append(row(k))
             }
-            writer.write(row2)
+            row2
+          }
+          try {
+            writer.write(rowToWrite)
+          } catch {
+            case NonFatal(e) =>
+              logger.error(s"Error writing row $row", e)
+              throw e
           }
           count = count + 1
         }
