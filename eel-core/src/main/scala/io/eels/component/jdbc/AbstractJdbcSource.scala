@@ -23,8 +23,7 @@ abstract class AbstractJdbcSource(url: String,
   protected def schemaFor(rs: ResultSet): Schema = {
     val dialect = providedDialect.getOrElse(JdbcDialect(url))
     val schema = JdbcSchemaFn(rs, dialect)
-    logger.debug("Fetched schema: ")
-    logger.debug(schema.print)
+    logger.debug("Fetched schema:\n" + schema.print)
     schema
   }
 

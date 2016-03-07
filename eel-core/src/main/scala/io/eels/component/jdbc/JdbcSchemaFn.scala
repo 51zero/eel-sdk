@@ -18,7 +18,7 @@ object JdbcSchemaFn extends StrictLogging {
       Column(
         name = md.getColumnLabel(k),
         `type` = dialect.fromJdbcType(md.getColumnType(k)),
-        nullable = md.isNullable(k) == 1,
+        nullable = md.isNullable(k) == ResultSetMetaData.columnNullable,
         precision = md.getPrecision(k),
         scale = md.getScale(k),
         signed = md.isSigned(k),
