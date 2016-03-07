@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Schema, Sink, SinkWriter}
+import io.eels.{Schema, Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -69,19 +69,5 @@ object HiveSink {
       tableName,
       dynamicPartitioning = dynamicPartitioning
     )
-  }
-}
-
-// returns all the partition parts for a given row, if a row doesn't contain a value
-// for a part then an error is thrown
-object RowPartitionParts {
-  def apply(row: InternalRow, partNames: Seq[String], schema: Schema): List[PartitionPart] = {
-    require(partNames.forall(schema.columnNames.contains), "Schema must contain all partitions " + partNames)
-    partNames.map { name =>
-      val index = schema.indexOf(name)
-      val value = row(index)
-      require(!value.toString.contains(" "), s"Values for partitions cannot contain spaces $name=$value (index $index)")
-      PartitionPart(name, value.toString)
-    }.toList
   }
 }

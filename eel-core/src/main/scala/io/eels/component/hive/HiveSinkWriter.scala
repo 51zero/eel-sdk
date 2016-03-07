@@ -57,7 +57,7 @@ class HiveSinkWriter(sourceSchema: Schema,
 
   def getOrCreateHiveWriter(row: InternalRow, sourceSchema: Schema, k: Long): HiveWriter = {
 
-    val parts = RowPartitionParts(row, partitionKeyNames, sourceSchema)
+    val parts = PartitionPartsFn(row, partitionKeyNames, sourceSchema)
     val partPath = HiveOps.partitionPathString(dbName, tableName, parts, tablePath)
     writers.getOrElseUpdate(partPath + "_" + k, {
 

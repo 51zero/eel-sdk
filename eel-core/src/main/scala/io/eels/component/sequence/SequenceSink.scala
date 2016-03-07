@@ -9,7 +9,6 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
 
 case class SequenceSink(path: Path) extends Sink {
-  self =>
   override def writer(schema: Schema): SinkWriter = new SequenceSinkWriter(schema, path)
 }
 
