@@ -1,9 +1,9 @@
 package io.eels.component.hive
 
-import io.eels.Column
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+
 import scala.collection.JavaConverters._
 
 object HiveSpecFn {
@@ -20,7 +20,9 @@ object HiveSpecFn {
         partition.getParameters.asScala.toMap
       )
     }.toList
-    val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField).toList
+    val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField).toList.map { column =>
+      HiveFieldSpec(column.name, HiveSchemaFns.toHiveType(column), column.comment)
+    }
     val owner = table.getOwner
     val retention = table.getRetention
     val createTime = table.getCreateTime
@@ -35,7 +37,7 @@ object HiveSpecFn {
 case class HiveSpec(dbName: String,
                     tableName: String,
                     location: String,
-                    columns: List[Column],
+                    fields: List[HiveFieldSpec],
                     tableType: String,
                     partitions: List[PartitionSpec],
                     params: Map[String, String],
@@ -47,3 +49,7 @@ case class HiveSpec(dbName: String,
                     owner: String)
 
 case class PartitionSpec(values: List[String], location: String, params: Map[String, String])
+
+case class HiveFieldSpec(name: String,
+                         `type`: String,
+                         comment: Option[String] = None)
