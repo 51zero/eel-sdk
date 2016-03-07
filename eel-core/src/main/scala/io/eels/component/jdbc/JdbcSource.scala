@@ -8,10 +8,10 @@ import io.eels._
 
 import scala.concurrent.duration._
 
-case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
-  extends Source
-    with Logging
-    with Using {
+case class JdbcSource(url: String,
+                      query: String,
+                      props: JdbcSourceProps = JdbcSourceProps(100),
+                      providedSchema: Option[Schema] = None) extends Source with Logging with Using {
 
   override def parts: Seq[Part] = {
 
@@ -72,8 +72,7 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
     Seq(part)
   }
 
-  lazy val schema: Schema = {
-
+  private def fetchSchema: Schema = {
     logger.info(s"Connecting to jdbc source $url...")
     using(DriverManager.getConnection(url)) { conn =>
       logger.debug(s"Connected to $url")
@@ -98,6 +97,8 @@ case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcS
       schema
     }
   }
+
+  lazy val schema: Schema = providedSchema getOrElse fetchSchema
 }
 
 case class JdbcSourceProps(fetchSize: Int, dialect: Option[JdbcDialect] = None)
