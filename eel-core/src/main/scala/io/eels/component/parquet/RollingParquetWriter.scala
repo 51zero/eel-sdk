@@ -1,5 +1,7 @@
 package io.eels.component.parquet
 
+import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.slf4j.StrictLogging
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -8,14 +10,14 @@ class RollingParquetWriter(basePath: Path,
                            avroSchema: Schema,
                            maxRecordsPerFile: Int,
                            maxFileSize: Long,
-                           skipCrc: Boolean)(implicit fs: FileSystem) extends ParquetWriterSupport {
+                           skipCrc: Boolean)(implicit fs: FileSystem) extends StrictLogging {
   logger.debug(s"Created rolling parquet writer; maxRecordsPerFile = $maxRecordsPerFile; maxFileSize = $maxFileSize; skipCrc = $skipCrc")
 
   private val isRolling = maxRecordsPerFile > 0 || maxFileSize > 0
   private var filecount = -1
   private var records = 0
   private var path = nextPath()
-  private var writer = createParquetWriter(path, avroSchema)
+  private var writer = ParquetWriterSupport(path, avroSchema)
 
   private def nextPath(): Path = {
     if (isRolling) {
@@ -30,7 +32,7 @@ class RollingParquetWriter(basePath: Path,
     logger.debug(s"Rolling parquet file [$records records]")
     close()
     path = nextPath()
-    writer = createParquetWriter(path, avroSchema)
+    writer = ParquetWriterSupport(path, avroSchema)
     records = 0
   }
 
@@ -57,5 +59,22 @@ class RollingParquetWriter(basePath: Path,
       if (fs.exists(crc))
         fs.delete(crc, false)
     }
+  }
+}
+
+object RollingParquetWriter extends StrictLogging {
+
+  val config = ConfigFactory.load()
+
+  val MaxRecordsPerFileKey = "eel.parquet.maxRecordsPerFile"
+  val MaxFileSizeKey = "eel.parquet.maxFileSize"
+  val SkipCrcKey = "eel.parquet.skipCrc"
+
+  val maxRecordsPerFile = config.getInt(MaxRecordsPerFileKey)
+  val maxFileSize = config.getInt(MaxFileSizeKey)
+  val skipCrc = config.getBoolean(SkipCrcKey)
+
+  def apply(path: Path, avroSchema: Schema)(implicit fs: FileSystem): RollingParquetWriter = {
+    new RollingParquetWriter(path, avroSchema, maxFileSize, maxRecordsPerFile, skipCrc)
   }
 }

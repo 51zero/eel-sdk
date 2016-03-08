@@ -2,13 +2,14 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 import java.util.concurrent._
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong, AtomicReference}
+import java.util.concurrent.atomic.AtomicLong
 
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
+import com.sksamuel.scalax.concurrent.BoundedThreadPoolExecutor
 import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
+import io.eels.{InternalRow, Schema, Sink, SinkWriter}
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -33,58 +34,19 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     }
   }
 
-  override def writer = new JdbcWriter(url, table, dialect, props, autoCommit, bufferSize, swallowExceptions)
-}
-
-class BoundedThreadPoolExecutor(poolSize: Int, queueSize: Int)
-  extends ThreadPoolExecutor(poolSize, poolSize, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue[Runnable]())
-    with AutoCloseable {
-
-  val semaphore = new Semaphore(poolSize + queueSize)
-  val running = new AtomicBoolean(true)
-
-  def execute(task: => Any): Unit = execute(new Runnable {
-    override def run(): Unit = task
-  })
-
-  override def execute(runnable: Runnable): Unit = {
-
-    var acquired = false
-    while (running.get && !acquired) {
-      try {
-        semaphore.acquire()
-        acquired = true
-      } catch {
-        case e: InterruptedException =>
-      }
-    }
-
-    try {
-      super.execute(runnable)
-    } catch {
-      case e: RejectedExecutionException =>
-        semaphore.release()
-        throw e;
-    }
-  }
-
-  override def afterExecute(r: Runnable, t: Throwable): Unit = {
-    super.afterExecute(r, t)
-    semaphore.release()
-  }
-
-  override def close(): Unit = {
-    running.set(false)
+  override def writer(schema: Schema) = {
+    new JdbcWriter(schema, url, table, dialect, props, autoCommit, bufferSize, swallowExceptions)
   }
 }
 
-class JdbcWriter(url: String,
+class JdbcWriter(schema: Schema,
+                 url: String,
                  table: String,
                  dialect: JdbcDialect,
                  props: JdbcSinkProps = JdbcSinkProps(),
                  autoCommit: Boolean,
                  bufferSize: Int,
-                 swallowExceptions: Boolean) extends Writer with StrictLogging {
+                 swallowExceptions: Boolean) extends SinkWriter with StrictLogging {
   logger.info(s"Creating Jdbc writer with ${props.threads} threads, batch size ${props.batchSize}, autoCommit=$autoCommit")
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
@@ -92,7 +54,7 @@ class JdbcWriter(url: String,
   // the buffer is a concurrent receiver for the write method. It needs to hold enough elements to keep the
   // frame threads busy until the coordinator thread gets a time slice and empties it via its iterator.
   // controlled by eel.jdbc.sink.bufferSize
-  private val buffer = new ArrayBlockingQueue[InternalRow](bufferSize)
+  private val buffer = new LinkedBlockingQueue[InternalRow](bufferSize)
 
   // We use a bounded executor because otherwise the executor would very quickly fill up with pending tasks
   // for all rows in the source. Then effectively we would have loaded the entire frame into memory and stored it
@@ -100,7 +62,6 @@ class JdbcWriter(url: String,
   private val workers = new BoundedThreadPoolExecutor(props.threads, props.threads)
   private val batchCount = new AtomicLong(0)
   private val coordinator = Executors.newSingleThreadExecutor()
-  private val schemaRef = new AtomicReference[FrameSchema](null)
   private var inserter: JdbcInserter = null
 
   coordinator.submit {
@@ -138,7 +99,7 @@ class JdbcWriter(url: String,
   private def ensureInserterCreated(): Unit = {
     // coordinator is single threaded, so simple var with null is fine
     if (inserter == null) {
-      inserter = new JdbcInserter(url, table, schemaRef.get, autoCommit, dialect)
+      inserter = new JdbcInserter(url, table, schema, autoCommit, dialect)
       if (props.createTable)
         inserter.ensureTableCreated()
     }
@@ -150,17 +111,14 @@ class JdbcWriter(url: String,
     workers.awaitTermination(1, TimeUnit.DAYS)
   }
 
-  override def write(row: InternalRow, schema: FrameSchema): Unit = {
-    // need an atomic ref here as this method will be called by multiple threads, and we need
-    // to ensure the schema is visible to the coordinator thread when it calls ensureInserterCreated()
-    if (schemaRef.get == null) schemaRef.set(schema)
+  override def write(row: InternalRow): Unit = {
     buffer.put(row)
   }
 }
 
 class JdbcInserter(url: String,
                    table: String,
-                   schema: FrameSchema,
+                   schema: Schema,
                    autoCommit: Boolean,
                    dialect: JdbcDialect) extends StrictLogging {
 
@@ -179,7 +137,7 @@ class JdbcInserter(url: String,
         stmt.addBatch()
       }
       val result = stmt.executeBatch()
-      logger.debug(s"Batch completed; $result rows updated")
+      logger.debug(s"Batch completed; ${result.length} rows updated")
       if (!autoCommit) conn.commit()
     } catch {
       case e: Exception =>

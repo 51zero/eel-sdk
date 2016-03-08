@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.nio.file.Path
 
 import com.sksamuel.scalax.io.Using
-import io.eels.{InternalRow, FrameSchema, Reader, Source}
+import io.eels._
 import org.apache.avro.file.{DataFileReader, SeekableFileInput}
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 
@@ -16,34 +16,37 @@ case class AvroSource(path: Path) extends Source with Using {
     new DataFileReader[GenericRecord](new SeekableFileInput(path.toFile), datumReader)
   }
 
-  override def schema: FrameSchema = {
+  override def schema: Schema = {
     using(createReader) { reader =>
       val record = reader.next()
       val columns = record.getSchema.getFields.asScala.map(_.name)
-      FrameSchema(columns)
+      Schema(columns)
     }
   }
-  override def readers: Seq[Reader] = {
+  override def parts: Seq[Part] = {
 
-    val reader = new Reader {
+    val part = new Part {
 
-      val reader = createReader
+      def reader: SourceReader = new SourceReader {
 
-      override def close(): Unit = reader.close()
+        val reader = createReader
 
-      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
+        override def close(): Unit = reader.close()
 
-        override def hasNext: Boolean = {
-          val hasNext = reader.hasNext
-          if (!hasNext)
-            reader.close()
-          hasNext
+        override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
+
+          override def hasNext: Boolean = {
+            val hasNext = reader.hasNext
+            if (!hasNext)
+              reader.close()
+            hasNext
+          }
+
+          override def next: InternalRow = AvroRecordFn.fromRecord(reader.next)
         }
-
-        override def next: InternalRow = AvroRecordFn.fromRecord(reader.next)
       }
     }
 
-    Seq(reader)
+    Seq(part)
   }
 }

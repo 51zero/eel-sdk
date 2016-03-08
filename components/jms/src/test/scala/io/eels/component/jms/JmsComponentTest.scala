@@ -2,7 +2,7 @@ package io.eels.component.jms
 
 import javax.jms.{DeliveryMode, Session}
 
-import io.eels.{FrameSchema, Row}
+import io.eels.{Schema, Row}
 import org.apache.activemq.ActiveMQConnectionFactory
 import org.apache.activemq.broker.BrokerService
 import org.scalatest.{Matchers, WordSpec}
@@ -36,7 +36,7 @@ class JmsComponentTest extends WordSpec with Matchers {
 
       val consumer = session.createConsumer(destination)
       val rows = JmsSource(consumer).toSet
-      rows shouldBe Set(Row(FrameSchema(List.empty[String]), List("Hello world")))
+      rows shouldBe Set(Row(Schema(List.empty[String]), List("Hello world")))
 
       session.close()
       connection.close()

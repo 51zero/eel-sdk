@@ -1,102 +1,53 @@
 package io.eels.component.jdbc
 
-import java.sql.DriverManager
-
+import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Reader, InternalRow, Source}
+import com.sksamuel.scalax.metrics.Timed
+import io.eels._
 
-import scala.concurrent.duration._
+case class JdbcSource(url: String,
+                      query: String,
+                      fetchSize: Int = 100,
+                      providedSchema: Option[Schema] = None,
+                      providedDialect: Option[JdbcDialect] = None,
+                      bucketing: Option[Bucketing] = None)
+  extends AbstractJdbcSource(url, providedSchema, providedDialect) with Logging with Using with Timed {
 
-case class JdbcSource(url: String, query: String, props: JdbcSourceProps = JdbcSourceProps(100))
-  extends Source
-    with StrictLogging
-    with Using {
+  def withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = Some(schema))
+  def withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = Some(dialect))
 
-  override def readers: Seq[Reader] = {
+  override def parts: Seq[Part] = {
 
-    logger.info(s"Connecting to jdbc source $url...")
-    val conn = DriverManager.getConnection(url)
-    logger.debug(s"Connected to $url")
-
+    val conn = connect()
     val stmt = conn.createStatement()
-    stmt.setFetchSize(props.fetchSize)
+    stmt.setFetchSize(fetchSize)
 
-    logger.debug(s"Executing query [$query]...")
-    val start = System.currentTimeMillis()
-    val rs = stmt.executeQuery(query)
-    val duration = (System.currentTimeMillis() - start).millis
-    logger.info(s" === query completed in $duration ===")
-
-    val dialect = props.dialect.getOrElse(JdbcDialect(url))
-    val schema = SchemaBuilder(rs, dialect)
-    logger.debug("Fetched schema: ")
-    logger.debug(schema.print)
-
-    val columnCount = schema.columns.size
-
-    val part = new Reader {
-
-      override def close(): Unit = {
-        logger.debug("Closing reader")
-        rs.close()
-        stmt.close()
-        conn.close()
-      }
-
-      var created = false
-
-      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
-        require(!created, "!Cannot create more than one iterator for a jdbc source!")
-        created = true
-
-        override def hasNext: Boolean = {
-          val hasNext = rs.next()
-          if (!hasNext) {
-            logger.debug("Resultset is completed; closing stream")
-            close()
-          }
-          hasNext
-        }
-
-        override def next: InternalRow = {
-          for ( k <- 1 to columnCount ) yield {
-            rs.getObject(k)
-          }
-        }
-      }
+    val rs = timed("Executing query") {
+      stmt.executeQuery(query)
     }
 
+    val schema = schemaFor(rs)
+    val part = new JdbcPart(rs, stmt, conn, schema)
     Seq(part)
   }
 
-  lazy val schema: FrameSchema = {
+  override protected def fetchSchema: Schema = {
 
-    logger.info(s"Connecting to jdbc source $url...")
-    using(DriverManager.getConnection(url)) { conn =>
-      logger.debug(s"Connected to $url")
+    using(connect()) { conn =>
+      using(conn.createStatement) { stmt =>
+        stmt.setFetchSize(fetchSize)
 
-      val stmt = conn.createStatement()
+        val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
+        val rs = timed(s"Query for schema [$schemaQuery]...") {
+          stmt.executeQuery(schemaQuery)
+        }
 
-      val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
-      logger.debug(s"Executing query for schema [$schemaQuery]...")
-      val start = System.currentTimeMillis()
-      val rs = stmt.executeQuery(query)
-      val duration = (System.currentTimeMillis() - start).millis
-      logger.info(s" === schema fetch completed in $duration ===")
-
-      val dialect = props.dialect.getOrElse(JdbcDialect(url))
-      val schema = SchemaBuilder(rs, dialect)
-      rs.close()
-      stmt.close()
-
-      logger.debug("Fetched schema: ")
-      logger.debug(schema.print)
-
-      schema
+        val schema = schemaFor(rs)
+        rs.close()
+        schema
+      }
     }
   }
 }
 
-case class JdbcSourceProps(fetchSize: Int, dialect: Option[JdbcDialect] = None)
-
+case class Bucketing(columnName: String, numberOfBuckets: Int)

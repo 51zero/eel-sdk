@@ -6,7 +6,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
 import Frame._
-import Frame._
+
+case class Wibble(name: String, location: String, postcode: String)
 
 class FrameTest extends WordSpec with Matchers with Eventually {
 
@@ -14,18 +15,109 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   val frame = Frame(List("a", "b"), List("1", "2"), List("3", "4"))
 
-  "Frame" should {
-    "be immutable and repeatable" in {
-      val f = frame.drop(1)
-      f.drop(1).size shouldBe 0
-      f.size shouldBe 1
+  "Frame.addColumnIfNotExists" should {
+    "not add column if already exists" in {
+      val f = frame.addColumnIfNotExists("a", "bibble")
+      f.schema shouldBe Schema(List(Column("a"), Column("b")))
+      f.head.get shouldBe List("1", "2")
     }
-    "support foreach" in {
+    "add column if it does not exist" in {
+      val f = frame.addColumnIfNotExists("testy", "bibble")
+      f.schema shouldBe Schema(List(Column("a"), Column("b"), Column("testy")))
+      f.head.get shouldBe List("1", "2", "bibble")
+    }
+  }
+
+  "Frame.addColumn" should {
+    "support adding columns" in {
+      val f = frame.addColumn("testy", "bibble")
+      f.schema shouldBe Schema(List(Column("a"), Column("b"), Column("testy")))
+      f.head.get shouldBe List("1", "2", "bibble")
+    }
+  }
+
+  "Frame.foreach" should {
+    "execute for every row" in {
       val count = new AtomicInteger(0)
       frame.foreach(_ => count.incrementAndGet).size
       eventually {
         count.get() shouldBe 2
       }
+    }
+  }
+
+
+  "Frame.stripFromColumnName" should {
+    "remove offending characters" in {
+      val frame = Frame(
+        List("name", "#location", "!postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      frame.stripFromColumnName(Seq('#', '!', 'p')).schema shouldBe
+        Schema(List(Column("name"), Column("location"),Column("ostcode")))
+    }
+  }
+
+  "Frame.removeColumn" should {
+    "remove column" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      val f = frame.removeColumn("location")
+      f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
+      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
+    }
+    "not remove column if case is different" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      val f = frame.removeColumn("POSTcode")
+      f.schema shouldBe Schema(List(Column("name"), Column("location"), Column("postcode")))
+      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "aylesbury", "hp22"), Row(f.schema, "ham", "buckingham", "mk10"))
+    }
+    "remove column with ignore case" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      val f = frame.removeColumn("locATION", false)
+      f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
+      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
+    }
+  }
+
+  "Frame.toSet[T]" should {
+    "marshall result into instances of T" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      frame.toSetAs[Wibble] shouldBe Set(Wibble("sam", "aylesbury", "hp22"), Wibble("ham", "buckingham", "mk10"))
+    }
+  }
+
+  "Frame.toSeq[T]" should {
+    "marshall result into instances of T" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("ham", "buckingham", "mk10")
+      )
+      frame.toSeqAs[Wibble] shouldBe Seq(Wibble("ham", "buckingham", "mk10"))
+    }
+  }
+
+  "Frame" should {
+    "be immutable and repeatable" in {
+      val f = frame.drop(1)
+      f.drop(1).size shouldBe 0
+      f.size shouldBe 1
     }
     "support forall" in {
       frame.forall(_.size == 1) shouldBe false
@@ -42,23 +134,8 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "be thread safe when using drop" in {
       val rows = Iterator.tabulate(10000)(k => Seq("1")).toList
-      val frame = Frame(FrameSchema(Seq("k")), rows)
+      val frame = Frame(Schema(Seq("k")), rows)
       frame.drop(100).toSeq.size shouldBe 9900
-    }
-    "support adding columns" in {
-      val f = frame.addColumn("testy", "bibble")
-      f.head.get shouldBe List("1", "2", "bibble")
-      f.schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("testy")))
-    }
-    "support removing columns" in {
-      val frame = Frame(
-        List("name", "location", "postcode"),
-        List("sam", "aylesbury", "hp22"),
-        List("ham", "buckingham", "mk10")
-      )
-      val f = frame.removeColumn("location")
-      f.schema shouldBe FrameSchema(List(Column("name"), Column("postcode")))
-      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
     "support column projection" in {
       val frame = Frame(
@@ -69,7 +146,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
       val f = frame.projection("location")
       f.head.get shouldBe Seq("aylesbury")
-      f.schema shouldBe FrameSchema(List(Column("location")))
+      f.schema shouldBe Schema(List(Column("location")))
     }
     "support column projection expressions" in {
       val frame = Frame(
@@ -80,7 +157,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
       val f = frame.projectionExpression("location,name")
       f.head.get shouldBe Seq("aylesbury", "sam")
-      f.schema shouldBe FrameSchema(List(Column("location"), Column("name")))
+      f.schema shouldBe Schema(List(Column("location"), Column("name")))
     }
     "support column projection re-ordering" in {
       val frame = Frame(
@@ -90,7 +167,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("ham", "buckingham")
       )
       val f = frame.projection("location", "name")
-      f.schema shouldBe FrameSchema(List(Column("location"), Column("name")))
+      f.schema shouldBe Schema(List(Column("location"), Column("name")))
       f.head.get shouldBe List("aylesbury", "sam")
     }
     "support row filtering by column name and fn" in {
@@ -116,7 +193,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     "support joins" in {
       val frame1 = Frame(List("a", "b"), List("sam", "bam"))
       val frame2 = Frame(List("c", "d"), List("ham", "jam"))
-      frame1.join(frame2).schema shouldBe FrameSchema(List(Column("a"), Column("b"), Column("c"), Column("d")))
+      frame1.join(frame2).schema shouldBe Schema(List(Column("a"), Column("b"), Column("c"), Column("d")))
       frame1.join(frame2).head.get shouldBe List("sam", "bam", "ham", "jam")
     }
     "support except" in {
@@ -132,7 +209,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("y", "aylesbury"),
         List("z", "buckingham")
       )
-      val schema = FrameSchema(Seq("name"))
+      val schema = Schema(Seq("name"))
       frame1.except(frame2).schema shouldBe schema
       frame1.except(frame2).toSeq.toSet shouldBe Set(
         Row(schema, "sam"),
@@ -271,11 +348,11 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support column update" in {
       val frame = Frame(
-        FrameSchema("name", "location"),
+        Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.updateColumn(Column("name", SchemaType.Int, true)).schema shouldBe FrameSchema(Column("name", SchemaType.Int, true), Column("location", SchemaType.String, false))
+      frame.updateColumn(Column("name", SchemaType.Int, true)).schema shouldBe Schema(Column("name", SchemaType.Int, true), Column("location", SchemaType.String, false))
     }
     "support column rename" in {
       val frame = Frame(
@@ -283,7 +360,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.renameColumn("name", "blame").schema shouldBe FrameSchema("blame", "location")
+      frame.renameColumn("name", "blame").schema shouldBe Schema("blame", "location")
     }
     "convert from a Seq[T<:Product]" ignore {
       val p1 = PersonA("name1", 2, 1.2, true, 11, 3, 1)

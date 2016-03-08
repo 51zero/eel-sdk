@@ -1,6 +1,6 @@
 package io.eels.component.orc
 
-import io.eels.{Frame, FrameSchema, Row}
+import io.eels.{Frame, Schema, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
@@ -15,7 +15,7 @@ class OrcComponentTest extends WordSpec with Matchers {
       implicit val fs = FileSystem.get(new Configuration)
 
       val frame = Frame(
-        FrameSchema("name", "job", "location"),
+        Schema("name", "job", "location"),
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),
         Vector("david bowie", "musician", "surrey")

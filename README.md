@@ -1,6 +1,8 @@
 # Eel
 
 [![Build Status](https://travis-ci.org/eel-sdk/eel.svg?branch=master)](https://travis-ci.org/eel-sdk/eel)
+[<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.10*.svg?label=latest%20release%20for%202.10"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.10%22)
+[<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.11*.svg?label=latest%20release%20for%202.11"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.11%22)
 
 <img src="https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png" width="140px" align="left"> Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel operates on a single machine. It is aimed at those problems which can be solved simply and quickly by iterating over data row by row. Or when the size of the data fits into memory and shuffling data between nodes adds overhead and complexity. This turns out to be quite a common use case.
 
@@ -94,7 +96,17 @@ Simple example of writing to a Hive database `frame.to(HiveSink("mydb", "mytable
 
 We can specify the number of concurrent writes, by using the ioThreads parameter `frame.to(HiveSink("mydb", "mytable").withIOThreads(4))`
  
- Kafka Source
+Csv Source
+----
+
+If the schema you need is in the form of the CSV headers, then we can easily parse those to create the schema. But obviously CSV won't encode any type information. Therefore, we can specify an instance of a `SchemaInferrer` which can be customized with rules to determine the correct schema type for each header. So for example, you might say that "name" is a SchemaType.String, or that anything matching "*_id" is a SchemaType.Long. You can also specify the nullability, scale, precision and unsigned. A quick example:
+
+```scala
+val inferrer = SchemaInferrer(SchemaType.String, SchemaRule("qty", SchemaType.Int, false), SchemaRule(".*_id", SchemaType.Int))
+CsvSource("myfile").withSchemaInferrer(inferrer)
+```
+
+Kafka Source
 ---
 
 Eel integrates with [Kafka](http://kafka.apache.org/) to read messages from a topic or topics into a Frame. To connect to a Kafka server we need an instance of `KafkaSource` with an instance of `KafkaSourceConfig`. The config requires the broker list (host:port,host:port,..), the consumer group to connect as, as well as the topic or topics to read from. In addition we must specify a `KafkaDeserializer` that can convert the incoming byte array from Kafka into an eel Row. 

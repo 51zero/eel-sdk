@@ -1,10 +1,10 @@
 package io.eels
 
 trait Sink {
-  def writer: Writer
+  def writer(schema: Schema): SinkWriter
 }
 
-trait Writer {
-  def write(row: InternalRow, schema: FrameSchema): Unit
+trait SinkWriter {
+  def write(row: InternalRow): Unit
   def close(): Unit
 }

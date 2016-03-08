@@ -18,7 +18,7 @@ class SequenceSourceTest extends WordSpec with Matchers {
 
   "SequenceSource" should {
     "read sequence files" in {
-      val schema = FrameSchema(List(
+      val schema = Schema(List(
         Column("a", SchemaType.String, false, 0, 0, true, None),
         Column("b", SchemaType.String, false, 0, 0, true, None),
         Column("c", SchemaType.String, false, 0, 0, true, None),
@@ -33,7 +33,7 @@ class SequenceSourceTest extends WordSpec with Matchers {
     }
     "read header as schema" in {
       val path = new Path(IO.fileFromResource("/test.seq").getAbsolutePath)
-      SequenceSource(path).schema shouldBe FrameSchema(
+      SequenceSource(path).schema shouldBe Schema(
         List(
           Column("a", SchemaType.String, false),
           Column("b", SchemaType.String, false),

@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.{Column, Frame, FrameSchema}
+import io.eels.{Column, Frame, Schema}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
@@ -42,7 +42,7 @@ class JdbcSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
     }
     "support multiple writers" in {
       val rows = List.fill(100000)(Seq("1", "2"))
-      val frame = Frame(FrameSchema(Seq("a", "b")), rows)
+      val frame = Frame(Schema(Seq("a", "b")), rows)
       frame.to(JdbcSink("jdbc:h2:mem:test", "multithreads", JdbcSinkProps(createTable = true, threads = 4)))
       val rs = conn.createStatement().executeQuery("select count(*) from multithreads")
       rs.next

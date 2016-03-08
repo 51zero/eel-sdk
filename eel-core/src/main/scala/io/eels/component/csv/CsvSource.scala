@@ -2,48 +2,119 @@ package io.eels.component.csv
 
 import java.nio.file.Path
 
-import com.github.tototoshi.csv.CSVReader
 import com.sksamuel.scalax.io.Using
-import io.eels.{FrameSchema, InternalRow, Reader, Source}
+import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
+import io.eels._
 
-case class CsvSource(path: Path, overrideSchema: Option[FrameSchema] = None) extends Source with Using {
+sealed abstract class Header
+object Header {
+  case object None extends Header
+  case object FirstComment extends Header
+  case object FirstRow extends Header
+}
 
-  def withSchema(schema: FrameSchema): CsvSource = copy(overrideSchema = Some(schema))
+case class CsvSource(path: Path,
+                     overrideSchema: Option[Schema] = None,
+                     format: CsvFormat = CsvFormat(),
+                     inferrer: SchemaInferrer = StringInferrer,
+                     ignoreLeadingWhitespaces: Boolean = true,
+                     ignoreTrailingWhitespaces: Boolean = true,
+                     skipEmptyLines: Boolean = true,
+                     emptyCellValue: Option[String] = None,
+                     header: Header = Header.FirstRow) extends Source with Using {
 
-  override def schema: FrameSchema = overrideSchema.getOrElse {
-    val reader = CSVReader.open(path.toFile)
-    using(reader) { reader =>
-      val headers = reader.readNext().get
-      FrameSchema(headers)
-    }
+  private def createParser: CsvParser = {
+    val settings = new CsvParserSettings()
+    settings.getFormat.setDelimiter(format.delimiter)
+    settings.getFormat.setQuote(format.quoteChar)
+    settings.getFormat.setQuoteEscape(format.quoteEscape)
+    settings.setLineSeparatorDetectionEnabled(true)
+    // this is always true as we will fetch the headers ourselves by reading first row
+    settings.setHeaderExtractionEnabled(false)
+    settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces)
+    settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
+    settings.setSkipEmptyLines(skipEmptyLines)
+    settings.setCommentCollectionEnabled(true)
+    settings.setEmptyValue(emptyCellValue.orNull)
+    settings.setNullValue(emptyCellValue.orNull)
+    new com.univocity.parsers.csv.CsvParser(settings)
   }
 
-  override def readers: Seq[Reader] = {
+  def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
+  def withHeader(header: Header): CsvSource = copy(header = header)
+  def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
+  def withDelimiter(c: Char): CsvSource = copy(format = format.copy(delimiter = c))
+  def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
+  def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
+  def withFormat(format: CsvFormat): CsvSource = copy(format = format)
+  def withEmptyCellValue(emptyCellValue: String): CsvSource = copy(emptyCellValue = Some(emptyCellValue))
+  def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
+  def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
+  def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
 
-    val reader = CSVReader.open(path.toFile)
-    val iter = reader.iterator
-
-    // throw away header
-    if (iter.hasNext)
-      iter.next
-
-    val part = new Reader {
-
-      override def close(): Unit = reader.close()
-
-      override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
-
-        override def hasNext: Boolean = {
-          val hasNext = iter.hasNext
-          if (!hasNext)
-            reader.close()
-          hasNext
-        }
-
-        override def next: InternalRow = iter.next
-      }
+  override def schema: Schema = overrideSchema.getOrElse {
+    val parser = createParser
+    parser.beginParsing(path.toFile)
+    val headers = header match {
+      case Header.None =>
+        val headers = parser.parseNext
+        List.tabulate(headers.size)(_.toString)
+      case Header.FirstComment =>
+        while (parser.getContext.lastComment == null && parser.parseNext != null) {}
+        val str = Option(parser.getContext.lastComment).getOrElse("")
+        str.split(format.delimiter).toSeq
+      case Header.FirstRow =>
+        parser.parseNext.toSeq
     }
+    parser.stopParsing()
+    inferrer(headers)
+  }
 
-    Seq(part)
+  override def parts: Seq[Part] = Seq(new CsvPart(createParser, path, header))
+}
+
+class CsvPart(parser: CsvParser, path: Path, header: Header) extends Part {
+
+  override def reader: SourceReader = new SourceReader {
+    parser.beginParsing(path.toFile)
+    override def close(): Unit = parser.stopParsing()
+    override def iterator: Iterator[InternalRow] = {
+      val k = header match {
+        case Header.FirstRow => 1
+        case _ => 0
+      }
+      Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map(_.toSeq)
+    }
+  }
+}
+
+trait SchemaInferrer {
+  def apply(headers: Seq[String]): Schema
+}
+
+object StringInferrer extends SchemaInferrer {
+  def apply(headers: Seq[String]): Schema = Schema(headers.map(header => Column(header, SchemaType.String, true)).toList)
+}
+
+case class SchemaRule(pattern: String, schemaType: SchemaType, nullable: Boolean = true) {
+  def apply(header: String): Option[Column] = {
+    if (header.matches(pattern)) Some(Column(header, schemaType, nullable)) else None
+  }
+}
+
+object SchemaInferrer {
+
+  import com.sksamuel.scalax.OptionImplicits._
+
+  def apply(default: SchemaType, first: SchemaRule, rest: SchemaRule*): SchemaInferrer = new SchemaInferrer {
+    val rules = first +: rest
+    override def apply(headers: Seq[String]): Schema = {
+      val columns = headers.map { header =>
+        rules.foldLeft(none[Column]) { (schemaType, rule) =>
+          schemaType.orElse(rule(header))
+        }.getOrElse(Column(header, default, true))
+      }
+      Schema(columns.toList)
+    }
   }
 }

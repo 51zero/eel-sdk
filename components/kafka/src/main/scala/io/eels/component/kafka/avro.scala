@@ -3,7 +3,7 @@ package io.eels.component.kafka
 import java.io.ByteArrayOutputStream
 
 import com.typesafe.config.ConfigFactory
-import io.eels.{FrameSchema, InternalRow}
+import io.eels.{Schema, InternalRow}
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import org.apache.avro.file.{DataFileReader, DataFileWriter, SeekableByteArrayInput}
 import org.apache.avro.generic.{GenericDatumReader, GenericDatumWriter, GenericRecord}
@@ -21,7 +21,7 @@ object AvroKafkaSerializer extends KafkaSerializer {
 
   val config = ConfigFactory.load()
 
-  override def apply(row: InternalRow, schema: FrameSchema): Array[Byte] = {
+  override def apply(row: InternalRow, schema: Schema): Array[Byte] = {
 
     val avroSchema = AvroSchemaFn.toAvro(schema)
     val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)

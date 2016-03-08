@@ -29,9 +29,10 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "com.github.tototoshi"        %% "scala-csv"            % "1.2.2",
+      "com.github.tototoshi"        %% "scala-csv"            % "1.3.0",
+      "com.univocity"               % "univocity-parsers"     % "2.0.0",
       "org.scala-lang"              % "scala-reflect"         % scalaVersion.value,
-      "com.sksamuel.scalax"         %% "scalax"               % "1.23.1",
+      "com.sksamuel.scalax"         %% "scalax"               % "1.24.1",
       "com.typesafe"                % "config"                % "1.2.1",
       "org.apache.hadoop"           % "hadoop-common"         % HadoopVersion          % "provided",
       "org.apache.hadoop"           % "hadoop-hdfs"           % HadoopVersion          % "provided",
@@ -51,7 +52,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/51zero/eel</url>
+      <url>https://github.com/eel-sdk/eel</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -60,8 +61,8 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:51zero/eel.git</url>
-          <connection>scm:git@github.com:51zero/eel.git</connection>
+          <url>git@github.com:eel-sdk/eel.git</url>
+          <connection>scm:git@github.com:eel-sdk/eel.git</connection>
         </scm>
         <developers>
           <developer>
@@ -78,7 +79,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, json, kafka, mongo, solr, cli)
+    .aggregate(core, kafka, mongo, solr, cli)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -93,17 +94,11 @@ object Build extends Build {
       "org.apache.hadoop"     % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hive"       % "hive-common"       % HiveVersion,
       "org.apache.hive"       % "hive-exec"         % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
-      "mysql"                 % "mysql-connector-java" % "5.1.38"
+      "com.fasterxml.jackson.core"      %  "jackson-databind"           % "2.7.2",
+      "com.fasterxml.jackson.module"    %% "jackson-module-scala"       % "2.7.2",
+      "mysql"                           % "mysql-connector-java"        % "5.1.38"
     ))
     .settings(name := "eel-core")
-
-  lazy val json = Project("eel-json", file("components/json"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-json")
-    .settings(libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.0"
-    ))
-    .dependsOn(core)
 
   lazy val kafka = Project("eel-kafka", file("components/kafka"))
     .settings(rootSettings: _*)

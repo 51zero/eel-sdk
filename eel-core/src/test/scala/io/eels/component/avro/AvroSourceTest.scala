@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.io.File
 import java.nio.file.Paths
 
-import io.eels.{Column, FrameSchema}
+import io.eels.{Column, Schema}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceTest extends WordSpec with Matchers {
@@ -13,7 +13,7 @@ class AvroSourceTest extends WordSpec with Matchers {
   "AvroSource" should {
     "read schema" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath))
-      people.schema shouldBe FrameSchema(List(Column("name"), Column("job"), Column("location")))
+      people.schema shouldBe Schema(List(Column("name"), Column("job"), Column("location")))
     }
     "read avro files" in {
       val people = AvroSource(Paths.get(new File(getClass.getResource("/test.avro").getFile).getAbsolutePath)).toSet

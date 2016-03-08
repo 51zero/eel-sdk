@@ -3,7 +3,7 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{FrameSchema, Frame}
+import io.eels.{Schema, Frame}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -80,7 +80,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val schema = FrameSchema("id", "state")
+  val schema = Schema("id", "state")
   val rows = List.fill(10000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
 
   logger.info(s"Generated ${rows.size} rows")
@@ -104,7 +104,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
   val start = System.currentTimeMillis()
 
   val result = HiveSource("sam", "people")
-    .withPartition("state", "<=", "Iowa")
+    .withPartitionConstraint("state", "<=", "Iowa")
     .withColumns("id", "foo", "woo").toFrame(4).toSeq
 
   val end = System.currentTimeMillis()

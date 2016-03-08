@@ -19,3 +19,4 @@ build
 credentials.sbt
 target
 data
+big.csv

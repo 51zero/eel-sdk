@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.{Column, FrameSchema, SchemaType}
+import io.eels.{Column, Schema, SchemaType}
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {
@@ -18,7 +18,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
   "JdbcSource" should {
     "read schema" in {
       JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema shouldBe {
-        FrameSchema(List(
+        Schema(List(
           Column("A", SchemaType.Int, true, 10),
           Column("B", SchemaType.Boolean, true, 1),
           Column("C", SchemaType.Long, true, 19)

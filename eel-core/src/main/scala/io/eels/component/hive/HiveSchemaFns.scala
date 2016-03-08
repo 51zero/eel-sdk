@@ -2,31 +2,36 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.NonEmptyString
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, FrameSchema, SchemaType}
+import io.eels.{Column, Schema, SchemaType}
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends StrictLogging {
 
-  def toHiveFields(schema: FrameSchema): Seq[FieldSchema] = toHiveFields(schema.columns)
-  def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map { column =>
-    new FieldSchema(column.name, toHiveType(column), "Created by eel")
+  def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name, toHiveType(column), null)
+
+  def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
+  def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)
+
+  def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {
+    logger.debug("Building schema from hive fields=" + schemas)
+    val columns = schemas.map(fromHiveField)
+    Schema(columns.toList)
   }
 
-  def fromHiveFields(schemas: Seq[FieldSchema]): FrameSchema = {
-    logger.debug("Building frame schame from hive field schemas=" + schemas)
-    val columns = schemas.map { s =>
-      val (schemaType, precision, scale) = toSchemaType(s.getType)
-      Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
-    }
-    FrameSchema(columns.toList)
+  def fromHiveField(s: FieldSchema): Column = {
+    val (schemaType, precision, scale) = toSchemaType(s.getType)
+    Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
   }
 
   val VarcharRegex = "varchar\\((\\d+\\))".r
   val DecimalRegex = "decimal\\((\\d+),(\\d+\\))".r
 
-  def toSchemaType(str: String): (SchemaType, Int, Int) = str match {
+  type Scale = Int
+  type Precision = Int
+
+  def toSchemaType(str: String): (SchemaType, Precision, Scale) = str match {
     case "tinyint" => (SchemaType.Short, 0, 0)
     case "smallint" => (SchemaType.Short, 0, 0)
     case "int" => (SchemaType.Int, 0, 0)
@@ -43,9 +48,16 @@ object HiveSchemaFns extends StrictLogging {
   }
 
 
+  /**
+    * Returns the hive column type for the given column
+    */
   def toHiveType(column: Column): String = column.`type` match {
-    case SchemaType.String => "string"
+    case SchemaType.BigInt => "bigint"
+    case SchemaType.Double => "double"
+    case SchemaType.Float => "float"
     case SchemaType.Int => "int"
+    case SchemaType.Long => "bigint"
+    case SchemaType.String => "string"
     case SchemaType.Short => "smallint"
     case _ =>
       logger.warn(s"No conversion from schema type ${column.`type`} to hive type; defaulting to string")

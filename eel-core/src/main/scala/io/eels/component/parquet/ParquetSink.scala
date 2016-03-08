@@ -1,33 +1,31 @@
 package io.eels.component.parquet
 
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
-import io.eels.{FrameSchema, InternalRow, Sink, Writer}
-import org.apache.avro.Schema
+import io.eels.component.avro.{AvroSchemaFn, DefaultAvroRecordMarshaller}
+import io.eels.{InternalRow, Schema, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with StrictLogging {
-  override def writer: Writer = new ParquetWriter(path)
+  override def writer(schema: Schema): SinkWriter = new ParquetSinkWriter(schema, path)
 }
 
-class ParquetWriter(path: Path)
-                   (implicit fs: FileSystem) extends Writer with RollingParquetWriterSupport with StrictLogging {
-
+class ParquetSinkWriter(schema: Schema, path: Path)
+                       (implicit fs: FileSystem) extends SinkWriter with StrictLogging {
   logger.debug(s"Parquet will write to $path")
-  var writer: RollingParquetWriter = _
-  var avroSchema: Schema = _
 
-  override def close(): Unit = {
-    if (writer != null) writer.close()
-  }
+  private val config = ConfigFactory.load()
+  private val caseSensitive = config.getBoolean("eel.parquet.caseSensitive")
 
-  override def write(row: InternalRow, schema: FrameSchema): Unit = {
+  private val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = caseSensitive)
+  private val writer = RollingParquetWriter(path, avroSchema)
+  private val marshaller = new DefaultAvroRecordMarshaller(schema, avroSchema)
+
+  override def close(): Unit = writer.close()
+
+  override def write(row: InternalRow): Unit = {
     this.synchronized {
-      if (writer == null) {
-        avroSchema = AvroSchemaFn.toAvro(schema)
-        writer = createRollingParquetWriter(path, avroSchema)
-      }
-      val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
+      val record = marshaller.toRecord(row)
       writer.write(record)
     }
   }

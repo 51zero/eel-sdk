@@ -1,13 +1,19 @@
 package io.eels.component.hive
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.sksamuel.scalax.Logging
+import com.sksamuel.scalax.metrics.Timed
 import io.eels.Frame
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-object HiveTestApp extends App with StrictLogging {
+import scala.util.Random
+
+object HiveTestApp extends App with Logging with Timed {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -24,37 +30,46 @@ object HiveTestApp extends App with StrictLogging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val s = client.getSchema("sam", "schematest2")
-  println(s)
-
-  val frame = Frame(
+  val maps = Array(
     Map("artist" -> "elton", "album" -> "yellow brick road", "year" -> "1972"),
     Map("artist" -> "elton", "album" -> "tumbleweed connection", "year" -> "1974"),
     Map("artist" -> "elton", "album" -> "empty sky", "year" -> "1969"),
-    Map("artist" -> "beatles", "album" -> "white album", "year" -> "1696"),
+    Map("artist" -> "beatles", "album" -> "white album", "year" -> "1969"),
     Map("artist" -> "beatles", "album" -> "tumbleweed connection", "year" -> "1966"),
     Map("artist" -> "pinkfloyd", "album" -> "the wall", "year" -> "1979"),
     Map("artist" -> "pinkfloyd", "album" -> "dark side of the moon", "year" -> "1974"),
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  HiveOps.createTable(
-    "sam",
-    "albums",
-    frame.schema,
-    List("year", "artist"),
-    format = HiveFormat.Parquet,
-    overwrite = true
-  )
+  val rows = List.fill(30000)(maps(Random.nextInt(maps.length)))
+  val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
 
-  val sink = HiveSink("sam", "albums").withIOThreads(2)
-  frame.to(sink)
-  logger.info("Write complete")
+  timed("creating table") {
+    HiveOps.createTable(
+      "sam",
+      "albums",
+      frame.schema,
+      List("year", "artist"),
+      format = HiveFormat.Parquet,
+      overwrite = true
+    )
+  }
 
-  val plan = HiveSource("sam", "albums").withPartition("year", "<", "1975").toSeq
-  logger.info("Result=" + plan)
+  val sink = HiveSink("sam", "albums").withIOThreads(4)
+  timed("writing data") {
+    frame.to(sink)
+    logger.info("Write complete")
+  }
 
-  val parts = client.listPartitions("sam", "albums", Short.MaxValue)
-  println(parts)
-  val q = parts
+  val spec = HiveSource("sam", "albums").spec
+  val mapper = new ObjectMapper
+  mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
+  mapper.registerModule(DefaultScalaModule)
+  println(mapper.writeValueAsString(spec))
+
+  //  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
+  //  logger.info("Result=" + result)
+
+  //  val years = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1970").withColumns("year", "artist").toSeq
+  //  logger.info("years=" + years)
 }

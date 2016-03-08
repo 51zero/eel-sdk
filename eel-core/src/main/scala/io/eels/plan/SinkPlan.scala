@@ -1,6 +1,6 @@
 package io.eels.plan
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+import java.util.concurrent.atomic.LongAdder
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
@@ -12,19 +12,18 @@ object SinkPlan extends Plan with StrictLogging {
 
   def apply(sink: Sink, frame: Frame)(implicit execution: ExecutionContext): Long = {
 
-    val count = new AtomicLong(0)
-    val latch = new CountDownLatch(slices)
-    val running = new AtomicBoolean(true)
+    val adder = new LongAdder()
+    val latch = new CountDownLatch(tasks)
     val schema = frame.schema
     val buffer = frame.buffer
-    val writer = sink.writer
+    val writer = sink.writer(schema)
 
-    for (k <- 1 to slices) {
+    for (k <- 1 to tasks) {
       Future {
         try {
-          buffer.iterator.takeWhile(_ => running.get).foreach { row =>
-            writer.write(row, schema)
-            count.incrementAndGet()
+          buffer.iterator.foreach { row =>
+            writer.write(row)
+            adder.increment()
           }
         } catch {
           case e: Throwable =>
@@ -43,6 +42,6 @@ object SinkPlan extends Plan with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    count.get()
+    adder.sum()
   }
 }

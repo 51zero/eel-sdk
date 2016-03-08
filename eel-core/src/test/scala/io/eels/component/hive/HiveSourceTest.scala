@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import java.util.UUID
 
-import io.eels.{Frame, FrameSchema}
+import io.eels.{Frame, Schema$}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
