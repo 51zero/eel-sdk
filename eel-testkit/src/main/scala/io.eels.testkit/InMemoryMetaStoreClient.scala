@@ -15,13 +15,13 @@ class InMemoryMetaStoreClient extends IMetaStoreClient {
   private val databases = scala.collection.mutable.Map.empty[String, Database]
 
   // databases
-  override def getDatabase(databaseName: String): Database = ???
+  override def getDatabase(databaseName: String): Database = databases.get(databaseName).getOrElse(throw new NoSuchObjectException)
   override def alterDatabase(name: String, db: Database): Unit = ???
-  override def dropDatabase(name: String): Unit = ???
-  override def dropDatabase(name: String, deleteData: Boolean, ignoreUnknownDb: Boolean): Unit = ???
-  override def dropDatabase(name: String, deleteData: Boolean, ignoreUnknownDb: Boolean, cascade: Boolean): Unit = ???
-  override def createDatabase(db: Database): Unit = ???
-  override def getDatabases(databasePattern: String): util.List[String] = ???
+  override def dropDatabase(name: String): Unit = databases.remove(name)
+  override def dropDatabase(name: String, deleteData: Boolean, ignoreUnknownDb: Boolean): Unit = databases.remove(name)
+  override def dropDatabase(name: String, deleteData: Boolean, ignoreUnknownDb: Boolean, cascade: Boolean): Unit = databases.remove(name)
+  override def createDatabase(db: Database): Unit = databases.put(db.getName, db)
+  override def getDatabases(databasePattern: String): util.List[String] = databases.keysIterator.toList.filter(_.matches(databasePattern.replace("*", ".*?"))).asJava
   override def getAllDatabases: util.List[String] = databases.keysIterator.toList.asJava
 
   // tables
