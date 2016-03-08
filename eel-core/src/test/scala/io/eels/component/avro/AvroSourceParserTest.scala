@@ -1,6 +1,5 @@
-package io.eels.component.parquet
+package io.eels.component.avro
 
-import io.eels.component.avro.{AvroSourceBuilder, AvroSourceParser}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceParserTest extends WordSpec with Matchers {

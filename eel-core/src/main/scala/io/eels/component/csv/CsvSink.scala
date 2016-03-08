@@ -2,37 +2,45 @@ package io.eels.component.csv
 
 import java.nio.file.Path
 
-import com.github.tototoshi.csv.{CSVFormat, CSVWriter, QUOTE_MINIMAL, Quoting}
+import com.univocity.parsers.csv.{CsvWriter, CsvWriterSettings}
 import io.eels.{InternalRow, Schema, Sink, SinkWriter}
 
-case class CsvSink(path: Path, props: CsvSinkProps = CsvSinkProps()) extends Sink {
-  override def writer(schema: Schema): SinkWriter = new CsvSinkWriter(schema, path, props)
+case class CsvSink(path: Path,
+                   writeHeaders: Boolean = true,
+                   format: CsvFormat = CsvFormat(),
+                   ignoreLeadingWhitespaces: Boolean = false,
+                   ignoreTrailingWhitespaces: Boolean = false) extends Sink {
+  override def writer(schema: Schema): SinkWriter = new CsvSinkWriter(schema, path, writeHeaders, format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces)
 }
 
-class CsvSinkWriter(schema: Schema, path: Path, props: CsvSinkProps) extends SinkWriter {
-  self =>
+class CsvSinkWriter(schema: Schema,
+                    path: Path,
+                    writeHeaders: Boolean = true,
+                    format: CsvFormat,
+                    ignoreLeadingWhitespaces: Boolean = false,
+                    ignoreTrailingWhitespaces: Boolean = false) extends SinkWriter {
 
-  private val format: CSVFormat = new CSVFormat {
-    override val delimiter: Char = props.delimiter
-    override val quoteChar: Char = props.quoteChar
-    override val treatEmptyLineAsNil: Boolean = false
-    override val escapeChar: Char = props.escapeChar
-    override val lineTerminator: String = props.lineTerminator
-    override val quoting: Quoting = QUOTE_MINIMAL
+  val lock = new Object {}
+
+  private def createWriter: CsvWriter = {
+    val settings = new CsvWriterSettings()
+    settings.getFormat.setDelimiter(format.delimiter)
+    settings.getFormat.setQuote(format.quoteChar)
+    settings.getFormat.setQuoteEscape(format.quoteEscape)
+    settings.setHeaderWritingEnabled(writeHeaders)
+    settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces)
+    settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
+    new CsvWriter(path.toFile, settings)
   }
 
-  private val writer = CSVWriter.open(path.toFile)(format)
+  private val writer = createWriter
 
   override def close(): Unit = writer.close()
 
   override def write(row: InternalRow): Unit = {
-    self.synchronized {
-      writer.writeRow(row)
+    lock.synchronized {
+      val array: Array[String] = row.map(any => if (any == null) null else any.toString).toArray
+      writer.writeRow(array)
     }
   }
 }
-
-case class CsvSinkProps(delimiter: Char = ',',
-                        quoteChar: Char = '"',
-                        escapeChar: Char = '"',
-                        lineTerminator: String = "\r\n")

@@ -27,7 +27,7 @@ class CsvSinkTest extends WordSpec with Matchers {
     }
     "support setting delimiter" in {
       val temp = Files.createTempFile("csvsink", ".test")
-      frame.to(CsvSink(temp, CsvSinkProps(delimiter = '>')))
+      frame.to(CsvSink(temp, format = CsvFormat().copy(delimiter = '>')))
       val result = Files.readAllLines(temp, Charset.defaultCharset).asScala.toSet
       result shouldBe Set("1>2>3>4", "5>6>7>8")
     }

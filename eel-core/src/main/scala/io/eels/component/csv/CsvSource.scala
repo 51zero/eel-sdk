@@ -6,8 +6,6 @@ import com.sksamuel.scalax.io.Using
 import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 import io.eels._
 
-case class CsvFormat(delimiter: Char = ',', quoteChar: Char = '"', quoteEscape: Char = '"', lineSeparator: String = "\n")
-
 sealed abstract class Header
 object Header {
   case object None extends Header

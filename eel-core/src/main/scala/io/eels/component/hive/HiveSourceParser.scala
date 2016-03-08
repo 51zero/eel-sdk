@@ -27,7 +27,7 @@ case class HiveSourceBuilder(db: String, table: String, params: Map[String, List
   }
 }
 
-object HiveSinkParser extends SinkParser[HiveSink] {
+object HiveSinkParser extends SinkParser {
   val HiveRegex = "hive:(.+?):(.+?)(\\?.*)?".r
   override def apply(str: String): Option[Builder[HiveSink]] = str match {
     case HiveRegex(db, table, params) =>

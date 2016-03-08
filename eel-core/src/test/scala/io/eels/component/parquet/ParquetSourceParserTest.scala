@@ -5,7 +5,7 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSourceParserTest extends WordSpec with Matchers {
 
   "ParquetSourceParser" should {
-    "parse csv url" in {
+    "parse url" in {
       val url = "parquet:some/path"
       ParquetSourceParser(url).get shouldBe ParquetSourceBuilder("some/path", Map.empty)
     }

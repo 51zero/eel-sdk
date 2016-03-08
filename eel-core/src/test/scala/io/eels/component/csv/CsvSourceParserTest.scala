@@ -1,6 +1,5 @@
 package io.eels.component.csv
 
-import io.eels.component.parquet.ParquetSourceParser
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceParserTest extends WordSpec with Matchers {
@@ -23,7 +22,7 @@ class CsvSourceParserTest extends WordSpec with Matchers {
       CsvSourceParser("csv:") shouldBe None
     }
     "not parse url with incorrect scheme" in {
-      ParquetSourceParser("qweqe:some/path") shouldBe None
+      CsvSourceParser("qweqe:some/path") shouldBe None
     }
   }
 }
