@@ -9,6 +9,7 @@ import com.sksamuel.scalax.io.Using
 import com.typesafe.config.ConfigFactory
 
 import scala.language.implicitConversions
+import scala.util.control.NonFatal
 
 trait Source extends Logging {
   self =>
@@ -50,6 +51,9 @@ class FrameSource(ioThreads: Int, source: Source) extends Frame with Logging wit
             reader.iterator.foreach(queue.put)
             logger.debug(s"Completed part #${count.incrementAndGet}")
           }
+        } catch {
+          case NonFatal(e) =>
+            logger.error("Error while loading from source; source thread will quit", e)
         } finally {
           latch.countDown()
         }
