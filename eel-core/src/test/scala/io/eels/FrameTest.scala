@@ -46,7 +46,6 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
-
   "Frame.stripFromColumnName" should {
     "remove offending characters" in {
       val frame = Frame(
@@ -113,6 +112,17 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
+  "Frame.filter" should {
+    "support row filtering by column name and fn" in {
+      frame.filter("b", _ == "2").size shouldBe 1
+    }
+    "throw if the column does not exist" in {
+      intercept[RuntimeException] {
+        frame.filter("qweeg", _ == "1").size
+      }
+    }
+  }
+
   "Frame" should {
     "be immutable and repeatable" in {
       val f = frame.drop(1)
@@ -169,9 +179,6 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       val f = frame.projection("location", "name")
       f.schema shouldBe Schema(List(Column("location"), Column("name")))
       f.head.get shouldBe List("aylesbury", "sam")
-    }
-    "support row filtering by column name and fn" in {
-      frame.filter("b", _ == "2").size shouldBe 1
     }
     "support union" in {
       frame.union(frame).size shouldBe 4
