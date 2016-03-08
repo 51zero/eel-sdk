@@ -50,6 +50,7 @@ object AvroSchemaFn extends StrictLogging {
     val schema = column.`type` match {
       case SchemaType.String => SchemaBuilder.builder().stringType()
       case SchemaType.Int => SchemaBuilder.builder().intType()
+      case SchemaType.Short => SchemaBuilder.builder().intType()
       case SchemaType.Boolean => Schema.create(Schema.Type.BOOLEAN)
       case SchemaType.Double => Schema.create(Schema.Type.DOUBLE)
       case SchemaType.Float => Schema.create(Schema.Type.FLOAT)
