@@ -178,11 +178,11 @@ trait Frame {
     }
   }
 
-  def removeColumn(columnName: String): Frame = new Frame {
-    override lazy val schema: Schema = outer.schema.removeColumn(columnName)
+  def removeColumn(columnName: String, caseSensitive: Boolean = true): Frame = new Frame {
+    override lazy val schema: Schema = outer.schema.removeColumn(columnName, caseSensitive)
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
-      val index = outer.schema.indexOf(columnName)
+      val index = outer.schema.indexOf(columnName, caseSensitive)
       override def close(): Unit = buffer.close()
       override def iterator: Iterator[InternalRow] = buffer.iterator.map { row =>
         row.slice(0, index) ++ row.slice(index + 1, row.length)

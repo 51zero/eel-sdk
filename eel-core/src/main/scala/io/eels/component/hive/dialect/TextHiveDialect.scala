@@ -17,6 +17,7 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     Iterator.continually(buff.readLine).takeWhile(_ != null)
   }
 
+  // todo add case insensitivity
   override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = new HiveWriter {
     logger.debug(s"Creating text writer for $path with delimiter=${TextHiveDialect.delimiter}")

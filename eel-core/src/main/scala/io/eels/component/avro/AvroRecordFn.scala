@@ -73,11 +73,10 @@ trait AvroRecordMarshaller {
   def toRecord(row: InternalRow): GenericRecord
 }
 
-class DefaultAvroRecordMarshaller(schema: Schema) extends AvroRecordMarshaller with Logging {
+class DefaultAvroRecordMarshaller(schema: Schema, avroSchema: AvroSchema) extends AvroRecordMarshaller with Logging {
 
-  val avroSchema = AvroSchemaFn.toAvro(schema)
-  val fields = avroSchema.getFields.asScala.toArray
-  val converters = fields.map { field => new OptionalConverter(converter(field.schema)) }
+  private val fields = avroSchema.getFields.asScala.toArray
+  private val converters = fields.map { field => new OptionalConverter(converter(field.schema)) }
 
   override def toRecord(row: InternalRow): GenericRecord = {
     val record = new Record(avroSchema)

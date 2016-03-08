@@ -8,9 +8,13 @@ case class Schema(columns: List[Column]) {
 
   def apply(name: String): Column = columns.find(_.name == name).get
 
-  def indexOf(column: Column): Int = indexOf(column.name)
+  def indexOf(column: Column): Int = indexOf(column.name, true)
+  def indexOf(column: Column, caseSensitive: Boolean): Int = indexOf(column.name, caseSensitive)
 
-  def indexOf(columnName: String): Int = columns.indexWhere(_.name == columnName)
+  def indexOf(columnName: String): Int = indexOf(columnName, true)
+  def indexOf(columnName: String, caseSensitive: Boolean): Int = columns.indexWhere { column =>
+    if (caseSensitive) columnName == column.name else columnName equalsIgnoreCase column.name
+  }
 
   lazy val columnNames: List[String] = columns.map(_.name)
 
@@ -33,7 +37,11 @@ case class Schema(columns: List[Column]) {
     })
   }
 
-  def removeColumn(name: String): Schema = copy(columns = columns.filterNot(_.name == name))
+  def removeColumn(name: String, caseSensitive: Boolean = true): Schema = {
+    copy(columns = columns.filterNot { column =>
+      if (caseSensitive) column.name == name else column.name equalsIgnoreCase name
+    })
+  }
 
   def removeColumns(names: List[String]): Schema = copy(columns = columns.filterNot(names contains _.name))
 

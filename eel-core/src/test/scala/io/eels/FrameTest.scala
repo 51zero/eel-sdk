@@ -70,6 +70,26 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
       f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
+    "not remove column if case is different" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      val f = frame.removeColumn("POSTcode")
+      f.schema shouldBe Schema(List(Column("name"), Column("location"), Column("postcode")))
+      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "aylesbury", "hp22"), Row(f.schema, "ham", "buckingham", "mk10"))
+    }
+    "remove column with ignore case" in {
+      val frame = Frame(
+        List("name", "location", "postcode"),
+        List("sam", "aylesbury", "hp22"),
+        List("ham", "buckingham", "mk10")
+      )
+      val f = frame.removeColumn("locATION", false)
+      f.schema shouldBe Schema(List(Column("name"), Column("postcode")))
+      f.toSeq.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
+    }
   }
 
   "Frame.toSet[T]" should {

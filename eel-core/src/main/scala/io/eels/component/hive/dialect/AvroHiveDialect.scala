@@ -3,7 +3,7 @@ package io.eels.component.hive.dialect
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{InternalRow, Schema, SourceReader}
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn, DefaultAvroRecordMarshaller}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
@@ -19,16 +19,19 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
                      (implicit fs: FileSystem): HiveWriter = {
     logger.debug(s"Creating avro writer for $path")
 
-    val avroSchema = AvroSchemaFn.toAvro(schema)
+    // hive is case insensitive
+    val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = false)
     val datumWriter = new GenericDatumWriter[GenericRecord](avroSchema)
     val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
     val out = fs.create(path, false)
     val writer = dataFileWriter.create(avroSchema, out)
 
+    val marshaller = new DefaultAvroRecordMarshaller(schema, avroSchema)
+
     new HiveWriter {
       override def close(): Unit = writer.close()
       override def write(row: InternalRow): Unit = {
-        val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
+        val record = marshaller.toRecord(row)
         writer.append(record)
       }
     }

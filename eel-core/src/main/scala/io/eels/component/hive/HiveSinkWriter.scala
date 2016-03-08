@@ -31,13 +31,14 @@ class HiveSinkWriter(sourceSchema: Schema,
   val tablePath = HiveOps.tablePath(dbName, tableName)
   val lock = new Object {}
 
+  // these will be in lower case
   val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
   logger.debug("Dynamic partitions: " + partitionKeyNames.mkString(","))
 
   // the target schema is used to determine what data we write. This is generated from the hive table,
   // with partition columns removed.
   val targetSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) hiveTableSchema else {
-    partitionKeyNames.foldLeft(hiveTableSchema)((schema, name) => schema.removeColumn(name))
+    partitionKeyNames.foldLeft(hiveTableSchema)((schema, name) => schema.removeColumn(name, caseSensitive = false))
   }
 
   // these are the indexes in input rows to skip from writing because they are partition values
@@ -58,7 +59,7 @@ class HiveSinkWriter(sourceSchema: Schema,
   def getOrCreateHiveWriter(row: InternalRow, sourceSchema: Schema, k: Long): HiveWriter = {
 
     val parts = PartitionPartsFn(row, partitionKeyNames, sourceSchema)
-    val partPath = HiveOps.partitionPathString(dbName, tableName, parts, tablePath)
+    val partPath = HiveOps.partitionPathString(dbName, tableName, parts, tablePath).toLowerCase
     writers.getOrElseUpdate(partPath + "_" + k, {
 
       // this is not thread safe, so each thread needs its own copy when in here

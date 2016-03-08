@@ -1,6 +1,5 @@
 package io.eels.component.hive.dialect
 
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroSchemaFn, DefaultAvroRecordMarshaller}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
@@ -10,15 +9,14 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
-  private val config = ConfigFactory.load()
-
   override def writer(schema: Schema, path: Path)
                      (implicit fs: FileSystem): HiveWriter = {
     ParquetLogMute()
 
-    val avroSchema = AvroSchemaFn.toAvro(schema)
+    // hive is case insensitive so we must lower case everything to keep it consistent
+    val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = false)
     val writer = RollingParquetWriter(path, avroSchema)
-    val marshaller = new DefaultAvroRecordMarshaller(schema)
+    val marshaller = new DefaultAvroRecordMarshaller(schema, avroSchema)
 
     new HiveWriter {
       override def close(): Unit = writer.close()

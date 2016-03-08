@@ -16,13 +16,17 @@ case class AvroSink(out: OutputStream) extends Sink {
 
 class AvroSinkWriter(schema: Schema, out: OutputStream, config: Config) extends SinkWriter {
 
-  val avroSchema = AvroSchemaFn.toAvro(schema)
+  private val caseSensitive = config.getBoolean("eel.avro.caseSensitive")
+
+  val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = caseSensitive)
   val datumWriter = new generic.GenericDatumWriter[GenericRecord](avroSchema)
   val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
   dataFileWriter.create(avroSchema, out)
 
+  private val marshaller = new DefaultAvroRecordMarshaller(schema, avroSchema)
+
   override def write(row: InternalRow): Unit = {
-    val record = AvroRecordFn.toRecord(row, avroSchema, schema, config)
+    val record = marshaller.toRecord(row)
     dataFileWriter.append(record)
   }
 

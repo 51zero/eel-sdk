@@ -9,9 +9,9 @@ import scala.collection.JavaConverters._
 
 object AvroSchemaFn extends StrictLogging {
 
-  def toAvro(fs: Schema, name: String = "row", namespace: String = "namespace"): AvroSchema = {
+  def toAvro(fs: Schema, caseSensitive: Boolean = true, name: String = "row", namespace: String = "namespace"): AvroSchema = {
     val avro = AvroSchema.createRecord(name, null, namespace, false)
-    val fields = fs.columns.map(toAvroField)
+    val fields = fs.columns.map(toAvroField(_, caseSensitive))
     avro.setFields(fields.asJava)
     avro
   }
@@ -50,7 +50,8 @@ object AvroSchemaFn extends StrictLogging {
     }
   }
 
-  def toAvroField(column: Column): AvroSchema.Field = {
+  def toAvroField(column: Column, caseSensitive: Boolean = true): AvroSchema.Field = {
+
     val schema = column.`type` match {
       case SchemaType.String => SchemaBuilder.builder().stringType()
       case SchemaType.Int => SchemaBuilder.builder().intType()
@@ -65,11 +66,13 @@ object AvroSchemaFn extends StrictLogging {
         AvroSchema.create(AvroSchema.Type.STRING)
     }
 
+    val name = if (caseSensitive) column.name else column.name.toLowerCase
+
     if (column.nullable) {
       val union = SchemaBuilder.unionOf().nullType().and().`type`(schema).endUnion()
-      new AvroSchema.Field(column.name, union, null, NullNode.getInstance())
+      new AvroSchema.Field(name, union, null, NullNode.getInstance())
     } else {
-      new AvroSchema.Field(column.name, schema, null, null)
+      new AvroSchema.Field(name, schema, null, null)
     }
   }
 }
