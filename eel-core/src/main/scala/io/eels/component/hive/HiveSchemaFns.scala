@@ -9,7 +9,7 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends StrictLogging {
 
-  def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name, toHiveType(column), null)
+  def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name.toLowerCase, toHiveType(column), null)
 
   def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
   def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)

@@ -10,7 +10,9 @@ case class Column(name: String,
                   precision: Int = 0,
                   scale: Int = 0,
                   signed: Boolean = true,
-                  comment: Option[String] = None)
+                  comment: Option[String] = None) {
+  def toLowerCase: Column = copy(name = name.toLowerCase)
+}
 
 sealed trait SchemaType
 
