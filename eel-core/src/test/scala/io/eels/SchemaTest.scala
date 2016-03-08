@@ -11,6 +11,19 @@ class SchemaTest extends WordSpec with Matchers {
   ))
 
   "Schema" should {
+    "return -1 if the column is not found" in {
+      val schema = Schema(List(
+        Column("name", SchemaType.String, true, 0, 0, true, None),
+        Column("age", SchemaType.Int, true, 0, 0, true, None),
+        Column("salary", SchemaType.Double, true, 0, 0, true, None),
+        Column("isPartTime", SchemaType.Boolean, true, 0, 0, true, None),
+        Column("value1", SchemaType.Decimal, true, 0, 0, true, None),
+        Column("value2", SchemaType.Float, true, 0, 0, true, None),
+        Column("value3", SchemaType.Long, true, 0, 0, true, None)
+      ))
+      schema.indexOf("value4") shouldBe -1
+    }
+
     "pretty print in desired format" in {
       schema.print shouldBe "- a [Boolean null scale=22 precision=0 signed]\n- b [String not null scale=0 precision=14 unsigned]"
     }

@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
+import com.sun.javaws.exceptions.InvalidArgumentException
 import io.eels.plan._
 
 import scala.concurrent.ExecutionContext
@@ -38,6 +39,7 @@ trait Frame {
         val iter2 = buffer2.iterator
 
         override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
+
         override def next(): InternalRow = iter1.next() ++ iter2.next()
       }
     }
@@ -45,53 +47,69 @@ trait Frame {
 
   def replace(from: String, target: Any): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(RowUtils.replace(from, target, _))
     }
   }
 
   def replace(columnName: String, from: String, target: Any): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(RowUtils.replace(index, from, target, _))
     }
   }
 
   def replace(columnName: String, fn: Any => Any): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(RowUtils.replaceByFn(index, fn, _))
     }
   }
 
   def takeWhile(pred: InternalRow => Boolean): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.takeWhile(pred)
     }
   }
 
   def updateSchemaType(columnName: String, schemaType: SchemaType): Frame = new Frame {
     override def schema: Schema = outer.schema.updateSchemaType(columnName, schemaType)
+
     override def buffer: Buffer = outer.buffer
   }
 
   def takeWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.takeWhile(row => p(row(index)))
     }
   }
@@ -114,7 +132,9 @@ trait Frame {
       override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
         val iter1 = buffer1.iterator
         val iter2 = buffer2.iterator
+
         override def hasNext: Boolean = iter1.hasNext && iter2.hasNext
+
         override def next(): InternalRow = RowUtils.toMap(schema1, iter1.next).--(schema2.columnNames).values.toList
       }
     }
@@ -122,19 +142,25 @@ trait Frame {
 
   def dropWhile(p: InternalRow => Boolean): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.dropWhile(p)
     }
   }
 
   def dropWhile(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.dropWhile(row => p(row(index)))
     }
   }
@@ -147,31 +173,42 @@ trait Frame {
     */
   def sample(k: Int): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.grouped(k).map(_.head)
     }
   }
 
   def addColumn(name: String, defaultValue: Any): Frame = addColumn(Column(name), defaultValue)
+
   def addColumn(column: Column, defaultValue: Any): Frame = new Frame {
     require(!outer.schema.columnNames.contains(column.name), s"Column $column already exists")
     override lazy val schema: Schema = outer.schema.addColumn(column)
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(_ :+ defaultValue)
     }
   }
 
   def addColumnIfNotExists(name: String, defaultValue: Any): Frame = addColumnIfNotExists(Column(name), defaultValue)
+
   def addColumnIfNotExists(column: Column, defaultValue: Any): Frame = new Frame {
     override lazy val schema: Schema = outer.schema.addColumnIfNotExists(column)
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val exists = outer.schema.columnNames.contains(column.name)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = {
         if (exists) buffer.iterator else buffer.iterator.map(_ :+ defaultValue)
       }
@@ -180,10 +217,13 @@ trait Frame {
 
   def removeColumn(columnName: String, caseSensitive: Boolean = true): Frame = new Frame {
     override lazy val schema: Schema = outer.schema.removeColumn(columnName, caseSensitive)
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName, caseSensitive)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map { row =>
         row.slice(0, index) ++ row.slice(index + 1, row.length)
       }
@@ -192,38 +232,49 @@ trait Frame {
 
   def updateColumn(column: Column): Frame = new Frame {
     override lazy val schema: Schema = outer.schema.updateColumn(column)
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(column)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator
     }
   }
 
   def renameColumn(nameFrom: String, nameTo: String): Frame = new Frame {
     override lazy val schema: Schema = outer.schema.renameColumn(nameFrom, nameTo)
+
     override def buffer: Buffer = outer.buffer
   }
 
   def stripFromColumnName(chars: Seq[Char]): Frame = new Frame {
     override lazy val schema: Schema = outer.schema.stripFromColumnName(chars)
+
     override def buffer: Buffer = outer.buffer
   }
 
   def explode(f: InternalRow => Seq[InternalRow]): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.flatMap(f)
     }
   }
 
   def fill(defaultValue: String): Frame = new Frame {
     override lazy val schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(_.map {
         case null => defaultValue
         case other => other
@@ -232,21 +283,27 @@ trait Frame {
   }
 
   def ++(frame: Frame): Frame = union(frame)
+
   def union(other: Frame): Frame = new Frame {
     override lazy val schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer1 = outer.buffer
       val buffer2 = other.buffer
+
       override def close(): Unit = {
         buffer1.close()
         buffer2.close()
       }
+
       override def iterator: Iterator[InternalRow] = buffer1.iterator ++ buffer2.iterator
     }
   }
 
   def projectionExpression(expr: String): Frame = projection(expr.split(',').map(_.trim))
+
   def projection(first: String, rest: String*): Frame = projection(first +: rest)
+
   def projection(columns: Seq[String]): Frame = new Frame {
 
     lazy val outerSchema = outer.schema
@@ -263,7 +320,9 @@ trait Frame {
       // we get a sequence of the indexes of the columns in the original schema, so we can just
       // apply those indexes to the incoming rows
       val indexes = columns.map(outerSchema.indexOf).toVector
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(row => indexes.map(row.apply))
     }
   }
@@ -276,9 +335,12 @@ trait Frame {
     */
   def foreach[U](f: (InternalRow) => U): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map {
         row =>
           f(row)
@@ -289,28 +351,37 @@ trait Frame {
 
   def collect(pf: PartialFunction[InternalRow, InternalRow]): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.collect(pf)
     }
   }
 
   def drop(k: Int): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val count = new AtomicInteger(0)
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.dropWhile(_ => count.getAndIncrement < k)
     }
   }
 
   def map(f: InternalRow => InternalRow): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.map(f)
     }
   }
@@ -319,9 +390,12 @@ trait Frame {
 
   def filter(p: InternalRow => Boolean): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.filter(p)
     }
   }
@@ -331,36 +405,52 @@ trait Frame {
     */
   def filter(columnName: String, p: Any => Boolean): Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
+      if (index < 0)
+        throw new IllegalArgumentException(s"$columnName is not found in the schema:${schema.columnNames.mkString(",")}")
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.filter(row => p(row(index)))
     }
   }
 
   def dropNullRows: Frame = new Frame {
     override def schema: Schema = outer.schema
+
     override def buffer: Buffer = new Buffer {
       val buffer = outer.buffer
+
       override def close(): Unit = buffer.close()
+
       override def iterator: Iterator[InternalRow] = buffer.iterator.filterNot(_.contains(null))
     }
   }
 
   // -- actions --
   def fold[A](a: A)(fn: (A, InternalRow) => A): A = FoldPlan(this, a)(fn)
+
   def forall(p: (InternalRow) => Boolean): Boolean = ForallPlan(this, p)
+
   def exists(p: (InternalRow) => Boolean): Boolean = ExistsPlan(this, p)
+
   def find(p: (InternalRow) => Boolean): Option[InternalRow] = FindPlan(this, p)
+
   def head: Option[InternalRow] = HeadPlan(this)
 
   def to(sink: Sink)(implicit executor: ExecutionContext): Long = SinkPlan(sink, this)
+
   def size(implicit executor: ExecutionContext): Long = ToSizePlan(this)
+
   def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan.untyped(this)
+
   def toSet(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = ToSetPlan(this)
 
   def toSeqAs[T](implicit executor: ExecutionContext, manifest: Manifest[T]): Seq[T] = ToSeqPlan.typed[T](this)
+
   def toSetAs[T](implicit executor: ExecutionContext, manifest: Manifest[T]): scala.collection.mutable.Set[T] = ToSetPlan.typed(this)
 }
 
@@ -369,21 +459,29 @@ object Frame {
   import scala.collection.JavaConverters._
 
   def apply(_schema: Schema, first: InternalRow, rest: InternalRow*): Frame = apply(_schema, first +: rest)
+
   def apply(_schema: Schema, rows: Seq[InternalRow]): Frame = new Frame {
     override def buffer: Buffer = new Buffer {
       val queue = new ConcurrentLinkedQueue[InternalRow](rows.asJava)
+
       override def close(): Unit = ()
+
       override def iterator: Iterator[InternalRow] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
+
     override def schema: Schema = _schema
   }
 
   def apply(first: Map[String, String], rest: Map[String, String]*): Frame = apply(first +: rest)
+
   def apply(maps: Seq[Map[String, String]]): Frame = new Frame {
     override lazy val schema: Schema = Schema(maps.head.keys.map(Column.apply).toList)
+
     override def buffer: Buffer = new Buffer {
       val queue = new ConcurrentLinkedQueue[InternalRow](maps.map(_.valuesIterator.toList).asJava)
+
       override def close(): Unit = ()
+
       override def iterator: Iterator[InternalRow] = ConcurrentLinkedQueueConcurrentIterator(queue)
     }
   }
