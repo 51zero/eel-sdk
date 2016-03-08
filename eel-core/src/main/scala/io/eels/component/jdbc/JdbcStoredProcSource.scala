@@ -7,7 +7,6 @@ import io.eels._
 
 case class JdbcStoredProcSource(url: String,
                                 storedProcedure: String,
-                                createStmtFn: Connection => CallableStatement,
                                 params: Seq[Any],
                                 fetchSize: Int = 100,
                                 providedSchema: Option[Schema] = None,
@@ -19,7 +18,7 @@ case class JdbcStoredProcSource(url: String,
 
   private def setup(): (Connection, CallableStatement) = {
     val conn = connect()
-    val stmt = createStmtFn(conn)
+    val stmt = conn.prepareCall(storedProcedure)
     stmt.setFetchSize(fetchSize)
     for ((param, index) <- params.zipWithIndex) {
       stmt.setObject(index, param)
@@ -30,9 +29,10 @@ case class JdbcStoredProcSource(url: String,
   override def parts: Seq[Part] = {
 
     val (conn, stmt) = setup()
-    logger.debug(s"Executing stored procedure [$storedProcedure]...")
+    logger.debug(s"Executing stored procedure [proc=$storedProcedure, params=${params.mkString(",")}]")
     val rs = timed("Stored proc") {
-      stmt.execute()
+      val result = stmt.execute()
+      logger.debug(s"Stored proc result=$result")
       stmt.getResultSet
     }
 
@@ -44,20 +44,23 @@ case class JdbcStoredProcSource(url: String,
   override protected def fetchSchema: Schema = {
 
     val (conn, stmt) = setup()
-    logger.debug(s"Executing stored procedure to retrieve schema [$storedProcedure]...")
-    val rs = timed("Stored proc") {
-      stmt.execute()
-      stmt.getResultSet
+
+    try {
+
+      logger.debug(s"Executing stored procedure for schema [proc=$storedProcedure, params=${params.mkString(",")}]")
+      val rs = timed("Stored proc") {
+        val result = stmt.execute()
+        logger.debug(s"Stored proc result=$result")
+        stmt.getResultSet
+      }
+      val schema = schemaFor(rs)
+      rs.close()
+      schema
+
+    } finally {
+      stmt.close()
+      conn.close()
     }
-
-    val schema = schemaFor(rs)
-    rs.close()
-    stmt.close()
-    conn.close()
-
-    logger.debug("Fetched schema: ")
-    logger.debug(schema.print)
-    schema
   }
 }
 

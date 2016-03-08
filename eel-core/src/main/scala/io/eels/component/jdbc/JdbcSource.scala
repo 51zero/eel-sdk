@@ -9,7 +9,8 @@ case class JdbcSource(url: String,
                       query: String,
                       fetchSize: Int = 100,
                       providedSchema: Option[Schema] = None,
-                      providedDialect: Option[JdbcDialect] = None)
+                      providedDialect: Option[JdbcDialect] = None,
+                      bucketing: Option[Bucketing] = None)
   extends AbstractJdbcSource(url, providedSchema, providedDialect) with Logging with Using with Timed {
 
   def withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = Some(schema))
@@ -32,20 +33,21 @@ case class JdbcSource(url: String,
 
   override protected def fetchSchema: Schema = {
 
-    val conn = connect()
-    val stmt = conn.createStatement()
-    stmt.setFetchSize(fetchSize)
+    using(connect()) { conn =>
+      using(conn.createStatement) { stmt =>
+        stmt.setFetchSize(fetchSize)
 
-    val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
-    val rs = timed(s"Query for schema [$schemaQuery]...") {
-      stmt.executeQuery(schemaQuery)
+        val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
+        val rs = timed(s"Query for schema [$schemaQuery]...") {
+          stmt.executeQuery(schemaQuery)
+        }
+
+        val schema = schemaFor(rs)
+        rs.close()
+        schema
+      }
     }
-
-    val schema = schemaFor(rs)
-    rs.close()
-    stmt.close()
-    conn.close()
-
-    schema
   }
 }
+
+case class Bucketing(columnName: String, numberOfBuckets: Int)
