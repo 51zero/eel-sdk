@@ -335,7 +335,8 @@ trait Frame {
       val buffer = outer.buffer
       val index = outer.schema.indexOf(columnName)
       if (index < 0)
-        sys.error(s"Cannot filter on column that doesn't exist [$columnName]")
+        throw new IllegalArgumentException(s"$columnName is not found in the schema:${schema.columnNames.mkString(",")}")
+
       override def close(): Unit = buffer.close()
       override def iterator: Iterator[InternalRow] = buffer.iterator.filter(row => p(row(index)))
     }

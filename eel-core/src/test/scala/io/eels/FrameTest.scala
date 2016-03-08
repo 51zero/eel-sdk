@@ -301,6 +301,16 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         )
       }
     }
+    "throw an error if the column is not present while filtering" in {
+      val frame = Frame(
+        List("name", "location"),
+        List("sam", "aylesbury"),
+        List("ham", "buckingham")
+      )
+      intercept[IllegalArgumentException] {
+        frame.filter("bibble", v => sys.error("Should not be here")).toSeq
+      }
+    }
     "support replace" in {
       val frame = Frame(
         List("name", "location"),
