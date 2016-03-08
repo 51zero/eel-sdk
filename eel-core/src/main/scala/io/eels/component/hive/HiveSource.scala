@@ -84,7 +84,7 @@ case class HiveSource(private val dbName: String,
     }
   }
 
-  def spec: HiveSpec = HiveSpecFn(dbName, tableName)
+  def spec: HiveSpec = HiveSpecFn.toHiveSpec(dbName, tableName)
 
   private def dialect(t: Table): HiveDialect = {
 

@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import java.util
 
+import com.sksamuel.scalax.NonEmptyString
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, Constants, Schema}
 import org.apache.hadoop.fs.Path
@@ -155,6 +156,22 @@ object HiveOps extends StrictLogging {
       client.getPartition(dbName, tableName, partitionName) != null
     } catch {
       case _: Throwable => false
+    }
+  }
+
+  def applySpec(spec: HiveSpec, overwrite: Boolean)(implicit client: IMetaStoreClient): Unit = {
+    spec.tables.foreach { table =>
+      val schemas = HiveSpecFn.toSchemas(spec)
+      createTable(spec.dbName,
+        table.tableName,
+        schemas(table.tableName),
+        table.partitionKeys,
+        HiveFormat.fromInputFormat(table.inputFormat),
+        Map.empty,
+        TableType.valueOf(table.tableType),
+        NonEmptyString(table.location),
+        overwrite
+      )
     }
   }
 

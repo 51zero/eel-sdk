@@ -28,7 +28,10 @@ object HiveSchemaFns extends StrictLogging {
   val VarcharRegex = "varchar\\((\\d+\\))".r
   val DecimalRegex = "decimal\\((\\d+),(\\d+\\))".r
 
-  def toSchemaType(str: String): (SchemaType, Int, Int) = str match {
+  type Scale = Int
+  type Precision = Int
+
+  def toSchemaType(str: String): (SchemaType, Precision, Scale) = str match {
     case "tinyint" => (SchemaType.Short, 0, 0)
     case "smallint" => (SchemaType.Short, 0, 0)
     case "int" => (SchemaType.Int, 0, 0)
