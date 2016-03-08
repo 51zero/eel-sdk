@@ -35,6 +35,7 @@ case class HiveSource(private val dbName: String,
   def withColumns(first: String, rest: String*): HiveSource = withColumns(first +: rest)
 
   def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(name, "=", value)
+
   def withPartitionConstraint(name: String, op: String, value: String): HiveSource = {
     val expr = op match {
       case "=" => PartitionEquals(name, value)
@@ -104,30 +105,13 @@ case class HiveSource(private val dbName: String,
       val schema = this.schema
       val dialect = this.dialect(t)
 
-      // check the metastore to see if all requests columns are partition columns, if so,
-      // then we can just load directly from the metastore
-      val partitions = HiveOps.partitions(dbName, tableName)(client)
-      val partitionKeys = partitions.flatMap(_.parts.map(_.key)).toSet
-      if (columns.nonEmpty && columns.forall(partitionKeys.contains)) {
-        logger.debug("Requested columns are all partitioned - reading directly from metastore")
-        val part = new Part {
-          override def reader = new SourceReader {
-            override def close(): Unit = ()
-            // we only want to keep the requested columns
-            override def iterator: Iterator[InternalRow] = partitions.iterator
-              .filter { partition => partitionExprs.isEmpty || partitionExprs.exists(_.eval(partition.parts)) }
-              .map { partition => partition.parts.filter(columns contains _.key).map(_.value) }
-          }
-        }
-        Seq(part)
-      } else {
-        val paths = HiveFileScanner(t, partitionExprs)
-        paths.map(new DialectPart(_, schema, dialect))
-      }
+      val paths = HiveFileScanner(t, partitionExprs)
+      paths.map(new DialectPart(_, schema, dialect))
     }
   }
 
   class DialectPart(path: Path, schema: Schema, dialect: HiveDialect) extends Part {
     override def reader: SourceReader = dialect.reader(path, schema, columns)
   }
+
 }
