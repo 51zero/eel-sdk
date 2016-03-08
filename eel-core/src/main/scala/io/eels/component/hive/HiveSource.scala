@@ -2,7 +2,6 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
-import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.parquet.ParquetLogMute
 import io.eels._
 import org.apache.hadoop.fs.{FileSystem, Path}
