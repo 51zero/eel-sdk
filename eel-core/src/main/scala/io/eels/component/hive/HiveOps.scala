@@ -218,8 +218,11 @@ object HiveOps extends StrictLogging {
     if (!tableExists(databaseName, tableName)) {
       logger.info(s"Creating table $databaseName.$tableName with partitionKeys=${partitionKeys.mkString(",")}")
 
+      val lowerPartitionKeys = partitionKeys.map(_.toLowerCase)
+      val lowerColumns = schema.columns.map(_.toLowerCase)
+
       val sd = new StorageDescriptor()
-      val fields = HiveSchemaFns.toHiveFields(schema.columns.filterNot(col => partitionKeys.contains(col.name))).asJava
+      val fields = lowerColumns.filterNot(lowerPartitionKeys contains _.name).map(HiveSchemaFns.toHiveField).asJava
       sd.setCols(fields)
       sd.setSerdeInfo(new SerDeInfo(
         null,
@@ -235,7 +238,7 @@ object HiveOps extends StrictLogging {
       table.setTableName(tableName)
       table.setCreateTime(createTimeAsInt)
       table.setSd(sd)
-      table.setPartitionKeys(partitionKeys.map(new FieldSchema(_, "string", null)).asJava)
+      table.setPartitionKeys(lowerPartitionKeys.map(new FieldSchema(_, "string", null)).asJava)
       table.setTableType(tableType.name)
 
       table.putToParameters("generated_by", "eel_" + Constants.EelVersion)
