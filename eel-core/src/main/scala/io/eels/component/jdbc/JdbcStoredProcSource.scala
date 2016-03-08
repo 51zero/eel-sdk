@@ -21,7 +21,7 @@ case class JdbcStoredProcSource(url: String,
     val stmt = conn.prepareCall(storedProcedure)
     stmt.setFetchSize(fetchSize)
     for ((param, index) <- params.zipWithIndex) {
-      stmt.setObject(index, param)
+      stmt.setObject(index + 1, param)
     }
     (conn, stmt)
   }
