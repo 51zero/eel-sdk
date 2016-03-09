@@ -77,9 +77,21 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
   }
 
   "InMemoryMetaStoreClientTest.createTable" should {
-    "create table folder using sd location inside database" in {
+    "create table folder using default location when sd location not set" in {
+      val table = new Table()
+      table.setDbName("sam")
+      table.setTableName("tab")
+      table.setSd(new StorageDescriptor())
 
-      val tablePath = dir.resolve("sam").resolve("tabloc")
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("sam", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+
+      dir.resolve("sam").resolve("tab").toFile.exists shouldBe true
+    }
+    "create table folder using sd location when external table" in {
+
+      val tablePath = Files.createTempDirectory("testy")
 
       val sd = new StorageDescriptor()
       sd.setCols(util.Arrays.asList(new FieldSchema("foo", "string", null)))
@@ -92,13 +104,29 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
       table.setDbName("sam")
       table.setTableName("tab")
       table.setSd(sd)
-      table.setTableType(TableType.MANAGED_TABLE.name)
+      table.setTableType(TableType.EXTERNAL_TABLE.name)
 
       val client = new InMemoryMetaStoreClient(dir.toString, fs)
       client.createDatabase(new Database("sam", "", "", Map.empty[String, String].asJava))
       client.createTable(table)
 
       tablePath.toFile.exists shouldBe true
+    }
+  }
+
+  "InMemoryMetaStoreClientTest.getTable" should {
+    "return table object" in {
+
+      val table = new Table()
+
+      table.setDbName("db")
+      table.setTableName("tab")
+      table.setSd(new StorageDescriptor())
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.getTable("db", "tab").getTableName shouldBe "tab"
     }
   }
 }

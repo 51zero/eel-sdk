@@ -19,6 +19,7 @@ import scala.collection.JavaConverters._
 class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreClient {
 
   private val databases = scala.collection.mutable.Map.empty[String, Database]
+  private val tables = scala.collection.mutable.Map.empty[String, Seq[Table]]
 
   // databases
   override def getDatabase(databaseName: String): Database = databases.getOrElse(databaseName, throw new NoSuchObjectException)
@@ -38,9 +39,11 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
 
   // tables
   override def createTable(tbl: Table): Unit = {
-    val db = databases(tbl.getDbName)
-    val location = tbl.getSd.getLocation
-    fs.mkdirs(new Path(location))
+    val location = if (tbl.getSd.getLocation == null) {
+      new Path(new Path(home, tbl.getDbName), tbl.getTableName)
+    } else new Path(tbl.getSd.getLocation)
+    fs.mkdirs(location)
+    tables.put(tbl.getDbName, tables.getOrElse(tbl.getDbName, Nil) :+ tbl)
   }
 
   override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean): Unit = ???
@@ -51,12 +54,13 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def getAllTables(dbName: String): util.List[String] = ???
   override def getTableObjectsByName(dbName: String, tableNames: util.List[String]): util.List[Table] = ???
   override def getTables(dbName: String, tablePattern: String): util.List[String] = ???
-  override def getTable(tableName: String): Table = ???
+  override def getTable(tableName: String): Table = sys.error("Use getTable(dbName, tableName)")
   override def alter_table(defaultDatabaseName: String, tblName: String, table: Table): Unit = ???
   override def alter_table(defaultDatabaseName: String, tblName: String, table: Table, cascade: Boolean): Unit = ???
   override def tableExists(databaseName: String, tableName: String): Boolean = ???
   override def tableExists(tableName: String): Boolean = ???
-  override def getTable(dbName: String, tableName: String): Table = ???
+
+  override def getTable(dbName: String, tableName: String): Table = tables(dbName).find(_.getTableName == tableName).get
 
   // permissions
   override def get_privilege_set(hiveObject: HiveObjectRef, user_name: String, group_names: util.List[String]): PrincipalPrivilegeSet = ???
