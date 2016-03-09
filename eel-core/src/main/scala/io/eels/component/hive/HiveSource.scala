@@ -71,7 +71,8 @@ case class HiveSource(private val dbName: String,
 
   override def schema: Schema = {
     using(createClient) { client =>
-      val s = client.getSchema(dbName, tableName).asScala.filter(fs => columns.isEmpty || columns.contains(fs.getName))
+      val lowerColumns = columns.map(_.toLowerCase)
+      val s = client.getSchema(dbName, tableName).asScala.filter(fs => columns.isEmpty || lowerColumns.contains(fs.getName.toLowerCase))
       HiveSchemaFns.fromHiveFields(s)
     }
   }
