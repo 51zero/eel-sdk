@@ -180,7 +180,7 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
 
 
   "InMemoryMetaStoreClientTest.getPartition" should {
-    "return partition if exists" in {
+    "return partition by values" in {
 
       val table = new Table()
       table.setDbName("db")
@@ -203,6 +203,31 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
       client.createTable(table)
       client.add_partition(part)
       client.getPartition("db", "tywin", util.Arrays.asList("goo", "moo")).getValues.asScala.toSeq shouldBe Seq("goo", "moo")
+    }
+    "return partition by name" in {
+
+      val table = new Table()
+      table.setDbName("db")
+      table.setTableName("tywin")
+      table.setPartitionKeys(util.Arrays.asList(new FieldSchema("a", "string", null), new FieldSchema("b", "string", null)))
+      table.setSd(new StorageDescriptor())
+
+      val part = new Partition(
+        util.Arrays.asList("noo", "roo"),
+        "db",
+        "tywin",
+        0,
+        0,
+        new StorageDescriptor(),
+        new util.HashMap
+      )
+      part.getSd.setLocation("dummy")
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.add_partition(part)
+      client.getPartition("db", "tywin", "a=noo/b=roo").getValues.asScala.toSeq shouldBe Seq("noo", "roo")
     }
   }
 }

@@ -100,7 +100,10 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
 
   // partitions
   override def getPartition(dbName: String, tblName: String, name: String): Partition = {
-    null
+    val key = dbName + ":" + tblName
+    val partitionKeys = getTable(dbName, tblName).getPartitionKeys.asScala.map(_.getName)
+    def dirname(values: Seq[String]): String = partitionKeys.zip(values).map { case (k, v) => s"$k=$v" }.mkString("/")
+    partitions.getOrElse(key, Nil).find(part => dirname(part.getValues.asScala) == name).orNull
   }
 
   override def getPartition(dbName: String, tblName: String, partVals: util.List[String]): Partition = {
