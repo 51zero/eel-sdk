@@ -3,7 +3,6 @@ package io.eels.component.hive
 import com.sksamuel.scalax.Logging
 import io.eels.Schema
 import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.JavaConverters._
@@ -11,7 +10,7 @@ import scala.collection.JavaConverters._
 object HiveSchemaEvolve extends Logging {
 
   def apply(dbName: String, tableName: String, schema: Schema)
-           (implicit fs: FileSystem, hiveConf: HiveConf, client: IMetaStoreClient): Unit = {
+           (implicit fs: FileSystem, client: IMetaStoreClient): Unit = {
     logger.debug(s"Checking hive:$dbName:$tableName schema for evolution")
 
     // these will be lower case

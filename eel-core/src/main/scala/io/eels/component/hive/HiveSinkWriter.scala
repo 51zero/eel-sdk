@@ -6,8 +6,7 @@ import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import io.eels.{InternalRow, Schema, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, IMetaStoreClient}
+import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -21,9 +20,10 @@ class HiveSinkWriter(sourceSchema: Schema,
                      dialect: HiveDialect,
                      dynamicPartitioning: Boolean,
                      includePartitionsInData: Boolean,
-                     bufferSize: Int)(implicit fs: FileSystem, hiveConf: HiveConf, client: IMetaStoreClient)
+                     bufferSize: Int)(implicit fs: FileSystem, client: IMetaStoreClient)
   extends SinkWriter
     with Logging {
+  self =>
 
   val base = System.nanoTime
   logger.debug(s"HiveSinkWriter created; timestamp=$base; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads; includePartitionsInData=$includePartitionsInData")
@@ -61,9 +61,6 @@ class HiveSinkWriter(sourceSchema: Schema,
     val parts = PartitionPartsFn(row, partitionKeyNames, sourceSchema)
     val partPath = HiveOps.partitionPathString(dbName, tableName, parts, tablePath)
     writers.getOrElseUpdate(partPath + "_" + k, {
-
-      // this is not thread safe, so each thread needs its own copy when in here
-      implicit val client = new HiveMetaStoreClient(hiveConf)
 
       val filePath = new Path(partPath, "part_" + System.nanoTime + "_" + k)
       logger.debug(s"Creating hive writer for $filePath")

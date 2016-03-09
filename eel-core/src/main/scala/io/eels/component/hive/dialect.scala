@@ -9,11 +9,20 @@ import org.apache.hadoop.hive.metastore.api.Table
 
 trait HiveDialect extends StrictLogging {
 
-  def reader(path: Path, schema: Schema, columns: Seq[String])
-            (implicit fs: FileSystem): SourceReader
+  /**
+    * Creates a new reader that will read from the given hadoop path.
+    *
+    * The dataSchema represents the schema that was written for the data files. This won't necessarily be the same
+    * as the hive metastore schema, because partition values are not written to the data files. We must include
+    * this here because some hive formats don't store schema information with the data, eg delimited files.
+    *
+    * The projection is the schema required by the user which may be the same,
+    * or may be a subset if a projection is being used.
+    *
+    */
+  def reader(path: Path, dataSchema: Schema, projection: Schema)(implicit fs: FileSystem): SourceReader
 
-  def writer(schema: Schema, path: Path)
-            (implicit fs: FileSystem): HiveWriter
+  def writer(schema: Schema, path: Path)(implicit fs: FileSystem): HiveWriter
 }
 
 object HiveDialect extends Logging {

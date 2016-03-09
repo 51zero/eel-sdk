@@ -9,7 +9,7 @@ import scala.collection.JavaConverters._
 
 case class AvroSource(path: Path) extends Source with Using {
 
-  override def schema: Schema = {
+  override lazy val schema = {
     using(AvroReaderSupport.createReader(path)) { reader =>
       val record = reader.next()
       val columns = record.getSchema.getFields.asScala.map(_.name)
@@ -19,14 +19,17 @@ case class AvroSource(path: Path) extends Source with Using {
 
   override def parts: Seq[Part] = {
     val part = new Part {
-      def reader: SourceReader = new AvroSourceReader(path)
+      def reader: SourceReader = new AvroSourceReader(path, schema)
     }
     Seq(part)
   }
 }
 
-class AvroSourceReader(path: Path) extends SourceReader {
+class AvroSourceReader(path: Path, schema: Schema) extends SourceReader {
+
   private val reader = AvroReaderSupport.createReader(path)
+  private val avroSchema = AvroSchemaFn.toAvro(schema)
+
   override def close(): Unit = reader.close()
   override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
     override def hasNext: Boolean = {
@@ -35,6 +38,6 @@ class AvroSourceReader(path: Path) extends SourceReader {
         reader.close()
       hasNext
     }
-    override def next: InternalRow = AvroRecordFn.fromRecord(reader.next)
+    override def next: InternalRow = AvroRecordFn.fromRecord(reader.next, avroSchema)
   }
 }

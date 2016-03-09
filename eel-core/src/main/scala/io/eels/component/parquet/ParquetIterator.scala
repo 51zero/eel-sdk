@@ -1,18 +1,23 @@
 package io.eels.component.parquet
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.InternalRow
-import io.eels.component.avro.AvroRecordFn
+import io.eels.{InternalRow, Schema}
+import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import org.apache.avro.generic.GenericRecord
 import org.apache.parquet.hadoop.ParquetReader
 
 object ParquetIterator extends StrictLogging {
 
-  def apply(reader: ParquetReader[GenericRecord],
-            columnNames: Seq[String] = Nil): Iterator[InternalRow] = new Iterator[InternalRow] {
+  // creates a new parquet iterator. The schema must match the schema used in the reader
+  def apply(reader: ParquetReader[GenericRecord], schema: Schema): Iterator[InternalRow] = new Iterator[InternalRow] {
+    require(schema.columns.nonEmpty, "Attempted to create a parquet iterator with no schema columns")
+
+    val avroSchema = AvroSchemaFn.toAvro(schema)
 
     val iter = Iterator.continually(reader.read).takeWhile(_ != null).map { record =>
-      if (columnNames.isEmpty) AvroRecordFn.fromRecord(record) else AvroRecordFn.fromRecord(record, columnNames)
+      val row = AvroRecordFn.fromRecord(record, avroSchema)
+      require(row.size == schema.size, s"Row is missing values for some schema fields [row=$row; schema=$schema]")
+      row
     }
 
     override def hasNext: Boolean = {

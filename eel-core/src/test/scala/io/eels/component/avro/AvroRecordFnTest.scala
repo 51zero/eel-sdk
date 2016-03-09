@@ -2,6 +2,7 @@ package io.eels.component.avro
 
 import com.typesafe.config.ConfigFactory
 import io.eels.{Column, Schema, SchemaType}
+import org.apache.avro.generic.GenericData.Record
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroRecordFnTest extends WordSpec with Matchers {
@@ -23,6 +24,18 @@ class AvroRecordFnTest extends WordSpec with Matchers {
       val sourceSchema = Schema(Column("a", SchemaType.Double, true))
       val avroSchema = AvroSchemaFn.toAvro(sourceSchema)
       AvroRecordFn.toRecord(Seq("13.3"), avroSchema, sourceSchema, config).toString shouldBe """{"a": 13.3}"""
+    }
+  }
+
+  "AvroRecordFn.fromRecord" should {
+    "return record in same order as target schema" in {
+      val schema = Schema(Column("a"), Column("b"), Column("c"))
+      val targetSchema = Schema(Column("c"), Column("a"))
+      val record = new Record(AvroSchemaFn.toAvro(schema))
+      record.put("a", "aaaa")
+      record.put("b", "bbbb")
+      record.put("c", "cccc")
+      AvroRecordFn.fromRecord(record, AvroSchemaFn.toAvro(targetSchema)) shouldBe Vector("cccc", "aaaa")
     }
   }
 }

@@ -24,6 +24,8 @@ case class Schema(columns: List[Column]) {
     copy(columns :+ col)
   }
 
+  def contains(columnName: String): Boolean = indexOf(columnName) >= 0
+
   def stripFromColumnName(chars: Seq[Char]): Schema = {
     def strip(name: String): String = chars.foldLeft(name) { (str, char) => str.replace(char.toString, "") }
     Schema(columns.map(col => col.copy(name = strip(col.name))))

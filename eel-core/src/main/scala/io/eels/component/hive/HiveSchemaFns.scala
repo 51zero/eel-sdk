@@ -10,19 +10,12 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 object HiveSchemaFns extends StrictLogging {
 
   def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name.toLowerCase, toHiveType(column), null)
-
   def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
   def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)
 
-  def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {
-    logger.debug("Building schema from hive fields=" + schemas)
-    val columns = schemas.map(fromHiveField)
-    Schema(columns.toList)
-  }
-
-  def fromHiveField(s: FieldSchema): Column = {
+  def fromHiveField(s: FieldSchema, nullable: Boolean): Column = {
     val (schemaType, precision, scale) = toSchemaType(s.getType)
-    Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
+    Column(s.getName, schemaType, nullable, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
   }
 
   val VarcharRegex = "varchar\\((\\d+\\))".r

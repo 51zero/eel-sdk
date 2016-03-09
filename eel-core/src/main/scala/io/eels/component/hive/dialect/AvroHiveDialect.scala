@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{InternalRow, Schema, SourceReader}
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn, DefaultAvroRecordMarshaller}
-import io.eels.component.hive.{HiveDialect, HiveWriter}
+import io.eels.component.hive.{HiveDialect, HiveWriter, Partition}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
 import org.apache.avro.{file, generic}
@@ -37,7 +37,7 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def reader(path: Path, schema: Schema, columns: Seq[String])(implicit fs: FileSystem): SourceReader = {
+  override def reader(path: Path, dataSchema: Schema, requestedSchema: Schema)(implicit fs: FileSystem): SourceReader = {
     logger.debug(s"Creating avro iterator for $path")
 
     new SourceReader {
@@ -48,11 +48,12 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
 
       val datumReader = new generic.GenericDatumReader[GenericRecord]()
       val reader = new DataFileReader[GenericRecord](new file.SeekableByteArrayInput(bytes), datumReader)
+      val avroSchema = AvroSchemaFn.toAvro(requestedSchema)
 
       override def close(): Unit = ()
       override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
         override def hasNext: Boolean = reader.hasNext
-        override def next(): InternalRow = AvroRecordFn.fromRecord(reader.next)
+        override def next(): InternalRow = AvroRecordFn.fromRecord(reader.next, avroSchema)
       }
     }
   }

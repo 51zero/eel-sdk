@@ -19,6 +19,7 @@ object RowUtils {
   }
 
   def toMap(schema: Schema, row: InternalRow): Map[String, Any] = {
+    require(schema.size == row.size)
     schema.columnNames.zip(row).map { case (field, value) => field -> value }.toMap
   }
 }
