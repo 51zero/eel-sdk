@@ -47,32 +47,39 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
     tables.put(tbl.getDbName, tables.getOrElse(tbl.getDbName, Nil) :+ tbl)
   }
 
-  override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean): Unit = {
+  override def dropTable(dbName: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean): Unit = {
     if (deleteData) {
-      tables.getOrElse(dbname, Nil).find(_.getTableName == tableName) match {
+      tables.getOrElse(dbName, Nil).find(_.getTableName == tableName) match {
         case Some(table) =>
           val path = new Path(table.getSd.getLocation)
           fs.delete(path, true)
         case _ =>
       }
     }
-    tables.put(dbname, tables.getOrElse(dbname, Nil).filterNot(_.getTableName == tableName))
+    tables.put(dbName, tables.getOrElse(dbName, Nil).filterNot(_.getTableName == tableName))
   }
 
-  override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean, ifPurge: Boolean): Unit = ???
+  override def dropTable(dbName: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean, ifPurge: Boolean): Unit = {
+    dropTable(dbName, tableName, deleteData, ignoreUnknownTab)
+  }
+
+  override def dropTable(tableName: String, deleteData: Boolean): Unit = sys.error("use dropTable(dbName, tableName)")
+  override def dropTable(dbName: String, tableName: String): Unit = dropTable(dbName, tableName, false, false)
+
   override def listTableNamesByFilter(dbName: String, filter: String, maxTables: Short): util.List[String] = ???
-  override def dropTable(tableName: String, deleteData: Boolean): Unit = ???
-  override def dropTable(dbname: String, tableName: String): Unit = ???
   override def getAllTables(dbName: String): util.List[String] = ???
   override def getTableObjectsByName(dbName: String, tableNames: util.List[String]): util.List[Table] = ???
   override def getTables(dbName: String, tablePattern: String): util.List[String] = ???
-  override def getTable(tableName: String): Table = sys.error("Use getTable(dbName, tableName)")
+
   override def alter_table(defaultDatabaseName: String, tblName: String, table: Table): Unit = ???
   override def alter_table(defaultDatabaseName: String, tblName: String, table: Table, cascade: Boolean): Unit = ???
-  override def tableExists(databaseName: String, tableName: String): Boolean = ???
-  override def tableExists(tableName: String): Boolean = ???
 
+  override def getTable(tableName: String): Table = sys.error("Use getTable(dbName, tableName)")
   override def getTable(dbName: String, tableName: String): Table = tables(dbName).find(_.getTableName == tableName).orNull
+  override def tableExists(dbName: String, tableName: String): Boolean = {
+    tables.getOrElse(dbName, Nil).exists(_.getTableName == tableName)
+  }
+  override def tableExists(tableName: String): Boolean = sys.error("Use tableExists(dbName, tableName)")
 
   // permissions
   override def get_privilege_set(hiveObject: HiveObjectRef, user_name: String, group_names: util.List[String]): PrincipalPrivilegeSet = ???

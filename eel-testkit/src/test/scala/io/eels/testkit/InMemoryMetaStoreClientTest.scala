@@ -129,6 +129,21 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
     }
   }
 
+  "InMemoryMetaStoreClientTest.tableExists" should {
+    "return true if table exists" in {
+      val table = new Table()
+      table.setDbName("db")
+      table.setTableName("wibble")
+      table.setSd(new StorageDescriptor())
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.tableExists("db", "wibble") shouldBe true
+      client.tableExists("db", "bibble") shouldBe false
+    }
+  }
+
   "InMemoryMetaStoreClientTest.dropTable" should {
     "remove table from client" in {
 
