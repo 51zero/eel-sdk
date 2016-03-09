@@ -24,7 +24,7 @@ object ParquetReaderSupport extends StrictLogging {
     require(columns.isEmpty || schema != null, "If pushdown columns are specified, the schema must be available")
 
     def projection: Schema = {
-      val builder = SchemaBuilder.record("dummy").namespace("com")
+      val builder = SchemaBuilder.record("row").namespace("namespace")
       columns.foldLeft(builder.fields) { (fields, name) =>
         val schemaType = schema(name).`type`
         schemaType match {

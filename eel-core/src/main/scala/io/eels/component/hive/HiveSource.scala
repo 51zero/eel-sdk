@@ -79,31 +79,20 @@ case class HiveSource(private val dbName: String,
 
   def spec: HiveSpec = HiveSpecFn.toHiveSpec(dbName, tableName)
 
-  private def dialect(t: Table): HiveDialect = {
-
-    val format = t.getSd.getInputFormat
-    logger.debug(s"Table format is $format")
-
-    val dialect = HiveDialect(format)
-    logger.debug(s"HiveDialect is $dialect")
-
-    dialect
-  }
-
   override def parts: Seq[Part] = {
     using(createClient) { client =>
 
       val t = client.getTable(dbName, tableName)
       val schema = this.schema
-      val dialect = this.dialect(t)
+      val dialect = HiveDialect(t)
 
       val paths = HiveFileScanner(t, partitionExprs)
-      paths.map(new DialectPart(_, schema, dialect))
+      paths.map(new HiveDialectPart(_, schema, dialect))
     }
   }
 
-  class DialectPart(path: Path, schema: Schema, dialect: HiveDialect) extends Part {
+  class HiveDialectPart(path: Path, schema: Schema, dialect: HiveDialect) extends Part {
     override def reader: SourceReader = dialect.reader(path, schema, columns)
   }
-
 }
+
