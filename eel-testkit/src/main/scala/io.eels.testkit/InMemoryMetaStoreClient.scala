@@ -93,8 +93,8 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def checkLock(lockid: Long): LockResponse = ???
   override def list_roles(principalName: String, principalType: PrincipalType): util.List[Role] = ???
   override def getDelegationToken(owner: String, renewerKerberosPrincipalName: String): String = ???
-  override def grant_privileges(privileges: PrivilegeBag): Boolean = ???
   override def create_role(role: Role): Boolean = ???
+  override def grant_privileges(privileges: PrivilegeBag): Boolean = ???
   override def revoke_role(role_name: String, user_name: String, principalType: PrincipalType, grantOption: Boolean): Boolean = ???
   override def revoke_privileges(privileges: PrivilegeBag, grantOption: Boolean): Boolean = ???
 
