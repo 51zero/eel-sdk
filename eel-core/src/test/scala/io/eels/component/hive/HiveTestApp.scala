@@ -7,7 +7,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 object HiveTestApp extends App with Logging with Timed {
@@ -52,6 +52,7 @@ object HiveTestApp extends App with Logging with Timed {
     )
   }
 
+
   val sink = HiveSink("sam", "albums").withIOThreads(4)
   timed("writing data") {
     frame.to(sink)
@@ -61,6 +62,8 @@ object HiveTestApp extends App with Logging with Timed {
   val source = HiveSource("sam", "albums").withColumns("year")
   println(source.toSeq)
 
+  val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
+  println(partitionNames.asScala.toList)
 
   //  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
   //  logger.info("Result=" + result)

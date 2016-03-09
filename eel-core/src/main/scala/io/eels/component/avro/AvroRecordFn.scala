@@ -13,6 +13,9 @@ import scala.collection.JavaConverters._
 
 object AvroRecordFn extends Logging {
 
+  /**
+    * Returns an AvroRecord using the schema present in the file
+    */
   def fromRecord(record: GenericRecord): InternalRow = {
     record.getSchema.getFields.asScala.map { field =>
       record.get(field.name) match {
@@ -22,9 +25,14 @@ object AvroRecordFn extends Logging {
     }.toVector
   }
 
-  def fromRecord(record: GenericRecord, columns: Seq[String]): InternalRow = {
-    columns.map { column =>
-      record.get(column) match {
+  /**
+    * Returns an eel Row from the given record using the target schema for the columns required.
+    * The row will return in the order of the target schema.
+    * Any values missing from the record will use null.
+    */
+  def fromRecord(record: GenericRecord, targetSchema: AvroSchema): InternalRow = {
+    targetSchema.getFields.asScala.map { field =>
+      record.get(field.name) match {
         case utf8: Utf8 => new String(utf8.getBytes)
         case other => other
       }

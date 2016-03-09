@@ -4,8 +4,7 @@ import java.util.Date
 
 import io.eels.{Column, Schema}
 import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, TableType}
+import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, IMetaStoreClient}
 
 import scala.collection.JavaConverters._
 
@@ -22,8 +21,7 @@ object HiveSpecFn {
   }
 
   def toHiveSpec(dbName: String, tableName: String)
-                (implicit fs: FileSystem, hive: HiveConf): HiveSpec = {
-    val client = new HiveMetaStoreClient(hive)
+                (implicit fs: FileSystem, client:IMetaStoreClient): HiveSpec = {
     val tableSpecs = client.getAllTables(dbName).asScala.map { tableName =>
       val table = client.getTable(dbName, tableName)
       val location = table.getSd.getLocation
@@ -35,7 +33,7 @@ object HiveSpecFn {
           partition.getParameters.asScala.toMap.filterKeys(_ != "transient_lastDdlTime")
         )
       }.toList
-      val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField).toList.map { column =>
+      val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField(_, true)).toList.map { column =>
         HiveFieldSpec(column.name, HiveSchemaFns.toHiveType(column), column.comment)
       }
       val owner = table.getOwner

@@ -28,10 +28,11 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def reader(path: Path, schema: Schema, columnNames: Seq[String])
+  override def reader(path: Path, dataSchema: Schema, targetSchema: Schema)
                      (implicit fs: FileSystem): SourceReader = new SourceReader {
-    val reader = ParquetReaderSupport.createReader(path, columnNames, schema)
+    require(targetSchema.columns.nonEmpty, "Cannot create parquet reader for a target schema that has no columns")
+    val reader = ParquetReaderSupport.createReader(path, targetSchema.size < dataSchema.size, targetSchema)
     override def close(): Unit = reader.close()
-    override def iterator: Iterator[InternalRow] = ParquetIterator(reader, columnNames)
+    override def iterator: Iterator[InternalRow] = ParquetIterator(reader, targetSchema)
   }
 }
