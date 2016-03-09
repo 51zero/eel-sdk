@@ -118,7 +118,6 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
     "return table object" in {
 
       val table = new Table()
-
       table.setDbName("db")
       table.setTableName("tab")
       table.setSd(new StorageDescriptor())
@@ -127,6 +126,40 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
       client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
       client.createTable(table)
       client.getTable("db", "tab").getTableName shouldBe "tab"
+    }
+  }
+
+  "InMemoryMetaStoreClientTest.dropTable" should {
+    "remove table from client" in {
+
+      val table = new Table()
+      table.setDbName("db")
+      table.setTableName("tab")
+      table.setSd(new StorageDescriptor())
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.getTable("db", "tab").getTableName shouldBe "tab"
+
+      client.dropTable("db", "tab", false, true)
+      client.getTable("db", "tab") shouldBe null
+    }
+    "respect delete data flag" in {
+
+      val table = new Table()
+      table.setDbName("db")
+      table.setTableName("tyrion")
+      table.setSd(new StorageDescriptor())
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.getTable("db", "tyrion").getTableName shouldBe "tyrion"
+      dir.resolve("db").resolve("tyrion").toFile.exists shouldBe true
+
+      client.dropTable("db", "tyrion", true, true)
+      dir.resolve("db").resolve("tyrion").toFile.exists shouldBe false
     }
   }
 }

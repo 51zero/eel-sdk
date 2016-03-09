@@ -39,14 +39,26 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
 
   // tables
   override def createTable(tbl: Table): Unit = {
-    val location = if (tbl.getSd.getLocation == null) {
-      new Path(new Path(home, tbl.getDbName), tbl.getTableName)
-    } else new Path(tbl.getSd.getLocation)
-    fs.mkdirs(location)
+    if (tbl.getSd.getLocation == null) {
+      tbl.getSd.setLocation(new Path(new Path(home, tbl.getDbName), tbl.getTableName).toString)
+    }
+    val path = new Path(tbl.getSd.getLocation)
+    fs.mkdirs(path)
     tables.put(tbl.getDbName, tables.getOrElse(tbl.getDbName, Nil) :+ tbl)
   }
 
-  override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean): Unit = ???
+  override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean): Unit = {
+    if (deleteData) {
+      tables.getOrElse(dbname, Nil).find(_.getTableName == tableName) match {
+        case Some(table) =>
+          val path = new Path(table.getSd.getLocation)
+          fs.delete(path, true)
+        case _ =>
+      }
+    }
+    tables.put(dbname, tables.getOrElse(dbname, Nil).filterNot(_.getTableName == tableName))
+  }
+
   override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean, ifPurge: Boolean): Unit = ???
   override def listTableNamesByFilter(dbName: String, filter: String, maxTables: Short): util.List[String] = ???
   override def dropTable(tableName: String, deleteData: Boolean): Unit = ???
@@ -60,7 +72,7 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def tableExists(databaseName: String, tableName: String): Boolean = ???
   override def tableExists(tableName: String): Boolean = ???
 
-  override def getTable(dbName: String, tableName: String): Table = tables(dbName).find(_.getTableName == tableName).get
+  override def getTable(dbName: String, tableName: String): Table = tables(dbName).find(_.getTableName == tableName).orNull
 
   // permissions
   override def get_privilege_set(hiveObject: HiveObjectRef, user_name: String, group_names: util.List[String]): PrincipalPrivilegeSet = ???
