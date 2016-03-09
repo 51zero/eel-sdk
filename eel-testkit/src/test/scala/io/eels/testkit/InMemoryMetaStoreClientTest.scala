@@ -6,7 +6,7 @@ import java.util
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.TableType
-import org.apache.hadoop.hive.metastore.api.{FieldSchema, _}
+import org.apache.hadoop.hive.metastore.api.{FieldSchema, Partition, _}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
@@ -175,6 +175,34 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
 
       client.dropTable("db", "tyrion", true, true)
       dir.resolve("db").resolve("tyrion").toFile.exists shouldBe false
+    }
+  }
+
+
+  "InMemoryMetaStoreClientTest.getPartition" should {
+    "return partition if exists" in {
+
+      val table = new Table()
+      table.setDbName("db")
+      table.setTableName("tywin")
+      table.setSd(new StorageDescriptor())
+
+      val part = new Partition(
+        util.Arrays.asList("goo", "moo"),
+        "db",
+        "tywin",
+        0,
+        0,
+        new StorageDescriptor(),
+        new util.HashMap
+      )
+      part.getSd.setLocation("dummy")
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.add_partition(part)
+      client.getPartition("db", "tywin", util.Arrays.asList("goo", "moo")).getValues.asScala.toSeq shouldBe Seq("goo", "moo")
     }
   }
 }

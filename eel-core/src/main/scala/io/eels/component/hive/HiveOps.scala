@@ -78,7 +78,7 @@ object HiveOps extends StrictLogging {
     sd.setLocation(location.toString)
 
     val newPartition = new HivePartition(
-      partition.values.asJava,
+      partition.values.asJava, // the hive partition values are the actual values of the partition parts
       dbName,
       tableName,
       createTimeAsInt,

@@ -20,6 +20,7 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
 
   private val databases = scala.collection.mutable.Map.empty[String, Database]
   private val tables = scala.collection.mutable.Map.empty[String, Seq[Table]]
+  private val partitions = scala.collection.mutable.Map.empty[String, Seq[Partition]]
 
   // databases
   override def getDatabase(databaseName: String): Database = databases.getOrElse(databaseName, throw new NoSuchObjectException)
@@ -98,13 +99,25 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def revoke_privileges(privileges: PrivilegeBag, grantOption: Boolean): Boolean = ???
 
   // partitions
+  override def getPartition(dbName: String, tblName: String, name: String): Partition = {
+    null
+  }
+
+  override def getPartition(dbName: String, tblName: String, partVals: util.List[String]): Partition = {
+    val key = dbName + ":" + tblName
+    partitions.getOrElse(key, Nil).find(_.getValues.asScala.toList == partVals.asScala.toList).orNull
+  }
+
+  override def add_partition(partition: Partition): Partition = {
+    val key = partition.getDbName + ":" + partition.getTableName
+    partitions.put(key, partitions.getOrElse(key, Nil) :+ partition)
+    partition
+  }
+
   override def getPartitionsByNames(db_name: String, tbl_name: String, part_names: util.List[String]): util.List[Partition] = ???
   override def dropPartition(db_name: String, tbl_name: String, part_vals: util.List[String], deleteData: Boolean): Boolean = ???
   override def dropPartition(db_name: String, tbl_name: String, name: String, deleteData: Boolean): Boolean = ???
   override def dropFunction(dbName: String, funcName: String): Unit = ???
-  override def add_partition(partition: Partition): Partition = ???
-  override def getPartition(tblName: String, dbName: String, partVals: util.List[String]): Partition = ???
-  override def getPartition(dbName: String, tblName: String, name: String): Partition = ???
   override def renamePartition(dbname: String, name: String, part_vals: util.List[String], newPart: Partition): Unit = ???
   override def isPartitionMarkedForEvent(db_name: String, tbl_name: String, partKVs: util.Map[String, String], eventType: PartitionEventType): Boolean = ???
   override def listPartitionSpecsByFilter(db_name: String, tbl_name: String, filter: String, max_parts: Int): PartitionSpecProxy = ???
@@ -177,7 +190,6 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def isCompatibleWith(conf: HiveConf): Boolean = ???
   override def alterFunction(dbName: String, funcName: String, newFunction: Function): Unit = ???
   override def getConfigValue(name: String, defaultValue: String): String = ???
-
   override def compact(dbname: String, tableName: String, partitionName: String, `type`: CompactionType): Unit = ???
   override def setMetaConf(key: String, value: String): Unit = ???
   override def createFunction(func: Function): Unit = ???
