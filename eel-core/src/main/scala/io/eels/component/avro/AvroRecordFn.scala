@@ -6,6 +6,7 @@ import io.eels.Converter._
 import io.eels.{Converter, InternalRow, Schema}
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.GenericRecord
+import org.apache.avro.util.Utf8
 import org.apache.avro.{Schema => AvroSchema}
 
 import scala.collection.JavaConverters._
@@ -14,13 +15,19 @@ object AvroRecordFn extends Logging {
 
   def fromRecord(record: GenericRecord): InternalRow = {
     record.getSchema.getFields.asScala.map { field =>
-      record.get(field.name)
+      record.get(field.name) match {
+        case utf8: Utf8 => new String(utf8.getBytes)
+        case other => other
+      }
     }.toVector
   }
 
   def fromRecord(record: GenericRecord, columns: Seq[String]): InternalRow = {
     columns.map { column =>
-      record.get(column)
+      record.get(column) match {
+        case utf8: Utf8 => new String(utf8.getBytes)
+        case other => other
+      }
     }.toVector
   }
 
