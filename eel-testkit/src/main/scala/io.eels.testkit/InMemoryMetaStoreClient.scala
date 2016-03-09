@@ -2,30 +2,47 @@ package io.eels.testkit
 
 import java.util
 
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.common.{ObjectPair, ValidTxnList}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.IMetaStoreClient.NotificationFilter
 import org.apache.hadoop.hive.metastore.api.{Database, _}
 import org.apache.hadoop.hive.metastore.partition.spec.PartitionSpecProxy
+
 import scala.collection.JavaConverters._
 
-class InMemoryMetaStoreClient extends IMetaStoreClient {
+/**
+  * @param home the location where databases will be created
+  * @param fs   a filesystem that can be used for file operations
+  */
+class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreClient {
 
   private val databases = scala.collection.mutable.Map.empty[String, Database]
 
   // databases
-  override def getDatabase(databaseName: String): Database = databases.get(databaseName).getOrElse(throw new NoSuchObjectException)
+  override def getDatabase(databaseName: String): Database = databases.getOrElse(databaseName, throw new NoSuchObjectException)
   override def alterDatabase(name: String, db: Database): Unit = ???
   override def dropDatabase(name: String): Unit = databases.remove(name)
   override def dropDatabase(name: String, deleteData: Boolean, ignoreUnknownDb: Boolean): Unit = databases.remove(name)
   override def dropDatabase(name: String, deleteData: Boolean, ignoreUnknownDb: Boolean, cascade: Boolean): Unit = databases.remove(name)
-  override def createDatabase(db: Database): Unit = databases.put(db.getName, db)
+
+  override def createDatabase(db: Database): Unit = {
+    val location = new Path(home, db.getName)
+    fs.mkdirs(location)
+    databases.put(db.getName, db)
+  }
+
   override def getDatabases(databasePattern: String): util.List[String] = databases.keysIterator.toList.filter(_.matches(databasePattern.replace("*", ".*?"))).asJava
   override def getAllDatabases: util.List[String] = databases.keysIterator.toList.asJava
 
   // tables
-  override def createTable(tbl: Table): Unit = ???
+  override def createTable(tbl: Table): Unit = {
+    val db = databases(tbl.getDbName)
+    val location = tbl.getSd.getLocation
+    fs.mkdirs(new Path(location))
+  }
+
   override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean): Unit = ???
   override def dropTable(dbname: String, tableName: String, deleteData: Boolean, ignoreUnknownTab: Boolean, ifPurge: Boolean): Unit = ???
   override def listTableNamesByFilter(dbName: String, filter: String, maxTables: Short): util.List[String] = ???
