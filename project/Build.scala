@@ -150,6 +150,7 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-testkit")
     .settings(libraryDependencies ++= Seq(
+      "org.scalatest"               %% "scalatest"            % ScalatestVersion
     ))
     .dependsOn(core)
 

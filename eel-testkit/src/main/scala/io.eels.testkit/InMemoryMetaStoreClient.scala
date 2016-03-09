@@ -40,6 +40,9 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
 
   // tables
   override def createTable(tbl: Table): Unit = {
+    if (tableExists(tbl.getDbName, tbl.getTableName))
+      throw new IllegalStateException(tbl.getTableName + "already exists")
+
     if (tbl.getSd.getLocation == null) {
       tbl.getSd.setLocation(new Path(new Path(home, tbl.getDbName), tbl.getTableName).toString)
     }
