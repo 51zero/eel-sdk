@@ -3,6 +3,7 @@ package io.eels.component.csv
 import java.nio.file.Path
 
 import com.sksamuel.scalax.io.Using
+import com.typesafe.config.ConfigFactory
 import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
 import io.eels._
 
@@ -21,7 +22,11 @@ case class CsvSource(path: Path,
                      ignoreTrailingWhitespaces: Boolean = true,
                      skipEmptyLines: Boolean = true,
                      emptyCellValue: Option[String] = None,
+                     verifyRows: Option[Boolean] = None,
                      header: Header = Header.FirstRow) extends Source with Using {
+
+  val config = ConfigFactory.load()
+  val DefaultVerifyRows = verifyRows.getOrElse(config.getBoolean("eel.csv.verifyRows"))
 
   private def createParser: CsvParser = {
     val settings = new CsvParserSettings()
@@ -47,6 +52,7 @@ case class CsvSource(path: Path,
   def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
   def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
   def withFormat(format: CsvFormat): CsvSource = copy(format = format)
+  def withVerifyRows(verifyRows: Boolean): CsvSource = copy(verifyRows = Some(verifyRows))
   def withEmptyCellValue(emptyCellValue: String): CsvSource = copy(emptyCellValue = Some(emptyCellValue))
   def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
   def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
@@ -70,10 +76,17 @@ case class CsvSource(path: Path,
     inferrer(headers)
   }
 
-  override def parts: Seq[Part] = Seq(new CsvPart(createParser, path, header))
+  override def parts: Seq[Part] = {
+    val verify = header match {
+      case Header.None => false
+      case _ => verifyRows.getOrElse(DefaultVerifyRows)
+    }
+    val part = new CsvPart(createParser, path, header, verify, schema)
+    Seq(part)
+  }
 }
 
-class CsvPart(parser: CsvParser, path: Path, header: Header) extends Part {
+class CsvPart(parser: CsvParser, path: Path, header: Header, verifyRows: Boolean, schema: Schema) extends Part {
 
   override def reader: SourceReader = new SourceReader {
     parser.beginParsing(path.toFile)
@@ -83,7 +96,12 @@ class CsvPart(parser: CsvParser, path: Path, header: Header) extends Part {
         case Header.FirstRow => 1
         case _ => 0
       }
-      Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map(_.toSeq)
+      Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map { array =>
+        if (verifyRows) {
+          assert(array.length == schema.size, s"Row has ${array.length} fields but schema expects ${schema.size}")
+        }
+        array.toSeq
+      }
     }
   }
 }

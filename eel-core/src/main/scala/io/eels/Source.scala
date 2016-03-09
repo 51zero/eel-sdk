@@ -53,7 +53,7 @@ class FrameSource(ioThreads: Int, source: Source) extends Frame with Logging wit
           }
         } catch {
           case NonFatal(e) =>
-            logger.error("Error while loading from source; source thread will quit", e)
+            logger.error("Error while loading from source; this reader thread will quit", e)
         } finally {
           latch.countDown()
         }

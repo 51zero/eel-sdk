@@ -4,6 +4,7 @@ import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
 case class Schema(columns: List[Column]) {
+
   require(columns.map(_.name).distinct.size == columns.size, "Frame schema cannot have duplicated column names")
 
   def apply(name: String): Column = columns.find(_.name == name).get
@@ -42,6 +43,8 @@ case class Schema(columns: List[Column]) {
       if (caseSensitive) column.name == name else column.name equalsIgnoreCase name
     })
   }
+
+  def size: Int = columns.size
 
   def removeColumns(names: List[String]): Schema = copy(columns = columns.filterNot(names contains _.name))
 

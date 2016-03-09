@@ -80,5 +80,10 @@ class CsvSourceTest extends WordSpec with Matchers {
         Column("", SchemaType.String, true)
       ))
     }
+    "support verifying rows" in {
+      val file = getClass.getResource("/corrupt.csv").toURI
+      val path = Paths.get(file)
+      CsvSource(path).withHeader(Header.FirstRow).toSeq.map(_.values) shouldBe Vector(Seq("1", "2", "3"))
+    }
   }
 }
