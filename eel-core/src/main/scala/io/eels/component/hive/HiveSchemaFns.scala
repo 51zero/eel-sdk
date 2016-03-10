@@ -18,7 +18,7 @@ object HiveSchemaFns extends StrictLogging {
     Column(s.getName, schemaType, nullable, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
   }
 
-  val VarcharRegex = "varchar\\((\\d+\\))".r
+  val VarcharRegex = "varchar\\((.*?)\\)".r
   val DecimalRegex = "decimal\\((\\d+),(\\d+\\))".r
 
   type Scale = Int
@@ -28,11 +28,15 @@ object HiveSchemaFns extends StrictLogging {
     case "tinyint" => (SchemaType.Short, 0, 0)
     case "smallint" => (SchemaType.Short, 0, 0)
     case "int" => (SchemaType.Int, 0, 0)
+    case "boolean" => (SchemaType.Boolean, 0, 0)
     case "bigint" => (SchemaType.BigInt, 0, 0)
     case "float" => (SchemaType.Float, 0, 0)
     case "double" => (SchemaType.Double, 0, 0)
     case "string" => (SchemaType.String, 0, 0)
+    case "binary" => (SchemaType.Binary, 0, 0)
     case "char" => (SchemaType.String, 0, 0)
+    case "date" => (SchemaType.Date, 0, 0)
+    case "timestamp" => (SchemaType.Timestamp, 0, 0)
     case DecimalRegex(precision, scale) => (SchemaType.Decimal, precision.toInt, scale.toInt)
     case VarcharRegex(precision) => (SchemaType.String, precision.toInt, 0)
     case other =>

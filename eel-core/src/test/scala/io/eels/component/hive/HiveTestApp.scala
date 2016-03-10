@@ -38,7 +38,7 @@ object HiveTestApp extends App with Logging with Timed {
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  val rows = List.fill(300)(maps(Random.nextInt(maps.length)))
+  val rows = List.fill(10000000)(maps(Random.nextInt(maps.length)))
   val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
 
   timed("creating table") {
@@ -59,11 +59,11 @@ object HiveTestApp extends App with Logging with Timed {
     logger.info("Write complete")
   }
 
-  val source = HiveSource("sam", "albums").withColumns("year")
-  println(source.toSeq)
+  //  val source = HiveSource("sam", "albums").withColumns("year")
+  //  println(source.toSeq)
 
-  val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
-  println(partitionNames.asScala.toList)
+  //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
+  //  println(partitionNames.asScala.toList)
 
   //  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
   //  logger.info("Result=" + result)

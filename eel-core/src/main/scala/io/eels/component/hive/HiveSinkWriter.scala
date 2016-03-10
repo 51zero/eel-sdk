@@ -35,9 +35,10 @@ class HiveSinkWriter(sourceSchema: Schema,
   val partitionKeyNames = HiveOps.partitionKeyNames(dbName, tableName)
   logger.debug("Dynamic partitions: " + partitionKeyNames.mkString(","))
 
-  // the target schema is used to determine what data we write. This is generated from the hive table,
-  // with partition columns removed.
-  val targetSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) hiveTableSchema else {
+  // the data schema is the hive schema with the partition columns removed. This is because the partition columns
+  // are not written to the data but inferred from the location
+  val dataSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) hiveTableSchema
+  else {
     partitionKeyNames.foldLeft(hiveTableSchema)((schema, name) => schema.removeColumn(name, caseSensitive = false))
   }
 
@@ -60,7 +61,7 @@ class HiveSinkWriter(sourceSchema: Schema,
 
     val parts = PartitionPartsFn(row, partitionKeyNames, sourceSchema)
     val partPath = HiveOps.partitionPathString(dbName, tableName, parts, tablePath)
-    writers.getOrElseUpdate(partPath + "_" + k, {
+    writers.getOrElseUpdate(partPath + k, {
 
       val filePath = new Path(partPath, "part_" + System.nanoTime + "_" + k)
       logger.debug(s"Creating hive writer for $filePath")
@@ -80,7 +81,7 @@ class HiveSinkWriter(sourceSchema: Schema,
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
 
-      dialect.writer(targetSchema, filePath)
+      dialect.writer(dataSchema, filePath)
     })
   }
 
