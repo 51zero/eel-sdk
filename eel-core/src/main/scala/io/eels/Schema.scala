@@ -17,6 +17,8 @@ case class Schema(columns: List[Column]) {
     if (caseSensitive) columnName == column.name else columnName equalsIgnoreCase column.name
   }
 
+  def toLowerCase: Schema = copy(columns = columns.map(column => column.copy(name = column.name.toLowerCase)))
+
   lazy val columnNames: List[String] = columns.map(_.name)
 
   def addColumn(col: Column): Schema = {
