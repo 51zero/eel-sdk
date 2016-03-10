@@ -98,7 +98,9 @@ class CsvPart(parser: CsvParser, path: Path, header: Header, verifyRows: Boolean
       }
       Iterator.continually(parser.parseNext).drop(k).takeWhile(_ != null).map { array =>
         if (verifyRows) {
-          assert(array.length == schema.size, s"Row has ${array.length} fields but schema expects ${schema.size}")
+          assert(
+            array.length == schema.size,
+            s"Row has ${array.length} fields but schema has ${schema.size}\nRow=${array.mkString(", ")}\nSchema=${schema.columnNames.mkString(", ")}")
         }
         array.toSeq
       }
