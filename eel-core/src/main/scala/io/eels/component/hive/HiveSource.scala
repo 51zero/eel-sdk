@@ -72,7 +72,7 @@ case class HiveSource(private val dbName: String,
   override lazy val schema: Schema = {
 
     // if no columnNames were specified, then we will return the schema as is from the hive database,
-    // otherwise we will keep the schema in the same order, but strip out all but the required columnNames
+    // otherwise we will keep only the specified columnNames
     if (columnNames.isEmpty) metastoreSchema
     else {
       // remember hive is always lower case, so when comparing requested columnNames with

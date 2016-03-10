@@ -34,8 +34,8 @@ class JdbcPart(rs: ResultSet, stmt: Statement, conn: Connection, schema: Schema)
       }
 
       override def next: InternalRow = {
-        for (k <- 1 to columnCount) yield {
-          rs.getObject(k)
+        schema.columnNames.map { columnName =>
+          rs.getObject(columnName)
         }
       }
     }
