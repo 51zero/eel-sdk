@@ -79,7 +79,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, kafka, mongo, solr, cli, testkit, tests)
+    .aggregate(core, kafka, mongo, solr, cli)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -145,21 +145,6 @@ object Build extends Build {
       "org.elasticsearch"         % "elasticsearch"       % "2.1.1"     % "test"
     ))
     .dependsOn(core)
-
-  lazy val testkit = Project("eel-testkit", file("eel-testkit"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-testkit")
-    .settings(libraryDependencies ++= Seq(
-      "org.scalatest"               %% "scalatest"            % ScalatestVersion
-    ))
-    .dependsOn(core)
-
-  lazy val tests = Project("eel-tests", file("eel-tests"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-tests")
-    .settings(libraryDependencies ++= Seq(
-    ))
-    .dependsOn(core, testkit)
 
   lazy val cli = Project("eel-cli", file("eel-cli"))
     .settings(rootSettings: _*)

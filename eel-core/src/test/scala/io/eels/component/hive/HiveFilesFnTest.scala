@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
-import io.eels.{Column, Frame, Schema}
 import io.eels.testkit.HiveTestKit
+import io.eels.{Column, Frame, Schema}
 import org.scalatest.{Matchers, WordSpec}
 
 class HiveFilesFnTest extends WordSpec with Matchers with HiveTestKit {
