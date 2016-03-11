@@ -84,44 +84,5 @@ object AvroRecordFn extends Logging {
   }
 }
 
-trait AvroRecordMarshaller {
-  def toRecord(row: InternalRow): GenericRecord
-}
 
-class DefaultAvroRecordMarshaller(schema: Schema, avroSchema: AvroSchema) extends AvroRecordMarshaller with Logging {
 
-  private val fields = avroSchema.getFields.asScala.toArray
-  private val converters = fields.map { field => new OptionalConverter(converter(field.schema)) }
-
-  override def toRecord(row: InternalRow): GenericRecord = {
-    val record = new Record(avroSchema)
-    for (k <- row.indices) {
-      val value = row(k)
-      val converted = converters(k)(value)
-      record.put(fields(k).name, converted)
-    }
-    record
-  }
-
-  private def converter(schema: AvroSchema): Converter[_] = {
-    schema.getType match {
-      case AvroSchema.Type.BOOLEAN => BooleanConverter
-      case AvroSchema.Type.DOUBLE => DoubleConverter
-      case AvroSchema.Type.ENUM => StringConverter
-      case AvroSchema.Type.FLOAT => FloatConverter
-      case AvroSchema.Type.INT => IntConverter
-      case AvroSchema.Type.LONG => LongConverter
-      case AvroSchema.Type.STRING => StringConverter
-      case AvroSchema.Type.UNION => converter(schema.getTypes.asScala.find(_.getType != AvroSchema.Type.NULL).get)
-      case other =>
-        logger.warn(s"No converter exists for fieldType=$other; defaulting to StringConverter")
-        StringConverter
-    }
-  }
-
-  //  def default(field: AvroSchema.Field) = {
-  //    if (field.defaultValue != null) field.defaultValue.getTextValue
-  //    else if (fillMissingValues) null
-  //    else sys.error(s"Record is missing value for column $field")
-  //  }
-}
