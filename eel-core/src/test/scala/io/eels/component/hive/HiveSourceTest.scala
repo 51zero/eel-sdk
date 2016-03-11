@@ -2,7 +2,10 @@ package io.eels.component.hive
 
 import io.eels.testkit.HiveTestKit
 import io.eels.{Column, Frame, Schema, SchemaType}
+import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
+
+import scala.collection.JavaConverters._
 
 class HiveSourceTest extends WordSpec with Matchers with HiveTestKit {
 
@@ -56,6 +59,25 @@ class HiveSourceTest extends WordSpec with Matchers with HiveTestKit {
     "return rows in projection order for a projection that includes ONLY some partitions" in {
       HiveSource("sam", "hivesourcetest").withColumns("q").toSet.map(_.values) shouldBe Set(Vector("5"), Vector("8"))
       HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) shouldBe Set(Vector("4"), Vector("7"))
+    }
+    "not load a partition which exists in the metastore, but doesn't have associated partition directory" in {
+      // this will add the partition in hive but not create the directory
+      HiveOps.createPartition("sam", "hivesourcetest", Partition("p=100/q=100"))
+      // the partition should exist in the metatstore
+      client.listPartitionNames("sam", "hivesourcetest", Short.MaxValue).asScala.toSet shouldBe Set("p=7/q=8", "p=4/q=5", "p=100/q=100")
+      // the partition value 100 should not be returned because it doesn't exist on disk
+      HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) should not contain "100"
+    }
+    "not load a partition which exists in the metastore, but has no data" in {
+      // this will add the partition in hive but not create the directory
+      HiveOps.createPartition("sam", "hivesourcetest", Partition("p=100/q=100"))
+      val location = client.getPartition("sam", "hivesourcetest", "p=100/q=100").getSd.getLocation
+      val emptyData = new Path(location, "empty")
+      fs.create(emptyData)
+      // the partition should exist in the metatstore
+      client.listPartitionNames("sam", "hivesourcetest", Short.MaxValue).asScala.toSet shouldBe Set("p=7/q=8", "p=4/q=5", "p=100/q=100")
+      // the partition value 100 should not be returned because there is no value on disk
+      HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) should not contain "100"
     }
   }
 

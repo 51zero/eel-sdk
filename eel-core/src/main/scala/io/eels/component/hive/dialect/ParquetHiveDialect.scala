@@ -22,7 +22,6 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
       override def close(): Unit = writer.close()
       override def write(row: InternalRow): Unit = {
         val record = marshaller.toRecord(row)
-        logger.trace(record.toString)
         writer.write(record)
       }
     }

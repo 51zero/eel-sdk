@@ -4,10 +4,8 @@ import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
 import io.eels._
 import io.eels.component.parquet.ParquetLogMute
-import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
+import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
-
-import scala.collection.JavaConverters._
 
 object HiveSource {
   def apply(dbName: String, tableName: String)
@@ -97,6 +95,7 @@ case class HiveSource(private val dbName: String,
   override def parts: Seq[Part] = {
 
     val table = client.getTable(dbName, tableName)
+    val dialect = HiveDialect(table)
     val paths = HiveFilesFn(table, partitionExprs)
     logger.debug(s"Found ${paths.size} visible hive files from all locations for $dbName:$tableName")
 
@@ -104,61 +103,11 @@ case class HiveSource(private val dbName: String,
     // to see which partitions have been created. Those files must indicate partitions that have data.
     if (schema.columnNames forall partitionKeys.contains) {
       logger.debug("Requested columns are all partitions; reading directly from metastore")
-      // we pass in the columns so we can order them to the requested withColumns ordering
-      Seq(new HivePartitionPart(dbName, tableName, schema.columnNames, partitionKeys))
+      // we pass in the columns so we can order the results to keep them aligned with the given withColumns ordering
+      Seq(new HivePartitionPart(dbName, tableName, schema.columnNames, partitionKeys, metastoreSchema, dialect))
     } else {
-      val dialect = HiveDialect(table)
       paths.map { case (file, partition) =>
         new HiveFilePart(dialect, file, partition, metastoreSchema, schema, partitionKeys)
-      }
-    }
-  }
-}
-
-class HivePartitionPart(dbName: String, tableName: String, columnNames: Seq[String], partitionKeys: Seq[String])
-                       (implicit fs: FileSystem, client: IMetaStoreClient) extends Part {
-
-  override def reader: SourceReader = {
-
-    val values = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { partition =>
-      fs.exists(new Path(partition.getSd.getLocation))
-    } map { partition =>
-      val map = partitionKeys.zip(partition.getValues.asScala).toMap
-      columnNames.map(map(_)).toVector
-    }
-
-    new SourceReader {
-      override def close(): Unit = ()
-      override def iterator: Iterator[InternalRow] = values.iterator
-    }
-  }
-}
-
-class HiveFilePart(dialect: HiveDialect,
-                   file: LocatedFileStatus,
-                   partition: Partition,
-                   metastoreSchema: Schema,
-                   schema: Schema,
-                   partitionKeys: Seq[String])
-                  (implicit fs: FileSystem) extends Part {
-
-  override def reader: SourceReader = {
-
-    // the schema we send to the reader must have any partitions removed, because those columns won't exist
-    // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
-    val dataSchema = Schema(schema.columns.filterNot(partitionKeys contains _.name))
-    val reader = dialect.reader(file.getPath, metastoreSchema, dataSchema)
-
-    new SourceReader {
-      override def close(): Unit = reader.close()
-
-      // when we read a row back from the dialect reader, we must repopulate any partition columns requested.
-      // Again because those values are not stored in hive, but inferred from the meta store
-      override def iterator: Iterator[InternalRow] = reader.iterator.map { row =>
-        val map = RowUtils.toMap(dataSchema, row)
-        schema.columnNames.map { columnName =>
-          map.getOrElse(columnName, partition.get(columnName).orNull)
-        }
       }
     }
   }
