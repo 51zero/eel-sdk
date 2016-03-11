@@ -119,7 +119,7 @@ class HiveSinkWriter(sourceSchema: Schema,
           count = count + 1
         }
       } catch {
-        case e: Throwable => logger.error("Error writing row", e)
+        case e: Throwable => logger.error(s"Error writing row ${e.getMessage}", e)
       } finally {
         logger.info(s"Sink thread $k completed; total $count rows")
         latch.countDown()

@@ -30,7 +30,7 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
 
   override def reader(path: Path, schema: Schema, columnNames: Seq[String])
                      (implicit fs: FileSystem): SourceReader = new SourceReader {
-    val reader = ParquetReaderSupport.createReader(path, columnNames)
+    val reader = ParquetReaderSupport.createReader(path, columnNames, schema)
     override def close(): Unit = reader.close()
     override def iterator: Iterator[InternalRow] = ParquetIterator(reader, columnNames)
   }

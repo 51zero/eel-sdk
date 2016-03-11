@@ -7,7 +7,7 @@ object Build extends Build {
 
   val org = "io.eels"
 
-  val ScalaVersion = "2.11.7"
+  val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0-M12"
   val Slf4jVersion = "1.7.5"
   val Log4jVersion = "1.2.17"
@@ -150,6 +150,7 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-testkit")
     .settings(libraryDependencies ++= Seq(
+      "org.scalatest"               %% "scalatest"            % ScalatestVersion
     ))
     .dependsOn(core)
 

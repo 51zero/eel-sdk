@@ -7,7 +7,7 @@ import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.metastore.api.Table
 
 object HiveFileScanner {
-  def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path] = {
+  def apply(table: Table, partitionExprs: List[PartitionConstraint])(implicit fs: FileSystem): List[Path] = {
     if (partitionExprs.isEmpty) HiveTableFileEnumerator(table)
     else HivePartitionFileEnumerator(table, partitionExprs)
   }
@@ -44,7 +44,7 @@ object HiveTableFileEnumerator extends HiveFileScanner {
 // loads all files under a table for the given set of partitions
 object HivePartitionFileEnumerator extends HiveFileScanner {
 
-  def apply(table: Table, partitionExprs: List[PartitionExpr])(implicit fs: FileSystem): List[Path] = {
+  def apply(table: Table, partitionExprs: List[PartitionConstraint])(implicit fs: FileSystem): List[Path] = {
 
     // returns true if the file meets the partition exprs
     def isEvaluated(file: LocatedFileStatus): Boolean = {

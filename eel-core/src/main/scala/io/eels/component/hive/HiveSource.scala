@@ -2,7 +2,6 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
-import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.parquet.ParquetLogMute
 import io.eels._
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -19,7 +18,7 @@ object HiveSource {
 
 case class HiveSource(private val dbName: String,
                       private val tableName: String,
-                      private val partitionExprs: List[PartitionExpr] = Nil,
+                      private val partitionExprs: List[PartitionConstraint] = Nil,
                       private val columns: Seq[String] = Nil)
                      (implicit fs: FileSystem, hive: HiveConf)
   extends Source
@@ -34,17 +33,9 @@ case class HiveSource(private val dbName: String,
 
   def withColumns(first: String, rest: String*): HiveSource = withColumns(first +: rest)
 
-  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(name, "=", value)
+  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(PartitionEquals(name, value))
 
-  def withPartitionConstraint(name: String, op: String, value: String): HiveSource = {
-    val expr = op match {
-      case "=" => PartitionEquals(name, value)
-      case ">" => PartitionGt(name, value)
-      case ">=" => PartitionGte(name, value)
-      case "<" => PartitionLt(name, value)
-      case "<=" => PartitionLte(name, value)
-      case _ => sys.error(s"Unsupported op $op")
-    }
+  def withPartitionConstraint(expr: PartitionConstraint): HiveSource = {
     copy(partitionExprs = partitionExprs :+ expr)
   }
 

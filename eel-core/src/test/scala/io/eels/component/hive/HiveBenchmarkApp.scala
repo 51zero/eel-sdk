@@ -104,7 +104,7 @@ object HiveBenchmarkApp extends App with StrictLogging {
   val start = System.currentTimeMillis()
 
   val result = HiveSource("sam", "people")
-    .withPartitionConstraint("state", "<=", "Iowa")
+    .withPartitionConstraint(PartitionLte("state", "Iowa"))
     .withColumns("id", "foo", "woo").toFrame(4).toSeq
 
   val end = System.currentTimeMillis()
