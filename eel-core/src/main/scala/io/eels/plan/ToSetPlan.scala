@@ -33,7 +33,7 @@ object ToSetPlan extends Plan with Using with StrictLogging {
       Future {
         try {
           val map = mutable.Set[InternalRow]()
-          buffer.iterator.takeWhile(_ => running.get).foreach(r => map += r)
+          buffer.iterator.takeWhile(_ => running.get).foreach(map.add)
           map
         } catch {
           case e: Throwable =>

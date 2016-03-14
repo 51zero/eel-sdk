@@ -29,7 +29,12 @@ case class HiveSink(private val dbName: String,
     HiveDialect(format)
   }
 
+  private def containsUpperCase(schema: Schema): Boolean = schema.columnNames.forall(col => col == col.toLowerCase)
+
   override def writer(schema: Schema): SinkWriter = {
+    if (containsUpperCase(schema)) {
+      logger.warn("Writing to hive with a schema that contains upper case characters, but hive will lower case all field names. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive")
+    }
 
     if (schemaEvolution.getOrElse(SchemaEvolutionDefault)) {
       HiveSchemaEvolve(dbName, tableName, schema)
