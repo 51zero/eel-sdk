@@ -8,6 +8,8 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels._
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.IndexedSeq
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 object ToSetPlan extends Plan with Using with StrictLogging {
@@ -22,17 +24,18 @@ object ToSetPlan extends Plan with Using with StrictLogging {
   def apply(frame: Frame)(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = {
     logger.info(s"Executing toSet on frame [tasks=$tasks]")
 
-    val map = new ConcurrentHashMap[InternalRow, Boolean]
     val buffer = frame.buffer
     val schema = frame.schema
     val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
 
     logger.info(s"Plan will execute with $tasks tasks")
-    for (k <- 1 to tasks) {
+    val futures: Seq[Future[mutable.Set[InternalRow]]] = (1 to tasks).map { case k =>
       Future {
         try {
-          buffer.iterator.takeWhile(_ => running.get).foreach(map.putIfAbsent(_, true))
+          val map = mutable.Set[InternalRow]()
+          buffer.iterator.takeWhile(_ => running.get).foreach(r => map += r)
+          map
         } catch {
           case e: Throwable =>
             logger.error("Error writing; aborting tasks", e)
@@ -49,6 +52,15 @@ object ToSetPlan extends Plan with Using with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    map.keySet.asScala.map(internal => Row(schema, internal))
+    raiseExceptionOnFailure(futures)
+    val sets = futures.flatMap(f => f.value.get.toOption).withFilter(_.nonEmpty).map(s => s)
+    sets.headOption match {
+      case None => mutable.Set.empty[Row]
+      case Some(set) =>
+        sets.tail
+          .foldLeft(set) { case (acc, i) => acc ++ i }
+          .map(internal => Row(schema, internal))
+
+    }
   }
 }
