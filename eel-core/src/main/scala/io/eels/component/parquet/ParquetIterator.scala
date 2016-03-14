@@ -12,10 +12,11 @@ object ParquetIterator extends StrictLogging {
   def apply(reader: ParquetReader[GenericRecord], schema: Schema): Iterator[InternalRow] = new Iterator[InternalRow] {
     require(schema.columns.nonEmpty, "Attempted to create a parquet iterator with no schema columns")
 
+    val recordFn = new AvroRecordFn
     val avroSchema = AvroSchemaFn.toAvro(schema)
 
     val iter = Iterator.continually(reader.read).takeWhile(_ != null).map { record =>
-      val row = AvroRecordFn.fromRecord(record, avroSchema)
+      val row = recordFn.fromRecord(record, avroSchema)
       require(row.size == schema.size, s"Row is missing values for some schema fields [row=$row; schema=$schema]")
       row
     }

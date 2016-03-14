@@ -1,7 +1,7 @@
 package io.eels.component.avro
 
 import com.sksamuel.scalax.Logging
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.Converter._
 import io.eels.{Converter, InternalRow, Schema}
 import org.apache.avro.generic.GenericData.Record
@@ -11,7 +11,11 @@ import org.apache.avro.{Schema => AvroSchema}
 
 import scala.collection.JavaConverters._
 
-object AvroRecordFn extends Logging {
+class AvroRecordFn extends Logging {
+
+  private val config = ConfigFactory.load()
+  private val useJavaString = config.getBoolean("eel.avro.java.string")
+  logger.debug(s"Avro will read strings as java.lang.String = $useJavaString")
 
   /**
     * Returns an AvroRecord using the schema present in the file
@@ -19,7 +23,7 @@ object AvroRecordFn extends Logging {
   def fromRecord(record: GenericRecord): InternalRow = {
     record.getSchema.getFields.asScala.map { field =>
       record.get(field.name) match {
-        case utf8: Utf8 => new String(utf8.getBytes)
+        case utf8: Utf8 if useJavaString => new String(utf8.getBytes)
         case other => other
       }
     }.toVector
@@ -33,7 +37,7 @@ object AvroRecordFn extends Logging {
   def fromRecord(record: GenericRecord, targetSchema: AvroSchema): InternalRow = {
     targetSchema.getFields.asScala.map { field =>
       record.get(field.name) match {
-        case utf8: Utf8 => new String(utf8.getBytes)
+        case utf8: Utf8 if useJavaString => new String(utf8.getBytes)
         case other => other
       }
     }.toVector

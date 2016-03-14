@@ -29,6 +29,7 @@ class AvroSourceReader(path: Path, schema: Schema) extends SourceReader {
 
   private val reader = AvroReaderSupport.createReader(path)
   private val avroSchema = AvroSchemaFn.toAvro(schema)
+  private val recordFn = new AvroRecordFn
 
   override def close(): Unit = reader.close()
   override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
@@ -38,6 +39,6 @@ class AvroSourceReader(path: Path, schema: Schema) extends SourceReader {
         reader.close()
       hasNext
     }
-    override def next: InternalRow = AvroRecordFn.fromRecord(reader.next, avroSchema)
+    override def next: InternalRow = recordFn.fromRecord(reader.next, avroSchema)
   }
 }

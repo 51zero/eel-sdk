@@ -49,11 +49,12 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
       val datumReader = new generic.GenericDatumReader[GenericRecord]()
       val reader = new DataFileReader[GenericRecord](new file.SeekableByteArrayInput(bytes), datumReader)
       val avroSchema = AvroSchemaFn.toAvro(requestedSchema)
+      val recordFn = new AvroRecordFn
 
       override def close(): Unit = ()
       override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
         override def hasNext: Boolean = reader.hasNext
-        override def next(): InternalRow = AvroRecordFn.fromRecord(reader.next, avroSchema)
+        override def next(): InternalRow = recordFn.fromRecord(reader.next, avroSchema)
       }
     }
   }

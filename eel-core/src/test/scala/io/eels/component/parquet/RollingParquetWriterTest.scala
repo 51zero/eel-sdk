@@ -36,11 +36,12 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
   }
 
   val avroSchema = AvroSchemaFn.toAvro(frame.schema)
+  val recordFn = new AvroRecordFn
 
   "RollingParquetWriter" should {
     "rollover on record count" in {
       val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, true)
-      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
+      frame.buffer.iterator.toList.foreach(row => writer.write(recordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
       writer.close()
       ParquetSource(path0).toSet.map(_.values.map(_.toString)) shouldBe
         Set(
@@ -55,13 +56,13 @@ class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfte
     }
     "write crc" in {
       val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, false)
-      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
+      frame.buffer.iterator.toList.foreach(row => writer.write(recordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
       writer.close()
       fs.exists(new Path(".parquet_0.crc")) shouldBe true
     }
     "skip crc if option set" in {
       val writer = new RollingParquetWriter(basePath, avroSchema, 2, 0, true)
-      frame.buffer.iterator.toList.foreach(row => writer.write(AvroRecordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
+      frame.buffer.iterator.toList.foreach(row => writer.write(recordFn.toRecord(row, avroSchema, frame.schema, ConfigFactory.load)))
       writer.close()
       fs.exists(new Path(".parquet_0.crc")) shouldBe false
     }
