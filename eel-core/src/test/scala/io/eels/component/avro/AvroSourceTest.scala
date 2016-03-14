@@ -26,6 +26,8 @@ class AvroSourceTest extends WordSpec with Matchers with OneInstancePerTest {
         List("elton john", "musician", "pinner"),
         List("issac newton", "scientist", "heaven")
       )
+      sys.props.put("eel.avro.java.string", "true")
+      ConfigFactory.invalidateCaches()
     }
     "read strings as utf8 when eel.avro.java.string is false" in {
       sys.props.put("eel.avro.java.string", "false")
@@ -36,6 +38,8 @@ class AvroSourceTest extends WordSpec with Matchers with OneInstancePerTest {
         List(new Utf8("elton john"), new Utf8("musician"), new Utf8("pinner")),
         List(new Utf8("issac newton"), new Utf8("scientist"), new Utf8("heaven"))
       )
+      sys.props.put("eel.avro.java.string", "true")
+      ConfigFactory.invalidateCaches()
     }
   }
 }
