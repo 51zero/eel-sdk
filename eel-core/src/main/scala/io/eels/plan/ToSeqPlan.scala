@@ -8,7 +8,11 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels._
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.IndexedSeq
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Failure
 
 object ToSeqPlan extends Plan with Using with StrictLogging {
 
@@ -22,17 +26,18 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
   def untyped(frame: Frame)(implicit executor: ExecutionContext): Seq[Row] = {
     logger.info(s"Executing toSeq on frame [tasks=$tasks]")
 
-    val queue = new ConcurrentLinkedQueue[InternalRow]
     val buffer = frame.buffer
     val schema = frame.schema
     val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
 
     logger.info(s"Plan will execute with $tasks tasks")
-    for (k <- 1 to tasks) {
+    val futures = (1 to tasks).map { case k =>
       Future {
         try {
-          buffer.iterator.takeWhile(_ => running.get).foreach(queue.add)
+          val list = ListBuffer[InternalRow]()
+          buffer.iterator.takeWhile(_ => running.get).foreach(r => list += r)
+          list
         } catch {
           case e: Throwable =>
             logger.error("Error writing; aborting tasks", e)
@@ -49,6 +54,11 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    queue.asScala.map(internal => Row(schema, internal)).toVector
+    raiseExceptionOnFailure(futures)
+    val result = futures.flatMap(f => f.value.get.toOption)
+      .withFilter(_.nonEmpty)
+      .flatMap(rows => rows)
+      .map(internal => Row(schema, internal))
+    result.toVector
   }
 }

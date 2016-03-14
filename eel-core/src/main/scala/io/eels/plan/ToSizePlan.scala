@@ -12,17 +12,17 @@ object ToSizePlan extends Plan with StrictLogging {
 
   def apply(frame: Frame)(implicit executor: ExecutionContext): Long = {
 
-    val count = new AtomicLong(0)
     val buffer = frame.buffer
     val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
 
     logger.info(s"Plan will execute with $tasks tasks")
-    for (k <- 1 to tasks) {
+    val futures = for (k <- 1 to tasks) yield {
       Future {
         try {
-          buffer.iterator.takeWhile(_ => running.get).foreach(_ => count.incrementAndGet)
+          val count = buffer.iterator.takeWhile(_ => running.get).foldLeft(0L) { case (acc, _) => acc + 1 }
           logger.debug(s"Task $k completed")
+          count
         } catch {
           case e: Throwable =>
             logger.error("Error writing; aborting tasks", e)
@@ -39,6 +39,7 @@ object ToSizePlan extends Plan with StrictLogging {
     buffer.close()
     logger.debug("Buffer closed")
 
-    count.get()
+    raiseExceptionOnFailure(futures)
+    futures.flatMap(f => f.value.get.toOption).foldLeft(0L)(_ + _)
   }
 }
