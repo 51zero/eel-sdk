@@ -1,16 +1,18 @@
 package io.eels.plan
 
-import java.util.concurrent.atomic.{AtomicBoolean, LongAdder}
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Frame, Sink}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 object SinkPlan extends Plan with StrictLogging {
 
   def apply(sink: Sink, frame: Frame)(implicit execution: ExecutionContext): Long = {
+
     val latch = new CountDownLatch(tasks)
     val schema = frame.schema
     val buffer = frame.buffer
@@ -19,11 +21,13 @@ object SinkPlan extends Plan with StrictLogging {
 
     val futures = for (k <- 1 to tasks) yield {
       Future {
+        var count = 0l
         try {
-          buffer.iterator.takeWhile(_ => running.get).foldLeft(0L) { case (total, row) =>
+          buffer.iterator.takeWhile(_ => running.get).foreach { row =>
             writer.write(row)
-            total + 1
+            count = count + 1
           }
+          count
         } catch {
           case e: Throwable =>
             logger.error("Error writing; shutting down executor", e)
@@ -43,6 +47,8 @@ object SinkPlan extends Plan with StrictLogging {
     logger.debug("Buffer closed")
 
     raiseExceptionOnFailure(futures)
-    futures.flatMap(f => f.value.get.toOption).foldLeft(0L)(_ + _)
+
+    val counts = Await.result(Future.sequence(futures.map(_.recover { case _ => 0l })), 1.minute)
+    counts.sum
   }
 }

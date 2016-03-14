@@ -7,7 +7,6 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-import scala.collection.JavaConverters._
 import scala.util.Random
 
 object HiveTestApp extends App with Logging with Timed {
@@ -51,7 +50,6 @@ object HiveTestApp extends App with Logging with Timed {
       overwrite = true
     )
   }
-
 
   val sink = HiveSink("sam", "albums").withIOThreads(4)
   timed("writing data") {

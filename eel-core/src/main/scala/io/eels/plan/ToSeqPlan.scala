@@ -1,18 +1,15 @@
 package io.eels.plan
 
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch, TimeUnit}
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels._
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.IndexedSeq
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Failure
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 object ToSeqPlan extends Plan with Using with StrictLogging {
 
@@ -32,7 +29,7 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
     val running = new AtomicBoolean(true)
 
     logger.info(s"Plan will execute with $tasks tasks")
-    val futures = (1 to tasks).map { case k =>
+    val futures = (1 to tasks).map { k =>
       Future {
         try {
           val list = ListBuffer[InternalRow]()
@@ -55,10 +52,8 @@ object ToSeqPlan extends Plan with Using with StrictLogging {
     logger.debug("Buffer closed")
 
     raiseExceptionOnFailure(futures)
-    val result = futures.flatMap(f => f.value.get.toOption)
-      .withFilter(_.nonEmpty)
-      .flatMap(rows => rows)
-      .map(internal => Row(schema, internal))
-    result.toVector
+
+    val seqs = Await.result(Future.sequence(futures), 1.minute)
+    seqs.reduce((a, b) => a ++ b).map(internal => Row(schema, internal))
   }
 }

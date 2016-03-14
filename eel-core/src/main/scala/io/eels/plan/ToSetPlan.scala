@@ -7,10 +7,9 @@ import com.sksamuel.scalax.io.Using
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels._
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 object ToSetPlan extends Plan with Using with StrictLogging {
 
@@ -30,7 +29,7 @@ object ToSetPlan extends Plan with Using with StrictLogging {
     val running = new AtomicBoolean(true)
 
     logger.info(s"Plan will execute with $tasks tasks")
-    val futures: Seq[Future[mutable.Set[InternalRow]]] = (1 to tasks).map { case k =>
+    val futures: Seq[Future[mutable.Set[InternalRow]]] = (1 to tasks).map { k =>
       Future {
         try {
           val map = mutable.Set[InternalRow]()
@@ -53,14 +52,8 @@ object ToSetPlan extends Plan with Using with StrictLogging {
     logger.debug("Buffer closed")
 
     raiseExceptionOnFailure(futures)
-    val sets = futures.flatMap(f => f.value.get.toOption).withFilter(_.nonEmpty).map(s => s)
-    sets.headOption match {
-      case None => mutable.Set.empty[Row]
-      case Some(set) =>
-        sets.tail
-          .foldLeft(set) { case (acc, i) => acc ++ i }
-          .map(internal => Row(schema, internal))
 
-    }
+    val sets = Await.result(Future.sequence(futures), 1.minute)
+    sets.reduce((a, b) => a ++ b).map(internal => Row(schema, internal))
   }
 }

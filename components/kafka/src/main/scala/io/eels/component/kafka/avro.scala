@@ -9,11 +9,14 @@ import org.apache.avro.file.{DataFileReader, DataFileWriter, SeekableByteArrayIn
 import org.apache.avro.generic.{GenericDatumReader, GenericDatumWriter, GenericRecord}
 
 object AvroKafkaDeserializer extends KafkaDeserializer {
+
+  val recordFn = new AvroRecordFn
+
   override def apply(bytes: Array[Byte]): InternalRow = {
     val datumReader = new GenericDatumReader[GenericRecord]()
     val reader = new DataFileReader[GenericRecord](new SeekableByteArrayInput(bytes), datumReader)
     val record = reader.next()
-    AvroRecordFn.fromRecord(record)
+    recordFn.fromRecord(record)
   }
 }
 
