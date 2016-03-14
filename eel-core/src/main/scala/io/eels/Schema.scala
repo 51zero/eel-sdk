@@ -17,12 +17,16 @@ case class Schema(columns: List[Column]) {
     if (caseSensitive) columnName == column.name else columnName equalsIgnoreCase column.name
   }
 
+  def toLowerCase: Schema = copy(columns = columns.map(column => column.copy(name = column.name.toLowerCase)))
+
   lazy val columnNames: List[String] = columns.map(_.name)
 
   def addColumn(col: Column): Schema = {
     require(!columnNames.contains(col.name), s"Column ${col.name} already exists")
     copy(columns :+ col)
   }
+
+  def contains(columnName: String): Boolean = indexOf(columnName) >= 0
 
   def stripFromColumnName(chars: Seq[Char]): Schema = {
     def strip(name: String): String = chars.foldLeft(name) { (str, char) => str.replace(char.toString, "") }

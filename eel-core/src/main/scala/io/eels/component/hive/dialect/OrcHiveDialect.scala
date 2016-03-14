@@ -31,12 +31,13 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
   }
 
   // todo implement column pushdown
-  override def reader(path: Path, schema: Schema, columns: Seq[String])(implicit fs: FileSystem): SourceReader = {
+  override def reader(path: Path, tableSchema: Schema, requestedSchema: Schema)
+                     (implicit fs: FileSystem): SourceReader = {
     logger.debug(s"Creating orc iterator for $path")
 
     new SourceReader {
 
-      val inspector = OrcStructInspector(schema)
+      val inspector = OrcStructInspector(tableSchema)
       val reader = OrcFile.createReader(fs, path).rows()
 
       override def close(): Unit = reader.close()

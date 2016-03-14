@@ -1,68 +1,90 @@
 package io.eels.component.hive
 
-import java.util.UUID
-
-import io.eels.{Frame, Schema$}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+import io.eels.testkit.HiveTestKit
+import io.eels.{Column, Frame, Schema, SchemaType}
+import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 
-import scala.util.Random
+import scala.collection.JavaConverters._
 
-class HiveSourceTest extends WordSpec with Matchers {
+class HiveSourceTest extends WordSpec with Matchers with HiveTestKit {
 
-//  import scala.concurrent.ExecutionContext.Implicits.global
-//
-//  val table = getClass.getSimpleName.toLowerCase
-//  val database = "sam"
-//
-//  val conf = new Configuration
-//  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-//  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-//  conf.reloadConfiguration()
-//  implicit val fs = FileSystem.get(conf)
-//
-//  implicit val hiveConf = new HiveConf()
-//  hiveConf.addResource(new Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
-//  hiveConf.reloadConfiguration()
-//
-//  implicit val client = new HiveMetaStoreClient(hiveConf)
-//
-//  val schema = FrameSchema("a", "b", "c", "d")
-//  val rows = List.fill(100)(List(UUID.randomUUID.toString, Random.nextInt, Random.nextDouble, Random.nextBoolean))
-//  val frame = Frame(schema, rows)
-//
-//  HiveOps.createTable(
-//    database,
-//    table,
-//    frame.schema,
-//    format = HiveFormat.Parquet,
-//    overwrite = true
-//  )
-//
-//  frame.to(HiveSink(database, table))
-//
-//  "HiveSource.schema" should {
-//    "only include projected columns" ignore {
-//      val source = HiveSource(database, table).withColumns("a", "c")
-//      source.schema.columnNames shouldBe List("a", "c")
-//    }
-//    "include all columns for *" ignore {
-//      val source = HiveSource(database, table)
-//      source.schema.columnNames shouldBe List("a", "b", "c", "d")
-//    }
-//  }
-//
-//  "HiveSource.buffer" should {
-//    "only include projected columns" ignore {
-//      val source = HiveSource(database, table).withColumns("a", "c")
-//      source.toSeq.head.size shouldBe 2
-//    }
-//    "include all columns for *" ignore {
-//      val source = HiveSource(database, table)
-//      source.toSeq.head.size shouldBe 4
-//    }
-//  }
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val schema = Schema(Column("a"), Column("b"), Column("c"), Column("p"), Column("q"))
+  HiveOps.createTable("sam", "hivesourcetest", schema, format = HiveFormat.Parquet, partitionKeys = List("p", "q"))
+
+  Frame(schema, Array("1", "2", "3", "4", "5"), Array("4", "5", "6", "7", "8")).to(HiveSink("sam", "hivesourcetest"))
+
+  "HiveSource.partitionValues" should {
+    "return all partition values directly from metastore" in {
+      HiveSource("sam", "hivesourcetest").partitionValues("p").toSet shouldBe Set("7", "4")
+    }
+  }
+
+  "HiveSource.schema" should {
+    "include partitions as non null columns" in {
+      HiveSource("sam", "hivesourcetest").schema shouldBe
+        Schema(List(Column("a", SchemaType.String, true), Column("b", SchemaType.String, true), Column("c", SchemaType.String, true), Column("p", SchemaType.String, false), Column("q", SchemaType.String, false)))
+    }
+    "respect withColumns" in {
+      HiveSource("sam", "hivesourcetest").withColumns("c", "b").schema shouldBe
+        Schema(List(Column("c", SchemaType.String, true), Column("b", SchemaType.String, true)))
+    }
+    "respect withColumns that specify partitions" in {
+      HiveSource("sam", "hivesourcetest").withColumns("c", "q").schema shouldBe
+        Schema(List(Column("c", SchemaType.String, true), Column("q", SchemaType.String, false)))
+    }
+    "respect withColumns that specify ONLY partitions" in {
+      HiveSource("sam", "hivesourcetest").withColumns("q", "p").schema shouldBe Schema(List(Column("q", SchemaType.String, false), Column("p", SchemaType.String, false)))
+    }
+    "respect withColumns that specify ONLY some partitions" in {
+      HiveSource("sam", "hivesourcetest").withColumns("q").schema shouldBe Schema(List(Column("q", SchemaType.String, false)))
+    }
+  }
+
+  "HiveSource.withColumns" should {
+    "return rows in projection order" in {
+      HiveSource("sam", "hivesourcetest").withColumns("c", "b").toSet.map(_.values) shouldBe
+        Set(Vector("3", "2"), Vector("6", "5"))
+    }
+    "return rows in projection order for a projection that includes partitions" in {
+      HiveSource("sam", "hivesourcetest").withColumns("c", "q", "a").toSet.map(_.values) shouldBe
+        Set(Vector("3", "5", "1"), Vector("6", "8", "4"))
+    }
+    "return rows in projection order for a projection that includes ONLY partitions" in {
+      HiveSource("sam", "hivesourcetest").withColumns("q", "p").toSet.map(_.values) shouldBe
+        Set(Vector("5", "4"), Vector("8", "7"))
+    }
+    "return rows in projection order for a projection that includes ONLY some partitions" in {
+      HiveSource("sam", "hivesourcetest").withColumns("q").toSet.map(_.values) shouldBe Set(Vector("5"), Vector("8"))
+      HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) shouldBe Set(Vector("4"), Vector("7"))
+    }
+    "not load a partition which exists in the metastore, but doesn't have associated partition directory" in {
+      // this will add the partition in hive but not create the directory
+      HiveOps.createPartition("sam", "hivesourcetest", Partition("p=100/q=100"))
+      // the partition should exist in the metatstore
+      client.listPartitionNames("sam", "hivesourcetest", Short.MaxValue).asScala.toSet shouldBe Set("p=7/q=8", "p=4/q=5", "p=100/q=100")
+      // the partition value 100 should not be returned because it doesn't exist on disk
+      HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) should not contain "100"
+    }
+    "not load a partition which exists in the metastore, but has no data" in {
+      // this will add the partition in hive but not create the directory
+      HiveOps.createPartition("sam", "hivesourcetest", Partition("p=100/q=100"))
+      val location = client.getPartition("sam", "hivesourcetest", "p=100/q=100").getSd.getLocation
+      val emptyData = new Path(location, "empty")
+      fs.create(emptyData)
+      // the partition should exist in the metatstore
+      client.listPartitionNames("sam", "hivesourcetest", Short.MaxValue).asScala.toSet shouldBe Set("p=7/q=8", "p=4/q=5", "p=100/q=100")
+      // the partition value 100 should not be returned because there is no value on disk
+      HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) should not contain "100"
+    }
+  }
+
+  "HiveSource" should {
+    "return rows with same ordering as schema" in {
+      HiveSource("sam", "hivesourcetest").toSet.map(_.values) shouldBe
+        Set(Vector("1", "2", "3", "4", "5"), Vector("4", "5", "6", "7", "8"))
+    }
+  }
 }

@@ -17,33 +17,19 @@ case class Column(name: String,
 sealed trait SchemaType
 
 object SchemaType {
-
   case object BigInt extends SchemaType
-
   case object Binary extends SchemaType
-
   case object Boolean extends SchemaType
-
   case object Date extends SchemaType
-
   case object Decimal extends SchemaType
-
   case object Double extends SchemaType
-
   case object Float extends SchemaType
-
   case object Int extends SchemaType
-
   case object Long extends SchemaType
-
   case object Short extends SchemaType
-
   case object String extends SchemaType
-
   case object Timestamp extends SchemaType
-
   case object Unsupported extends SchemaType
-
 }
 
 object Column {

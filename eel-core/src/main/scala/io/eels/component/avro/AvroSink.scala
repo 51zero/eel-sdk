@@ -23,7 +23,7 @@ class AvroSinkWriter(schema: Schema, out: OutputStream, config: Config) extends 
   val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
   dataFileWriter.create(avroSchema, out)
 
-  private val marshaller = new DefaultAvroRecordMarshaller(schema, avroSchema)
+  private val marshaller = new ConvertingAvroRecordMarshaller(avroSchema)
 
   override def write(row: InternalRow): Unit = {
     val record = marshaller.toRecord(row)

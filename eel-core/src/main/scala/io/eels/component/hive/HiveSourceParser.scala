@@ -6,6 +6,7 @@ import io.eels.component.Builder
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
+import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 object HiveSourceParser extends SourceParser {
   val HiveRegex = "hive:(.+?):(.+?)(\\?.*)?".r
@@ -23,6 +24,7 @@ case class HiveSourceBuilder(db: String, table: String, params: Map[String, List
   override def apply(): HiveSource = {
     implicit val fs = FileSystem.get(new Configuration)
     implicit val conf = new HiveConf()
+    implicit val client = new HiveMetaStoreClient(conf)
     HiveSource(db, table)
   }
 }
@@ -43,6 +45,7 @@ case class HiveSinkBuilder(db: String, table: String, params: Map[String, List[S
   override def apply(): HiveSink = {
     implicit val fs = FileSystem.get(new Configuration)
     implicit val conf = new HiveConf()
+    implicit val client = new HiveMetaStoreClient(conf)
     val dynamicPartitioning = params.get("dynamicPartitioning").map(_.head.contains("true"))
     val schemaEvolution = params.get("schemaEvolution").map(_.head.contains("true"))
     HiveSink(db, table, 4, dynamicPartitioning, schemaEvolution)

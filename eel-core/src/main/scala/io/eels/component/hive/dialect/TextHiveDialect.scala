@@ -42,14 +42,14 @@ object TextHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def reader(path: Path, schema: Schema, ignored: Seq[String])
+  override def reader(path: Path, tableSchema: Schema, requestedSchema: Schema)
                      (implicit fs: FileSystem): SourceReader = new SourceReader {
     val in = fs.open(path)
     val iter = lineIterator(in)
     override def close(): Unit = in.close()
     override def iterator: Iterator[InternalRow] = new Iterator[InternalRow] {
       override def hasNext: Boolean = iter.hasNext
-      override def next(): InternalRow = iter.next.split(delimiter).padTo(schema.columns.size, null).toSeq
+      override def next(): InternalRow = iter.next.split(delimiter).padTo(tableSchema.size, null).toSeq
     }
   }
 }

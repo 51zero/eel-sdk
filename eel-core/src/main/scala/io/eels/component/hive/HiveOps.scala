@@ -24,11 +24,11 @@ object HiveOps extends StrictLogging {
     * directly from the hive metastore.
     */
   def partitionMap(dbName: String, tableName: String)
-                  (implicit client: IMetaStoreClient): Map[String, Set[String]] = {
+                  (implicit client: IMetaStoreClient): Map[String, Seq[String]] = {
     client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala
       .flatMap(p => Partition(p).parts)
       .groupBy(_.key)
-      .map { case (key, values) => key -> values.map(_.value).toSet }
+      .map { case (key, values) => key -> values.map(_.value) }
   }
 
   /**
@@ -37,7 +37,7 @@ object HiveOps extends StrictLogging {
     * directly from the hive metastore.
     */
   def partitionValues(dbName: String, tableName: String, keys: Seq[String])
-                     (implicit client: IMetaStoreClient): List[Set[String]] = {
+                     (implicit client: IMetaStoreClient): List[Seq[String]] = {
     partitionMap(dbName, tableName).collect { case (key, values) if keys contains key => values }.toList
   }
 
@@ -47,8 +47,8 @@ object HiveOps extends StrictLogging {
     * directly from the hive metastore.
     */
   def partitionValues(dbName: String, tableName: String, key: String)
-                     (implicit client: IMetaStoreClient): Set[String] = {
-    partitionMap(dbName, tableName).getOrElse(key, Set.empty)
+                     (implicit client: IMetaStoreClient): Seq[String] = {
+    partitionMap(dbName, tableName).getOrElse(key, Nil)
   }
 
   /**
@@ -133,6 +133,15 @@ object HiveOps extends StrictLogging {
     tablePath.toString + "/" + parts.map(_.unquoted).mkString("/")
   }
 
+  // Returns the eel schema for the hive db:table
+  def schema(dbName: String, tableName: String)(implicit client: IMetaStoreClient): Schema = {
+    val table = client.getTable(dbName, tableName)
+    // hive columns are always nullable, and hive partitions are never nullable
+    val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField(_, true)) ++
+      table.getPartitionKeys.asScala.map(HiveSchemaFns.fromHiveField(_, false))
+    Schema(columns.toList)
+  }
+
   /**
     * Adds this column to the hive schema. This is schema evolution.
     * The column must be marked as nullable and cannot have the same name as an existing column.
@@ -208,6 +217,7 @@ object HiveOps extends StrictLogging {
                   location: Option[String] = None,
                   overwrite: Boolean = false)
                  (implicit client: IMetaStoreClient): Boolean = {
+    require(partitionKeys.forall(schema.contains), s"Schema must define all partition keys ${partitionKeys.mkString(",")}")
 
     if (overwrite) {
       logger.debug("Removing table if exists (overwrite mode = true)")

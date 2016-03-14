@@ -15,6 +15,6 @@ trait HiveTestKit extends BeforeAndAfterAll {
   }
 
   val dir = Files.createTempDirectory("hive-test-kit")
-  val fs = FileSystem.getLocal(new Configuration)
+  implicit val fs = FileSystem.getLocal(new Configuration)
   implicit val client = new InMemoryMetaStoreClient(dir.toAbsolutePath.toString, fs)
 }

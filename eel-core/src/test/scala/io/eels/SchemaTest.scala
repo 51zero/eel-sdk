@@ -10,6 +10,21 @@ class SchemaTest extends WordSpec with Matchers {
     Column("b", SchemaType.String, precision = 14, signed = false, nullable = false)
   ))
 
+  "Schema.toLowerCase" should {
+    "lower case all column names" in {
+      Schema(List(Column("a"), Column("B"))).toLowerCase shouldBe Schema(List(Column("a"), Column("b")))
+    }
+  }
+
+  "Schema.contains" should {
+    "return true if the schema contains the column" in {
+      schema.contains("a") shouldBe true
+      schema.contains("b") shouldBe true
+      schema.contains("C") shouldBe false
+      schema.contains("A") shouldBe false
+    }
+  }
+
   "Schema" should {
     "return -1 if the column is not found" in {
       val schema = Schema(List(

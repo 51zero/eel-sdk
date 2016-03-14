@@ -195,6 +195,46 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
     }
   }
 
+  "InMemoryMetaStoreClientTest.listPartitionNames" should {
+    "return all partition dir paths" in {
+
+      val table = new Table()
+      table.setDbName("db")
+      table.setTableName("varys")
+      table.setSd(new StorageDescriptor())
+      table.setPartitionKeys(util.Arrays.asList(new FieldSchema("a", "string", null), new FieldSchema("b", "string", null)))
+
+      val part1 = new Partition(
+        util.Arrays.asList("goo", "moo"),
+        "db",
+        "varys",
+        0,
+        0,
+        new StorageDescriptor(),
+        new util.HashMap
+      )
+      part1.getSd.setLocation("dummy1")
+
+      val part2 = new Partition(
+        util.Arrays.asList("goo", "roo"),
+        "db",
+        "varys",
+        0,
+        0,
+        new StorageDescriptor(),
+        new util.HashMap
+      )
+      part2.getSd.setLocation("dummy2")
+
+      val client = new InMemoryMetaStoreClient(dir.toString, fs)
+      client.createDatabase(new Database("db", "", "", Map.empty[String, String].asJava))
+      client.createTable(table)
+      client.add_partition(part1)
+      client.add_partition(part2)
+
+      client.listPartitionNames("db", "varys", Short.MaxValue).asScala.toSet shouldBe Set("a=goo/b=moo", "a=goo/b=roo")
+    }
+  }
 
   "InMemoryMetaStoreClientTest.getPartition" should {
     "return partition by values" in {

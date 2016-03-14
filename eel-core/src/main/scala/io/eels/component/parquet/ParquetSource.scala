@@ -15,7 +15,7 @@ case class ParquetSource(pattern: FilePattern) extends Source with Logging with 
     AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 
-  override def schema: Schema = {
+  override lazy val schema: Schema = {
     val paths = pattern.toPaths
     val schemas = paths.map { path =>
       using(createReader(path)) { reader =>
@@ -29,16 +29,16 @@ case class ParquetSource(pattern: FilePattern) extends Source with Logging with 
   override def parts: Seq[Part] = {
     val paths = pattern.toPaths
     logger.debug(s"Parquet source will read from $paths")
-    paths.map(new ParquetPart(_))
+    paths.map(new ParquetPart(_, schema))
   }
 }
 
-class ParquetPart(path: Path) extends Part {
-  override def reader: SourceReader = new ParquetSourceReader(path)
+class ParquetPart(path: Path, schema: Schema) extends Part {
+  override def reader: SourceReader = new ParquetSourceReader(path, schema)
 }
 
-class ParquetSourceReader(path: Path) extends SourceReader {
-  val reader = ParquetReaderSupport.createReader(path, Nil, null)
-  override def iterator: Iterator[InternalRow] = ParquetIterator(reader, Nil)
+class ParquetSourceReader(path: Path, schema: Schema) extends SourceReader {
+  val reader = ParquetReaderSupport.createReader(path, false, schema)
+  override def iterator: Iterator[InternalRow] = ParquetIterator(reader, schema)
   override def close(): Unit = reader.close()
 }

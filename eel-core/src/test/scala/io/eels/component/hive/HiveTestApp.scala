@@ -1,8 +1,5 @@
 package io.eels.component.hive
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
 import io.eels.Frame
@@ -10,7 +7,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 object HiveTestApp extends App with Logging with Timed {
@@ -41,7 +38,7 @@ object HiveTestApp extends App with Logging with Timed {
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  val rows = List.fill(30000)(maps(Random.nextInt(maps.length)))
+  val rows = List.fill(10000000)(maps(Random.nextInt(maps.length)))
   val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
 
   timed("creating table") {
@@ -55,17 +52,18 @@ object HiveTestApp extends App with Logging with Timed {
     )
   }
 
+
   val sink = HiveSink("sam", "albums").withIOThreads(4)
   timed("writing data") {
     frame.to(sink)
     logger.info("Write complete")
   }
 
-  val spec = HiveSource("sam", "albums").spec
-  val mapper = new ObjectMapper
-  mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
-  mapper.registerModule(DefaultScalaModule)
-  println(mapper.writeValueAsString(spec))
+  //  val source = HiveSource("sam", "albums").withColumns("year")
+  //  println(source.toSeq)
+
+  //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
+  //  println(partitionNames.asScala.toList)
 
   //  val result = HiveSource("sam", "albums").withPartitionConstraint("year", "<", "1975").toSeq
   //  logger.info("Result=" + result)

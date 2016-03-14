@@ -104,9 +104,7 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   // partitions
   override def getPartition(dbName: String, tblName: String, name: String): Partition = {
     val key = dbName + ":" + tblName
-    val partitionKeys = getTable(dbName, tblName).getPartitionKeys.asScala.map(_.getName)
-    def dirname(values: Seq[String]): String = partitionKeys.zip(values).map { case (k, v) => s"$k=$v" }.mkString("/")
-    partitions.getOrElse(key, Nil).find(part => dirname(part.getValues.asScala) == name).orNull
+    partitions.getOrElse(key, Nil).find(part => partitionName(dbName, tblName, part.getValues.asScala) == name).orNull
   }
 
   override def getPartition(dbName: String, tblName: String, partVals: util.List[String]): Partition = {
@@ -118,6 +116,25 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
     val key = partition.getDbName + ":" + partition.getTableName
     partitions.put(key, partitions.getOrElse(key, Nil) :+ partition)
     partition
+  }
+
+  override def listPartitions(db_name: String, tbl_name: String, max_parts: Short): util.List[Partition] = {
+    partitions.getOrElse(db_name + ":" + tbl_name, Nil).take(max_parts).asJava
+  }
+
+  def partitionKeys(db_name: String, tbl_name: String): List[String] = {
+    getTable(db_name, tbl_name).getPartitionKeys.asScala.map(_.getName).toList
+  }
+
+  private def partitionName(db_name: String, tbl_name: String, values: Seq[String]): String = {
+    val keys = partitionKeys(db_name, tbl_name)
+    keys.zip(values).map { case (k, v) => s"$k=$v" }.mkString("/")
+  }
+
+  override def listPartitionNames(db_name: String, tbl_name: String, max_parts: Short): util.List[String] = {
+    listPartitions(db_name, tbl_name, max_parts).asScala.map { partition =>
+      partitionName(db_name, tbl_name, partition.getValues.asScala)
+    }.asJava
   }
 
   override def getPartitionsByNames(db_name: String, tbl_name: String, part_names: util.List[String]): util.List[Partition] = ???
@@ -138,7 +155,6 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def listPartitionsWithAuthInfo(dbName: String, tableName: String, s: Short, userName: String, groupNames: util.List[String]): util.List[Partition] = ???
   override def listPartitionsWithAuthInfo(dbName: String, tableName: String, partialPvals: util.List[String], s: Short, userName: String, groupNames: util.List[String]): util.List[Partition] = ???
   override def listPartitionsByFilter(db_name: String, tbl_name: String, filter: String, max_parts: Short): util.List[Partition] = ???
-  override def listPartitions(db_name: String, tbl_name: String, max_parts: Short): util.List[Partition] = ???
   override def listPartitions(db_name: String, tbl_name: String, part_vals: util.List[String], max_parts: Short): util.List[Partition] = ???
   override def validatePartitionNameCharacters(partVals: util.List[String]): Unit = ???
   override def alter_partitions(dbName: String, tblName: String, newParts: util.List[Partition]): Unit = ???
@@ -148,12 +164,15 @@ class InMemoryMetaStoreClient(home: String, fs: FileSystem) extends IMetaStoreCl
   override def exchange_partition(partitionSpecs: util.Map[String, String], sourceDb: String, sourceTable: String, destdb: String, destTableName: String): Partition = ???
   override def markPartitionForEvent(db_name: String, tbl_name: String, partKVs: util.Map[String, String], eventType: PartitionEventType): Unit = ???
   override def alter_partition(dbName: String, tblName: String, newPart: Partition): Unit = ???
-  override def listPartitionNames(db_name: String, tbl_name: String, max_parts: Short): util.List[String] = ???
   override def listPartitionNames(db_name: String, tbl_name: String, part_vals: util.List[String], max_parts: Short): util.List[String] = ???
 
   // schemas
-  override def getSchema(db: String, tableName: String): util.List[FieldSchema] = ???
-  override def getFields(db: String, tableName: String): util.List[FieldSchema] = ???
+  override def getSchema(db: String, tableName: String): util.List[FieldSchema] = {
+    val table = getTable(db, tableName)
+    (table.getSd.getCols.asScala ++ table.getPartitionKeys.asScala).asJava
+  }
+
+  override def getFields(db: String, tableName: String): util.List[FieldSchema] = getTable(db, tableName).getSd.getCols
 
   // txs
   override def openTxn(user: String): Long = ???

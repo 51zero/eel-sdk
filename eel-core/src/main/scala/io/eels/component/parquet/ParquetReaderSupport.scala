@@ -20,13 +20,20 @@ object ParquetReaderSupport extends StrictLogging {
     parallelism.toString
   }
 
-  def createReader(path: Path, columns: Seq[String], schema: io.eels.Schema): ParquetReader[GenericRecord] = {
-    require(columns.isEmpty || schema != null, "If pushdown columns are specified, the schema must be available")
+  /**
+    * Creates a new reader from the given path. If projection is set then a projected schema is generated
+    * from the given schema.
+    */
+  def createReader(path: Path,
+                   isProjection: Boolean,
+                   schema: io.eels.Schema): ParquetReader[GenericRecord] = {
+    require(!isProjection || schema != null, "Schema cannot be null if projection is set")
 
     def projection: Schema = {
-      val builder = SchemaBuilder.record("dummy").namespace("com")
-      columns.foldLeft(builder.fields) { (fields, name) =>
-        val schemaType = schema(name).`type`
+      val builder = SchemaBuilder.record("row").namespace("namespace")
+      schema.columns.foldLeft(builder.fields) { (fields, col) =>
+        val schemaType = col.`type`
+        val name = col.name
         schemaType match {
           case SchemaType.BigInt => fields.optionalLong(name)
           case SchemaType.Boolean => fields.optionalBoolean(name)
@@ -45,7 +52,7 @@ object ParquetReaderSupport extends StrictLogging {
 
     def configuration: Configuration = {
       val conf = new Configuration
-      if (columns.nonEmpty) {
+      if (isProjection) {
         AvroReadSupport.setAvroReadSchema(conf, projection)
         AvroReadSupport.setRequestedProjection(conf, projection)
         conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)

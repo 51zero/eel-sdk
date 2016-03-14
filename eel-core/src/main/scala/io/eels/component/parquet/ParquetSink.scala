@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.avro.{AvroSchemaFn, DefaultAvroRecordMarshaller}
+import io.eels.component.avro.{AvroSchemaFn, ConvertingAvroRecordMarshaller}
 import io.eels.{InternalRow, Schema, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -19,7 +19,7 @@ class ParquetSinkWriter(schema: Schema, path: Path)
 
   private val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = caseSensitive)
   private val writer = RollingParquetWriter(path, avroSchema)
-  private val marshaller = new DefaultAvroRecordMarshaller(schema, avroSchema)
+  private val marshaller = new ConvertingAvroRecordMarshaller(avroSchema)
 
   override def close(): Unit = writer.close()
 

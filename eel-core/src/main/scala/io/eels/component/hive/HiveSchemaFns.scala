@@ -10,22 +10,15 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 object HiveSchemaFns extends StrictLogging {
 
   def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name.toLowerCase, toHiveType(column), null)
-
   def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
   def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)
 
-  def fromHiveFields(schemas: Seq[FieldSchema]): Schema = {
-    logger.debug("Building schema from hive fields=" + schemas)
-    val columns = schemas.map(fromHiveField)
-    Schema(columns.toList)
-  }
-
-  def fromHiveField(s: FieldSchema): Column = {
+  def fromHiveField(s: FieldSchema, nullable: Boolean): Column = {
     val (schemaType, precision, scale) = toSchemaType(s.getType)
-    Column(s.getName, schemaType, true, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
+    Column(s.getName, schemaType, nullable, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
   }
 
-  val VarcharRegex = "varchar\\((\\d+\\))".r
+  val VarcharRegex = "varchar\\((.*?)\\)".r
   val DecimalRegex = "decimal\\((\\d+),(\\d+\\))".r
 
   type Scale = Int
@@ -35,11 +28,15 @@ object HiveSchemaFns extends StrictLogging {
     case "tinyint" => (SchemaType.Short, 0, 0)
     case "smallint" => (SchemaType.Short, 0, 0)
     case "int" => (SchemaType.Int, 0, 0)
+    case "boolean" => (SchemaType.Boolean, 0, 0)
     case "bigint" => (SchemaType.BigInt, 0, 0)
     case "float" => (SchemaType.Float, 0, 0)
     case "double" => (SchemaType.Double, 0, 0)
     case "string" => (SchemaType.String, 0, 0)
+    case "binary" => (SchemaType.Binary, 0, 0)
     case "char" => (SchemaType.String, 0, 0)
+    case "date" => (SchemaType.Date, 0, 0)
+    case "timestamp" => (SchemaType.Timestamp, 0, 0)
     case DecimalRegex(precision, scale) => (SchemaType.Decimal, precision.toInt, scale.toInt)
     case VarcharRegex(precision) => (SchemaType.String, precision.toInt, 0)
     case other =>
