@@ -5,11 +5,14 @@ import com.sksamuel.scalax.io.Using
 import io.eels._
 import io.eels.component.avro.{AvroSchemaFn, AvroSchemaMerge}
 import org.apache.avro.generic.GenericRecord
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetReader
-import org.apache.parquet.hadoop.ParquetReader
+import org.apache.parquet.hadoop.{Footer, ParquetFileReader, ParquetReader}
 
-case class ParquetSource(pattern: FilePattern) extends Source with Logging with Using {
+import scala.collection.JavaConverters._
+
+case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends Source with Logging with Using {
 
   private def createReader(path: Path): ParquetReader[GenericRecord] = {
     AvroParquetReader.builder[GenericRecord](path).build().asInstanceOf[ParquetReader[GenericRecord]]
@@ -30,6 +33,16 @@ case class ParquetSource(pattern: FilePattern) extends Source with Logging with 
     val paths = pattern.toPaths
     logger.debug(s"Parquet source will read from $paths")
     paths.map(new ParquetPart(_, schema))
+  }
+
+  def footers: Seq[Footer] = {
+    val paths = pattern.toPaths
+    logger.debug(s"Parquet source will read from $paths")
+    paths.flatMap { path =>
+      val status = fs.getFileStatus(path)
+      logger.debug(s"status=$status; path=$path")
+      ParquetFileReader.readAllFootersInParallel(new Configuration, status).asScala
+    }
   }
 }
 

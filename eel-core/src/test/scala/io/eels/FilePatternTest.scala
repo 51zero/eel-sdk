@@ -2,10 +2,13 @@ package io.eels
 
 import java.nio.file.Files
 
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
 
 class FilePatternTest extends WordSpec with Matchers {
+
+  implicit val fs = FileSystem.get(new Configuration)
 
   "FilePattern" should {
     "detect single hdfs path without name server" in {

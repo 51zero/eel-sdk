@@ -20,7 +20,10 @@ object ParquetSourceParser extends SourceParser {
 
 case class ParquetSourceBuilder(path: String, params: Map[String, List[String]]) extends Builder[ParquetSource] {
   require(path != null, "path cannot be null")
-  override def apply(): ParquetSource = new ParquetSource(Paths.get(path))
+  override def apply(): ParquetSource = {
+    implicit val fs = FileSystem.get(new Configuration)
+    new ParquetSource(Paths.get(path))
+  }
 }
 
 object ParquetSinkParser extends SinkParser {

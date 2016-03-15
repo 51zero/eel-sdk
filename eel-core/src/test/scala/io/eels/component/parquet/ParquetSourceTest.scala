@@ -16,7 +16,7 @@ import scala.util.Try
 class ParquetSourceTest extends WordSpec with Matchers {
   ParquetLogMute()
 
-  val fs = FileSystem.get(new Configuration)
+  implicit val fs = FileSystem.get(new Configuration)
 
   import scala.concurrent.ExecutionContext.Implicits.global
 

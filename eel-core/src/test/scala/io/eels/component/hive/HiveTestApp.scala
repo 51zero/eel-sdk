@@ -3,10 +3,12 @@ package io.eels.component.hive
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
 import io.eels.Frame
+import io.eels.component.parquet.ParquetSource
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 object HiveTestApp extends App with Logging with Timed {
@@ -37,7 +39,7 @@ object HiveTestApp extends App with Logging with Timed {
     Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
   )
 
-  val rows = List.fill(10000000)(maps(Random.nextInt(maps.length)))
+  val rows = List.fill(10000)(maps(Random.nextInt(maps.length)))
   val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
 
   timed("creating table") {
@@ -51,11 +53,20 @@ object HiveTestApp extends App with Logging with Timed {
     )
   }
 
+  val table = HiveOps.tablePath("sam", "albums")
+
   val sink = HiveSink("sam", "albums").withIOThreads(4)
   timed("writing data") {
     frame.to(sink)
     logger.info("Write complete")
   }
+
+  val footers = ParquetSource("hdfs:/user/hive/warehouse/sam.db/albums/*").footers
+  val f = footers
+  println(f)
+
+  val sum = footers.flatMap(_.getParquetMetadata.getBlocks.asScala.map(_.getRowCount)).sum
+  println(sum)
 
   //  val source = HiveSource("sam", "albums").withColumns("year")
   //  println(source.toSeq)
