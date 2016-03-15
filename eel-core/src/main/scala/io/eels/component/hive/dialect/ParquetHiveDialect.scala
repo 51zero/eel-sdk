@@ -14,15 +14,17 @@ object ParquetHiveDialect extends HiveDialect with StrictLogging {
     ParquetLogMute()
 
     // hive is case insensitive so we must lower case everything to keep it consistent
-    val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = false)
-    val writer = RollingParquetWriter(path, avroSchema)
-    val marshaller = new ConvertingAvroRecordMarshaller(avroSchema)
+    lazy val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = false)
+    lazy val writer = RollingParquetWriter(path, avroSchema)
+    lazy val marshaller = new ConvertingAvroRecordMarshaller(avroSchema)
+    var count = 0l
 
     new HiveWriter {
-      override def close(): Unit = writer.close()
+      override def close(): Unit = if (count > 0) writer.close()
       override def write(row: InternalRow): Unit = {
         val record = marshaller.toRecord(row)
         writer.write(record)
+        count = count + 1
       }
     }
   }
