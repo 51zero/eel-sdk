@@ -3,7 +3,7 @@ package io.eels.cli
 import java.io.PrintStream
 import java.nio.file.{Path, Paths}
 
-import io.eels.SourceParser
+import io.eels.{Constants, SourceParser}
 import io.eels.component.hive.{HiveOps, HiveSource, HiveSpec}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -19,7 +19,7 @@ object ApplySpecMain {
   def apply(args: Seq[String], out: PrintStream = System.out): Unit = {
 
     val parser = new scopt.OptionParser[Options]("eel") {
-      head("eel apply-spec", CliConstants.Version)
+      head("eel apply-spec", Constants.EelVersion)
 
       opt[String]("dataset") required() action { (source, o) =>
         o.copy(source = source)

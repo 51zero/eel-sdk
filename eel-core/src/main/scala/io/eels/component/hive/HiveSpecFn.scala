@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.util.Date
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import io.eels.{Column, Schema}
@@ -63,7 +63,7 @@ object HiveSpec {
 
   private val mapper = new ObjectMapper with ScalaObjectMapper
   mapper.registerModule(DefaultScalaModule)
-  mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+  mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
   private val writer = mapper.writerWithDefaultPrettyPrinter()
 
   def apply(path: Path): HiveSpec = apply(Source.fromFile(path.toFile).getLines.mkString("\n"))

@@ -177,8 +177,8 @@ object HiveOps extends StrictLogging {
         table.partitionKeys,
         HiveFormat.fromInputFormat(table.inputFormat),
         Map.empty,
-        TableType.valueOf(table.tableType),
-        NonEmptyString(table.location),
+        TableType.MANAGED_TABLE,
+        None,
         overwrite
       )
     }

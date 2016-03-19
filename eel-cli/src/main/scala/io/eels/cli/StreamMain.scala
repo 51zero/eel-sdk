@@ -1,6 +1,6 @@
 package io.eels.cli
 
-import io.eels.{Sink, SinkParser, SourceParser}
+import io.eels.{Constants, Sink, SinkParser, SourceParser}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
@@ -15,7 +15,7 @@ object StreamMain {
   def apply(args: Seq[String]): Unit = {
 
     val parser = new scopt.OptionParser[Options]("eel") {
-      head("eel", "0.21.x")
+      head("eel", Constants.EelVersion)
 
       opt[String]("source") required() action { (source, o) =>
         o.copy(from = source)

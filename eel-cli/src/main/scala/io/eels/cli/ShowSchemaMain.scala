@@ -2,7 +2,7 @@ package io.eels.cli
 
 import java.io.PrintStream
 
-import io.eels.SourceParser
+import io.eels.{Constants, SourceParser}
 import io.eels.component.avro.AvroSchemaFn
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -10,15 +10,13 @@ import org.apache.hadoop.hive.conf.HiveConf
 
 object ShowSchemaMain {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   implicit val fs = FileSystem.get(new Configuration)
   implicit val hiveConf = new HiveConf
 
   def apply(args: Seq[String], out: PrintStream = System.out): Unit = {
 
     val parser = new scopt.OptionParser[Options]("eel") {
-      head("eel schema", CliConstants.Version)
+      head("eel schema", Constants.EelVersion)
 
       opt[String]("source") required() action { (source, o) =>
         o.copy(source = source)
