@@ -1,12 +1,18 @@
 package io.eels.component.hive
 
+import java.nio.file.Path
 import java.util.Date
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import io.eels.{Column, Schema}
 import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.metastore.{HiveMetaStoreClient, IMetaStoreClient}
+import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.JavaConverters._
+import scala.io.Source
 
 object HiveSpecFn {
 
@@ -52,6 +58,19 @@ object HiveSpecFn {
 }
 
 case class HiveSpec(dbName: String, tables: List[HiveTableSpec])
+
+object HiveSpec {
+
+  private val mapper = new ObjectMapper with ScalaObjectMapper
+  mapper.registerModule(DefaultScalaModule)
+  mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+  private val writer = mapper.writerWithDefaultPrettyPrinter()
+
+  def apply(path: Path): HiveSpec = apply(Source.fromFile(path.toFile).getLines.mkString("\n"))
+  def apply(str: String): HiveSpec = mapper.readValue[HiveSpec](str)
+
+  def writeAsJson(spec: HiveSpec): String = writer.writeValueAsString(spec)
+}
 
 case class HiveTableSpec(tableName: String,
                          location: String,

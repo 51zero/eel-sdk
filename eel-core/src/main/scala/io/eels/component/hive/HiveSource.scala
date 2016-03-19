@@ -12,8 +12,8 @@ object HiveSource {
            (implicit fs: FileSystem, client: IMetaStoreClient): HiveSource = new HiveSource(dbName, tableName)
 }
 
-case class HiveSource(private val dbName: String,
-                      private val tableName: String,
+case class HiveSource(val dbName: String,
+                      val tableName: String,
                       private val partitionExprs: List[PartitionConstraint] = Nil,
                       private val columnNames: Seq[String] = Nil,
                       private val predicate: Option[Predicate] = None)
@@ -26,6 +26,10 @@ case class HiveSource(private val dbName: String,
   def withColumns(columns: Seq[String]): HiveSource = {
     require(columns.nonEmpty)
     copy(columnNames = columns)
+  }
+
+  def create(schema: org.apache.avro.Schema): Unit = {
+
   }
 
   def withColumns(first: String, rest: String*): HiveSource = withColumns(first +: rest)

@@ -14,8 +14,10 @@ object Main extends App {
   val params = args.tail
 
   command match {
-    case "schema" => SchemaMain(params)
+    case "schema" => ShowSchemaMain(params)
     case "stream" => StreamMain(params)
+    case "apply-spec" => ApplySpecMain(params)
+    case "fetch-spec" => FetchSpecMain(params)
     case other => System.err.println(s"Unknown command $other")
   }
 }

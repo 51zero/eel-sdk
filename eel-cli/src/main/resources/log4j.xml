@@ -13,6 +13,10 @@
         <level value="debug"/>
     </logger>
 
+    <logger name="org.apache.hadoop.hive.conf">
+        <level value="error"/>
+    </logger>
+
     <root>
         <level value="warn"/>
         <appender-ref ref="default"/>

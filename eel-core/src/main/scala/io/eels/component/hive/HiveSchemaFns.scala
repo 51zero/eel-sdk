@@ -50,12 +50,16 @@ object HiveSchemaFns extends StrictLogging {
     */
   def toHiveType(column: Column): String = column.`type` match {
     case SchemaType.BigInt => "bigint"
+    case SchemaType.Boolean => "boolean"
+    case SchemaType.Decimal => s"decimal(${column.scale},${column.precision})"
     case SchemaType.Double => "double"
     case SchemaType.Float => "float"
     case SchemaType.Int => "int"
     case SchemaType.Long => "bigint"
-    case SchemaType.String => "string"
     case SchemaType.Short => "smallint"
+    case SchemaType.String => "string"
+    case SchemaType.Timestamp => "timestamp"
+    case SchemaType.Date => "date"
     case _ =>
       logger.warn(s"No conversion from schema type ${column.`type`} to hive type; defaulting to string")
       "string"

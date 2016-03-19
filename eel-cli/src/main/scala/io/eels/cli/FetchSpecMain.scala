@@ -3,14 +3,12 @@ package io.eels.cli
 import java.io.PrintStream
 
 import io.eels.SourceParser
-import io.eels.component.avro.AvroSchemaFn
+import io.eels.component.hive.{HiveSource, HiveSpec}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.conf.HiveConf
 
-object SchemaMain {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+object FetchSpecMain {
 
   implicit val fs = FileSystem.get(new Configuration)
   implicit val hiveConf = new HiveConf
@@ -18,24 +16,29 @@ object SchemaMain {
   def apply(args: Seq[String], out: PrintStream = System.out): Unit = {
 
     val parser = new scopt.OptionParser[Options]("eel") {
-      head("eel schema", CliConstants.Version)
+      head("eel fetch-spec", CliConstants.Version)
 
-      opt[String]("source") required() action { (source, o) =>
+      opt[String]("dataset") required() action { (source, o) =>
         o.copy(source = source)
-      } text "specify source, eg hive:database:table or parquet:/path/to/file"
+      } text "specify dataset, eg hive:database:table"
     }
 
     parser.parse(args, Options()) match {
       case Some(options) =>
         val builder = SourceParser(options.source).getOrElse(sys.error(s"Unsupported source ${options.source}"))
         val source = builder()
-        val schema = source.schema
-        val avroSchema = AvroSchemaFn.toAvro(schema)
-        out.println(avroSchema)
+        source match {
+          case hive: HiveSource =>
+            val spec = hive.spec
+            val json = HiveSpec.writeAsJson(spec.copy(tables = spec.tables.filter(_.tableName == hive.tableName)))
+            println(json)
+          case _ =>
+            sys.error(s"Unsupported source $source")
+        }
       case _ =>
     }
   }
 
-  case class Options(source: String = "")
+  case class Options(source: String = null)
 }
 
