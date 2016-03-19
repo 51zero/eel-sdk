@@ -37,7 +37,7 @@ object ToSetPlan extends Plan with Using with StrictLogging {
           map
         } catch {
           case e: Throwable =>
-            logger.error("Error writing; aborting tasks", e)
+            logger.error("Error reading; aborting tasks", e)
             running.set(false)
             throw e
         } finally {

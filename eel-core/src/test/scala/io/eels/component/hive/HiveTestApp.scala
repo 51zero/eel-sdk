@@ -2,8 +2,8 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
+import io.eels.Frame
 import io.eels.component.parquet.ParquetSource
-import io.eels.{Frame, SchemaType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -40,7 +40,7 @@ object HiveTestApp extends App with Logging with Timed {
     Seq("pinkfloyd", "emily", "1966")
   )
 
-  val rows = List.fill(1000000)(data(Random.nextInt(data.length)) ++ List(Random.nextLong.toString, Random.nextLong.toString, Random.nextLong.toString))
+  val rows = List.fill(100000)(data(Random.nextInt(data.length)) ++ List(Random.nextBoolean().toString, Random.nextBoolean.toString, Random.nextBoolean.toString))
   val frame = Frame(Seq("artist", "album", "year", "j", "k", "l"), rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
   println(frame.schema.print)
 
@@ -68,15 +68,18 @@ object HiveTestApp extends App with Logging with Timed {
   val sum = footers.flatMap(_.getParquetMetadata.getBlocks.asScala.map(_.getRowCount)).sum
   println(sum)
 
-  timed("hive read") {
-    val source = HiveSource("sam", "albums").toFrame(4).filter("year", _.toString == "1979")
-    println(source.size)
-  }
+//  timed("hive read") {
+//    val source = HiveSource("sam", "albums").toFrame(4).filter("year", _.toString == "1979")
+//    println(source.size)
+//  }
+//
+//  timed("hive read with predicate") {
+//    val source = HiveSource("sam", "albums").withPredicate(PredicateEquals("year", "1979")).toFrame(4)
+//    println(source.size)
+//  }
 
-  timed("hive read with predicate") {
-    val source = HiveSource("sam", "albums").withPredicate(PredicateEquals("year", "1979")).toFrame(4)
-    println(source.size)
-  }
+  val counts = HiveSource("sam", "albums").toFrame(4).counts
+  println(counts)
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
   //  println(partitionNames.asScala.toList)

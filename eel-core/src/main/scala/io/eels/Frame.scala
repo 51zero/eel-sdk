@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.scalax.collection.ConcurrentLinkedQueueConcurrentIterator
+import io.eels.plan.CountsPlan.{ColumnName, Counts}
 import io.eels.plan._
 
 import scala.concurrent.ExecutionContext
@@ -360,6 +361,7 @@ trait Frame {
 
   def to(sink: Sink)(implicit executor: ExecutionContext): Long = SinkPlan(sink, this)
   def size(implicit executor: ExecutionContext): Long = ToSizePlan(this)
+  def counts(implicit executor: ExecutionContext): Map[ColumnName, Counts] = CountsPlan(this)
   def toSeq(implicit executor: ExecutionContext): Seq[Row] = ToSeqPlan.untyped(this)
   def toSet(implicit executor: ExecutionContext): scala.collection.mutable.Set[Row] = ToSetPlan(this)
 
