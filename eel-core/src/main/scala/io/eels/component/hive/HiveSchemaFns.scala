@@ -19,7 +19,7 @@ object HiveSchemaFns extends StrictLogging {
   }
 
   val VarcharRegex = "varchar\\((.*?)\\)".r
-  val DecimalRegex = "decimal\\((\\d+),(\\d+\\))".r
+  val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".r
 
   type Scale = Int
   type Precision = Int

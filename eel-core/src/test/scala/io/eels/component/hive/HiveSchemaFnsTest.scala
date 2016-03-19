@@ -27,6 +27,12 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
       column.`type` shouldBe SchemaType.String
       column.precision shouldBe 12
     }
+    "parse hive decimal" in {
+      val column = HiveSchemaFns.fromHiveField(new FieldSchema("name", "decimal(12,4)", null), true)
+      column.`type` shouldBe SchemaType.Decimal
+      column.scale shouldBe 4
+      column.precision shouldBe 12
+    }
     "convert float to float" in {
       HiveSchemaFns.fromHiveField(new FieldSchema("name", "float", null), true).`type` shouldBe SchemaType.Float
     }
