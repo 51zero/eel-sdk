@@ -28,7 +28,6 @@ object CountsPlan extends Plan with Using with Logging {
     val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
 
-    logger.info(s"Plan will execute with $tasks tasks")
     val futures = (1 to tasks).map { k =>
       Future {
         try {

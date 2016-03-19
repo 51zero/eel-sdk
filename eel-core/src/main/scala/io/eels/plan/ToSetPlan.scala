@@ -28,7 +28,6 @@ object ToSetPlan extends Plan with Using with StrictLogging {
     val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
 
-    logger.info(s"Plan will execute with $tasks tasks")
     val futures: Seq[Future[mutable.Set[InternalRow]]] = (1 to tasks).map { k =>
       Future {
         try {

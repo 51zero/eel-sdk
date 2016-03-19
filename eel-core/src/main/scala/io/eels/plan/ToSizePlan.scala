@@ -11,12 +11,12 @@ import scala.concurrent.{ExecutionContext, Future}
 object ToSizePlan extends Plan with StrictLogging {
 
   def apply(frame: Frame)(implicit executor: ExecutionContext): Long = {
+    logger.info(s"Plan will execute with $tasks tasks")
 
     val buffer = frame.buffer
     val latch = new CountDownLatch(tasks)
     val running = new AtomicBoolean(true)
 
-    logger.info(s"Plan will execute with $tasks tasks")
     val futures = for (k <- 1 to tasks) yield {
       Future {
         try {

@@ -19,6 +19,7 @@ object SinkPlan extends Plan with StrictLogging {
     val writer = sink.writer(schema)
     val running = new AtomicBoolean(true)
 
+    logger.info(s"Plan will execute with $tasks tasks")
     val futures = for (k <- 1 to tasks) yield {
       Future {
         var count = 0l

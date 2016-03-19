@@ -22,14 +22,18 @@ object AnalyzeMain {
       opt[String]("dataset") required() action { (source, o) =>
         o.copy(source = source)
       } text "specify dataset, eg hive:database:table"
+
+      opt[Boolean]("reverse") optional() action { (reverse, o) =>
+        o.copy(reverse = reverse)
+      } text "specify reverse ordering of columns, eg most distinct first"
     }
 
     parser.parse(args, Options()) match {
       case Some(options) =>
         val builder = SourceParser(options.source).getOrElse(sys.error(s"Unsupported source ${options.source}"))
-        val source = builder()
-        val results = source.counts.toSeq.sortBy(_._2.size)
-        for ((columnName, columnCounts) <- results) {
+        val result = builder().counts.toSeq.sortBy(_._2.size)
+        val orderedResults = if (options.reverse) result.reverse else result
+        for ((columnName, columnCounts) <- orderedResults) {
           println(columnName)
           for ((value, counts) <- columnCounts) {
             println(s"\t$value ($counts)")
@@ -39,6 +43,6 @@ object AnalyzeMain {
     }
   }
 
-  case class Options(source: String = null)
+  case class Options(source: String = null, reverse: Boolean = false)
 }
 
