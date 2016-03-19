@@ -18,6 +18,7 @@ object Main extends App {
     case "stream" => StreamMain(params)
     case "apply-spec" => ApplySpecMain(params)
     case "fetch-spec" => FetchSpecMain(params)
+    case "analyze" => AnalyzeMain(params)
     case other => System.err.println(s"Unknown command $other")
   }
 }

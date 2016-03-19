@@ -13,6 +13,8 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 object CountsPlan extends Plan with Using with Logging {
 
+  private val DistinctValueCap = config.getInt("eel.plans.counts.distinctValueCap")
+
   type ColumnName = String
   type Value = Any
   type ValueCount = Long
@@ -34,8 +36,10 @@ object CountsPlan extends Plan with Using with Logging {
           buffer.iterator.takeWhile(_ => running.get).foreach { row =>
             for ((value, columnName) <- row.zip(schema.columnNames)) {
               val counts = maps.getOrElseUpdate(columnName, mutable.Map.empty[Value, ValueCount])
-              val count = counts.getOrElse(value, 0l)
-              counts.put(value, count + 1)
+              if (counts.contains(value) || counts.size < DistinctValueCap) {
+                val count = counts.getOrElse(value, 0l)
+                counts.put(value, count + 1)
+              }
             }
           }
           maps.toMap
