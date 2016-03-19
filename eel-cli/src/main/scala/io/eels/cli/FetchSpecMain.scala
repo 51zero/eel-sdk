@@ -2,7 +2,7 @@ package io.eels.cli
 
 import java.io.PrintStream
 
-import io.eels.SourceParser
+import io.eels.{Constants, SourceParser}
 import io.eels.component.hive.{HiveSource, HiveSpec}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -16,7 +16,7 @@ object FetchSpecMain {
   def apply(args: Seq[String], out: PrintStream = System.out): Unit = {
 
     val parser = new scopt.OptionParser[Options]("eel") {
-      head("eel fetch-spec", CliConstants.Version)
+      head("eel fetch-spec", Constants.EelVersion)
 
       opt[String]("dataset") required() action { (source, o) =>
         o.copy(source = source)
