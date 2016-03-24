@@ -2,7 +2,6 @@ package io.eels.component.hive
 
 import java.util
 
-import com.sksamuel.scalax.NonEmptyString
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Column, Constants, Schema}
 import org.apache.hadoop.fs.Path
@@ -252,6 +251,8 @@ object HiveOps extends StrictLogging {
       table.setTableType(tableType.name)
 
       table.putToParameters("generated_by", "eel_" + Constants.EelVersion)
+      if (tableType == TableType.EXTERNAL_TABLE)
+        table.putToParameters("EXTERNAL", "TRUE")
       props.foreach { case (key, value) =>
         table.putToParameters(key, value)
       }
