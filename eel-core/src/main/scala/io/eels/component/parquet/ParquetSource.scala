@@ -51,7 +51,7 @@ class ParquetPart(path: Path, schema: Schema) extends Part {
 }
 
 class ParquetSourceReader(path: Path, schema: Schema) extends SourceReader {
-  val reader = ParquetReaderSupport.createReader(path, false, schema)
+  val reader = ParquetReaderSupport.createReader(path, false, None, schema)
   override def iterator: Iterator[InternalRow] = ParquetIterator(reader, schema)
   override def close(): Unit = reader.close()
 }

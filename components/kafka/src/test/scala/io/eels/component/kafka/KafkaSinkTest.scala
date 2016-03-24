@@ -24,9 +24,10 @@ class KafkaSinkTest extends WordSpec with Matchers with BeforeAndAfterAll {
       val topic = "kafka-sink-test"
 
       val frame = Frame(
-        Map("name" -> "dover castle", "location" -> "kent"),
-        Map("name" -> "tower of london", "location" -> "london"),
-        Map("name" -> "hever castle", "location" -> "kent")
+        Seq("name", "location"),
+        Seq("dover castle", "kent"),
+        Seq("tower of london", "london"),
+        Seq("hever castle", "kent")
       )
 
       val kafkaSinkConfig = KafkaSinkConfig("localhost:" + config.kafkaPort)

@@ -2,12 +2,13 @@ package io.eels.component.hive
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
-import io.eels.Frame
 import io.eels.component.parquet.ParquetSource
+import io.eels.{Frame, SchemaType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+
 import scala.collection.JavaConverters._
 import scala.util.Random
 
@@ -28,26 +29,27 @@ object HiveTestApp extends App with Logging with Timed {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val maps = Array(
-    Map("artist" -> "elton", "album" -> "yellow brick road", "year" -> "1972"),
-    Map("artist" -> "elton", "album" -> "tumbleweed connection", "year" -> "1974"),
-    Map("artist" -> "elton", "album" -> "empty sky", "year" -> "1969"),
-    Map("artist" -> "beatles", "album" -> "white album", "year" -> "1969"),
-    Map("artist" -> "beatles", "album" -> "tumbleweed connection", "year" -> "1966"),
-    Map("artist" -> "pinkfloyd", "album" -> "the wall", "year" -> "1979"),
-    Map("artist" -> "pinkfloyd", "album" -> "dark side of the moon", "year" -> "1974"),
-    Map("artist" -> "pinkfloyd", "album" -> "emily", "year" -> "1966")
+  val data = Array(
+    Seq("elton", "yellow brick road ", "1972"),
+    Seq("elton", "tumbleweed connection", "1974"),
+    Seq("elton", "empty sky", "1969"),
+    Seq("beatles", "white album", "1969"),
+    Seq("beatles", "tumbleweed connection", "1966"),
+    Seq("pinkfloyd", "the wall", "1979"),
+    Seq("pinkfloyd", "dark side of the moon", "1974"),
+    Seq("pinkfloyd", "emily", "1966")
   )
 
-  val rows = List.fill(10000)(maps(Random.nextInt(maps.length)))
-  val frame = Frame(rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
+  val rows = List.fill(1000000)(data(Random.nextInt(data.length)) ++ List(Random.nextLong.toString, Random.nextLong.toString, Random.nextLong.toString))
+  val frame = Frame(Seq("artist", "album", "year", "j", "k", "l"), rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
+  println(frame.schema.print)
 
   timed("creating table") {
     HiveOps.createTable(
       "sam",
       "albums",
       frame.schema,
-      List("year", "artist"),
+      List("artist"),
       format = HiveFormat.Parquet,
       overwrite = true
     )
@@ -62,14 +64,19 @@ object HiveTestApp extends App with Logging with Timed {
   }
 
   val footers = ParquetSource("hdfs:/user/hive/warehouse/sam.db/albums/*").footers
-  val f = footers
-  println(f)
 
   val sum = footers.flatMap(_.getParquetMetadata.getBlocks.asScala.map(_.getRowCount)).sum
   println(sum)
 
-  //  val source = HiveSource("sam", "albums").withColumns("year")
-  //  println(source.toSeq)
+  timed("hive read") {
+    val source = HiveSource("sam", "albums").toFrame(4).filter("year", _.toString == "1979")
+    println(source.size)
+  }
+
+  timed("hive read with predicate") {
+    val source = HiveSource("sam", "albums").withPredicate(PredicateEquals("year", "1979")).toFrame(4)
+    println(source.size)
+  }
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
   //  println(partitionNames.asScala.toList)

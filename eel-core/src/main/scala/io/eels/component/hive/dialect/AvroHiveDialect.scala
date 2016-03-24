@@ -2,9 +2,9 @@ package io.eels.component.hive.dialect
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Schema, SourceReader}
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn, ConvertingAvroRecordMarshaller}
-import io.eels.component.hive.{HiveDialect, HiveWriter, Partition}
+import io.eels.component.hive.{HiveDialect, HiveWriter, Predicate}
+import io.eels.{InternalRow, Schema, SourceReader}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
 import org.apache.avro.{file, generic}
@@ -37,7 +37,7 @@ object AvroHiveDialect extends HiveDialect with StrictLogging {
     }
   }
 
-  override def reader(path: Path, dataSchema: Schema, requestedSchema: Schema)(implicit fs: FileSystem): SourceReader = {
+  override def reader(path: Path, dataSchema: Schema, requestedSchema: Schema, predicate: Option[Predicate])(implicit fs: FileSystem): SourceReader = {
     logger.debug(s"Creating avro iterator for $path")
 
     new SourceReader {

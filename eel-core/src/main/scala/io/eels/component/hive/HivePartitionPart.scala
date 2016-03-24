@@ -18,6 +18,7 @@ class HivePartitionPart(dbName: String,
                         columnNames: Seq[String],
                         partitionKeys: Seq[String],
                         metastoreSchema: Schema,
+                        predicate: Option[Predicate],
                         dialect: HiveDialect)
                        (implicit fs: FileSystem, client: IMetaStoreClient) extends Part with Logging {
 
@@ -37,7 +38,7 @@ class HivePartitionPart(dbName: String,
     val values = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { partition =>
       !checkDataForPartitionOnlySources || HiveFileScanner(partition.getSd.getLocation).exists { file =>
         try {
-          val reader = dialect.reader(file.getPath, metastoreSchema, dataSchema)
+          val reader = dialect.reader(file.getPath, metastoreSchema, dataSchema, predicate: Option[Predicate])
           reader.iterator.hasNext
         } catch {
           case NonFatal(e) => logger.warn(s"Error parsing ${file.getPath} to check for data")

@@ -3,11 +3,14 @@ package io.eels.component.parquet
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.SchemaType
-import org.apache.avro.{Schema, SchemaBuilder}
+import io.eels.component.hive.Predicate
 import org.apache.avro.generic.GenericRecord
+import org.apache.avro.{Schema, SchemaBuilder}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
+import org.apache.parquet.filter2.compat.FilterCompat
+import org.apache.parquet.filter2.compat.FilterCompat.{Filter, NoOpFilter}
 import org.apache.parquet.hadoop.ParquetReader
 
 object ParquetReaderSupport extends StrictLogging {
@@ -26,6 +29,7 @@ object ParquetReaderSupport extends StrictLogging {
     */
   def createReader(path: Path,
                    isProjection: Boolean,
+                   predicate: Option[Predicate],
                    schema: io.eels.Schema): ParquetReader[GenericRecord] = {
     require(!isProjection || schema != null, "Schema cannot be null if projection is set")
 
@@ -62,6 +66,7 @@ object ParquetReaderSupport extends StrictLogging {
 
     AvroParquetReader.builder[GenericRecord](path)
       .withConf(configuration)
+      .withFilter(predicate.fold(FilterCompat.NOOP)(p => FilterCompat.get(p())))
       .build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 }

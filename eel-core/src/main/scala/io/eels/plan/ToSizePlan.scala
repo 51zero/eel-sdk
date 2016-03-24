@@ -20,7 +20,10 @@ object ToSizePlan extends Plan with StrictLogging {
     val futures = for (k <- 1 to tasks) yield {
       Future {
         try {
-          val count = buffer.iterator.takeWhile(_ => running.get).foldLeft(0L) { case (acc, _) => acc + 1 }
+          var count = 0
+          buffer.iterator.takeWhile(_ => running.get).foreach { row =>
+            count = count + 1
+          }
           logger.debug(s"Task $k completed")
           count
         } catch {
