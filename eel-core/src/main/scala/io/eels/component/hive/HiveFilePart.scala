@@ -8,6 +8,7 @@ class HiveFilePart(dialect: HiveDialect,
                    partition: Partition,
                    metastoreSchema: Schema,
                    schema: Schema,
+                   predicate: Option[Predicate],
                    partitionKeys: Seq[String])
                   (implicit fs: FileSystem) extends Part {
 
@@ -16,7 +17,7 @@ class HiveFilePart(dialect: HiveDialect,
     // the schema we send to the reader must have any partitions removed, because those columns won't exist
     // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
     val dataSchema = Schema(schema.columns.filterNot(partitionKeys contains _.name))
-    val reader = dialect.reader(file.getPath, metastoreSchema, dataSchema)
+    val reader = dialect.reader(file.getPath, metastoreSchema, dataSchema, predicate)
 
     new SourceReader {
       override def close(): Unit = reader.close()

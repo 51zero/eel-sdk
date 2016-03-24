@@ -15,7 +15,6 @@ class AvroRecordFn extends Logging {
 
   private val config = ConfigFactory.load()
   private val useJavaString = config.getBoolean("eel.avro.java.string")
-  logger.debug(s"Avro will read strings as java.lang.String = $useJavaString")
 
   /**
     * Returns an AvroRecord using the schema present in the file

@@ -15,7 +15,8 @@ object HiveSource {
 case class HiveSource(private val dbName: String,
                       private val tableName: String,
                       private val partitionExprs: List[PartitionConstraint] = Nil,
-                      private val columnNames: Seq[String] = Nil)
+                      private val columnNames: Seq[String] = Nil,
+                      private val predicate: Option[Predicate] = None)
                      (implicit fs: FileSystem, client: IMetaStoreClient)
   extends Source
     with Logging
@@ -28,6 +29,8 @@ case class HiveSource(private val dbName: String,
   }
 
   def withColumns(first: String, rest: String*): HiveSource = withColumns(first +: rest)
+
+  def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))
 
   def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(PartitionEquals(name, value))
 
@@ -104,10 +107,10 @@ case class HiveSource(private val dbName: String,
     if (schema.columnNames forall partitionKeys.contains) {
       logger.debug("Requested columns are all partitions; reading directly from metastore")
       // we pass in the columns so we can order the results to keep them aligned with the given withColumns ordering
-      Seq(new HivePartitionPart(dbName, tableName, schema.columnNames, partitionKeys, metastoreSchema, dialect))
+      Seq(new HivePartitionPart(dbName, tableName, schema.columnNames, partitionKeys, metastoreSchema, predicate, dialect))
     } else {
       paths.map { case (file, partition) =>
-        new HiveFilePart(dialect, file, partition, metastoreSchema, schema, partitionKeys)
+        new HiveFilePart(dialect, file, partition, metastoreSchema, schema, predicate, partitionKeys)
       }
     }
   }

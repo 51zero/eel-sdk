@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.component.hive.{HiveDialect, HiveWriter}
+import io.eels.component.hive.{HiveDialect, HiveWriter, Predicate}
 import io.eels.component.orc.{OrcStructInspector, StandardStructInspector}
 import io.eels.{InternalRow, Schema, SourceReader}
 import org.apache.hadoop.conf.Configuration
@@ -31,7 +31,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
   }
 
   // todo implement column pushdown
-  override def reader(path: Path, tableSchema: Schema, requestedSchema: Schema)
+  override def reader(path: Path, tableSchema: Schema, requestedSchema: Schema, predicate: Option[Predicate])
                      (implicit fs: FileSystem): SourceReader = {
     logger.debug(s"Creating orc iterator for $path")
 

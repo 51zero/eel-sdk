@@ -20,7 +20,7 @@ trait HiveDialect extends StrictLogging {
     * or may be a subset if a projection is being used.
     *
     */
-  def reader(path: Path, dataSchema: Schema, projection: Schema)(implicit fs: FileSystem): SourceReader
+  def reader(path: Path, dataSchema: Schema, projection: Schema, predicate: Option[Predicate])(implicit fs: FileSystem): SourceReader
 
   def writer(schema: Schema, path: Path)(implicit fs: FileSystem): HiveWriter
 }

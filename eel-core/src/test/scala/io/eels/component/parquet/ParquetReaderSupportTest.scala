@@ -39,7 +39,7 @@ class ParquetReaderSupportTest extends WordSpec with Matchers with BeforeAndAfte
   "ParquetReaderSupport" should {
     "support projections on doubles" in {
 
-      val reader = ParquetReaderSupport.createReader(path, true, schema.removeColumn("looong"))
+      val reader = ParquetReaderSupport.createReader(path, true, None, schema.removeColumn("looong"))
       val record = reader.read()
       reader.close()
 
@@ -48,7 +48,7 @@ class ParquetReaderSupportTest extends WordSpec with Matchers with BeforeAndAfte
     }
     "support projections on longs" in {
 
-      val reader = ParquetReaderSupport.createReader(path, true, schema.removeColumn("str"))
+      val reader = ParquetReaderSupport.createReader(path, true, None, schema.removeColumn("str"))
       val record = reader.read()
       reader.close()
 
@@ -56,7 +56,7 @@ class ParquetReaderSupportTest extends WordSpec with Matchers with BeforeAndAfte
     }
     "support full projections" in {
 
-      val reader = ParquetReaderSupport.createReader(path, true, schema)
+      val reader = ParquetReaderSupport.createReader(path, true, None, schema)
       val record = reader.read()
       reader.close()
 
@@ -67,7 +67,7 @@ class ParquetReaderSupportTest extends WordSpec with Matchers with BeforeAndAfte
     }
     "support non projections" in {
 
-      val reader = ParquetReaderSupport.createReader(path, false, null)
+      val reader = ParquetReaderSupport.createReader(path, false, None, null)
       val record = reader.read()
       reader.close()
 
