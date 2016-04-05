@@ -79,7 +79,7 @@ object Build extends Build {
     .settings(publish := {})
     .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, kafka, mongo, solr, cli)
+    .aggregate(core, cli)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -99,52 +99,6 @@ object Build extends Build {
       "mysql"                           % "mysql-connector-java"        % "5.1.38"
     ))
     .settings(name := "eel-core")
-
-  lazy val kafka = Project("eel-kafka", file("components/kafka"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-kafka")
-    .settings(libraryDependencies ++= Seq(
-      "org.apache.kafka"              %  "kafka-clients"        % "0.9.0.0",
-      "com.sksamuel.kafka.embedded"   %% "embedded-kafka"       % "0.21.0",
-      "com.fasterxml.jackson.core"    % "jackson-databind"      % "2.7.0"
-    ))
-    .dependsOn(core)
-
-  lazy val mongo = Project("eel-mongo", file("components/mongo"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-mongo")
-    .settings(libraryDependencies ++= Seq(
-       "org.mongodb" % "mongo-java-driver" % "3.2.2"
-    ))
-    .dependsOn(core)
-
-  lazy val jms = Project("eel-jms", file("components/jms"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-jms")
-    .settings(libraryDependencies ++= Seq(
-      "javax.jms" % "jms" % "1.1",
-      "org.apache.activemq" % "activemq-broker"       % "5.13.1" % "test",
-      "org.apache.activemq" % "activemq-kahadb-store" % "5.13.1" % "test"
-    ))
-    .dependsOn(core)
-
-  lazy val solr = Project("eel-solr", file("components/solr"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-solr")
-    .settings(libraryDependencies ++= Seq(
-      "org.apache.solr" % "solr-solrj" % "5.4.1"
-    ))
-    .dependsOn(core)
-
-  lazy val elasticsearch = Project("eel-elasticsearch", file("components/elasticsearch"))
-    .settings(rootSettings: _*)
-    .settings(name := "eel-elasticsearch")
-    .settings(libraryDependencies ++= Seq(
-      "com.sksamuel.elastic4s"    %% "elastic4s-core"     % "2.1.1",
-      "org.json4s"                %% "json4s-native"      % "3.3.0",
-      "org.elasticsearch"         % "elasticsearch"       % "2.1.1"     % "test"
-    ))
-    .dependsOn(core)
 
   lazy val cli = Project("eel-cli", file("eel-cli"))
     .settings(rootSettings: _*)
