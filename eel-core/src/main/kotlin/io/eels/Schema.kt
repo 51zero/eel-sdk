@@ -2,6 +2,8 @@ package io.eels
 
 data class Schema(val columns: List<Column>) {
 
+  constructor(vararg columns: Column) : this(columns.asList())
+
   init {
     require(columns.map { it.name }.distinct().size == columns.size, { "Frame schema cannot have duplicated column name" })
   }
