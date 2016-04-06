@@ -36,9 +36,7 @@ object Column {
   implicit def apply(str: String): Column = Column(str, SchemaType.String, false)
 }
 
-object InternalRow {
-  val PoisonPill: InternalRow = List(new {})
-}
+
 
 case class Row(schema: Schema, values: Seq[Any]) {
   override def toString: String = {

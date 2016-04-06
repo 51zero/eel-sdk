@@ -11,7 +11,26 @@ data class Column(val name: String,
    * Creates a lowercase version of this column
    */
   fun toLowerCase(): Column = copy(name = name.toLowerCase())
+
+  companion object {
+
+  }
 }
+
+data class Row(val schema: Schema, val values: List<Any?>) {
+
+  override fun toString(): String {
+    return schema.columnNames().zip(values).map { it ->
+      "${it.first} = ${if (it.second == null) "" else it.second.toString()}"
+    }.joinToString ("[", ",", "]")
+  }
+
+  companion object {
+    val poisonPill = Row(Schema(listOf()), listOf(object : Any() {}))
+  }
+}
+
+
 
 enum class ColumnType {
   BigInt,
