@@ -1,16 +1,15 @@
-language: scala
-scala:
-- 2.11.7
-- 2.10.6
-script: sbt test pack-archive
+language: java
+
 jdk:
-- oraclejdk8
-deploy:
-  provider: releases
-  api_key:
-    secure: Byh7QZRVF19zt6y/NoJj8yp85S+8kmwGULrwVHM5/hvmumdchqwMeVsEVRdj/ZjGhgPhlPYF5HQ9WHWubLkD2sktJWqSaBSHgqjbqbe/6ExiiJAz1sUP/gRPn0Y7BabSy1DaBFCpNC5FLjz9u/iyqIlcH8L5Wy3xKMJR8s/3IQ1SCkdYQCSeTLuOsoUUcfpTVfjjolge0mP/hs6l/Efkhh2OCi3YA1Gj/qY4sMMJLXDLthXZrOMLCbItVF9QrrXFXYKFVXHZNSrNhh77VI2T0ogGPud+Xs4nhVpLF2YB19FnPvAz78teG8qjW0bgKSWOyw1tprwAWjdlsg4eUEDlBBWdGVm/lhdYPwizUNWbkFe/QWCVERRLkoEYCZ4g4gB7AVp5MFVLrKRQXypTbjmH0/f8R8G4QXMlTKTVKUhRElXTNlsnOmrCWeO916R8h2Fpl2HJOMc1lsZAKLI2AwjEvfg/iDqePDGdP5+NrbmQ0XmzH+zGC+mtfxu5H9/108D8MEf+MnDBtqT2CfiFu0wvVpPg4v0S+NFrq2nM+jin2MjsuFWf9cccJudwdpux+JN/r5oHTa33ng9NwtdjYl82mKJCqipuYd7c2YiKAF9qozSt40R31o1rJGwwuPvZyCRdJrVKK6gY2kBzvW5i2f7fi9lLNyXwsgtCN+QDzn/EuKo=
-  file_glob: true
-  file: ./eel-cli/target/eel-cli-*.tar.gz
-  skip_cleanup: true
-  on:
-    tags: true
+  - oraclejdk8
+
+sudo: false
+
+cache:
+  directories:
+  - $HOME/.m2
+  - $HOME/.gradle
+
+install: /bin/true
+
+script: gradle test
