@@ -1,5 +1,7 @@
 package io.eels
 
+import com.sun.org.apache.xerces.internal.impl.xpath.regex.CaseInsensitiveMap
+
 data class Column(val name: String,
                   val `type`: ColumnType = ColumnType.String,
                   val nullable: Boolean = true,
@@ -26,7 +28,12 @@ data class Row(val schema: Schema, val values: List<Any?>) {
     }.joinToString ("[", ",", "]")
   }
 
-  fun get(k: Int): Any? = values.get(k)
+  fun get(k: Int): Any? = values[k]
+
+  fun get(name: String, caseInsensitive: Boolean = false): Any? {
+    val index = schema.indexOf(name, caseInsensitive)
+    return values[index]
+  }
 
   companion object {
     val poisonPill = Row(Schema(Column("a")), listOf(object : Any() {}))

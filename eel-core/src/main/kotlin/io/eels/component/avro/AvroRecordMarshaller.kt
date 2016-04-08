@@ -7,10 +7,8 @@ import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
 
 /**
- * Converts eel rows into avro records using the given avro schema.
- * Each row must provide a value for each field in the schema, and the the order of the values
- * in the row is assumed to be the same order as the order of the fields in the schema.
- * Each row value will be converted into the appropriate type for the field.
+ * Writes eel rows as avro records using the given avro schema.
+ * Each row must provide a value for each field in the schema.
  */
 class AvroRecordMarshaller(val schema: Schema) : Logging {
 
@@ -21,7 +19,7 @@ class AvroRecordMarshaller(val schema: Schema) : Logging {
     logger.debug("Avro marshaller created with schema=${fields.map { it.name() }.joinToString (", ")}")
   }
 
-  fun toRecord(row: Row): GenericRecord {
+  fun toRecord(row: Row, caseInsensitive: Boolean = false): GenericRecord {
     require(
         row.size() == schema.fields.size,
         {
@@ -29,8 +27,9 @@ class AvroRecordMarshaller(val schema: Schema) : Logging {
         }
     )
     val record = GenericData.Record(schema)
-    for (k in 0 until row.size()) {
-      record.put(schema.fields.get(k).name(), row.get(k))
+    for (field in fields) {
+      val value = row.get(field.name(), caseInsensitive)
+      record.put(field.name(), value)
     }
     return record
   }

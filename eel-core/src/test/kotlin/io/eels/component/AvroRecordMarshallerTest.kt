@@ -10,12 +10,12 @@ import org.apache.avro.SchemaBuilder
 class AvroRecordMarshallerTest : WordSpec() {
 
   val avroSchema = SchemaBuilder.record("row").fields().requiredString("s").requiredLong("l").requiredBoolean("b").endRecord()
-  val eelSchema = Schema(Column("a"), Column("b"), Column("c"))
   val marshaller = AvroRecordMarshaller(avroSchema)
 
   init {
     "ConvertingAvroRecordMarshaller" should {
-      "create record with all fields set in field order" with {
+      "create field from values in row" with {
+        val eelSchema = Schema(Column("s"), Column("l"), Column("b"))
         val record = marshaller.toRecord(Row(eelSchema, listOf("a", 1L, false)))
         record.get("s") shouldBe "a"
         record.get("l") shouldBe 1L
@@ -30,6 +30,13 @@ class AvroRecordMarshallerTest : WordSpec() {
           val eelSchema = Schema(Column("a"), Column("b"), Column("c"), Column("d"))
           marshaller.toRecord(Row(eelSchema, listOf("1", "2", "3", "4")))
         }
+      }
+      "support out of order rows" with {
+        val eelSchema = Schema(Column("l"), Column("b"), Column("s"))
+        val record = marshaller.toRecord(Row(eelSchema, listOf(1L, false, "a")))
+        record.get("s") shouldBe "a"
+        record.get("l") shouldBe 1L
+        record.get("b") shouldBe false
       }
       //      "convert strings to longs" with {
       //        val record = marshaller.toRecord(Seq("1", "2", "true"))
