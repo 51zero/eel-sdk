@@ -16,15 +16,23 @@ data class Column(val name: String,
 
 data class Row(val schema: Schema, val values: List<Any?>) {
 
+  init {
+    require(schema.size() == values.size, { "Row should have a value for each column (${schema.columns.size} columns=${schema.columns.joinToString { "," }}, ${values.size} values=${values.joinToString { "," }})" })
+  }
+
   override fun toString(): String {
     return schema.columnNames().zip(values).map { it ->
       "${it.first} = ${if (it.second == null) "" else it.second.toString()}"
     }.joinToString ("[", ",", "]")
   }
 
+  fun get(k: Int): Any? = values.get(k)
+
   companion object {
-    val poisonPill = Row(Schema(listOf()), listOf(object : Any() {}))
+    val poisonPill = Row(Schema(Column("a")), listOf(object : Any() {}))
   }
+
+  fun size(): Int = values.size
 }
 
 
