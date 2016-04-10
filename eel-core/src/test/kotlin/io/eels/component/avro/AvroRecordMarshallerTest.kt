@@ -1,4 +1,4 @@
-package io.eels.component
+package io.eels.component.avro
 
 import io.eels.Column
 import io.eels.Row
