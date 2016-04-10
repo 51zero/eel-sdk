@@ -1,7 +1,5 @@
 package io.eels
 
-import com.sun.org.apache.xerces.internal.impl.xpath.regex.CaseInsensitiveMap
-
 data class Column(val name: String,
                   val `type`: ColumnType = ColumnType.String,
                   val nullable: Boolean = true,
@@ -43,6 +41,12 @@ data class Row(val schema: Schema, val values: List<Any?>) {
 }
 
 
+data class Database(val name: String, val tables: List<Table>)
+
+data class Table(val name: String,
+                 val columns: Column,
+                 val partitionKeys: List<PartitionKey>,
+                 val props: Map<String, String>)
 
 enum class ColumnType {
   BigInt,
