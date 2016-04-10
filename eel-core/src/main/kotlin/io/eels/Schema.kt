@@ -5,7 +5,8 @@ data class Schema(val columns: List<Column>) {
   constructor(vararg columns: Column) : this(columns.asList())
 
   init {
-    require(columns.map { it.name }.distinct().size == columns.size, { "Frame schema cannot have duplicated column name" })
+    require(columns.map { it.name }.distinct().size == columns.size, { "Schema cannot have duplicated column name" })
+    require(columns.size > 0, { "Schema cannot be empty" })
   }
 
   fun apply(name: String): Column? = columns.find { it.name == name }
