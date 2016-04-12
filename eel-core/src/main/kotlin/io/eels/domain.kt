@@ -7,10 +7,7 @@ data class Column(val name: String,
                   val scale: Int = 0,
                   val signed: Boolean = true,
                   val comment: String = "") {
-
-  /**
-   * Creates a lowercase version of this column
-   */
+  // Creates a lowercase version of this column
   fun toLowerCase(): Column = copy(name = name.toLowerCase())
 }
 

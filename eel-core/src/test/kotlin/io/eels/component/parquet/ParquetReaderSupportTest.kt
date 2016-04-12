@@ -19,7 +19,7 @@ class ParquetReaderSupportTest : WordSpec() {
 
   val path = Path(UUID.randomUUID().toString())
 
-  fun afterAll(): Unit {
+  override fun afterAll(): Unit {
     val fs = FileSystem.get(Configuration())
     fs.delete(path, false)
   }
@@ -28,7 +28,6 @@ class ParquetReaderSupportTest : WordSpec() {
 
     val avroSchema = SchemaBuilder.record("com.chuckle").fields()
         .requiredString("str").requiredLong("looong").requiredDouble("dooble").endRecord()
-
 
     val writer = AvroParquetWriter.builder<GenericRecord>(path)
         .withSchema(avroSchema)

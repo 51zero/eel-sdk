@@ -47,7 +47,7 @@ object ParquetReaderSupport : Logging {
           ColumnType.String -> fields.optionalString(name)
           ColumnType.Short -> fields.optionalInt(name)
           else -> {
-            // logger.warn(s"Unknown schema type $ColumnType; default to string")
+            logger.warn("Unknown schema type ${col.type}; defaulting to string")
             fields.optionalString(name)
           }
         }

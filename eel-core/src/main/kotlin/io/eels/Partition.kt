@@ -15,7 +15,7 @@ data class Partition(val parts: List<PartitionPart>) {
   fun values(): List<String> = parts.map { it.value }
 
   // returns the partition value for the given key
-  fun get(key: String): String? = parts.find { it.key == key }.map { it.value }
+  fun get(key: String): String? = parts.find { it.key == key }?.value
 }
 
 // represents part of a partition, eg a single key=value pair, which is what people might think a
