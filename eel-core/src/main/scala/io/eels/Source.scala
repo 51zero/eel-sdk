@@ -81,14 +81,7 @@ class FrameSource(ioThreads: Int, source: Source) extends Frame with Logging wit
   }
 }
 
-/**
-  *
-  * A Part represents part of the source data. Eg a single path in a multifile source, or a single table
-  * in a multitable source. A part provides a reader for that source when requested.
-  */
-trait Part {
-  def reader: SourceReader
-}
+
 
 /**
   * A one time usable reader of data.

@@ -50,14 +50,6 @@ class CsvSourceTest extends WordSpec with Matchers {
       CsvSource(path).withHeader(Header.None).toSet.map(_.values) shouldBe
         Set(List("a", "b", "c"), List("e", "f", "g"), List("1", "2", "3"), List("4", "5", "6"))
     }
-    "support schema inferrer" in {
-      val inferrer = SchemaInferrer(SchemaType.String, SchemaRule("a", SchemaType.Int, false), SchemaRule("b", SchemaType.Boolean))
-      CsvSource(path).withHeader(Header.FirstRow).withSchemaInferrer(inferrer).schema shouldBe Schema(List(
-        Column("a", SchemaType.Int, false),
-        Column("b", SchemaType.Boolean, true),
-        Column("c", SchemaType.String, true)
-      ))
-    }
     "support delimiters" in {
       val file = getClass.getResource("/psv.psv").toURI
       val path = Paths.get(file)
