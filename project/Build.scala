@@ -84,8 +84,7 @@ object Build extends Build {
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
     .settings(libraryDependencies ++= Seq(
-      "io.dropwizard.metrics" %  "metrics-core"     % "3.1.2",
-      "io.dropwizard.metrics" %  "metrics-jvm"      % "3.1.2",
+
       "org.apache.parquet"    % "parquet-avro"      % "1.8.1",
       "org.apache.hadoop"     % "hadoop-common"     % HadoopVersion,
       "org.apache.hadoop"     % "hadoop-client"     % HadoopVersion,

@@ -5,14 +5,14 @@ package io.eels
   * that is, multiple iterators can be created and accessed concurrently from the
   * same source buffer.
   */
-trait Buffer {
+interface Buffer {
 
   /**
     * Closes this buffer once it is no longer needed. This results in early termination of any
     * outstanding Iterators. That is, after this method is called, all further calls to `hasNext`
     * on the iterators will return false.
     */
-  def close(): Unit
+  fun close(): Unit
 
-  def iterator: Iterator[Seq[Any]]
+  fun iterator(): Iterator<Array<Any>>
 }
