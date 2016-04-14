@@ -4,15 +4,9 @@
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.10*.svg?label=latest%20release%20for%202.10"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.10%22)
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.11*.svg?label=latest%20release%20for%202.11"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.11%22)
 
-<img src="https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png" width="140px" align="left"> Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel operates on a single machine. It is aimed at those problems which can be solved simply and quickly by iterating over data row by row. Or when the size of the data fits into memory and shuffling data between nodes adds overhead and complexity. This turns out to be quite a common use case.
+<img src="https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png" width="140px" align="left"> Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel is an SDK.
 
 Latest release [here](http://search.maven.org/#search|ga|1|io-eels)
-
-*Rationale:*
-
-I was working on a big data project - kafka, hdfs, hive, spark. And spark was a great toolkit. But sometimes we wanted to work on some tables, or some files, that were quite small. For instance a feed table that sits alongside a data table. Maybe the feed table had 1000 rows. For this kind of manipulation, submitting a job to Yarn seemed overkill (and would take an order of magnitude longer). Of course, we can use spark local mode, but this doesn't feel like the right way to use Spark.
-
-Eel is a small toolkit for moving data between file formats and databases, when that data will comfortably fit into memory. No distributed programming here! Eel wraps the client libraries available for the many "big data" formats/stores, and uses those to convert into an intermediate format called a 'Frame'. Frames can be mapped, filtered, joined, etc, then persisted back out.
 
 ### Example Use Cases
 
