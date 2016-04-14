@@ -16,9 +16,15 @@
 
 * Dumping data from JDBC into Hadoop
 
-### Introduction
+### Overview
 
 The core data structure in Eel is the Frame. A frame consists of columns, and rows containings values for each column. A frame is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. Frames are constructed from sources such as hive tables, jdbc databases, delimited files, kafka queues, or even programatically from Scala or Java collections.
+
+### Frames
+
+### Sources
+
+### File API
 
 ### Examples
 
@@ -40,7 +46,7 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 
 ##### Projection
 
-### Components
+### Sources
 
 * CSV
 * Json
@@ -49,9 +55,6 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 * Avro
 * Hadoop Sequence files
 * Hadoop Orc
-* Kafka
-* Elasticsearch
-* Solr
 
 Parquet Source
 --------------
