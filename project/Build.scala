@@ -5,37 +5,8 @@ import xerial.sbt.Pack._
 
 object Build extends Build {
 
-  val org = "io.eels"
 
-  val ScalaVersion = "2.11.8"
-  val ScalatestVersion = "3.0.0-M12"
-  val Slf4jVersion = "1.7.5"
-  val Log4jVersion = "1.2.17"
-  val HadoopVersion = "2.6.1"
-  val HiveVersion = "1.1.0"
-  val Avro4sVersion = "1.2.2"
-
-  val rootSettings = Seq(
-    organization := org,
-    scalaVersion := ScalaVersion,
-    crossScalaVersions := Seq(ScalaVersion, "2.10.6"),
-    publishMavenStyle := true,
-    resolvers += Resolver.mavenLocal,
-    resolvers += "conjars" at "http://conjars.org/repo/",
-    publishArtifact in Test := false,
-    parallelExecution in Test := false,
-    scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
-    javacOptions := Seq("-source", "1.7", "-target", "1.7"),
-    sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "com.github.tototoshi"        %% "scala-csv"            % "1.3.0",
-      "org.scala-lang"              % "scala-reflect"         % scalaVersion.value,
-      "com.sksamuel.scalax"         %% "scalax"               % "1.26.0",
-      "com.typesafe"                % "config"                % "1.2.1",
-      "org.apache.hadoop"           % "hadoop-common"         % HadoopVersion          % "provided",
-      "org.apache.hadoop"           % "hadoop-hdfs"           % HadoopVersion          % "provided",
-      "com.typesafe.scala-logging"  %% "scala-logging-slf4j"  % "2.1.2",
       "com.google.guava"            % "guava"                 % "18.0",
       "com.h2database"              % "h2"                    % "1.4.191",
       "org.scalatest"               %% "scalatest"            % ScalatestVersion  % "test",
@@ -84,14 +55,12 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(libraryDependencies ++= Seq(
 
-      "org.apache.parquet"    % "parquet-avro"      % "1.8.1",
       "org.apache.hadoop"     % "hadoop-common"     % HadoopVersion,
       "org.apache.hadoop"     % "hadoop-client"     % HadoopVersion,
       "org.apache.hadoop"     % "hadoop-hdfs"       % HadoopVersion,
       "org.apache.hadoop"     % "hadoop-mapreduce"  % HadoopVersion,
       "org.apache.hadoop"     % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hive"       % "hive-common"       % HiveVersion,
-      "org.apache.hive"       % "hive-exec"         % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm"),
       "com.fasterxml.jackson.core"      %  "jackson-databind"           % "2.7.2",
       "com.fasterxml.jackson.module"    %% "jackson-module-scala"       % "2.7.2",
       "mysql"                           % "mysql-connector-java"        % "5.1.38"
