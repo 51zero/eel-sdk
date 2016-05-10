@@ -2,9 +2,6 @@ package io.eels.component.avro
 
 import org.apache.avro.Schema
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.ListMap
-
 @deprecated("use the functionality from avro4s when we can ditch 2.10 in eel")
 object AvroSchemaMerge {
 
@@ -27,3 +24,5 @@ object AvroSchemaMerge {
     schema
   }
 }
+
+object q

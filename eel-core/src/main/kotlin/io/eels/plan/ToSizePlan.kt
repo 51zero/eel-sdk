@@ -1,21 +1,20 @@
 package io.eels.plan
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.Frame
+import io.eels.Logging
 
-import scala.concurrent.{ExecutionContext, Future}
+object ToSizePlan : Plan(), Logging {
 
-object ToSizePlan extends Plan with StrictLogging {
+  fun apply(frame: Frame): Long {
+    logger.info("Plan will execute with $tasks tasks")
 
-  def apply(frame: Frame)(implicit executor: ExecutionContext): Long = {
-    logger.info(s"Plan will execute with $tasks tasks")
-
-    val buffer = frame.buffer
-    val latch = new CountDownLatch(tasks)
-    val running = new AtomicBoolean(true)
+    val buffer = frame.buffer()
+    val latch = CountDownLatch(tasks)
+    val running = AtomicBoolean(true)
 
     val futures = for (k <- 1 to tasks) yield {
       Future {
@@ -43,6 +42,6 @@ object ToSizePlan extends Plan with StrictLogging {
     logger.debug("Buffer closed")
 
     raiseExceptionOnFailure(futures)
-    futures.flatMap(f => f.value.get.toOption).foldLeft(0L)(_ + _)
+    return futures.flatMap { it.value.get.toOption }.foldLeft(0L)(_ + _)
   }
 }

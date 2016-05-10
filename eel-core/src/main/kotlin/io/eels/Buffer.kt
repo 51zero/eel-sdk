@@ -14,5 +14,5 @@ interface Buffer {
     */
   fun close(): Unit
 
-  fun iterator(): Iterator<Array<Any>>
+  fun iterator(): Iterator<Row>
 }

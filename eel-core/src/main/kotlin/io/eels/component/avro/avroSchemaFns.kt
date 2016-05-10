@@ -6,14 +6,14 @@ import io.eels.Schema
 import org.apache.avro.SchemaBuilder
 import org.codehaus.jackson.node.NullNode
 
-fun toAvro(schema: Schema, caseSensitive: Boolean = true, name: String = "row", namespace: String = "namespace"): org.apache.avro.Schema {
+fun schemaToAvroSchema(schema: Schema, caseSensitive: Boolean = true, name: String = "row", namespace: String = "namespace"): org.apache.avro.Schema {
   val avroFields = schema.columns.map { toAvroField(it, caseSensitive) }
   val avroSchema = org.apache.avro.Schema.createRecord(name, null, namespace, false)
   avroSchema.fields = avroFields
   return avroSchema
 }
 
-fun fromAvro(avro: org.apache.avro.Schema): Schema {
+fun avroSchemaToSchema(avro: org.apache.avro.Schema): Schema {
   require(avro.type == org.apache.avro.Schema.Type.RECORD, { "Can only convert avro records to eel schemas" })
   val cols = avro.fields.map(::toColumn)
   return Schema(cols)

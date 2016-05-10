@@ -1,6 +1,7 @@
 package io.eels.component
 
 import io.eels.Row
+import java.io.Closeable
 
 /**
  *
@@ -11,7 +12,6 @@ interface Part {
   fun reader(): SourceReader
 }
 
-interface SourceReader {
-  fun close(): Unit
+interface SourceReader : Closeable {
   fun iterator(): Iterator<Row>
 }

@@ -15,11 +15,11 @@ class AvroRecordFnTest : WordSpec() {
     "fromRecord" should {
       "create eel row from supplied avro record" with {
         val schema = Schema(Column("a"), Column("b"), Column("c"))
-        val record = GenericData.Record(toAvro(schema))
+        val record = GenericData.Record(schemaToAvroSchema(schema))
         record.put("a", "aaaa")
         record.put("b", "bbbb")
         record.put("c", "cccc")
-        fromRecord(record) shouldBe Row(schema, listOf("aaaa", "bbbb", "cccc"))
+        avroRecordToRow(record) shouldBe Row(schema, listOf("aaaa", "bbbb", "cccc"))
       }
     }
     //    "AvroRecordFn" should

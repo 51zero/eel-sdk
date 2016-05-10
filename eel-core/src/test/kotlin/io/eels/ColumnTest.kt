@@ -2,7 +2,7 @@ package io.eels
 
 import io.kotlintest.specs.WordSpec
 
-class ColumnTest : WordSpec() {
+class FieldTest : WordSpec() {
 
   init {
     "Column.toLowerCase" should {

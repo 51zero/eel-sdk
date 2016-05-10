@@ -31,10 +31,20 @@ data class Row(val schema: Schema, val values: List<Any?>) {
   }
 
   companion object {
-    val poisonPill = Row(Schema(Column("a")), listOf(object : Any() {}))
+    val PoisonPill = Row(Schema(Column("a")), listOf(object : Any() {}))
   }
 
   fun size(): Int = values.size
+
+  fun replace(name: String, value: Any, caseSensitive: Boolean): Row {
+    val k = schema.indexOf(name, caseSensitive)
+    // todo this could be optimized to avoid the copy
+    val newValues = values.toMutableList()
+    newValues[k] = value
+    return copy(values = newValues.toList())
+  }
+
+  fun add(name: String, value: Any): Row = copy(schema = schema.addColumn(name), values = values + value)
 }
 
 

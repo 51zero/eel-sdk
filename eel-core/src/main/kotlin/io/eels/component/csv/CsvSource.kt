@@ -6,9 +6,9 @@ import com.univocity.parsers.csv.CsvParserSettings
 import io.eels.Option
 import io.eels.Row
 import io.eels.Schema
+import io.eels.Source
 import io.eels.component.Part
 import io.eels.component.SchemaInferrer
-import io.eels.component.Source
 import io.eels.component.SourceReader
 import io.eels.component.StringInferrer
 import io.eels.component.Using

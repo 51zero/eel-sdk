@@ -23,6 +23,8 @@ data class Schema(val columns: List<Column>) {
 
   fun columnNames(): List<String> = columns.map { it.name }
 
+  fun addColumn(name: String): Schema = addColumn(Column(name))
+
   fun addColumn(col: Column): Schema {
     require(!columnNames().contains(col.name), { "Column ${col.name} already exist" })
     return copy(columns + col)
