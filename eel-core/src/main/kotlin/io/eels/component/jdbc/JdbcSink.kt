@@ -1,25 +1,20 @@
 package io.eels.component.jdbc
 
-import java.sql.DriverManager
-import java.util.concurrent._
-import java.util.concurrent.atomic.AtomicLong
-
-import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
-import com.sksamuel.scalax.concurrent.BoundedThreadPoolExecutor
-import com.sksamuel.scalax.jdbc.ResultSetIterator
 import com.typesafe.config.ConfigFactory
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Schema, Sink, SinkWriter}
+import io.eels.Logging
+import io.eels.Row
+import io.eels.Schema
+import io.eels.Sink
+import io.eels.SinkWriter
+import org.apache.commons.beanutils.ResultSetIterator
+import java.sql.DriverManager
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
-import scala.language.implicitConversions
-import scala.util.Try
-
-case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkProps())
-  extends Sink
-    with StrictLogging {
+class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkProps()) : Sink, Logging {
 
   private val dialect = props.dialectFn(url)
-  logger.debug(s"Dialect detected from url [$dialect]")
+  logger.debug("Dialect detected from url [$dialect]")
 
   private val config = ConfigFactory.load()
   private val bufferSize = config.getInt("eel.jdbc.sink.bufferSize")
@@ -34,9 +29,7 @@ case class JdbcSink(url: String, table: String, props: JdbcSinkProps = JdbcSinkP
     }
   }
 
-  override def writer(schema: Schema) = {
-    new JdbcWriter(schema, url, table, dialect, props, autoCommit, bufferSize, swallowExceptions)
-  }
+  override fun writer(schema: Schema) = JdbcWriter(schema, url, table, dialect, props, autoCommit, bufferSize, swallowExceptions)
 }
 
 class JdbcWriter(schema: Schema,
@@ -46,7 +39,7 @@ class JdbcWriter(schema: Schema,
                  props: JdbcSinkProps = JdbcSinkProps(),
                  autoCommit: Boolean,
                  bufferSize: Int,
-                 swallowExceptions: Boolean) extends SinkWriter with StrictLogging {
+                 swallowExceptions: Boolean) : SinkWriter, Logging {
   logger.info(s"Creating Jdbc writer with ${props.threads} threads, batch size ${props.batchSize}, autoCommit=$autoCommit")
 
   import com.sksamuel.scalax.concurrent.ThreadImplicits.toRunnable
@@ -96,7 +89,7 @@ class JdbcWriter(schema: Schema,
   // so it can be shut down immediately after that ask is submitted
   coordinator.shutdown()
 
-  private def ensureInserterCreated(): Unit = {
+  private fun ensureInserterCreated(): Unit {
     // coordinator is single threaded, so simple var with null is fine
     if (inserter == null) {
       inserter = new JdbcInserter(url, table, schema, autoCommit, dialect)
@@ -105,13 +98,13 @@ class JdbcWriter(schema: Schema,
     }
   }
 
-  override def close(): Unit = {
+  override fun close(): Unit {
     buffer.put(InternalRow.PoisonPill)
     logger.debug("Closing JDBC Writer... blocking until workers completed")
     workers.awaitTermination(1, TimeUnit.DAYS)
   }
 
-  override def write(row: InternalRow): Unit = {
+  override fun write(row: InternalRow): Unit {
     buffer.put(row)
   }
 }
@@ -120,18 +113,19 @@ class JdbcInserter(url: String,
                    table: String,
                    schema: Schema,
                    autoCommit: Boolean,
-                   dialect: JdbcDialect) extends StrictLogging {
+                   dialect: JdbcDialect) : Logging {
 
-  logger.debug(s"Connecting to jdbc $url...")
+  logger.debug("Connecting to jdbc $url...")
   val conn = DriverManager.getConnection(url)
   conn.setAutoCommit(autoCommit)
-  logger.debug(s"Connected to $url")
+  logger.debug("Connected to $url")
 
-  def insertBatch(batch: Seq[InternalRow]): Unit = {
+  fun insertBatch(batch: Seq<Row>): Unit {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
     try {
-      batch.foreach { row =>
-        row.zipWithIndex foreach { case (value, k) =>
+      batch.foreach { row ->
+        row.zipWithIndex foreach {
+          (value, k) ->
           stmt.setObject(k + 1, value)
         }
         stmt.addBatch()
@@ -152,16 +146,16 @@ class JdbcInserter(url: String,
     }
   }
 
-  def ensureTableCreated(): Unit = {
+  fun ensureTableCreated(): Unit {
     logger.debug(s"Ensuring table [$table] is created")
 
-    def tableExists: Boolean = {
-      logger.debug(s"Fetching list of tables to detect if $table exists")
+    fun tableExists: Boolean {
+      logger.debug("Fetching list of tables to detect if $table exists")
       val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
       val names = tables.map(_.apply(3).toLowerCase)
       val exists = names contains table.toLowerCase
-      logger.debug(s"${tables.size} tables found; $table exists is $exists")
-      exists
+      logger.debug("${tables.size} tables found; $table exists is $exists")
+      return exists
     }
 
     if (!tableExists) {
@@ -172,7 +166,7 @@ class JdbcInserter(url: String,
         stmt.executeUpdate(sql)
         if (!autoCommit) conn.commit()
       } catch {
-        case e: Exception =>
+        case e: Exception ->
           logger.error("Batch failure", e)
           if (!autoCommit)
             Try {
@@ -186,8 +180,8 @@ class JdbcInserter(url: String,
   }
 }
 
-case class JdbcSinkProps(createTable: Boolean = false,
-                         batchSize: Int = 10000,
-                         dialectFn: String => JdbcDialect = url => JdbcDialect(url),
-                         threads: Int = 4)
+data class JdbcSinkProps(val createTable: Boolean = false,
+                         val batchSize: Int = 10000,
+                         val dialectFn: (String) -> JdbcDialect,
+                         val threads: Int = 4)
 
