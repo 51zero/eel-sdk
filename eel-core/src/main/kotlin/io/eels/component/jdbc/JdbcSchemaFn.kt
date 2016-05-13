@@ -6,16 +6,19 @@ import io.eels.Schema
 import java.sql.ResultSet
 import java.sql.ResultSetMetaData
 
+/**
+ * Generates an eel schema from the metadata in a resultset.
+ */
 object JdbcSchemaFn : Logging {
 
   operator fun invoke(rs: ResultSet, dialect: JdbcDialect): Schema {
     logger.debug("Building frame schema from resultset")
 
-    val md: ResultSetMetaData = rs.metaData
+    val md = rs.metaData
     val columnCount = md.columnCount
     logger.debug("Resultset column count is $columnCount")
 
-    val cols = for (k in 1..columnCount) {
+    val cols = (1..columnCount).map { k ->
       Column(
           name = md.getColumnLabel(k),
           `type` = dialect.fromJdbcType(md.getColumnType(k)),
@@ -26,6 +29,6 @@ object JdbcSchemaFn : Logging {
       )
     }
 
-    return Schema(cols.toList)
+    return Schema(cols)
   }
 }

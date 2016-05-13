@@ -1,61 +1,64 @@
 package io.eels.component.jdbc
 
-import java.sql._
+import io.eels.Schema
+import io.eels.Timed
+import io.eels.component.Part
+import io.eels.zipWithIndex
+import java.sql.CallableStatement
+import java.sql.Connection
 
-import com.sksamuel.scalax.metrics.Timed
-import io.eels._
+class JdbcStoredProcSource(url: String,
+                           val storedProcedure: String,
+                           val params: List<Any>,
+                           val fetchSize: Int = 100,
+                           providedSchema: Schema?,
+                           providedDialect: JdbcDialect?) : AbstractJdbcSource(url, providedSchema, providedDialect), Timed {
 
-case class JdbcStoredProcSource(url: String,
-                                storedProcedure: String,
-                                params: Seq[Any],
-                                fetchSize: Int = 100,
-                                providedSchema: Option[Schema] = None,
-                                providedDialect: Option[JdbcDialect] = None)
-  extends AbstractJdbcSource(url, providedSchema, providedDialect) with Timed {
+  override fun schema(): Schema = providedSchema ?: fetchSchema()
 
-  def withProvidedSchema(schema: Schema): JdbcStoredProcSource = copy(providedSchema = Some(schema))
-  def withProvidedDialect(dialect: JdbcDialect): JdbcStoredProcSource = copy(providedDialect = Some(dialect))
+  fun withProvidedSchema(schema: Schema): JdbcStoredProcSource = JdbcStoredProcSource(url = url, storedProcedure = storedProcedure, params = params, providedSchema = schema, providedDialect = providedDialect)
+  fun withProvidedDialect(dialect: JdbcDialect): JdbcStoredProcSource = JdbcStoredProcSource(url = url, storedProcedure = storedProcedure, params = params, providedSchema = providedSchema, providedDialect = dialect)
 
-  private def setup(): (Connection, CallableStatement) = {
+  private fun setup(): Pair<Connection, CallableStatement> {
     val conn = connect()
     val stmt = conn.prepareCall(storedProcedure)
-    stmt.setFetchSize(fetchSize)
-    for ((param, index) <- params.zipWithIndex) {
+    stmt.fetchSize = fetchSize
+    for ((param, index) in params.zipWithIndex()) {
       stmt.setObject(index + 1, param)
     }
-    (conn, stmt)
+    return Pair(conn, stmt)
   }
 
-  override def parts: Seq[Part] = {
+  override fun parts(): List<Part> {
 
     val (conn, stmt) = setup()
-    logger.debug(s"Executing stored procedure [proc=$storedProcedure, params=${params.mkString(",")}]")
+    logger.debug("Executing stored procedure [proc=$storedProcedure, params=${params.joinToString(",")}]")
     val rs = timed("Stored proc") {
       val result = stmt.execute()
-      logger.debug(s"Stored proc result=$result")
-      stmt.getResultSet
+      logger.debug("Stored proc result=$result")
+      stmt.resultSet
     }
 
     val schema = schemaFor(rs)
-    val part = new JdbcPart(rs, stmt, conn, schema)
-    Seq(part)
+    val part = ResultsetPart(rs, stmt, conn, schema)
+    return listOf(part)
   }
 
-  override protected def fetchSchema: Schema = {
+  override fun fetchSchema(): Schema {
 
     val (conn, stmt) = setup()
 
     try {
 
-      logger.debug(s"Executing stored procedure for schema [proc=$storedProcedure, params=${params.mkString(",")}]")
+      logger.debug("Executing stored procedure for schema [proc=$storedProcedure, params=${params.joinToString(",")}]")
       val rs = timed("Stored proc") {
         val result = stmt.execute()
-        logger.debug(s"Stored proc result=$result")
-        stmt.getResultSet
+        logger.debug("Stored proc result=$result")
+        stmt.resultSet
       }
       val schema = schemaFor(rs)
       rs.close()
-      schema
+      return schema
 
     } finally {
       stmt.close()

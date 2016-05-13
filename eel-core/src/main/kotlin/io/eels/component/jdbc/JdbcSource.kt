@@ -2,6 +2,7 @@ package io.eels.component.jdbc
 
 import io.eels.Logging
 import io.eels.Schema
+import io.eels.Timed
 import io.eels.component.Part
 import io.eels.component.Using
 
@@ -12,32 +13,31 @@ class JdbcSource(url: String,
                  providedDialect: JdbcDialect?,
                  val bucketing: Bucketing?) : AbstractJdbcSource(url, providedSchema, providedDialect), Logging, Using, Timed {
 
-  override fun schema(): Schema {
-    throw UnsupportedOperationException()
-  }
+  override fun schema(): Schema = providedSchema ?: fetchSchema()
 
-  fun withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = schema)
-  fun withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = dialect)
+  fun withProvidedSchema(schema: Schema): JdbcSource = JdbcSource(url = url, query = query, fetchSize = fetchSize, providedDialect = providedDialect, bucketing = bucketing, providedSchema = schema)
+  fun withProvidedDialect(dialect: JdbcDialect): JdbcSource = JdbcSource(url = url, query = query, fetchSize = fetchSize, providedDialect = dialect, bucketing = bucketing, providedSchema = providedSchema)
 
   override fun parts(): List<Part> {
 
     val conn = connect()
     val stmt = conn.createStatement()
-    stmt.setFetchSize(fetchSize)
+    stmt.fetchSize = fetchSize
 
     val rs = timed("Executing query") {
       stmt.executeQuery(query)
     }
 
     val schema = schemaFor(rs)
-    val part = JdbcPart(rs, stmt, conn, schema)
+    val part = ResultsetPart(rs, stmt, conn, schema)
     return listOf(part)
   }
 
   override fun fetchSchema(): Schema {
-    using(connect()) { conn ->
-      using(conn.createStatement) { stmt ->
-        stmt.setFetchSize(fetchSize)
+    return using(connect()) { conn ->
+      using(conn.createStatement()) { stmt ->
+
+        stmt.fetchSize = fetchSize
 
         val schemaQuery = "SELECT * FROM ($query) tmp WHERE 1=0"
         val rs = timed("Query for schema [$schemaQuery]...") {
@@ -52,4 +52,4 @@ class JdbcSource(url: String,
   }
 }
 
-data class Bucketing(columnName: String, numberOfBuckets: Int)
+data class Bucketing(val columnName: String, val numberOfBuckets: Int)

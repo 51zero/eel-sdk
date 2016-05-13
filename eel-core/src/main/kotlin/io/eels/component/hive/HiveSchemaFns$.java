@@ -1,10 +1,3 @@
-package io.eels.component.hive
-
-import com.sksamuel.scalax.NonEmptyString
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Schema, SchemaType}
-import org.apache.hadoop.hive.metastore.api.FieldSchema
-
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends StrictLogging {

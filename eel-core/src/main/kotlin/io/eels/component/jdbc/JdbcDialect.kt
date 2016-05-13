@@ -86,7 +86,7 @@ open class GenericJdbcDialect : JdbcDialect, Logging {
 
   override fun insertQuery(schema: Schema, table: String): String {
     val columns = schema.columnNames().joinToString(",")
-    val parameters = List.fill(schema.columns.size)("?").joinToString(",")
+    val parameters = Array(schema.columns.size, { "?" }).joinToString(",")
     return "INSERT INTO $table ($columns) VALUES ($parameters)"
   }
 

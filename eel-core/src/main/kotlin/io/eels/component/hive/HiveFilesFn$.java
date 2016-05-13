@@ -1,13 +1,3 @@
-package io.eels.component.hive
-
-import com.sksamuel.scalax.Logging
-import com.typesafe.config.ConfigFactory
-import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
-import org.apache.hadoop.hive.metastore.api.Table
-
-import scala.collection.JavaConverters._
-
 // returns hive paths for the table that match the partition constraints
 object HiveFilesFn extends Logging {
 

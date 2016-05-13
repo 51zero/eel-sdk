@@ -1,11 +1,8 @@
 package io.eels.component.orc
 
-import com.sksamuel.scalax.io.Using
 import io.eels._
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcFile, RecordReader}
-
-import scala.collection.JavaConverters._
 
 case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
 

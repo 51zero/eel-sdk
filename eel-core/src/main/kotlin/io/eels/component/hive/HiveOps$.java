@@ -1,15 +1,3 @@
-package io.eels.component.hive
-
-import java.util
-
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Column, Constants, Schema}
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.api.{FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
-import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
-
-import scala.collection.JavaConverters._
-
 object HiveOps extends StrictLogging {
 
   def partitions(dbName: String, tableName: String)

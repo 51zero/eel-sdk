@@ -1,7 +1,6 @@
 package io.eels.component.orc
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{InternalRow, Schema, Sink, SinkWriter}
+import io.eels.{Schema, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.ql.io.orc.OrcFile

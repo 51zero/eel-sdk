@@ -2,9 +2,6 @@ package io.eels.component.sequence
 
 import java.io.StringReader
 
-import com.github.tototoshi.csv.CSVReader
-import com.sksamuel.scalax.Logging
-import com.sksamuel.scalax.io.Using
 import io.eels._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path

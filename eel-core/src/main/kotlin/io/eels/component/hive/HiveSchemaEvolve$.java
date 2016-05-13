@@ -1,12 +1,3 @@
-package io.eels.component.hive
-
-import com.sksamuel.scalax.Logging
-import io.eels.Schema
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
-
-import scala.collection.JavaConverters._
-
 object HiveSchemaEvolve extends Logging {
 
   def apply(dbName: String, tableName: String, schema: Schema)

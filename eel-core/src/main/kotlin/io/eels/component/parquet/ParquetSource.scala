@@ -1,16 +1,12 @@
 package io.eels.component.parquet
 
-import com.sksamuel.scalax.Logging
-import com.sksamuel.scalax.io.Using
 import io.eels._
-import io.eels.component.avro.{AvroSchemaFn, AvroSchemaMerge}
+import io.eels.component.avro.AvroSchemaMerge
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetReader
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader, ParquetReader}
-
-import scala.collection.JavaConverters._
 
 case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends Source with Logging with Using {
 

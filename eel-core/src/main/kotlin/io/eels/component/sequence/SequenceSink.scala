@@ -2,8 +2,7 @@ package io.eels.component.sequence
 
 import java.io.StringWriter
 
-import com.github.tototoshi.csv.CSVWriter
-import io.eels.{Schema, InternalRow, Sink, SinkWriter}
+import io.eels.{Schema, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}

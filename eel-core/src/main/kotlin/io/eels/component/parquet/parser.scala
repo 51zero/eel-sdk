@@ -2,8 +2,6 @@ package io.eels.component.parquet
 
 import java.nio.file.Paths
 
-import com.sksamuel.scalax.net.UrlParamParser
-import io.eels.component.Builder
 import io.eels.{SinkParser, SourceParser}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}

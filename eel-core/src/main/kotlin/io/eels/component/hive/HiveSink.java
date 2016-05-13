@@ -1,11 +1,3 @@
-package io.eels.component.hive
-
-import com.typesafe.config.ConfigFactory
-import com.typesafe.scalalogging.slf4j.StrictLogging
-import io.eels.{Schema, Sink, SinkWriter}
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
-
 case class HiveSink(private val dbName: String,
                     private val tableName: String,
                     private val ioThreads: Int = 4,

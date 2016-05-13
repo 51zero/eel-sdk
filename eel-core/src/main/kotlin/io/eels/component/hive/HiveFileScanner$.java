@@ -1,10 +1,3 @@
-package io.eels.component.hive
-
-import com.sksamuel.scalax.Logging
-import com.typesafe.config.ConfigFactory
-import io.eels.HdfsIterator
-import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
-
 object HiveFileScanner extends Logging {
 
   private val config = ConfigFactory.load()

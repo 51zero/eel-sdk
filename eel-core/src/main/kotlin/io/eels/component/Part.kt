@@ -1,17 +1,13 @@
 package io.eels.component
 
 import io.eels.Row
-import java.io.Closeable
+import rx.Observable
 
 /**
- *
- * A Part represents part of the source data. Eg a single path in a multifile source, or a single table
- * in a multitable source. A part provides a reader for that source when requested.
+ * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
+ * in a multi-table source. Splitting sources into parts allows them to be read concurrently. A single
+ * part is always read by a single thread.
  */
 interface Part {
-  fun reader(): SourceReader
-}
-
-interface SourceReader : Closeable {
-  fun iterator(): Iterator<Row>
+  fun stream(): Observable<Row>
 }

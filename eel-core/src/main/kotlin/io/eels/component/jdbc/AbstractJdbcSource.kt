@@ -20,12 +20,12 @@ abstract class AbstractJdbcSource(val url: String,
 
   protected abstract fun fetchSchema(): Schema
 
-  val schema: Schema = providedSchema getOrElse fetchSchema
+  val schema: Schema = providedSchema ?: fetchSchema()
 
   protected fun schemaFor(rs: ResultSet): Schema {
     val dialect = providedDialect ?: io.eels.component.jdbc.JdbcDialect(url)
     val schema = JdbcSchemaFn(rs, dialect)
-    logger.debug("Fetched schema:\n" + schema.print)
+    logger.debug("Fetched schema:\n" + schema.print())
     return schema
   }
 }

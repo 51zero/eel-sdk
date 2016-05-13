@@ -1,12 +1,8 @@
 package io.eels.component.json
 
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.sksamuel.scalax.io.Using
 import io.eels._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
-
-import scala.collection.JavaConverters._
 
 case class JsonSource(path: Path) extends Source with Using {
 
