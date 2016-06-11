@@ -21,21 +21,22 @@ class SequenceSinkWriter(schema: Schema, path: Path) : SinkWriter {
 
   val writer = SequenceFile.createWriter(Configuration(),
     SequenceFile.Writer.file(path),
-      SequenceFile.Writer.keyClass(classOf<IntWritable>),
-      SequenceFile.Writer.valueClass(classOf<BytesWritable>)
+      SequenceFile.Writer.keyClass(IntWritable::class.java),
+      SequenceFile.Writer.valueClass(BytesWritable::class.java)
   )
 
   val key = IntWritable(0)
 
-  val headers = valuesToCsv(schema.columnNames())
-  writer.append(key, BytesWritable(headers.getBytes("UTF8")))
+  val headers = valuesToCsv(schema.columnNames()).apply {
+    writer.append(key, BytesWritable(this.toByteArray()))
+  }
 
   override fun close(): Unit = writer.close()
 
   override fun write(row: Row): Unit {
     synchronized(this) {
       val csv = valuesToCsv(row.values)
-      writer.append(key, BytesWritable(csv.getBytes("UTF8")))
+      writer.append(key, BytesWritable(csv.toByteArray()))
       key.set(key.get() + 1)
     }
   }

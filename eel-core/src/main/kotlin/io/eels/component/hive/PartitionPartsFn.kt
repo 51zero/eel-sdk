@@ -1,21 +1,25 @@
-import io.eels.PartitionPart
+import io.eels.Row
+import io.eels.schema.PartitionPart
+import io.eels.util.Logging
 
-// returns all the partition parts for a given row, if a row doesn't contain a value
-// for a part then an error is thrown
-object PartitionPartsFn extends Logging {
-  def apply(row: InternalRow, partNames: Seq[String], schema: Schema): List[PartitionPart] = {
-    require(partNames.forall(schema.columnNames.contains), "Schema must contain all partitions " + partNames)
-    partNames.map { name =>
-      val index = schema.indexOf(name)
+object PartitionPartsFn : Logging {
+
+  /**
+   * For a given row, will return the list of PartitionPart's that match the given list of part names.
+   */
+  fun rowPartitionParts(row: Row, partNames: List<String>): List<PartitionPart> {
+    require(partNames.all { row.schema.columnNames().contains(it) }, { "Schema must contain all partitions $partNames" })
+
+    return partNames.map {
+      val index = row.schema.indexOf(it)
       try {
-        val value = row(index)
-        require(!value.toString.contains(" "), s"Values for partitions cannot contain spaces $name=$value (index $index)")
-        PartitionPart(name, value.toString)
-      } catch {
-        case NonFatal(e) =>
-          logger.error(s"Could not get value for partition $name. Row=$row")
-          throw e
+        val value = row.values[index]
+        require(!value.toString().contains(" "), { "Values for partitions cannot contain spaces $it=$value (index $index)" })
+        PartitionPart(it, value.toString())
+      } catch(e: Exception) {
+        logger.error("Could not get value for partition $it. Row=$row")
+        throw e
       }
-    }.toList
+    }
   }
 }

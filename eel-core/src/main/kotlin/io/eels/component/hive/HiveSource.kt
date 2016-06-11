@@ -1,5 +1,7 @@
 package io.eels.component.hive
 
+import io.eels.schema.PartitionConstraint
+import io.eels.schema.PartitionEquals
 import io.eels.Source
 import io.eels.component.Part
 import io.eels.component.Predicate

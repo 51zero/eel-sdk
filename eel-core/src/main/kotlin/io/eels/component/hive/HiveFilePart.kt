@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.Partition
+import io.eels.schema.Partition
 import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.component.Part

@@ -1,7 +1,7 @@
 import com.typesafe.config.ConfigFactory
 import io.eels.util.Logging
 import io.eels.component.hive.HiveFileScanner
-import io.eels.component.hive.PartitionConstraint
+import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
 import org.apache.hadoop.fs.Path
@@ -11,9 +11,9 @@ import org.apache.hadoop.hive.metastore.api.Table
 // returns hive paths for the table that match the partition constraints
 object HiveFilesFn : Logging {
 
-  private val config = ConfigFactory.load()
-  private val errorOnMissingPartitions = config.getBoolean("eel.hive.source.errorOnMissingPartitions")
-  private val warnOnMissingPartitions = config.getBoolean("eel.hive.source.warnOnMissingPartitions")
+  val config = ConfigFactory.load()
+  val errorOnMissingPartitions = config.getBoolean("eel.hive.source.errorOnMissingPartitions")
+  val warnOnMissingPartitions = config.getBoolean("eel.hive.source.warnOnMissingPartitions")
 
   fun apply(table: Table, partitionConstraints: List<PartitionConstraint>, fs: FileSystem, client: IMetaStoreClient): List<Pair<LocatedFileStatus, Partition>> {
 

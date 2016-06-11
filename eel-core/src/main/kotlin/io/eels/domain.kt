@@ -1,6 +1,7 @@
 package io.eels
 
 import io.eels.schema.Column
+import io.eels.schema.PartitionPartValues
 import io.eels.schema.Schema
 
 data class Row(val schema: Schema, val values: List<Any?>) {

@@ -2,8 +2,8 @@ package io.eels.component.hive
 
 import io.eels.Constants
 import io.eels.util.Logging
-import io.eels.Partition
-import io.eels.PartitionPart
+import io.eels.schema.Partition
+import io.eels.schema.PartitionPart
 import io.eels.schema.Column
 import io.eels.schema.Schema
 import io.eels.util.Option

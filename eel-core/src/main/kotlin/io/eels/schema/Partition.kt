@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.schema
 
 // Represents a hive partition, which, against what you might think, in hive speak
 // is the full set of partition key/values pairs for a particular record
