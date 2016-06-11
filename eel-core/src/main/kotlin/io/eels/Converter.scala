@@ -1,7 +1,5 @@
 package io.eels
 
-import com.sksamuel.scalax.Logging
-
 trait Converter[T] {
   def apply(value: Any): T
 }

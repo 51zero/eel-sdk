@@ -1,7 +1,9 @@
 package io.eels
 
-// represents a hive partition, which, against what you might think, in hive speak is the full list of
-// partition key values pairs for a record, eg key1=value1/key2=value2/key3=value3 is the partition, key=value is not a partition,
+// represents a hive partition, which, against what you might think, in hive speak
+// is the full list of partition key/values pairs for a record, eg key1=value1/key2=value2/key3=value3
+// is a partition, key=value is not a partition. The latter doesn't seem to have a name in
+// hive so I have called it a PartitionPart
 data class Partition(val parts: List<PartitionPart>) {
 
   // returns the partition in normalized directory representation, eg key1=value1/key2=value2/...
@@ -19,7 +21,7 @@ data class Partition(val parts: List<PartitionPart>) {
 }
 
 // represents part of a partition, eg a single key=value pair, which is what people might think a
-// partition is normally. For example, name=sam is not a partition in hive speak (it doesn't seem to have a name in hive)
+// partition is normally. For example, name=sam is not a partition in hive speak
 // so I've decided to call it PartitionPart
 data class PartitionPart(val key: String, val value: String) {
   // returns the key value part in the standard hive key=value format

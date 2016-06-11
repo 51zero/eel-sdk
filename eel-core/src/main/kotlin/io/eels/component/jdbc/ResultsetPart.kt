@@ -17,7 +17,7 @@ class ResultsetPart(val rs: ResultSet,
                     val conn: Connection,
                     val schema: Schema) : Part, Logging {
 
-  override fun stream(): Observable<Row> {
+  override fun data(): Observable<Row> {
     return Observable.create<Row> {
       try {
         it.onStart()

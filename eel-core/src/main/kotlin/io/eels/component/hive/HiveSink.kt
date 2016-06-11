@@ -1,9 +1,20 @@
-case class HiveSink(private val dbName: String,
+package io.eels.component.hive
+
+import com.typesafe.config.ConfigFactory
+import io.eels.Logging
+import io.eels.Schema
+import io.eels.Sink
+import io.eels.SinkWriter
+import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.hive.metastore.IMetaStoreClient
+
+data class HiveSink(private val dbName: String,
                     private val tableName: String,
                     private val ioThreads: Int = 4,
-                    private val dynamicPartitioning: Option[Boolean] = None,
-                    private val schemaEvolution: Option[Boolean] = None)
-                   (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with StrictLogging {
+                    private val dynamicPartitioning: Boolean?,
+                    private val schemaEvolution: Boolean?,
+                    val fs: FileSystem,
+                    val client: IMetaStoreClient) : Sink, Logging {
 
   val config = ConfigFactory.load()
   val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
@@ -11,19 +22,19 @@ case class HiveSink(private val dbName: String,
   val SchemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
   val DynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
 
-  def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
-  def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
-  def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
+  fun withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
+  fun withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = partitioning)
+  fun withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = schemaEvolution)
 
-  private def dialect(implicit client: IMetaStoreClient): HiveDialect = {
+  private fun dialect(client: IMetaStoreClient): HiveDialect {
     val format = HiveOps.tableFormat(dbName, tableName)
-    logger.debug(s"Table format is $format")
-    HiveDialect(format)
+    logger.debug("Table format is $format")
+    return io.eels.component.hive.HiveDialect(format)
   }
 
-  private def containsUpperCase(schema: Schema): Boolean = schema.columnNames.forall(col => col == col.toLowerCase)
+  private fun containsUpperCase(schema: Schema): Boolean = schema.columnNames().all { it == it.toLowerCase() }
 
-  override def writer(schema: Schema): SinkWriter = {
+  override fun writer(schema: Schema): SinkWriter {
     if (containsUpperCase(schema)) {
       logger.warn("Writing to hive with a schema that contains upper case characters, but hive will lower case all field names. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive")
     }
@@ -32,7 +43,7 @@ case class HiveSink(private val dbName: String,
       HiveSchemaEvolve(dbName, tableName, schema)
     }
 
-    new HiveSinkWriter(
+    return HiveSinkWriter(
       schema,
       HiveOps.schema(dbName, tableName),
       dbName,

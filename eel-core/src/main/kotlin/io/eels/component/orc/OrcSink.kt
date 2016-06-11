@@ -1,0 +1,37 @@
+package io.eels.component.orc
+
+import io.eels.Logging
+import io.eels.Row
+import io.eels.Schema
+import io.eels.Sink
+import io.eels.SinkWriter
+import org.apache.hadoop.hive.ql.io.orc.OrcFile
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory
+
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.Path
+
+class OrcSink(path: Path) : Sink, Logging {
+  override fun writer(schema: Schema): SinkWriter = OrcSinkWriter(schema, path)
+}
+
+class OrcSinkWriter(schema: Schema, path: Path) : SinkWriter, Logging {
+  init {
+    logger.debug("Creating orc writer $schema")
+  }
+
+  val inspector = ObjectInspectorFactory.getStandardListObjectInspector(
+    PrimitiveObjectInspectorFactory.javaStringObjectInspector
+  )
+  val writer = OrcFile.createWriter(path, OrcFile.writerOptions(Configuration()).inspector(inspector))
+  writer.addRow(schema.columnNames.toArray)
+
+  override fun write(row: Row): Unit {
+    synchronized(this) {
+      writer.addRow(row.toArray)
+    }
+  }
+
+  override fun close(): Unit = writer.close()
+}

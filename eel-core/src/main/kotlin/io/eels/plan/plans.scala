@@ -1,6 +1,5 @@
 package io.eels.plan
 
-import com.sksamuel.scalax.io.Using
 import io.eels._
 
 object HeadPlan extends Using {

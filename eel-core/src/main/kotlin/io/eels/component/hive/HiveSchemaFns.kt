@@ -1,3 +1,5 @@
+import io.eels.component.avro.toSchemaType
+
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends StrictLogging {

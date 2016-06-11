@@ -4,12 +4,10 @@ import com.typesafe.config.ConfigFactory
 import com.univocity.parsers.csv.CsvParser
 import com.univocity.parsers.csv.CsvParserSettings
 import io.eels.Option
-import io.eels.Row
 import io.eels.Schema
 import io.eels.Source
 import io.eels.component.Part
 import io.eels.component.SchemaInferrer
-import io.eels.component.SourceReader
 import io.eels.component.StringInferrer
 import io.eels.component.Using
 import io.eels.getOrElse
@@ -89,34 +87,7 @@ data class CsvSource(val path: Path,
       Header.None -> false
       else -> verifyRows.getOrElse(defaultVerifyRows)
     }
-    val part = CsvPart(createParser(), path, header, verify, schema())
+    val part = CsvPart({ createParser() }, path, header, verify, schema())
     return listOf(part)
-  }
-}
-
-class CsvPart(val parser: CsvParser, val path: Path, val header: Header, val verifyRows: Boolean, val schema: Schema) : Part {
-
-  override fun reader(): SourceReader = object : io.eels.component.SourceReader {
-
-    init {
-      parser.beginParsing(path.toFile())
-    }
-
-    override fun close(): Unit = parser.stopParsing()
-    override fun iterator(): Iterator<Row> {
-      val rowsToSkip = when (header) {
-        Header.FirstRow -> 1
-        else -> 0
-      }
-      return Stream.generate { parser.parseNext() }.skip(rowsToSkip.toLong()).iterator().asSequence().takeWhile { it != null }.map {
-        if (verifyRows) {
-          assert(
-              it.size == schema.size(),
-              { "Row has ${it.size} fields but schema has ${schema.size()}\nRow=${it.joinToString(", ")}\nSchema=${schema.columnNames().joinToString(", ")}" }
-          )
-        }
-        Row(schema, it.toList())
-      }.iterator()
-    }
   }
 }

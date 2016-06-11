@@ -5,10 +5,10 @@ import io.eels.Row
 import io.eels.Schema
 import io.eels.Source
 import io.eels.component.Part
-import io.eels.component.SourceReader
 import java.nio.file.Path
 
 import io.eels.component.Using
+import rx.Observable
 
 class AvroSource(val path: Path) : Source, Using {
 
@@ -21,27 +21,23 @@ class AvroSource(val path: Path) : Source, Using {
     })
   }
 
-  override fun parts(): List<Part> {
-    val part = object : Part {
-      override fun reader(): SourceReader = AvroSourceReader(path, schema())
-    }
-    return listOf(part)
-  }
+  override fun parts(): List<Part> = listOf(AvroSourcePart(path, schema()))
 }
 
-class AvroSourceReader(path: Path, schema: Schema) : SourceReader {
+class AvroSourcePart(val path: Path, val schema: Schema) : Part {
 
-  private val reader = AvroReaderSupport.createReader(path)
+  override fun data(): Observable<Row> = Observable.create<Row> {
 
-  override fun close(): Unit = reader.close()
-  override fun iterator(): Iterator<Row> = object : Iterator<Row> {
-    override fun hasNext(): Boolean {
-      val hasNext = reader.hasNext()
-      if (!hasNext)
-        reader.close()
-      return hasNext
+    val reader = AvroReaderSupport.createReader(path)
+    it.onStart()
+
+    while (reader.hasNext() && !it.isUnsubscribed) {
+      val record = reader.next()
+      val row = avroRecordToRow(record)
+      it.onNext(row)
     }
 
-    override fun next(): Row = avroRecordToRow(reader.next())
+    if (!it.isUnsubscribed)
+      it.onCompleted()
   }
 }

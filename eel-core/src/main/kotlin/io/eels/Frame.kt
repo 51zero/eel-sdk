@@ -1,9 +1,7 @@
 package io.eels
 
-import one.util.streamex.StreamEx
 import org.apache.hadoop.hdfs.server.namenode.Content
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.stream.Stream
+import rx.Observable
 
 interface Frame {
 
@@ -14,11 +12,21 @@ interface Frame {
 
   fun schema(): Schema
 
-  fun stream(): Stream<Row>
+  fun observable(): Observable<Row>
 
+  /**
+   * Combines two frames together such that the columns from this frame are joined with the columns
+   * of the given frame. Eg, if this frame has A,B and the given frame has C,D then the result will
+   * be A,B,C,D
+   */
   fun join(other: Frame): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().join(other.schema())
-    override fun stream(): Stream<Row> = StreamEx.of(outer().stream()).append(other.stream())
+
+    override fun observable(): Observable<Row> {
+      val schema = schema()
+      val func: (Row, Row) -> Row = { a, b -> Row(schema, a.values.plus(b.values)) }
+      return outer().observable().zipWith(other.observable(), func)
+    }
   }
 
   /**
@@ -27,7 +35,7 @@ interface Frame {
    */
   fun replace(from: String, target: Any?): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> = outer().stream().map {
+    override fun observable(): Observable<Row> = outer().observable().map {
       val values = it.values.map { if (it == from) target else it }
       Row(it.schema, values)
     }
@@ -39,9 +47,9 @@ interface Frame {
    */
   fun replace(columnName: String, from: String, target: Any?): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val index = schema().indexOf(columnName)
-      return outer().stream().map {
+      return outer().observable().map {
         val values = it.values.toMutableList()
         if (values[index] == from)
           values[index] = target
@@ -56,9 +64,9 @@ interface Frame {
    */
   fun replace(columnName: String, fn: (Any?) -> Any?): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val index = schema().indexOf(columnName)
-      return outer().stream().map {
+      return outer().observable().map {
         val values = it.values.toMutableList()
         values[index] = fn(values[index])
         Row(it.schema, values.toList())
@@ -68,32 +76,32 @@ interface Frame {
 
   fun takeWhile(pred: (Row) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> = StreamEx.of(outer().stream()).takeWhile(pred)
+    override fun observable(): Observable<Row> = outer().observable().takeWhile(pred)
   }
 
   fun takeWhile(columnName: String, pred: (Any?) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val index = outer().schema().indexOf(columnName)
-      return StreamEx.of(outer().stream()).takeWhile { pred(it.values[index]) }
+      return outer().observable().takeWhile { pred(it.values[index]) }
     }
   }
 
   fun updateColumnType(columnName: String, columnType: ColumnType): Frame = object : Frame {
-    override fun stream(): Stream<Row> = outer().stream()
     override fun schema(): Schema = outer().schema().updateColumnType(columnName, columnType)
+    override fun observable(): Observable<Row> = outer().observable()
   }
 
   fun dropWhile(pred: (Row) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> = StreamEx.of(outer().stream()).dropWhile(pred)
+    override fun observable(): Observable<Row> = outer().observable().skipWhile(pred)
   }
 
   fun dropWhile(columnName: String, pred: (Any?) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val index = outer().schema().indexOf(columnName)
-      return StreamEx.of(outer().stream()).dropWhile { pred(it.values[index]) }
+      return outer().observable().skipWhile { pred(it.values[index]) }
     }
   }
 
@@ -105,7 +113,7 @@ interface Frame {
    */
   fun sample(k: Int): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> = StreamEx.of(outer().stream())
+    override fun observable(): Observable<Row> = outer().observable()
   }
 
   /**
@@ -122,11 +130,11 @@ interface Frame {
    */
   fun addColumn(column: Column, defaultValue: Any): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().addColumn(column)
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val exists = outer().schema().columnNames().contains(column.name)
       if (exists) throw IllegalArgumentException("Cannot add column $column as it already exists")
       val newSchema = schema()
-      return outer().stream().map { Row(newSchema, it.values.plus(defaultValue)) }
+      return outer().observable().map { Row(newSchema, it.values.plus(defaultValue)) }
     }
   }
 
@@ -134,18 +142,18 @@ interface Frame {
 
   fun addColumnIfNotExists(column: Column, defaultValue: Any): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().addColumnIfNotExists(column)
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val exists = outer().schema().columnNames().contains(column.name)
-      return if (exists) outer().stream() else addColumn(column, defaultValue).stream()
+      return if (exists) outer().observable() else addColumn(column, defaultValue).observable()
     }
   }
 
   fun removeColumn(columnName: String, caseSensitive: Boolean = true): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().removeColumn(columnName, caseSensitive)
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val index = outer().schema().indexOf(columnName, caseSensitive)
       val newSchema = schema()
-      return outer().stream().map {
+      return outer().observable().map {
         val newValues = it.values.slice(0..index).plus(it.values.slice(index + 1..it.values.size))
         Row(newSchema, newValues)
       }
@@ -153,7 +161,7 @@ interface Frame {
   }
 
   fun updateColumn(column: Column): Frame = object : Frame {
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       throw UnsupportedOperationException()
     }
 
@@ -163,27 +171,27 @@ interface Frame {
     //      val buffer = outer().buffer()
     //      val index = outer().schema().indexOf(column)
     //      override fun close(): Unit = buffer.close()
-    //      override fun stream(): Stream<Row> = buffer.stream()
+    //      override fun stream(): Observable<Row> = buffer.stream()
     //    }
   }
 
   fun renameColumn(nameFrom: String, nameTo: String): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().renameColumn(nameFrom, nameTo)
-    override fun stream(): Stream<Row> = outer().stream()
+    override fun observable(): Observable<Row> = outer().observable()
   }
 
   fun stripFromColumnName(chars: List<Char>): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().stripFromColumnName(chars)
-    override fun stream(): Stream<Row> = outer().stream()
+    override fun observable(): Observable<Row> = outer().observable()
   }
 
   fun explode(fn: (Row) -> List<Row>): Frame = object : Frame {
-    override fun stream(): Stream<Row> = outer().stream().flatMap { StreamEx.of(fn(it)) }
+    override fun observable(): Observable<Row> = outer().observable().flatMap { Observable.from(fn(it)) }
     override fun schema(): Schema = outer().schema()
   }
 
   fun fill(defaultValue: String): Frame = object : Frame {
-    override fun stream(): Stream<Row> = stream().map {
+    override fun observable(): Observable<Row> = observable().map {
       val newValues = it.values.map {
         when (it) {
           null -> defaultValue
@@ -196,11 +204,15 @@ interface Frame {
     override fun schema(): Schema = outer().schema()
   }
 
+  /**
+   * Joins two frames together, such that the elements of the given frame are appended to the
+   * end of this frame. This operation is the same as a concat operation.
+   */
   fun union(other: Frame): Frame = object : Frame {
     // todo check schemas are compatible
     override fun schema(): Schema = outer().schema()
 
-    override fun stream(): Stream<Row> = StreamEx.of(outer().stream()).append(other.stream())
+    override fun observable(): Observable<Row> = outer().observable().concatWith(other.observable())
   }
 
   fun projectionExpression(expr: String): Frame = projection(expr.split(',').map { it.trim() })
@@ -216,12 +228,12 @@ interface Frame {
       return Schema(newColumns)
     }
 
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
 
       val oldSchema = outer().schema()
       val newSchema = schema()
 
-      return outer().stream().map { row ->
+      return outer().observable().map { row ->
         val values = newSchema.columnNames().map {
           val k = oldSchema.indexOf(it)
           row.values[k]
@@ -239,7 +251,7 @@ interface Frame {
    */
   fun <U> foreach(fn: (Row) -> U): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> = outer().stream().map {
+    override fun observable(): Observable<Row> = outer().observable().map {
       fn(it)
       it
     }
@@ -247,16 +259,11 @@ interface Frame {
 
   fun drop(k: Int): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> {
-      val count = AtomicInteger(0)
-      return StreamEx.of(outer().stream()).dropWhile {
-        count.getAndIncrement() < k
-      }
-    }
+    override fun observable(): Observable<Row> = outer().observable().skip(k)
   }
 
   fun map(f: (Row) -> Row): Frame = object : Frame {
-    override fun stream(): Stream<Row> = outer().stream().map(f)
+    override fun observable(): Observable<Row> = outer().observable().map(f)
     override fun schema(): Schema = outer().schema()
   }
 
@@ -264,7 +271,7 @@ interface Frame {
 
   fun filter(p: (Row) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> = outer().stream().filter(p)
+    override fun observable(): Observable<Row> = outer().observable().filter(p)
   }
 
   /**
@@ -272,14 +279,14 @@ interface Frame {
    */
   fun filter(columnName: String, p: (Any?) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun stream(): Stream<Row> {
+    override fun observable(): Observable<Row> {
       val index = schema().indexOf(columnName)
-      return outer().stream().filter { p(it.values[index]) }
+      return outer().observable().filter { p(it.values[index]) }
     }
   }
 
   fun dropNullRows(): Frame = object : Frame {
-    override fun stream(): Stream<Row> = outer().stream().filter { !it.values.contains(null) }
+    override fun observable(): Observable<Row> = outer().observable().filter { !it.values.contains(null) }
     override fun schema(): Schema = outer().schema()
   }
 
@@ -301,7 +308,7 @@ interface Frame {
     operator fun invoke(_schema: Schema, vararg rows: Row): Frame = invoke(_schema, rows.asList())
     operator fun invoke(_schema: Schema, rows: List<Row>): Frame = object : Frame {
       override fun schema(): Schema = _schema
-      override fun stream(): Stream<Row> = StreamEx.of(rows)
+      override fun observable(): Observable<Row> = Observable.from(rows)
     }
   }
 }

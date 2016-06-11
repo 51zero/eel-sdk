@@ -3,9 +3,9 @@ package io.eels.component.hive
 import io.eels.Row
 import io.eels.Schema
 import io.eels.component.Predicate
-import io.eels.component.SourceReader
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
+import rx.Observable
 
 interface HiveDialect {
 
@@ -16,11 +16,11 @@ interface HiveDialect {
    * as the hive metastore schema, because partition values are not written to the data files. We must include
    * this here because some hive formats don't store schema information with the data, eg delimited files.
    *
-   * The projection is the schema required by the user which may be the same,
-   * or may be a subset if a projection is being used.
+   * The projection is the schema required by the user which may be the same as the written data, or
+   * it may be a subset if a projection pushdown is being used.
    *
    */
-  fun reader(path: Path, dataSchema: Schema, projection: Schema, predicate: Predicate?, fs: FileSystem): SourceReader
+  fun reader(path: Path, dataSchema: Schema, projection: Schema, predicate: Predicate?, fs: FileSystem): Observable<Row>
 
   fun writer(schema: Schema, path: Path, fs: FileSystem): HiveWriter
 }

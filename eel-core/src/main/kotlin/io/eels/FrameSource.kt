@@ -2,13 +2,12 @@ package io.eels
 
 import com.typesafe.config.ConfigFactory
 import io.eels.component.Using
-import one.util.streamex.StreamEx
+import rx.Observable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import java.util.stream.Stream
 
 class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Using {
 
@@ -21,9 +20,10 @@ class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Usin
 
   override fun schema(): Schema = source.schema()
 
-  // this stream method may be invoked multiple times, each time generating a new "load action" and a new
-  // resultant stream from it. I need to see whether this is the behaviour I want.
-  override fun stream(): Stream<Row> {
+  // this method may be invoked multiple times, each time generating a new "load action" and a new
+  // resultant observable from it.
+  // todo is this is the behaviour I want?
+  override fun observable(): Observable<Row> {
     val executor = Executors.newFixedThreadPool(ioThreads)
     logger.debug("Source will read using a FixedThreadPool [ioThreads=$ioThreads]")
 
@@ -63,6 +63,13 @@ class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Usin
       }
     }
     executor.shutdown()
-    return StreamEx.generate { queue.take() }.takeWhile { it != Row.PoisonPill }
+
+    return Observable.create { subscriber ->
+      subscriber.onStart()
+      queue.takeWhile { it != Row.PoisonPill }.forEach {
+        subscriber.onNext(it)
+      }
+      subscriber.onCompleted()
+    }
   }
 }

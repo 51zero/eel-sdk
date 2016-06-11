@@ -3,11 +3,7 @@ package io.eels.plan
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.{Frame, Sink}
-
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
 
 object SinkPlan extends Plan with StrictLogging {
 

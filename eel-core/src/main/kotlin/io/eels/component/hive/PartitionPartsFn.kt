@@ -1,3 +1,5 @@
+import io.eels.PartitionPart
+
 // returns all the partition parts for a given row, if a row doesn't contain a value
 // for a part then an error is thrown
 object PartitionPartsFn extends Logging {

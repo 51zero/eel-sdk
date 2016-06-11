@@ -3,13 +3,7 @@ package io.eels.plan
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.sksamuel.scalax.io.Using
-import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels._
-
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
 
 object ToSeqPlan extends Plan with Using with StrictLogging {
 

@@ -1,30 +1,39 @@
-object HiveOps extends StrictLogging {
+package io.eels.component.hive
 
-  def partitions(dbName: String, tableName: String)
-                (implicit client: IMetaStoreClient): List[Partition] = {
-    client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala.map(Partition.apply).toList
-  }
+import io.eels.Logging
+import io.eels.Partition
+import io.eels.PartitionPart
+import io.eels.component.hive.HiveFormat
+import io.eels.component.hive.HiveSpecFn
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.hive.metastore.IMetaStoreClient
+import org.apache.hadoop.hive.metastore.TableType
+import org.apache.hadoop.hive.metastore.api.FieldSchema
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor
+
+class HiveOps(val client: IMetaStoreClient) : Logging {
+
+  fun partitions(dbName: String, tableName: String): List<Partition> =
+      client.listPartitionNames(dbName, tableName, Short.MAX_VALUE).map(Partition.apply).toList
 
   /**
     * Returns a map of all partition keys to their values.
     * This operation is optimized, in that it does not need to scan files, but can retrieve the information
     * directly from the hive metastore.
     */
-  def partitionMap(dbName: String, tableName: String)
-                  (implicit client: IMetaStoreClient): Map[String, Seq[String]] = {
-    client.listPartitionNames(dbName, tableName, Short.MaxValue).asScala
-      .flatMap(p => Partition(p).parts)
-      .groupBy(_.key)
-      .map { case (key, values) => key -> values.map(_.value) }
+  fun partitionMap(dbName: String, tableName: String): Map<String, List<String>> {
+    client.listPartitionNames(dbName, tableName, Short.MAX_VALUE)
+        .flatMap { Partition(it).parts }
+        .groupBy { it.key }
+        .map { key, values -> key -> values.map{ it.value } }
   }
 
   /**
-    * Returns all partition values for the given partition keys.
+   * Returns all partition values for the given partition keys.
     * This operation is optimized, in that it does not need to scan files, but can retrieve the information
     * directly from the hive metastore.
     */
-  def partitionValues(dbName: String, tableName: String, keys: Seq[String])
-                     (implicit client: IMetaStoreClient): List[Seq[String]] = {
+  fun partitionValues(dbName: String, tableName: String, keys: List<String>): List<List<String>> {
     partitionMap(dbName, tableName).collect { case (key, values) if keys contains key => values }.toList
   }
 
@@ -33,8 +42,7 @@ object HiveOps extends StrictLogging {
     * This operation is optimized, in that it does not need to scan files, but can retrieve the information
     * directly from the hive metastore.
     */
-  def partitionValues(dbName: String, tableName: String, key: String)
-                     (implicit client: IMetaStoreClient): Seq[String] = {
+  fun partitionValues(dbName: String, tableName: String, key: String, ): List<String> {
     partitionMap(dbName, tableName).getOrElse(key, Nil)
   }
 
@@ -43,8 +51,7 @@ object HiveOps extends StrictLogging {
     * partition key values as a subdirectory of the table location. The values for the serialzation formats are
     * taken from the values for the table.
     */
-  def createPartition(dbName: String, tableName: String, partition: Partition)
-                     (implicit client: IMetaStoreClient): Unit = {
+  fun createPartition(dbName: String, tableName: String, partition: Partition, ): Unit {
     val table = client.getTable(dbName, tableName)
     val location = new Path(table.getSd.getLocation, partition.name)
     createPartition(dbName, tableName, partition, location)
@@ -55,17 +62,16 @@ object HiveOps extends StrictLogging {
     * specified. If you want to use the default location then use the other variant that doesn't require the
     * location path. The values for the serialzation formats are taken from the values for the table.
     */
-  def createPartition(dbName: String, tableName: String, partition: Partition, location: Path)
-                     (implicit client: IMetaStoreClient): Unit = {
+  fun createPartition(dbName: String, tableName: String, partition: Partition, location: Path, ): Unit {
 
     // we fetch the table so we can copy the serde/format values from the table. It makes no sense
     // to store a partition with different serialization formats to other partitions.
     val table = client.getTable(dbName, tableName)
-    val sd = new StorageDescriptor(table.getSd)
-    sd.setLocation(location.toString)
+    val sd = StorageDescriptor(table.sd)
+    sd.setLocation(location.toString())
 
-    val newPartition = new HivePartition(
-      partition.values.asJava, // the hive partition values are the actual values of the partition parts
+    val newPartition = HivePartition(
+        partition.values, // the hive partition values are the actual values of the partition parts
       dbName,
       tableName,
       createTimeAsInt,
@@ -77,51 +83,42 @@ object HiveOps extends StrictLogging {
     client.add_partition(newPartition)
   }
 
-  def hivePartitions(dbName: String, tableName: String)(implicit client: IMetaStoreClient): List[HivePartition] = {
-    client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
-  }
+  fun hivePartitions(dbName: String, tableName: String, ): List<org.apache.hadoop.hive.metastore.api.Partition> =
+      client.listPartitions(dbName, tableName, Short.MAX_VALUE)
 
-  def createTimeAsInt: Int = (System.currentTimeMillis / 1000).toInt
+  fun createTimeAsInt(): Int = (System.currentTimeMillis() / 1000).toInt()
 
-  def partitionKeys(dbName: String, tableName: String)(implicit client: IMetaStoreClient): List[FieldSchema] = {
-    client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
-  }
+  fun partitionKeys(dbName: String, tableName: String, ): List<FieldSchema> =
+      client.getTable(dbName, tableName).partitionKeys
 
-  def partitionKeyNames(dbName: String, tableName: String)(implicit client: IMetaStoreClient): List[String] = {
-    partitionKeys(dbName, tableName).map(_.getName)
-  }
+  fun partitionKeyNames(dbName: String, tableName: String): List<String> = partitionKeys(dbName, tableName).map(_.getName)
 
-  def tableExists(databaseName: String, tableName: String)(implicit client: IMetaStoreClient): Boolean = {
-    client.tableExists(databaseName, tableName)
-  }
+  fun tableExists(databaseName: String, tableName: String): Boolean = client.tableExists(databaseName, tableName)
 
-  def tableFormat(dbName: String, tableName: String)(implicit client: IMetaStoreClient): String = {
-    client.getTable(dbName, tableName).getSd.getInputFormat
-  }
+  fun tableFormat(dbName: String, tableName: String): String = client.getTable(dbName, tableName).sd.inputFormat
 
-  def location(dbName: String, tableName: String)(implicit client: IMetaStoreClient): String = {
-    client.getTable(dbName, tableName).getSd.getLocation
-  }
+  fun location(dbName: String, tableName: String): String = client.getTable(dbName, tableName).sd.location
 
-  def tablePath(dbName: String, tableName: String)(implicit client: IMetaStoreClient): Path = {
-    new Path(location(dbName, tableName))
-  }
+  fun tablePath(dbName: String, tableName: String): Path = Path(location(dbName, tableName))
 
-  def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart])
-                   (implicit client: IMetaStoreClient): Path = {
+
+  fun partitionPath(dbName: String, tableName: String, parts: List<PartitionPart>): Path = {
     partitionPath(dbName, tableName, parts, tablePath(dbName, tableName))
   }
 
-  def partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): Path = {
+  fun partitionPath(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): Path
+  {
     new Path(partitionPathString(dbName, tableName, parts, tablePath))
   }
 
-  def partitionPathString(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): String = {
+  fun partitionPathString(dbName: String, tableName: String, parts: Seq[PartitionPart], tablePath: Path): String
+  {
     tablePath.toString + "/" + parts.map(_.unquoted).mkString("/")
   }
 
   // Returns the eel schema for the hive db:table
-  def schema(dbName: String, tableName: String)(implicit client: IMetaStoreClient): Schema = {
+  fun schema(dbName: String, tableName: String)( ): Schema =
+  {
     val table = client.getTable(dbName, tableName)
     // hive columns are always nullable, and hive partitions are never nullable
     val columns = table.getSd.getCols.asScala.map(HiveSchemaFns.fromHiveField(_, true)) ++
@@ -133,8 +130,9 @@ object HiveOps extends StrictLogging {
     * Adds this column to the hive schema. This is schema evolution.
     * The column must be marked as nullable and cannot have the same name as an existing column.
     */
-  def addColumn(dbName: String, tableName: String, column: Column)
-               (implicit client: IMetaStoreClient): Unit = {
+  fun addColumn(dbName: String, tableName: String, column: Column)
+  ( ): Unit =
+  {
     val table = client.getTable(dbName, tableName)
     val sd = table.getSd
     sd.addToCols(HiveSchemaFns.toHiveField(column))
@@ -142,10 +140,11 @@ object HiveOps extends StrictLogging {
   }
 
   // creates (if not existing) the partition for the given partition parts
-  def partitionExists(dbName: String,
+  fun partitionExists(dbName: String,
                       tableName: String,
                       parts: Seq[PartitionPart])
-                     (implicit client: IMetaStoreClient): Boolean = {
+  ( ): Boolean =
+  {
     val partitionName = parts.map(_.unquoted).mkString("/")
     logger.debug(s"Checking if partition exists '$partitionName'")
     try {
@@ -155,7 +154,8 @@ object HiveOps extends StrictLogging {
     }
   }
 
-  def applySpec(spec: HiveSpec, overwrite: Boolean)(implicit client: IMetaStoreClient): Unit = {
+  fun applySpec(spec: HiveSpec, overwrite: Boolean)( ): Unit =
+  {
     spec.tables.foreach { table =>
       val schemas = HiveSpecFn.toSchemas(spec)
       createTable(spec.dbName,
@@ -172,10 +172,11 @@ object HiveOps extends StrictLogging {
   }
 
   // creates (if not existing) the partition for the given partition parts
-  def createPartitionIfNotExists(dbName: String,
+  fun createPartitionIfNotExists(dbName: String,
                                  tableName: String,
                                  parts: Seq[PartitionPart])
-                                (implicit client: IMetaStoreClient): Unit = {
+  ( ): Unit =
+  {
     val partitionName = parts.map(_.unquoted).mkString("/")
     logger.debug(s"Ensuring partition exists '$partitionName'")
     val exists = try {
@@ -194,7 +195,7 @@ object HiveOps extends StrictLogging {
     }
   }
 
-  def createTable(databaseName: String,
+  fun createTable(databaseName: String,
                   tableName: String,
                   schema: Schema,
                   partitionKeys: List[String] = Nil,
@@ -203,7 +204,8 @@ object HiveOps extends StrictLogging {
                   tableType: TableType = TableType.MANAGED_TABLE,
                   location: Option[String] = None,
                   overwrite: Boolean = false)
-                 (implicit client: IMetaStoreClient): Boolean = {
+  ( ): Boolean =
+  {
     require(partitionKeys.forall(schema.contains), s"Schema must define all partition keys ${partitionKeys.mkString(",")}")
 
     if (overwrite) {
