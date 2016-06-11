@@ -38,7 +38,6 @@ class HiveFilePart(val dialect: HiveDialect,
 
     val obs = data()
     val sub = obs.subscribe(object : Subscriber<Row>() {
-
     })
     sub.unsubscribe()
   }

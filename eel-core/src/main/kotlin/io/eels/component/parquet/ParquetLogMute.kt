@@ -4,7 +4,7 @@ import java.util.logging.Logger
 
 object ParquetLogMute {
 
-  fun apply() {
+  operator fun invoke() {
 
     try {
       Class.forName("org.apache.parquet.Log")

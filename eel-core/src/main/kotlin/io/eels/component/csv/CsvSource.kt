@@ -3,16 +3,15 @@ package io.eels.component.csv
 import com.typesafe.config.ConfigFactory
 import com.univocity.parsers.csv.CsvParser
 import com.univocity.parsers.csv.CsvParserSettings
-import io.eels.Option
 import io.eels.schema.Schema
 import io.eels.Source
 import io.eels.component.Part
 import io.eels.component.SchemaInferrer
 import io.eels.component.StringInferrer
 import io.eels.component.Using
-import io.eels.getOrElse
+import io.eels.util.Option
+import io.eels.util.getOrElse
 import java.nio.file.Path
-import java.util.stream.Stream
 
 enum class Header {
   None, FirstComment, FirstRow

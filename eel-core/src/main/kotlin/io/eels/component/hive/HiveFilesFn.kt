@@ -1,7 +1,6 @@
 import com.typesafe.config.ConfigFactory
 import io.eels.util.Logging
 import io.eels.component.hive.HiveFileScanner
-import io.eels.component.hive.Partition
 import io.eels.component.hive.PartitionConstraint
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus

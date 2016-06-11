@@ -1,62 +1,78 @@
-import io.eels.component.avro.toSchemaType
+package io.eels.component.hive
+
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
+import io.eels.schema.Precision
+import io.eels.schema.Scale
+import io.eels.schema.Schema
+import io.eels.util.Logging
+import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 // create FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
-object HiveSchemaFns extends StrictLogging {
+object HiveSchemaFns : Logging {
 
-  def toHiveField(column: Column): FieldSchema = new FieldSchema(column.name.toLowerCase, toHiveType(column), null)
-  def toHiveFields(schema: Schema): Seq[FieldSchema] = toHiveFields(schema.columns)
-  def toHiveFields(columns: Seq[Column]): Seq[FieldSchema] = columns.map(toHiveField)
+  val VarcharRegex = "varchar\\((.*?)\\)".toRegex()
+  val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".toRegex()
 
-  def fromHiveField(s: FieldSchema, nullable: Boolean): Column = {
-    val (schemaType, precision, scale) = toSchemaType(s.getType)
-    Column(s.getName, schemaType, nullable, precision = precision, scale = scale, comment = NonEmptyString(s.getComment))
-  }
+  // converts an eel column into a hive FieldSchema
+  fun toHiveField(column: Column): FieldSchema = FieldSchema(column.name.toLowerCase(), toHiveType(column), null)
 
-  val VarcharRegex = "varchar\\((.*?)\\)".r
-  val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".r
+  // converts an eel column into a list of hive FieldSchema's
+  fun toHiveFields(schema: Schema): List<FieldSchema> = toHiveFields(schema.columns)
 
-  type Scale = Int
-  type Precision = Int
-
-  def toSchemaType(str: String): (SchemaType, Precision, Scale) = str match {
-    case "tinyint" => (SchemaType.Short, 0, 0)
-    case "smallint" => (SchemaType.Short, 0, 0)
-    case "int" => (SchemaType.Int, 0, 0)
-    case "boolean" => (SchemaType.Boolean, 0, 0)
-    case "bigint" => (SchemaType.BigInt, 0, 0)
-    case "float" => (SchemaType.Float, 0, 0)
-    case "double" => (SchemaType.Double, 0, 0)
-    case "string" => (SchemaType.String, 0, 0)
-    case "binary" => (SchemaType.Binary, 0, 0)
-    case "char" => (SchemaType.String, 0, 0)
-    case "date" => (SchemaType.Date, 0, 0)
-    case "timestamp" => (SchemaType.Timestamp, 0, 0)
-    case DecimalRegex(precision, scale) => (SchemaType.Decimal, precision.toInt, scale.toInt)
-    case VarcharRegex(precision) => (SchemaType.String, precision.toInt, 0)
-    case other =>
-      logger.warn(s"Unknown schema type $other; defaulting to string")
-      (SchemaType.String, 0, 0)
-  }
-
+  // converts a list of eel columns into a list of hive FieldSchema's
+  fun toHiveFields(columns: List<Column>): List<FieldSchema> = columns.map { toHiveField(it) }
 
   /**
-    * Returns the hive column type for the given column
-    */
-  def toHiveType(column: Column): String = column.`type` match {
-    case SchemaType.BigInt => "bigint"
-    case SchemaType.Boolean => "boolean"
-    case SchemaType.Decimal => s"decimal(${column.scale},${column.precision})"
-    case SchemaType.Double => "double"
-    case SchemaType.Float => "float"
-    case SchemaType.Int => "int"
-    case SchemaType.Long => "bigint"
-    case SchemaType.Short => "smallint"
-    case SchemaType.String => "string"
-    case SchemaType.Timestamp => "timestamp"
-    case SchemaType.Date => "date"
-    case _ =>
-      logger.warn(s"No conversion from schema type ${column.`type`} to hive type; defaulting to string")
+   * converts a hive FieldSchema into an eel Column type, with the given nullability.
+   * Nullability has to be specified manually, since all hive fields are always nullable, but eel supports non nulls too
+   */
+  fun fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Column {
+    val (ColumnType, precision, scale) = toColumnType(fieldSchema.type)
+    return Column(fieldSchema.name, ColumnType, nullable, precision = precision, scale = scale, comment = fieldSchema.comment)
+  }
+
+  // returns the eel columnType, precision and scale for a given hive field type "text" description
+  fun toColumnType(str: String): Triple<ColumnType, Precision, Scale> = when (str) {
+    "tinyint" -> Triple(ColumnType.Short, Precision(0), Scale(0))
+    "smallint" -> Triple(ColumnType.Short, Precision(0), Scale(0))
+    "int" -> Triple(ColumnType.Int, Precision(0), Scale(0))
+    "boolean" -> Triple(ColumnType.Boolean, Precision(0), Scale(0))
+    "bigint" -> Triple(ColumnType.BigInt, Precision(0), Scale(0))
+    "float" -> Triple(ColumnType.Float, Precision(0), Scale(0))
+    "double" -> Triple(ColumnType.Double, Precision(0), Scale(0))
+    "string" -> Triple(ColumnType.String, Precision(0), Scale(0))
+    "binary" -> Triple(ColumnType.Binary, Precision(0), Scale(0))
+    "char" -> Triple(ColumnType.String, Precision(0), Scale(0))
+    "date" -> Triple(ColumnType.Date, Precision(0), Scale(0))
+    "timestamp" -> Triple(ColumnType.Timestamp, Precision(0), Scale(0))
+  //DecimalRegex(precision, scale) -> (ColumnType.Decimal, precision.toInt, scale.toInt)
+  //VarcharRegex(precision) -> (ColumnType.String, precision.toInt, 0)
+    else -> {
+      logger.warn("Unknown schema type $str; defaulting to string")
+      Triple(ColumnType.String, Precision(0), Scale(0))
+    }
+  }
+
+  /**
+   * Returns the hive column type for the given column
+   */
+  fun toHiveType(column: Column): String = when (column.type) {
+    ColumnType.BigInt -> "bigint"
+    ColumnType.Boolean -> "boolean"
+    ColumnType.Decimal -> "decimal(${column.scale},${column.precision})"
+    ColumnType.Double -> "double"
+    ColumnType.Float -> "float"
+    ColumnType.Int -> "int"
+    ColumnType.Long -> "bigint"
+    ColumnType.Short -> "smallint"
+    ColumnType.String -> "string"
+    ColumnType.Timestamp -> "timestamp"
+    ColumnType.Date -> "date"
+    else -> {
+      logger.warn("No conversion from column type ${column.`type`} to hive type; defaulting to string")
       "string"
+    }
   }
 }

@@ -1,6 +1,8 @@
 package io.eels.component.jdbc
 
 import io.eels.schema.Column
+import io.eels.schema.Precision
+import io.eels.schema.Scale
 import io.eels.util.Logging
 import io.eels.schema.Schema
 import java.sql.ResultSet
@@ -23,8 +25,8 @@ object JdbcSchemaFn : Logging {
           name = md.getColumnLabel(k),
           `type` = dialect.fromJdbcType(md.getColumnType(k)),
           nullable = md.isNullable(k) == ResultSetMetaData.columnNullable,
-          precision = md.getPrecision(k),
-          scale = md.getScale(k),
+          precision = Precision(md.getPrecision(k)),
+          scale = Scale(md.getScale(k)),
           signed = md.isSigned(k)
       )
     }

@@ -2,10 +2,10 @@ package io.eels.component
 
 import io.eels.schema.Column
 import io.eels.schema.ColumnType
-import io.eels.Option
 import io.eels.schema.Schema
-import io.eels.getOrElse
-import io.eels.orElse
+import io.eels.util.Option
+import io.eels.util.getOrElse
+import io.eels.util.orElse
 
 interface SchemaInferrer {
 

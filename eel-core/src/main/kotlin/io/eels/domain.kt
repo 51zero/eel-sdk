@@ -44,5 +44,5 @@ data class Database(val name: String, val tables: List<Table>)
 
 data class Table(val name: String,
                  val columns: Column,
-                 val partitionKeys: List<PartitionKey>,
+                 val partitionPartValues: List<PartitionPartValues>,
                  val props: Map<String, String>)
