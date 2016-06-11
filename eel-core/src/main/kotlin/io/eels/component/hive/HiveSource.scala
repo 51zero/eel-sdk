@@ -4,6 +4,8 @@ import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.io.Using
 import io.eels._
 import io.eels.component.parquet.ParquetLogMute
+import io.eels.schema.Schema
+import io.eels.util.Logging
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 

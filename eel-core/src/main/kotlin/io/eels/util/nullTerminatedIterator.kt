@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.util
 
 import java.util.*
 import java.util.stream.Stream

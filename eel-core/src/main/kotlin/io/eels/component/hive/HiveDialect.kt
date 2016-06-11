@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.component.Predicate
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path

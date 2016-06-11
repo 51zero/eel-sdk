@@ -1,5 +1,6 @@
 package io.eels
 
+import io.eels.util.nullTerminatedIterator
 import org.apache.hadoop.fs.Path
 import java.util.stream.Stream
 

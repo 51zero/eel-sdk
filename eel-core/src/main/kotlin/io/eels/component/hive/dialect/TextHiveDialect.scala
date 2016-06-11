@@ -5,7 +5,8 @@ import java.io.{BufferedReader, InputStream, InputStreamReader}
 import com.github.tototoshi.csv.{CSVWriter, DefaultCSVFormat}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter, Predicate}
-import io.eels.{InternalRow, Schema, SourceReader}
+import io.eels.schema.Schema
+import io.eels.{InternalRow, SourceReader}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object TextHiveDialect extends HiveDialect with StrictLogging {

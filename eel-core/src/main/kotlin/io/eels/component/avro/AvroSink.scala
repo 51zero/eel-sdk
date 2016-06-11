@@ -4,7 +4,8 @@ import java.io.{File, OutputStream}
 import java.nio.file.{Files, Path}
 
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.{Schema, Sink, SinkWriter}
+import io.eels.schema.Schema
+import io.eels.{Sink, SinkWriter}
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic
 import org.apache.avro.generic.GenericRecord

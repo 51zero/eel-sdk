@@ -1,6 +1,6 @@
 package io.eels.component.avro
 
-import io.eels.Logging
+import io.eels.util.Logging
 import io.eels.Row
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData

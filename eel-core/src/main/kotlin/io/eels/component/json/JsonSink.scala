@@ -1,6 +1,7 @@
 package io.eels.component.json
 
-import io.eels.{Schema, Sink, SinkWriter}
+import io.eels.schema.Schema
+import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 

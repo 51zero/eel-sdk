@@ -2,7 +2,7 @@ package io.eels.component.csv
 
 import com.univocity.parsers.csv.CsvParser
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.component.Part
 import one.util.streamex.StreamEx
 import rx.Observable

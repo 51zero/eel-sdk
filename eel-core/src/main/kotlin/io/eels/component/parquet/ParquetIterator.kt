@@ -1,11 +1,11 @@
 package io.eels.component.parquet
 
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.component.avro.avroRecordToRow
 import io.eels.component.avro.schemaToAvroSchema
-import io.eels.map
-import io.eels.nullTerminatedIterator
+import io.eels.util.map
+import io.eels.util.nullTerminatedIterator
 import org.apache.avro.generic.GenericRecord
 import org.apache.parquet.hadoop.ParquetReader
 import java.util.stream.Stream

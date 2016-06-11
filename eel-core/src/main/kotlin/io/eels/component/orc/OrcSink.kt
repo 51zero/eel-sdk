@@ -1,8 +1,8 @@
 package io.eels.component.orc
 
-import io.eels.Logging
+import io.eels.util.Logging
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
 import org.apache.hadoop.hive.ql.io.orc.OrcFile

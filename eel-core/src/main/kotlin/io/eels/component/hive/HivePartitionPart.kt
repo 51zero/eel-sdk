@@ -1,9 +1,9 @@
 package io.eels.component.hive
 
 import com.typesafe.config.ConfigFactory
-import io.eels.Logging
+import io.eels.util.Logging
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.component.Part
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient

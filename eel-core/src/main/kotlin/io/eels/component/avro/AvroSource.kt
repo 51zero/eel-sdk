@@ -1,8 +1,8 @@
 package io.eels.component.avro
 
-import io.eels.Column
+import io.eels.schema.Column
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Source
 import io.eels.component.Part
 import java.nio.file.Path

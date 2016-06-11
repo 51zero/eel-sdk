@@ -1,10 +1,10 @@
 package io.eels.component.sequence
 
 import au.com.bytecode.opencsv.CSVReader
-import io.eels.Column
-import io.eels.Logging
+import io.eels.schema.Column
+import io.eels.util.Logging
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Source
 import io.eels.component.Part
 import io.eels.component.Using

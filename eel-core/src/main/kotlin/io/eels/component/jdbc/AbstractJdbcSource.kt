@@ -1,7 +1,7 @@
 package io.eels.component.jdbc
 
-import io.eels.Logging
-import io.eels.Schema
+import io.eels.util.Logging
+import io.eels.schema.Schema
 import io.eels.Source
 import java.sql.Connection
 import java.sql.DriverManager

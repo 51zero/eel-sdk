@@ -1,10 +1,10 @@
 package io.eels.component.jdbc
 
 import com.typesafe.config.ConfigFactory
-import io.eels.BoundedThreadPoolExecutor
-import io.eels.Logging
+import io.eels.util.BoundedThreadPoolExecutor
+import io.eels.util.Logging
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
 import org.apache.commons.beanutils.ResultSetIterator

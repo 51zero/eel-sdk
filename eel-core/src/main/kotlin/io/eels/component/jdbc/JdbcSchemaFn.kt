@@ -1,8 +1,8 @@
 package io.eels.component.jdbc
 
-import io.eels.Column
-import io.eels.Logging
-import io.eels.Schema
+import io.eels.schema.Column
+import io.eels.util.Logging
+import io.eels.schema.Schema
 import java.sql.ResultSet
 import java.sql.ResultSetMetaData
 

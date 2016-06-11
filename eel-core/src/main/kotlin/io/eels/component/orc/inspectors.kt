@@ -1,6 +1,6 @@
 package io.eels.component.orc
 
-import io.eels.Schema
+import io.eels.schema.Schema
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory

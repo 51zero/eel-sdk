@@ -1,8 +1,8 @@
 package io.eels.component.avro
 
-import io.eels.Column
-import io.eels.ColumnType
-import io.eels.Schema
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
+import io.eels.schema.Schema
 import org.apache.avro.SchemaBuilder
 
 import io.eels.component.avro.avroSchemaToSchema

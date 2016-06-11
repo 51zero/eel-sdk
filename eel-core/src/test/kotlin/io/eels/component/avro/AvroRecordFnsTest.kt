@@ -1,9 +1,9 @@
 package io.eels.component.avro
 
 import com.typesafe.config.ConfigFactory
-import io.eels.Column
+import io.eels.schema.Column
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 import org.apache.avro.generic.GenericData
 

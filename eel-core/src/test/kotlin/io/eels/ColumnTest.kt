@@ -1,5 +1,6 @@
 package io.eels
 
+import io.eels.schema.Column
 import io.kotlintest.specs.WordSpec
 
 class FieldTest : WordSpec() {

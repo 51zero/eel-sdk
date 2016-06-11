@@ -4,7 +4,8 @@ import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroSchemaFn, ConvertingAvroRecordMarshaller}
 import io.eels.component.hive.{HiveDialect, HiveWriter, Predicate}
 import io.eels.component.parquet.{ParquetIterator, ParquetLogMute, ParquetReaderSupport, RollingParquetWriter}
-import io.eels.{InternalRow, Schema, SourceReader}
+import io.eels.schema.Schema
+import io.eels.{InternalRow, SourceReader}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object ParquetHiveDialect extends HiveDialect with StrictLogging {

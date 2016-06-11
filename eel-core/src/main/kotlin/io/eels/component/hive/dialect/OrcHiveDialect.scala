@@ -3,12 +3,11 @@ package io.eels.component.hive.dialect
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.hive.{HiveDialect, HiveWriter, Predicate}
 import io.eels.component.orc.{OrcStructInspector, StandardStructInspector}
-import io.eels.{InternalRow, Schema, SourceReader}
+import io.eels.schema.Schema
+import io.eels.{InternalRow, SourceReader}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcFile, OrcStruct}
-
-import scala.collection.JavaConverters._
 
 object OrcHiveDialect extends HiveDialect with StrictLogging {
 

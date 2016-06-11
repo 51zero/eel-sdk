@@ -4,6 +4,9 @@ import io.eels.component.SchemaInferrer
 import io.eels.component.SchemaRule
 import io.eels.component.csv.CsvSource
 import io.eels.component.csv.Header
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
+import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 import java.nio.file.Paths
 

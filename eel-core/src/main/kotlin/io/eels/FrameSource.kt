@@ -2,6 +2,8 @@ package io.eels
 
 import com.typesafe.config.ConfigFactory
 import io.eels.component.Using
+import io.eels.schema.Schema
+import io.eels.util.Logging
 import rx.Observable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors

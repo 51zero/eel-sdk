@@ -2,9 +2,9 @@ package io.eels.component.parquet
 
 import java.util.UUID
 
-import io.eels.Column
-import io.eels.ColumnType
-import io.eels.Schema
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
+import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.GenericData

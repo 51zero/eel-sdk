@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels._
+import io.eels.util.Logging
 
 object CountsPlan extends Plan with Using with Logging {
 

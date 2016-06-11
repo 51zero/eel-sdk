@@ -1,5 +1,7 @@
 package io.eels
 
+import io.eels.util.Logging
+import io.eels.util.map
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
 import java.io.File

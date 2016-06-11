@@ -1,7 +1,7 @@
 package io.eels.component.sequence
 
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
 import java.io.StringWriter

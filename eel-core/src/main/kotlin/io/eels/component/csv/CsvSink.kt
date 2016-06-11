@@ -5,7 +5,7 @@ import java.nio.file.Path
 import com.univocity.parsers.csv.CsvWriter
 import com.univocity.parsers.csv.CsvWriterSettings
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
 

@@ -1,15 +1,7 @@
 package io.eels
 
-data class Column(val name: String,
-                  val `type`: ColumnType = ColumnType.String,
-                  val nullable: Boolean = true,
-                  val precision: Int = 0,
-                  val scale: Int = 0,
-                  val signed: Boolean = true,
-                  val comment: String = "") {
-  // Creates a lowercase version of this column
-  fun toLowerCase(): Column = copy(name = name.toLowerCase())
-}
+import io.eels.schema.Column
+import io.eels.schema.Schema
 
 data class Row(val schema: Schema, val values: List<Any?>) {
 
@@ -54,19 +46,3 @@ data class Table(val name: String,
                  val columns: Column,
                  val partitionKeys: List<PartitionKey>,
                  val props: Map<String, String>)
-
-enum class ColumnType {
-  BigInt,
-  Binary,
-  Boolean,
-  Date,
-  Decimal,
-  Double,
-  Float,
-  Int,
-  Long,
-  Short,
-  String,
-  Timestamp,
-  Unsupported
-}

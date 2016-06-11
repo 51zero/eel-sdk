@@ -1,9 +1,9 @@
 package io.eels.component.jdbc
 
-import io.eels.Schema
-import io.eels.Timed
+import io.eels.schema.Schema
+import io.eels.util.Timed
 import io.eels.component.Part
-import io.eels.zipWithIndex
+import io.eels.util.zipWithIndex
 import java.sql.CallableStatement
 import java.sql.Connection
 

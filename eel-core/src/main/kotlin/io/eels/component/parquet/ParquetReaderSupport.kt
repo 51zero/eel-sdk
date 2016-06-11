@@ -1,8 +1,8 @@
 package io.eels.component.parquet
 
 import com.typesafe.config.ConfigFactory
-import io.eels.ColumnType
-import io.eels.Logging
+import io.eels.schema.ColumnType
+import io.eels.util.Logging
 import io.eels.component.Predicate
 import org.apache.avro.Schema
 import org.apache.avro.SchemaBuilder
@@ -30,7 +30,7 @@ object ParquetReaderSupport : Logging {
   fun create(path: Path,
              isProjection: Boolean,
              predicate: Predicate?,
-             schema: io.eels.Schema?): ParquetReader<GenericRecord> {
+             schema: io.eels.schema.Schema?): ParquetReader<GenericRecord> {
     require(!isProjection || schema != null, { "Schema cannot be null if projection is set" })
 
     fun projection(): Schema {

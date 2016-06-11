@@ -1,6 +1,8 @@
 package io.eels
 
 import io.eels.component.Part
+import io.eels.schema.Schema
+import io.eels.util.Logging
 
 /**
  * A Source is a provider of data to eel.

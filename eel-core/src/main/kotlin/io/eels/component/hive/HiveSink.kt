@@ -1,8 +1,8 @@
 package io.eels.component.hive
 
 import com.typesafe.config.ConfigFactory
-import io.eels.Logging
-import io.eels.Schema
+import io.eels.util.Logging
+import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
 import org.apache.hadoop.fs.FileSystem

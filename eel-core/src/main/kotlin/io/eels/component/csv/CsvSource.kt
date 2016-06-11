@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigFactory
 import com.univocity.parsers.csv.CsvParser
 import com.univocity.parsers.csv.CsvParserSettings
 import io.eels.Option
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.Source
 import io.eels.component.Part
 import io.eels.component.SchemaInferrer

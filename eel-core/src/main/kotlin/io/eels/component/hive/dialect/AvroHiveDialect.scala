@@ -4,7 +4,8 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.slf4j.StrictLogging
 import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn, ConvertingAvroRecordMarshaller}
 import io.eels.component.hive.{HiveDialect, HiveWriter, Predicate}
-import io.eels.{InternalRow, Schema, SourceReader}
+import io.eels.schema.Schema
+import io.eels.{InternalRow, SourceReader}
 import org.apache.avro.file.{DataFileReader, DataFileWriter}
 import org.apache.avro.generic.{GenericDatumWriter, GenericRecord}
 import org.apache.avro.{file, generic}

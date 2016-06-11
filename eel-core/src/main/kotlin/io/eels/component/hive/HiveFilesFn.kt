@@ -1,5 +1,5 @@
 import com.typesafe.config.ConfigFactory
-import io.eels.Logging
+import io.eels.util.Logging
 import io.eels.component.hive.HiveFileScanner
 import io.eels.component.hive.Partition
 import io.eels.component.hive.PartitionConstraint

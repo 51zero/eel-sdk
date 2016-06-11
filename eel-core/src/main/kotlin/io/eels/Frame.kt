@@ -1,5 +1,8 @@
 package io.eels
 
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
+import io.eels.schema.Schema
 import org.apache.hadoop.hdfs.server.namenode.Content
 import rx.Observable
 

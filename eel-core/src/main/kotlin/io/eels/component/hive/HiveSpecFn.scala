@@ -7,12 +7,9 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import io.eels.{Column, Schema}
+import io.eels.schema.Schema
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
-
-import scala.collection.JavaConverters._
-import scala.io.Source
 
 object HiveSpecFn {
 

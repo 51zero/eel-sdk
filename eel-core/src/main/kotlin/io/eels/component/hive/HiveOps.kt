@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.Logging
+import io.eels.util.Logging
 import io.eels.Partition
 import io.eels.PartitionPart
 import io.eels.component.hive.HiveFormat

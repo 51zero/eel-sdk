@@ -1,5 +1,6 @@
-package io.eels
+package io.eels.schema
 
+// todo rename columns to fields
 data class Schema(val columns: List<Column>) {
 
   constructor(vararg columns: Column) : this(columns.asList())
@@ -90,7 +91,7 @@ data class Schema(val columns: List<Column>) {
     fun apply(vararg columns: Column): Schema = Schema(columns.toList())
     //  fun apply(first: String, vararg rest: String): Schema = apply(first + rest)
 
-    //    fun apply(strs: Seq<String>): io.eels.Schema = Schema(strs.map(Column.apply).toList)
+    //    fun apply(strs: Seq<String>): io.eels.schema.Schema = Schema(strs.map(Column.apply).toList)
 
     //    fun from[T <: Product : TypeTag : ClassTag]: Schema =
     //    {

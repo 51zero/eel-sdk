@@ -1,6 +1,7 @@
 package io.eels.component.json
 
 import io.eels._
+import io.eels.schema.{Column, Schema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 

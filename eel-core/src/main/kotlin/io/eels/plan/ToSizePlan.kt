@@ -1,7 +1,7 @@
 package io.eels.plan
 
 import io.eels.Frame
-import io.eels.Logging
+import io.eels.util.Logging
 
 object ToSizePlan : Plan(), Logging {
 

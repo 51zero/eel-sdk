@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.util
 
 interface Timed {
   fun <T> timed(msg: String, fn: () -> T): T {

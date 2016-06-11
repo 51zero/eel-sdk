@@ -1,7 +1,8 @@
 package io.eels.component.parquet
 
 import com.typesafe.config.ConfigFactory
-import io.eels.{Schema, Sink, SinkWriter}
+import io.eels.schema.Schema
+import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with StrictLogging {

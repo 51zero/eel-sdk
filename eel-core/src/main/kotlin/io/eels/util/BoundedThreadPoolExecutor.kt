@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.util
 
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException

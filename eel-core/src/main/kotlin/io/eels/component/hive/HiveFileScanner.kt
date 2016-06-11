@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.typesafe.config.ConfigFactory
 import io.eels.HdfsIterator
-import io.eels.Logging
+import io.eels.util.Logging
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
 import org.apache.hadoop.fs.Path

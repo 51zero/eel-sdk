@@ -1,5 +1,7 @@
 package io.eels
 
+import io.eels.util.Logging
+
 trait Converter[T] {
   def apply(value: Any): T
 }

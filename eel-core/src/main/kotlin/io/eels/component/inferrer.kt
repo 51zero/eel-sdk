@@ -1,9 +1,9 @@
 package io.eels.component
 
-import io.eels.Column
-import io.eels.ColumnType
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
 import io.eels.Option
-import io.eels.Schema
+import io.eels.schema.Schema
 import io.eels.getOrElse
 import io.eels.orElse
 

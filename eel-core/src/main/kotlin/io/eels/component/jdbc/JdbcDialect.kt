@@ -1,10 +1,10 @@
 package io.eels.component.jdbc
 
-import io.eels.Column
-import io.eels.ColumnType
-import io.eels.Logging
+import io.eels.schema.Column
+import io.eels.schema.ColumnType
+import io.eels.util.Logging
 import io.eels.Row
-import io.eels.Schema
+import io.eels.schema.Schema
 
 interface JdbcDialect {
 

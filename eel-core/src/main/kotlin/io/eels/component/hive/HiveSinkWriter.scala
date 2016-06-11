@@ -4,13 +4,10 @@ import java.util.concurrent._
 
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
-import io.eels.{InternalRow, Schema, SinkWriter}
+import io.eels.schema.Schema
+import io.eels.{InternalRow, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
-
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
-import scala.util.control.NonFatal
 
 class HiveSinkWriter(sourceSchema: Schema,
                      hiveTableSchema: Schema,

@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.util
 
 fun <T, U> Iterator<T>.map(f: (T) -> U): Iterator<U> {
   val outer = this
