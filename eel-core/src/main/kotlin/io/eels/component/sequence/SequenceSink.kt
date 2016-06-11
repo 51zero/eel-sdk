@@ -1,5 +1,7 @@
 package io.eels.component.sequence
 
+import com.univocity.parsers.csv.CsvWriter
+import com.univocity.parsers.csv.CsvWriterSettings
 import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.Sink
@@ -43,7 +45,7 @@ class SequenceSinkWriter(schema: Schema, path: Path) : SinkWriter {
 
   private fun valuesToCsv(values: List<Any?>): String {
     val swriter = StringWriter()
-    val csv = CSVWriter(swriter)
+    val csv = CsvWriter(swriter, CsvWriterSettings())
     csv.writeRow(values)
     csv.close()
     return swriter.toString().trim()

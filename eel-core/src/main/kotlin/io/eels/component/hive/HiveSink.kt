@@ -5,14 +5,16 @@ import io.eels.util.Logging
 import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
+import io.eels.util.Option
+import io.eels.util.getOrElse
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 data class HiveSink(private val dbName: String,
                     private val tableName: String,
                     private val ioThreads: Int = 4,
-                    private val dynamicPartitioning: Boolean?,
-                    private val schemaEvolution: Boolean?,
+                    private val dynamicPartitioning: Option<Boolean>,
+                    private val schemaEvolution: Option<Boolean>,
                     val fs: FileSystem,
                     val client: IMetaStoreClient) : Sink, Logging {
 
@@ -22,12 +24,14 @@ data class HiveSink(private val dbName: String,
   val SchemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
   val DynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
 
-  fun withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
-  fun withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = partitioning)
-  fun withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = schemaEvolution)
+  val ops = HiveOps(client)
 
-  private fun dialect(client: IMetaStoreClient): HiveDialect {
-    val format = HiveOps.tableFormat(dbName, tableName)
+  fun withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
+  fun withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Option(partitioning))
+  fun withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Option(schemaEvolution))
+
+  private fun dialect(): HiveDialect {
+    val format = ops.tableFormat(dbName, tableName)
     logger.debug("Table format is $format")
     return io.eels.component.hive.HiveDialect(format)
   }
@@ -40,19 +44,23 @@ data class HiveSink(private val dbName: String,
     }
 
     if (schemaEvolution.getOrElse(SchemaEvolutionDefault)) {
-      HiveSchemaEvolve(dbName, tableName, schema)
+      // HiveSchemaEvolve(dbName, tableName, schema)
+      throw UnsupportedOperationException()
     }
 
-    return HiveSinkWriter(
-      schema,
-      HiveOps.schema(dbName, tableName),
-      dbName,
-      tableName,
-      ioThreads,
-      dialect,
-      dynamicPartitioning.getOrElse(DynamicPartitioningDefault),
-      includePartitionsInData,
-      bufferSize
-    )
+//    return HiveSinkWriter(
+//        schema,
+//        ops.schema(dbName, tableName),
+//        dbName,
+//        tableName,
+//        ioThreads,
+//        dialect(),
+//        dynamicPartitioning.getOrElse(DynamicPartitioningDefault),
+//        includePartitionsInData,
+//        bufferSize,
+//        fs,
+//        client
+//    )
+    throw UnsupportedOperationException()
   }
 }

@@ -14,7 +14,7 @@ object ToSizePlan : Plan(), Logging {
 
     // todo this must change to be multithreaded
     var count = 0L
-    stream.iterator().forEach { count += 1 }
+    //stream.iterator().forEach { count += 1 }
 
     // val futures = for (k <- 1 to tasks) yield {
     //      Future {

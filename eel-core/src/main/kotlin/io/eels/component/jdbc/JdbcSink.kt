@@ -7,7 +7,6 @@ import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.Sink
 import io.eels.SinkWriter
-import org.apache.commons.beanutils.ResultSetIterator
 import java.sql.DriverManager
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -57,48 +56,48 @@ class JdbcWriter(val schema: Schema,
   private val workers = BoundedThreadPoolExecutor(props.threads, props.threads)
   private val batchCount = AtomicLong(0)
   private val coordinator = Executors.newSingleThreadExecutor()
-  private var inserter: JdbcInserter = null
+  private var inserter: JdbcInserter? = null
 
   init {
-    coordinator.submit {
-      logger.debug("Starting Jdbc Writer Coordinator")
-      BlockingQueueConcurrentIterator(buffer, Row.PoisonPill)
-          .grouped(props.batchSize)
-          .withPartial(true)
-          .foreach {
-            ensureInserterCreated()
-            workers.submit {
-              try {
-                val offset = batchCount.addAndGet(props.batchSize)
-                logger.debug("Inserting batch $offset / ? =>")
-                inserter.insertBatch(it)
-              } catch(t: Throwable) {
-                if (swallowExceptions) {
-                  logger.error("Exception when inserting batch; continuing", t)
-                } else {
-                  logger.error("Exception when inserting batch; aborting writers", t)
-                  workers.shutdownNow()
-                  coordinator.shutdownNow()
-                }
-              }
-            }
-          }
-      logger.debug("End of buffer reached; shutting down workers")
-      workers.shutdown()
-    }
+//    coordinator.submit {
+//      logger.debug("Starting Jdbc Writer Coordinator")
+//      BlockingQueueConcurrentIterator(buffer, Row.PoisonPill)
+//          .grouped(props.batchSize)
+//          .withPartial(true)
+//          .foreach {
+//            ensureInserterCreated()
+//            workers.submit {
+//              try {
+//                val offset = batchCount.addAndGet(props.batchSize)
+//                logger.debug("Inserting batch $offset / ? =>")
+//                inserter.insertBatch(it)
+//              } catch(t: Throwable) {
+//                if (swallowExceptions) {
+//                  logger.error("Exception when inserting batch; continuing", t)
+//                } else {
+//                  logger.error("Exception when inserting batch; aborting writers", t)
+//                  workers.shutdownNow()
+//                  coordinator.shutdownNow()
+//                }
+//              }
+//            }
+//          }
+//      logger.debug("End of buffer reached; shutting down workers")
+//      workers.shutdown()
+//    }
   }
 
   // the coordinate only runs the one task, that is to read all the data from the buffer and populate worker jobs
   // so it can be shut down immediately after that ask is submitted
-  coordinator.shutdown()
+  //coordinator.shutdown()
 
   private fun ensureInserterCreated(): Unit {
     // coordinator is single threaded, so simple var with null is fine
-    if (inserter == null) {
-      inserter = JdbcInserter(url, table, schema, autoCommit, dialect)
-      if (props.createTable)
-        inserter.ensureTableCreated()
-    }
+//    if (inserter == null) {
+//      inserter = JdbcInserter(url, table, schema, autoCommit, dialect)
+//      if (props.createTable)
+//        inserter.ensureTableCreated()
+//    }
   }
 
   override fun close(): Unit {
@@ -121,63 +120,63 @@ class JdbcInserter(val url: String,
 
   init {
     logger.debug("Connecting to jdbc $url...")
-    conn.setAutoCommit(autoCommit)
+    conn.autoCommit = autoCommit
     logger.debug("Connected to $url")
   }
 
   fun insertBatch(batch: List<Row>): Unit {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
-    try {
-      batch.forEach { row ->
-        row.zipWithIndex foreach {
-          (value, k) ->
-          stmt.setObject(k + 1, value)
-        }
-        stmt.addBatch()
-      }
-      val result = stmt.executeBatch()
-      logger.debug("Batch completed; ${result.size} rows updated")
-      if (!autoCommit) conn.commit()
-    } catch (e: Exception) {
-      logger.error("Batch failure", e)
-      if (!autoCommit)
-        Try {
-          conn.rollback()
-        }
-      throw e
-    } finally {
-      stmt.close()
-    }
+//    try {
+//      batch.forEach { row ->
+//        row.zipWithIndex foreach {
+//          (value, k) ->
+//          stmt.setObject(k + 1, value)
+//        }
+//        stmt.addBatch()
+//      }
+//      val result = stmt.executeBatch()
+//      logger.debug("Batch completed; ${result.size} rows updated")
+//      if (!autoCommit) conn.commit()
+//    } catch (e: Exception) {
+//      logger.error("Batch failure", e)
+//      if (!autoCommit)
+//        Try {
+//          conn.rollback()
+//        }
+//      throw e
+//    } finally {
+//      stmt.close()
+//    }
   }
 
   fun ensureTableCreated(): Unit {
     logger.debug("Ensuring table [$table] is created")
 
-    fun tableExists(): Boolean {
-      logger.debug("Fetching list of tables to detect if $table exists")
-      val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
-      val names = tables.map(_.apply(3).toLowerCase)
-      val exists = names contains table.toLowerCase
-      logger.debug("${tables.size} tables found; $table exists is $exists")
-      return exists
-    }
-
-    if (!tableExists()) {
-      val sql = dialect.create(schema, table)
-      logger.info(s"Creating table $table [$sql]")
-      val stmt = conn.createStatement()
-      try {
-        stmt.executeUpdate(sql)
-        if (!autoCommit) conn.commit()
-      } catch(e: Exception) {
-        logger.error("Batch failure", e)
-        if (!autoCommit)
-          conn.rollback()
-        throw e
-      } finally {
-        stmt.close()
-      }
-    }
+//    fun tableExists(): Boolean {
+//      logger.debug("Fetching list of tables to detect if $table exists")
+//      val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
+//      val names = tables.map(_.apply(3).toLowerCase)
+//      val exists = names contains table.toLowerCase
+//      logger.debug("${tables.size} tables found; $table exists is $exists")
+//      return exists
+//    }
+//
+//    if (!tableExists()) {
+//      val sql = dialect.create(schema, table)
+//      logger.info(s"Creating table $table [$sql]")
+//      val stmt = conn.createStatement()
+//      try {
+//        stmt.executeUpdate(sql)
+//        if (!autoCommit) conn.commit()
+//      } catch(e: Exception) {
+//        logger.error("Batch failure", e)
+//        if (!autoCommit)
+//          conn.rollback()
+//        throw e
+//      } finally {
+//        stmt.close()
+//      }
+//    }
   }
 }
 

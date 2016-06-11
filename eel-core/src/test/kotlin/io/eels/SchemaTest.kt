@@ -2,14 +2,16 @@ package io.eels
 
 import io.eels.schema.Column
 import io.eels.schema.ColumnType
+import io.eels.schema.Precision
+import io.eels.schema.Scale
 import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 
 class SchemaTest : WordSpec() {
 
   val schema = Schema(listOf(
-      Column("a", ColumnType.Boolean, signed = true, scale = 22, nullable = true),
-      Column("b", ColumnType.String, precision = 14, signed = false, nullable = false)
+      Column("a", ColumnType.Boolean, signed = true, scale = Scale(22), nullable = true),
+      Column("b", ColumnType.String, precision = Precision(14), signed = false, nullable = false)
   ))
 
   init {
@@ -32,13 +34,13 @@ class SchemaTest : WordSpec() {
     "Schema" should {
       "return -1 if the column is not found" with {
         val schema = Schema(listOf(
-            Column("name", ColumnType.String, true, 0, 0, true),
-            Column("age", ColumnType.Int, true, 0, 0, true),
-            Column("salary", ColumnType.Double, true, 0, 0, true),
-            Column("isPartTime", ColumnType.Boolean, true, 0, 0, true),
-            Column("value1", ColumnType.Decimal, true, 0, 0, true),
-            Column("value2", ColumnType.Float, true, 0, 0, true),
-            Column("value3", ColumnType.Long, true, 0, 0, true)
+            Column("name", ColumnType.String, true, Precision(0), Scale(0), true),
+            Column("age", ColumnType.Int, true, Precision(0), Scale(0), true),
+            Column("salary", ColumnType.Double, true, Precision(0), Scale(0), true),
+            Column("isPartTime", ColumnType.Boolean, true, Precision(0), Scale(0), true),
+            Column("value1", ColumnType.Decimal, true, Precision(0), Scale(0), true),
+            Column("value2", ColumnType.Float, true, Precision(0), Scale(0), true),
+            Column("value3", ColumnType.Long, true, Precision(0), Scale(0), true)
         ))
         schema.indexOf("value4") shouldBe -1
       }
@@ -49,26 +51,26 @@ class SchemaTest : WordSpec() {
       //      "be inferred from the inner Person case class" in {
       //        Schema.from[Person] shouldBe {
       //          Schema(List(
-      //              Column("name", ColumnType.String, true, 0, 0, true, None),
-      //              Column("age", ColumnType.Int, true, 0, 0, true, None),
-      //              Column("salary", ColumnType.Double, true, 0, 0, true, None),
-      //              Column("isPartTime", ColumnType.Boolean, true, 0, 0, true, None),
-      //              Column("value1", ColumnType.Decimal, true, 0, 0, true, None),
-      //              Column("value2", ColumnType.Float, true, 0, 0, true, None),
-      //              Column("value3", ColumnType.Long, true, 0, 0, true, None)
+      //              Column("name", ColumnType.String, true, Precision(0), Scale(0), true, None),
+      //              Column("age", ColumnType.Int, true, Precision(0), Scale(0), true, None),
+      //              Column("salary", ColumnType.Double, true, Precision(0), Scale(0), true, None),
+      //              Column("isPartTime", ColumnType.Boolean, true, Precision(0), Scale(0), true, None),
+      //              Column("value1", ColumnType.Decimal, true, Precision(0), Scale(0), true, None),
+      //              Column("value2", ColumnType.Float, true, Precision(0), Scale(0), true, None),
+      //              Column("value3", ColumnType.Long, true, Precision(0), Scale(0), true, None)
       //          ))
       //        }
       //      }
       //      "be inferred from the outer Person case class" in {
       //        Schema.from[Person] shouldBe {
       //          Schema(List(
-      //              Column("name", ColumnType.String, true, 0, 0, true, None),
-      //              Column("age", ColumnType.Int, true, 0, 0, true, None),
-      //              Column("salary", ColumnType.Double, true, 0, 0, true, None),
-      //              Column("isPartTime", ColumnType.Boolean, true, 0, 0, true, None),
-      //              Column("value1", ColumnType.Decimal, true, 0, 0, true, None),
-      //              Column("value2", ColumnType.Float, true, 0, 0, true, None),
-      //              Column("value3", ColumnType.Long, true, 0, 0, true, None)
+      //              Column("name", ColumnType.String, true, Precision(0), Scale(0), true, None),
+      //              Column("age", ColumnType.Int, true, Precision(0), Scale(0), true, None),
+      //              Column("salary", ColumnType.Double, true, Precision(0), Scale(0), true, None),
+      //              Column("isPartTime", ColumnType.Boolean, true, Precision(0), Scale(0), true, None),
+      //              Column("value1", ColumnType.Decimal, true, Precision(0), Scale(0), true, None),
+      //              Column("value2", ColumnType.Float, true, Precision(0), Scale(0), true, None),
+      //              Column("value3", ColumnType.Long, true, Precision(0), Scale(0), true, None)
       //          ))
       //        }
       //      }
@@ -78,11 +80,11 @@ class SchemaTest : WordSpec() {
       "set new schema type and leave other fields untouched" with {
         Schema(
             Column("a", ColumnType.Int, true),
-            Column("b", ColumnType.Short, false, scale = 2, precision = 3)
+            Column("b", ColumnType.Short, false, scale = Scale(2), precision = Precision(3))
         ).updateColumnType("b", ColumnType.Boolean) shouldBe
             Schema(
-                Column("a", ColumnType.Int, true, 0, 0, true),
-                Column("b", ColumnType.Boolean, false, scale = 2, precision = 3)
+                Column("a", ColumnType.Int, true, Precision(0), Scale(0), true),
+                Column("b", ColumnType.Boolean, false, scale = Scale(2), precision = Precision(3))
             )
       }
     }

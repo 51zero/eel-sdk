@@ -30,7 +30,7 @@ class OrcSinkWriter(schema: Schema, path: Path) : SinkWriter, Logging {
 
   override fun write(row: Row): Unit {
     synchronized(this) {
-      writer.addRow(row.toArray)
+      writer.addRow(row.values)
     }
   }
 

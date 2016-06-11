@@ -18,9 +18,10 @@ object HiveFileScanner : Logging {
     return file.len == 0L || ignoreHiddenFiles && file.path.name.matches(hiddenFilePattern.toRegex())
   }
 
-  operator fun invoke(location: String, fs: FileSystem): List<LocatedFileStatus> {
-    logger.debug("Scanning $location, filtering=$ignoreHiddenFiles, pattern=$hiddenFilePattern")
-    val path = Path(location)
+  // given a hadoop path, will look for files inside that path that match the
+  // configured settings for hidden files
+  operator fun invoke(path: Path, fs: FileSystem): List<LocatedFileStatus> {
+    logger.debug("Scanning $path, filtering=$ignoreHiddenFiles, pattern=$hiddenFilePattern")
     val files: List<LocatedFileStatus> = if (fs.exists(path)) {
       HdfsIterator(fs.listFiles(path, true)).asSequence().filter { it.isFile }.filterNot { !skip(it) }.toList()
     } else {

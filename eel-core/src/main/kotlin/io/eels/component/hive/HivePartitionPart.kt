@@ -38,18 +38,18 @@ class HivePartitionPart(val dbName: String,
   override fun data(): Observable<Row> {
     // the schema we use for the parquet reader must have at least one column, so we can take
     // the full metastore schema and remove our partition columns
-    val dataSchema = Schema(metastoreSchema.columns.filterNot { it.contains { it.name } })
-
-    val values = client.listPartitions(dbName, tableName, Short.MAX_VALUE).filter {
-      !checkDataForPartitionOnlySources || HiveFileScanner(it.sd.location, fs).any {
-        try {
-          val reader = dialect.reader(it.path, metastoreSchema, dataSchema, predicate)
-          reader.iterator.hasNext
-        } catch(t: Throwable) {
-          logger.warn("Error parsing ${file.getPath} to check for data")
-          false
-        }
-      }
+//    val dataSchema = Schema(metastoreSchema.columns.filterNot { it.contains { it.name } })
+//
+//    val values = client.listPartitions(dbName, tableName, Short.MAX_VALUE).filter {
+//      !checkDataForPartitionOnlySources || HiveFileScanner(it.sd.location, fs).any {
+//        try {
+//          val reader = dialect.reader(it.path, metastoreSchema, dataSchema, predicate)
+//          reader.iterator.hasNext
+//        } catch(t: Throwable) {
+//          logger.warn("Error parsing ${file.getPath} to check for data")
+//          false
+//        }
+//      }
 //    } map { partition =>
 //      val map = partitionKeys.zip(partition.getValues.asScala).toMap
 //      columnNames.map(map(_)).toVector
@@ -59,7 +59,6 @@ class HivePartitionPart(val dbName: String,
 //      override def close(): Unit = ()
 //      override def iterator: Iterator[InternalRow] = values.iterator
 //    }
-    }
 
 
 //  override fun reader(): SourceReader = {
@@ -68,5 +67,6 @@ class HivePartitionPart(val dbName: String,
 //
 //
 //
-//  }
+    throw UnsupportedOperationException()
   }
+}

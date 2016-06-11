@@ -1,7 +1,5 @@
 package io.eels.schema
 
-import io.eels.schema.Partition
-import io.eels.schema.PartitionPart
 import io.eels.util.findOptional
 
 interface PartitionConstraint {

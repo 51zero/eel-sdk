@@ -31,7 +31,7 @@ open class GenericJdbcDialect : JdbcDialect, Logging {
     ColumnType.Int -> "int"
     ColumnType.Short -> "smallint"
     ColumnType.String -> {
-      if (column.precision > 0) "varchar(${column.precision})"
+      if (column.precision.value > 0) "varchar(${column.precision})"
       else "varchar(255)"
     }
     else -> {

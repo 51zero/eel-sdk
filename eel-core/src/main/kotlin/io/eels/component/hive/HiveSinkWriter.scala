@@ -5,6 +5,7 @@ import java.util.concurrent._
 import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.collection.BlockingQueueConcurrentIterator
 import io.eels.schema.Schema
+import io.eels.util.Logging
 import io.eels.{InternalRow, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -17,7 +18,9 @@ class HiveSinkWriter(sourceSchema: Schema,
                      dialect: HiveDialect,
                      dynamicPartitioning: Boolean,
                      includePartitionsInData: Boolean,
-                     bufferSize: Int)(implicit fs: FileSystem, client: IMetaStoreClient)
+                     bufferSize: Int,
+                     fs: FileSystem,
+                     client: IMetaStoreClient)
   extends SinkWriter
     with Logging {
   self =>

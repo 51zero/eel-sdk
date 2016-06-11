@@ -35,15 +35,15 @@ class HiveFilePart(val dialect: HiveDialect,
 
       it.onCompleted()
     }
-
-    val obs = data()
-    val sub = obs.subscribe(object : Subscriber<Row>() {
-    })
-    sub.unsubscribe()
+//
+//    val obs = data()
+//    val sub = obs.subscribe(object : Subscriber<Row>() {
+//    })
+//    sub.unsubscribe()
   }
 
-    // the schema we send to the reader must have any partitions removed, because those columns won't exist
-    // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
+  // the schema we send to the reader must have any partitions removed, because those columns won't exist
+  // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
 //    val dataSchema = Schema(schema.columns.filterNot { partitionKeys.contains(it.name) })
 //    val reader = dialect.reader(file.path, metastoreSchema, dataSchema, predicate, fs)
 //
@@ -57,5 +57,4 @@ class HiveFilePart(val dialect: HiveDialect,
 //        }
 //        row
 //      }
-  }
 }

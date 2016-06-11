@@ -28,6 +28,8 @@ data class Partition(val parts: List<PartitionPart>) {
       }
       return Partition(parts)
     }
+
+    val empty = Partition(emptyList())
   }
 }
 

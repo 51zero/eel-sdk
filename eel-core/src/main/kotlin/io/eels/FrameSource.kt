@@ -39,20 +39,20 @@ class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Usin
     val count = AtomicLong(0)
     val latch = CountDownLatch(parts.size)
 
-    for (part in parts) {
-      executor.submit {
-        try {
-          using(part.reader()) {
-            it.iterator().forEach { queue.put(it) }
-            logger.debug("Completed part #${count.incrementAndGet()}")
-          }
-        } catch (e: Exception) {
-          logger.error("Error while loading from source; this reader thread will quit", e)
-        } finally {
-          latch.countDown()
-        }
-      }
-    }
+//    for (part in parts) {
+//      executor.submit {
+//        try {
+//          using(part.reader()) {
+//            it.iterator().forEach { queue.put(it) }
+//            logger.debug("Completed part #${count.incrementAndGet()}")
+//          }
+//        } catch (e: Exception) {
+//          logger.error("Error while loading from source; this reader thread will quit", e)
+//        } finally {
+//          latch.countDown()
+//        }
+//      }
+//    }
 
     executor.submit {
       latch.await(1, TimeUnit.DAYS)
