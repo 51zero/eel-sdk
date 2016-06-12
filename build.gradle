@@ -35,6 +35,7 @@ project(':eel-core') {
         compile "org.apache.hadoop:hadoop-yarn:$hadoop_version"
         compile("org.apache.hive:hive-exec:$hive_version") {
             exclude group: "org.pentaho"
+            exclude group: "org.apache.calcite"
         }
         compile 'org.apache.parquet:parquet-avro:1.8.1'
         compile 'org.slf4j:slf4j-api:1.7.21'
