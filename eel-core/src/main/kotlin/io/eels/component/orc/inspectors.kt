@@ -13,7 +13,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory
 
 object OrcStructInspector {
   fun apply(schema: Schema): StructObjectInspector {
-    val types: List<TypeInfo> = (0..schema.columns.size).map { TypeInfoFactory.stringTypeInfo }
+    val types: List<TypeInfo> = (0..schema.fields.size).map { TypeInfoFactory.stringTypeInfo }
     val typeInfo = TypeInfoFactory.getStructTypeInfo(schema.columnNames(), types)
     return OrcStruct.createObjectInspector(typeInfo) as SettableStructObjectInspector
   }
@@ -23,7 +23,7 @@ object StandardStructInspector {
 
   fun apply(schema: Schema): StandardStructObjectInspector {
 
-    val fieldInspectors: List<ObjectInspector> = (0..schema.columns.size).map { PrimitiveObjectInspectorFactory.javaStringObjectInspector }
+    val fieldInspectors: List<ObjectInspector> = (0..schema.fields.size).map { PrimitiveObjectInspectorFactory.javaStringObjectInspector }
 
     return ObjectInspectorFactory.getStandardStructObjectInspector(
         schema.columnNames(),

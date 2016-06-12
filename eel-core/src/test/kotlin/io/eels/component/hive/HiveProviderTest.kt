@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.schema.Schema
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
@@ -21,20 +21,20 @@ fun main(args: Array<String>): Unit {
 
   ops.createTable(
       "sam",
-      "qqq",
-      Schema(Column("name"), Column("artist"), Column("year"), Column("genre")),
+      "test1",
+      Schema(Field("name"), Field("artist"), Field("year"), Field("genre"), Field.createStruct("band_members", Field("name"))),
       listOf("genre", "artist"),
       format = HiveFormat.Parquet,
-      overwrite = false,
+      overwrite = true,
       location = "file:/user/hive/warehouse/sam.db/bibble"
   )
 
-  val provider = HiveProvider("sam", "albums", client)
+  val provider = HiveProvider("sam", "test1", client)
   val schema = provider.schema()
 
   println(schema.show())
 
-  println(ops.partitionKeys("sam", "albums"))
-  println(ops.partitions("sam", "albums"))
+  println(ops.partitionFieldSchemas("sam", "test1"))
+  println(ops.partitions("sam", "test1"))
 
 }

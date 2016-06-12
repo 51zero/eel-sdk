@@ -1,6 +1,6 @@
 package io.eels.component.avro
 
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.Source
@@ -15,7 +15,7 @@ class AvroSource(val path: Path) : Source, Using {
   override fun schema(): Schema {
     return using(AvroReaderSupport.createReader(path), { reader ->
       val record = reader.next()
-      val columns = record.schema.fields.map { it.name() }.map { Column(it) }
+      val columns = record.schema.fields.map { it.name() }.map { Field(it) }
       // todo this should also take into account the field types
       Schema(columns)
     })

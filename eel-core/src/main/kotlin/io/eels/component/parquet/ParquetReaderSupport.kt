@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.ColumnType
+import io.eels.schema.FieldType
 import io.eels.util.Logging
 import io.eels.component.Predicate
 import org.apache.avro.Schema
@@ -35,17 +35,17 @@ object ParquetReaderSupport : Logging {
 
     fun projection(): Schema {
       val builder = SchemaBuilder.record("row").namespace("namespace")
-      return schema!!.columns.fold(builder.fields(), { fields, col ->
+      return schema!!.fields.fold(builder.fields(), { fields, col ->
         val name = col.name
         when (col.type) {
-          ColumnType.BigInt -> fields.optionalLong(name)
-          ColumnType.Boolean -> fields.optionalBoolean(name)
-          ColumnType.Double -> fields.optionalDouble(name)
-          ColumnType.Float -> fields.optionalFloat(name)
-          ColumnType.Int -> fields.optionalInt(name)
-          ColumnType.Long -> fields.optionalLong(name)
-          ColumnType.String -> fields.optionalString(name)
-          ColumnType.Short -> fields.optionalInt(name)
+          FieldType.BigInt -> fields.optionalLong(name)
+          FieldType.Boolean -> fields.optionalBoolean(name)
+          FieldType.Double -> fields.optionalDouble(name)
+          FieldType.Float -> fields.optionalFloat(name)
+          FieldType.Int -> fields.optionalInt(name)
+          FieldType.Long -> fields.optionalLong(name)
+          FieldType.String -> fields.optionalString(name)
+          FieldType.Short -> fields.optionalInt(name)
           else -> {
             logger.warn("Unknown schema type ${col.type}; defaulting to string")
             fields.optionalString(name)

@@ -7,7 +7,7 @@ import io.eels.component.Part
 import io.eels.component.Predicate
 import io.eels.component.Using
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.schema.Schema
 import io.eels.util.Logging
 import io.eels.util.Option
@@ -75,7 +75,7 @@ data class HiveSource(val dbName: String,
       //  metastoreSchema.columns.find { it.name equalsIgnoreCase it }
       //       .getOrElse(sys.error("Requested column $columnName does not exist in the hive source"))
       // }
-      val columns = emptyList<Column>()
+      val columns = emptyList<Field>()
       Schema(columns)
     }
 

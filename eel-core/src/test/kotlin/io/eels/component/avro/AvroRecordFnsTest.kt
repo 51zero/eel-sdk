@@ -1,7 +1,7 @@
 package io.eels.component.avro
 
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.Row
 import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
@@ -14,7 +14,7 @@ class AvroRecordFnTest : WordSpec() {
   init {
     "fromRecord" should {
       "create eel row from supplied avro record" {
-        val schema = Schema(Column("a"), Column("b"), Column("c"))
+        val schema = Schema(Field("a"), Field("b"), Field("c"))
         val record = GenericData.Record(schemaToAvroSchema(schema))
         record.put("a", "aaaa")
         record.put("b", "bbbb")

@@ -1,7 +1,7 @@
 package io.eels
 
-import io.eels.schema.Column
-import io.eels.schema.ColumnType
+import io.eels.schema.Field
+import io.eels.schema.FieldType
 import io.eels.schema.Schema
 import org.apache.hadoop.hdfs.server.namenode.Content
 import rx.Observable
@@ -90,8 +90,8 @@ interface Frame {
     }
   }
 
-  fun updateColumnType(columnName: String, columnType: ColumnType): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().updateColumnType(columnName, columnType)
+  fun updateColumnType(columnName: String, fieldType: FieldType): Frame = object : Frame {
+    override fun schema(): Schema = outer().schema().updateColumnType(columnName, fieldType)
     override fun observable(): Observable<Row> = outer().observable()
   }
 
@@ -123,7 +123,7 @@ interface Frame {
    * Returns a new Frame with the new column of type String added at the end. The value of
    * this column for each Row is specified by the default value.
    */
-  fun addColumn(name: String, defaultValue: String): Frame = addColumn(Column(name), defaultValue)
+  fun addColumn(name: String, defaultValue: String): Frame = addColumn(Field(name), defaultValue)
 
   /**
    * Returns a new Frame with the given column added at the end. The value of this column
@@ -131,23 +131,23 @@ interface Frame {
    * Column definition. Eg, an error will occur if the Column had type Int and the default
    * value was 1.3
    */
-  fun addColumn(column: Column, defaultValue: Any): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().addColumn(column)
+  fun addColumn(field: Field, defaultValue: Any): Frame = object : Frame {
+    override fun schema(): Schema = outer().schema().addColumn(field)
     override fun observable(): Observable<Row> {
-      val exists = outer().schema().columnNames().contains(column.name)
-      if (exists) throw IllegalArgumentException("Cannot add column $column as it already exists")
+      val exists = outer().schema().columnNames().contains(field.name)
+      if (exists) throw IllegalArgumentException("Cannot add column $field as it already exists")
       val newSchema = schema()
       return outer().observable().map { Row(newSchema, it.values.plus(defaultValue)) }
     }
   }
 
-  fun addColumnIfNotExists(name: String, defaultValue: Any): Frame = addColumnIfNotExists(Column(name), defaultValue)
+  fun addColumnIfNotExists(name: String, defaultValue: Any): Frame = addColumnIfNotExists(Field(name), defaultValue)
 
-  fun addColumnIfNotExists(column: Column, defaultValue: Any): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().addColumnIfNotExists(column)
+  fun addColumnIfNotExists(field: Field, defaultValue: Any): Frame = object : Frame {
+    override fun schema(): Schema = outer().schema().addColumnIfNotExists(field)
     override fun observable(): Observable<Row> {
-      val exists = outer().schema().columnNames().contains(column.name)
-      return if (exists) outer().observable() else addColumn(column, defaultValue).observable()
+      val exists = outer().schema().columnNames().contains(field.name)
+      return if (exists) outer().observable() else addColumn(field, defaultValue).observable()
     }
   }
 
@@ -163,12 +163,12 @@ interface Frame {
     }
   }
 
-  fun updateColumn(column: Column): Frame = object : Frame {
+  fun updateColumn(field: Field): Frame = object : Frame {
     override fun observable(): Observable<Row> {
       throw UnsupportedOperationException()
     }
 
-    override fun schema(): Schema = outer().schema().updateColumn(column)
+    override fun schema(): Schema = outer().schema().updateColumn(field)
 
     //    override fun buffer(): Buffer = object : Buffer {
     //      val buffer = outer().buffer()
@@ -227,7 +227,7 @@ interface Frame {
   fun projection(columns: List<String>): Frame = object : Frame {
 
     override fun schema(): Schema {
-      val newColumns = outer().schema().columns.filter { columns.contains(it.name) }
+      val newColumns = outer().schema().fields.filter { columns.contains(it.name) }
       return Schema(newColumns)
     }
 

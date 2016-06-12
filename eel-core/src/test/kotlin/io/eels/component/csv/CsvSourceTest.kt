@@ -1,7 +1,7 @@
 package io.eels.component.csv
 
-import io.eels.schema.Column
-import io.eels.schema.ColumnType
+import io.eels.schema.Field
+import io.eels.schema.FieldType
 import io.eels.schema.Schema
 import java.nio.file.Paths
 

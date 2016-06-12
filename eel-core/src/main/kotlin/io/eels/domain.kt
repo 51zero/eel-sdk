@@ -1,13 +1,13 @@
 package io.eels
 
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.schema.PartitionPartValues
 import io.eels.schema.Schema
 
 data class Row(val schema: Schema, val values: List<Any?>) {
 
   init {
-    require(schema.size() == values.size, { "Row should have a value for each column (${schema.columns.size} columns=${schema.columns.joinToString { "," }}, ${values.size} values=${values.joinToString { "," }})" })
+    require(schema.size() == values.size, { "Row should have a value for each column (${schema.fields.size} columns=${schema.fields.joinToString { "," }}, ${values.size} values=${values.joinToString { "," }})" })
   }
 
   override fun toString(): String {
@@ -24,7 +24,7 @@ data class Row(val schema: Schema, val values: List<Any?>) {
   }
 
   companion object {
-    val PoisonPill = Row(Schema(Column("a")), listOf(object : Any() {}))
+    val PoisonPill = Row(Schema(Field("a")), listOf(object : Any() {}))
   }
 
   fun size(): Int = values.size
@@ -44,6 +44,6 @@ data class Row(val schema: Schema, val values: List<Any?>) {
 data class Database(val name: String, val tables: List<Table>)
 
 data class Table(val name: String,
-                 val columns: Column,
+                 val columns: Field,
                  val partitionPartValues: List<PartitionPartValues>,
                  val props: Map<String, String>)

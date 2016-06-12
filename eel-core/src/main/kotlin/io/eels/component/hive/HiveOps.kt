@@ -4,7 +4,7 @@ import io.eels.Constants
 import io.eels.util.Logging
 import io.eels.schema.Partition
 import io.eels.schema.PartitionPart
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.schema.Schema
 import io.eels.util.Option
 import org.apache.hadoop.fs.Path
@@ -99,10 +99,10 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
     return names.map { Partition.parsePath(it) }
   }
 
-  // returns all the partition keys for a table as hive FieldSchemas
-  fun partitionKeys(dbName: String, tableName: String): List<FieldSchema> = client.getTable(dbName, tableName).partitionKeys
+  fun partitionFieldSchemas(dbName: String, tableName: String): List<FieldSchema> =
+      client.getTable(dbName, tableName).partitionKeys
 
-  fun partitionKeyNames(dbName: String, tableName: String): List<String> = partitionKeys(dbName, tableName).map { it.name }
+  fun partitionKeyNames(dbName: String, tableName: String): List<String> = partitionFieldSchemas(dbName, tableName).map { it.name }
 
   fun tableExists(databaseName: String, tableName: String): Boolean = client.tableExists(databaseName, tableName)
 
@@ -125,7 +125,8 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
   fun schema(dbName: String, tableName: String): Schema {
     val table = client.getTable(dbName, tableName)
 
-    // hive columns are always nullable, and hive partitions are never nullable
+    // hive columns are always nullable, and hive partitions are never nullable so we can set
+    // the nullable fields appropriately
     val cols = table.sd.cols.map { HiveSchemaFns.fromHiveField(it, true) }
     val partitions = table.partitionKeys.map { HiveSchemaFns.fromHiveField(it, false) }
 
@@ -137,10 +138,10 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
    * Adds this column to the hive schema. This is schema evolution.
    * The column must be marked as nullable and cannot have the same name as an existing column.
    */
-  fun addColumn(dbName: String, tableName: String, column: Column): Unit {
+  fun addColumn(dbName: String, tableName: String, field: Field): Unit {
     val table = client.getTable(dbName, tableName)
     val sd = table.sd
-    sd.addToCols(HiveSchemaFns.toHiveField(column))
+    sd.addToCols(HiveSchemaFns.toHiveField(field))
     client.alter_table(dbName, tableName, table)
   }
 
@@ -213,12 +214,12 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
     }
 
     if (overwrite) {
-      logger.debug("Removing table if exists (overwrite mode = true)")
+      logger.debug("Removing table $databaseName.$tableName if exists (overwrite mode = true)")
       if (tableExists(databaseName, tableName)) {
-        logger.debug("Table exists, it will be dropped")
+        logger.debug("Table $databaseName.$tableName  exists, it will be dropped")
         client.dropTable(databaseName, tableName, true, true, true)
       } else {
-        logger.debug("Table does not exist")
+        logger.debug("Table $databaseName.$tableName does not exist")
       }
     }
 
@@ -227,7 +228,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
 
       // we will normalize all our columns as lower case, which is how hive treats them
       val lowerPartitionKeys = partitionKeys.map { it.toLowerCase() }
-      val lowerColumns = schema.columns.map { it.toLowerCase() }
+      val lowerColumns = schema.fields.map { it.toLowerCase() }
 
       val sd = StorageDescriptor()
 

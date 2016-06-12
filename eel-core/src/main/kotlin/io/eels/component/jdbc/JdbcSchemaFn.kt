@@ -1,6 +1,6 @@
 package io.eels.component.jdbc
 
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.schema.Precision
 import io.eels.schema.Scale
 import io.eels.util.Logging
@@ -21,7 +21,7 @@ object JdbcSchemaFn : Logging {
     logger.debug("Resultset column count is $columnCount")
 
     val cols = (1..columnCount).map { k ->
-      Column(
+      Field(
           name = md.getColumnLabel(k),
           `type` = dialect.fromJdbcType(md.getColumnType(k)),
           nullable = md.isNullable(k) == ResultSetMetaData.columnNullable,

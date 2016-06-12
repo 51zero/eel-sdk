@@ -1,7 +1,7 @@
 package io.eels
 
-import io.eels.schema.Column
-import io.eels.schema.ColumnType
+import io.eels.schema.Field
+import io.eels.schema.FieldType
 import io.eels.schema.Precision
 import io.eels.schema.Scale
 import io.eels.schema.Schema
@@ -10,15 +10,15 @@ import io.kotlintest.specs.WordSpec
 class SchemaTest : WordSpec() {
 
   val schema = Schema(listOf(
-      Column("a", ColumnType.Boolean, signed = true, scale = Scale(22), nullable = true),
-      Column("b", ColumnType.String, precision = Precision(14), signed = false, nullable = false)
+      Field("a", FieldType.Boolean, signed = true, scale = Scale(22), nullable = true),
+      Field("b", FieldType.String, precision = Precision(14), signed = false, nullable = false)
   ))
 
   init {
 
     "Schema.toLowerCase" should {
       "lower case all column names" {
-        Schema(listOf(Column("a"), Column("B"))).toLowerCase() shouldBe Schema(listOf(Column("a"), Column("b")))
+        Schema(listOf(Field("a"), Field("B"))).toLowerCase() shouldBe Schema(listOf(Field("a"), Field("b")))
       }
     }
 
@@ -34,13 +34,13 @@ class SchemaTest : WordSpec() {
     "Schema" should {
       "return -1 if the column is not found" {
         val schema = Schema(listOf(
-            Column("name", ColumnType.String, true, Precision(0), Scale(0), true),
-            Column("age", ColumnType.Int, true, Precision(0), Scale(0), true),
-            Column("salary", ColumnType.Double, true, Precision(0), Scale(0), true),
-            Column("isPartTime", ColumnType.Boolean, true, Precision(0), Scale(0), true),
-            Column("value1", ColumnType.Decimal, true, Precision(0), Scale(0), true),
-            Column("value2", ColumnType.Float, true, Precision(0), Scale(0), true),
-            Column("value3", ColumnType.Long, true, Precision(0), Scale(0), true)
+            Field("name", FieldType.String, true, Precision(0), Scale(0), true),
+            Field("age", FieldType.Int, true, Precision(0), Scale(0), true),
+            Field("salary", FieldType.Double, true, Precision(0), Scale(0), true),
+            Field("isPartTime", FieldType.Boolean, true, Precision(0), Scale(0), true),
+            Field("value1", FieldType.Decimal, true, Precision(0), Scale(0), true),
+            Field("value2", FieldType.Float, true, Precision(0), Scale(0), true),
+            Field("value3", FieldType.Long, true, Precision(0), Scale(0), true)
         ))
         schema.indexOf("value4") shouldBe -1
       }
@@ -79,12 +79,12 @@ class SchemaTest : WordSpec() {
     "Schema.updateColumnType" should {
       "set new schema type and leave other fields untouched" {
         Schema(
-            Column("a", ColumnType.Int, true),
-            Column("b", ColumnType.Short, false, scale = Scale(2), precision = Precision(3))
-        ).updateColumnType("b", ColumnType.Boolean) shouldBe
+            Field("a", FieldType.Int, true),
+            Field("b", FieldType.Short, false, scale = Scale(2), precision = Precision(3))
+        ).updateColumnType("b", FieldType.Boolean) shouldBe
             Schema(
-                Column("a", ColumnType.Int, true, Precision(0), Scale(0), true),
-                Column("b", ColumnType.Boolean, false, scale = Scale(2), precision = Precision(3))
+                Field("a", FieldType.Int, true, Precision(0), Scale(0), true),
+                Field("b", FieldType.Boolean, false, scale = Scale(2), precision = Precision(3))
             )
       }
     }

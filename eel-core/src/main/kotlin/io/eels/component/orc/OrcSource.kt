@@ -1,6 +1,6 @@
 package io.eels.component.orc
 
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.Source
@@ -49,6 +49,6 @@ fun createOrcReader(path: Path, fs: FileSystem): RecordReader = OrcFile.createRe
 
 fun orcSchemaFromReader(reader: RecordReader): Schema {
   val fields = reader.next(null) as List<Any?>
-  val columns = fields.map { Column(it.toString()) }
+  val columns = fields.map { Field(it.toString()) }
   return Schema(columns)
 }

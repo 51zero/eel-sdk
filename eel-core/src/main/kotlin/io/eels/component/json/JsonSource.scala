@@ -1,7 +1,7 @@
 package io.eels.component.json
 
 import io.eels._
-import io.eels.schema.{Column, Schema}
+import io.eels.schema.{Field, Schema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 
@@ -18,7 +18,7 @@ case class JsonSource(path: Path) extends Source with Using {
     using(createInputStream(path)) { in =>
       val roots = reader.readValues[JsonNode](in)
       val node = roots.next()
-      val columns = node.fieldNames.asScala.map(Column.apply).toList
+      val columns = node.fieldNames.asScala.map(Field.apply).toList
       Schema(columns)
     }
   }

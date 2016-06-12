@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
-import io.eels.schema.Column
-import io.eels.schema.ColumnType
+import io.eels.schema.Field
+import io.eels.schema.FieldType
 import io.eels.schema.Precision
 import io.eels.schema.Scale
 import io.eels.schema.Schema
@@ -16,63 +16,70 @@ object HiveSchemaFns : Logging {
   val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".toRegex()
 
   // converts an eel column into a hive FieldSchema
-  fun toHiveField(column: Column): FieldSchema = FieldSchema(column.name.toLowerCase(), toHiveType(column), null)
+  fun toHiveField(field: Field): FieldSchema = FieldSchema(field.name.toLowerCase(), toHiveType(field), field.comment)
 
   // converts an eel column into a list of hive FieldSchema's
-  fun toHiveFields(schema: Schema): List<FieldSchema> = toHiveFields(schema.columns)
+  fun toHiveFields(schema: Schema): List<FieldSchema> = toHiveFields(schema.fields)
 
   // converts a list of eel columns into a list of hive FieldSchema's
-  fun toHiveFields(columns: List<Column>): List<FieldSchema> = columns.map { toHiveField(it) }
+  fun toHiveFields(fields: List<Field>): List<FieldSchema> = fields.map { toHiveField(it) }
 
   /**
    * converts a hive FieldSchema into an eel Column type, with the given nullability.
    * Nullability has to be specified manually, since all hive fields are always nullable, but eel supports non nulls too
    */
-  fun fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Column {
-    val (ColumnType, precision, scale) = toColumnType(fieldSchema.type)
-    return Column(fieldSchema.name, ColumnType, nullable, precision = precision, scale = scale, comment = fieldSchema.comment)
+  fun fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Field {
+    val (ColumnType, precision, scale) = toFieldType(fieldSchema.type)
+    return Field(fieldSchema.name, ColumnType, nullable, precision = precision, scale = scale, comment = fieldSchema.comment)
   }
 
   // returns the eel columnType, precision and scale for a given hive field type "text" description
-  fun toColumnType(str: String): Triple<ColumnType, Precision, Scale> = when (str) {
-    "tinyint" -> Triple(ColumnType.Short, Precision(0), Scale(0))
-    "smallint" -> Triple(ColumnType.Short, Precision(0), Scale(0))
-    "int" -> Triple(ColumnType.Int, Precision(0), Scale(0))
-    "boolean" -> Triple(ColumnType.Boolean, Precision(0), Scale(0))
-    "bigint" -> Triple(ColumnType.BigInt, Precision(0), Scale(0))
-    "float" -> Triple(ColumnType.Float, Precision(0), Scale(0))
-    "double" -> Triple(ColumnType.Double, Precision(0), Scale(0))
-    "string" -> Triple(ColumnType.String, Precision(0), Scale(0))
-    "binary" -> Triple(ColumnType.Binary, Precision(0), Scale(0))
-    "char" -> Triple(ColumnType.String, Precision(0), Scale(0))
-    "date" -> Triple(ColumnType.Date, Precision(0), Scale(0))
-    "timestamp" -> Triple(ColumnType.Timestamp, Precision(0), Scale(0))
+  fun toFieldType(str: String): Triple<FieldType, Precision, Scale> = when (str) {
+    "tinyint" -> Triple(FieldType.Short, Precision(0), Scale(0))
+    "smallint" -> Triple(FieldType.Short, Precision(0), Scale(0))
+    "int" -> Triple(FieldType.Int, Precision(0), Scale(0))
+    "boolean" -> Triple(FieldType.Boolean, Precision(0), Scale(0))
+    "bigint" -> Triple(FieldType.BigInt, Precision(0), Scale(0))
+    "float" -> Triple(FieldType.Float, Precision(0), Scale(0))
+    "double" -> Triple(FieldType.Double, Precision(0), Scale(0))
+    "string" -> Triple(FieldType.String, Precision(0), Scale(0))
+    "binary" -> Triple(FieldType.Binary, Precision(0), Scale(0))
+    "char" -> Triple(FieldType.String, Precision(0), Scale(0))
+    "date" -> Triple(FieldType.Date, Precision(0), Scale(0))
+    "timestamp" -> Triple(FieldType.Timestamp, Precision(0), Scale(0))
   //DecimalRegex(precision, scale) -> (ColumnType.Decimal, precision.toInt, scale.toInt)
   //VarcharRegex(precision) -> (ColumnType.String, precision.toInt, 0)
     else -> {
-      logger.warn("Unknown schema type $str; defaulting to string")
-      Triple(ColumnType.String, Precision(0), Scale(0))
+      logger.warn("Unknown hive type $str; defaulting to string")
+      Triple(FieldType.String, Precision(0), Scale(0))
     }
   }
 
   /**
-   * Returns the hive column type for the given column
+   * Returns the hive type for the given field
    */
-  fun toHiveType(column: Column): String = when (column.type) {
-    ColumnType.BigInt -> "bigint"
-    ColumnType.Boolean -> "boolean"
-    ColumnType.Decimal -> "decimal(${column.scale},${column.precision})"
-    ColumnType.Double -> "double"
-    ColumnType.Float -> "float"
-    ColumnType.Int -> "int"
-    ColumnType.Long -> "bigint"
-    ColumnType.Short -> "smallint"
-    ColumnType.String -> "string"
-    ColumnType.Timestamp -> "timestamp"
-    ColumnType.Date -> "date"
+  fun toHiveType(field: Field): String = when (field.type) {
+    FieldType.BigInt -> "bigint"
+    FieldType.Boolean -> "boolean"
+    FieldType.Decimal -> "decimal(${field.scale},${field.precision})"
+    FieldType.Double -> "double"
+    FieldType.Float -> "float"
+    FieldType.Int -> "int"
+    FieldType.Long -> "bigint"
+    FieldType.Short -> "smallint"
+    FieldType.String -> "string"
+    FieldType.Timestamp -> "timestamp"
+    FieldType.Date -> "date"
+    FieldType.Struct -> toStructDDL(field)
     else -> {
-      logger.warn("No conversion from column type ${column.`type`} to hive type; defaulting to string")
+      logger.warn("No conversion from field type ${field.`type`} to hive type; defaulting to string")
       "string"
     }
+  }
+
+  fun toStructDDL(field: Field): String {
+    require(field.type == FieldType.Struct, { "Invoked struct method on non struct type" })
+    val types = field.fields.map { it.name + ":" + toHiveType(it) }.joinToString(",")
+    return "struct<$types>"
   }
 }

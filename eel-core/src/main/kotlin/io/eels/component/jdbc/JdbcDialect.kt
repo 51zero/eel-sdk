@@ -1,7 +1,7 @@
 package io.eels.component.jdbc
 
-import io.eels.schema.Column
-import io.eels.schema.ColumnType
+import io.eels.schema.Field
+import io.eels.schema.FieldType
 import io.eels.util.Logging
 import io.eels.Row
 import io.eels.schema.Schema
@@ -10,8 +10,8 @@ interface JdbcDialect {
 
   fun create(schema: Schema, table: String): String
   fun insert(row: Row, table: String): String
-  fun toJdbcType(column: Column): String
-  fun fromJdbcType(i: Int): ColumnType
+  fun toJdbcType(field: Field): String
+  fun fromJdbcType(i: Int): FieldType
 
   /**
     * Returns a parameterized insert query
@@ -25,68 +25,68 @@ interface JdbcDialect {
 
 open class GenericJdbcDialect : JdbcDialect, Logging {
 
-  override fun toJdbcType(column: Column): String = when (column.type) {
-    ColumnType.Long -> "int"
-    ColumnType.BigInt -> "int"
-    ColumnType.Int -> "int"
-    ColumnType.Short -> "smallint"
-    ColumnType.String -> {
-      if (column.precision.value > 0) "varchar(${column.precision})"
+  override fun toJdbcType(field: Field): String = when (field.type) {
+    FieldType.Long -> "int"
+    FieldType.BigInt -> "int"
+    FieldType.Int -> "int"
+    FieldType.Short -> "smallint"
+    FieldType.String -> {
+      if (field.precision.value > 0) "varchar(${field.precision})"
       else "varchar(255)"
     }
     else -> {
-      logger.warn("Unknown schema type ${column.type}")
+      logger.warn("Unknown schema type ${field.type}")
       "varchar(255)"
     }
   }
 
-  override fun fromJdbcType(i: Int): ColumnType = when (i) {
-    java.sql.Types.BIGINT -> ColumnType.Long
-    java.sql.Types.BINARY -> ColumnType.Binary
-    java.sql.Types.BIT -> ColumnType.Boolean
-    java.sql.Types.BLOB -> ColumnType.Binary
-    java.sql.Types.BOOLEAN -> ColumnType.Boolean
-    java.sql.Types.CHAR -> ColumnType.String
-    java.sql.Types.CLOB -> ColumnType.String
-    java.sql.Types.DATALINK -> ColumnType.Unsupported
-    java.sql.Types.DATE -> ColumnType.Date
-    java.sql.Types.DECIMAL -> ColumnType.Decimal
-    java.sql.Types.DISTINCT -> ColumnType.Unsupported
-    java.sql.Types.DOUBLE -> ColumnType.Double
-    java.sql.Types.FLOAT -> ColumnType.Float
-    java.sql.Types.INTEGER -> ColumnType.Int
-    java.sql.Types.JAVA_OBJECT -> ColumnType.Unsupported
-    java.sql.Types.LONGNVARCHAR -> ColumnType.String
-    java.sql.Types.LONGVARBINARY -> ColumnType.Binary
-    java.sql.Types.LONGVARCHAR -> ColumnType.String
-    java.sql.Types.NCHAR -> ColumnType.String
-    java.sql.Types.NCLOB -> ColumnType.String
-    java.sql.Types.NULL -> ColumnType.Unsupported
-    java.sql.Types.NUMERIC -> ColumnType.Decimal
-    java.sql.Types.NVARCHAR -> ColumnType.String
-    java.sql.Types.OTHER -> ColumnType.Unsupported
-    java.sql.Types.REAL -> ColumnType.Double
-    java.sql.Types.REF -> ColumnType.String
-    java.sql.Types.ROWID -> ColumnType.Long
-    java.sql.Types.SMALLINT -> ColumnType.Int
-    java.sql.Types.SQLXML -> ColumnType.String
-    java.sql.Types.STRUCT -> ColumnType.String
-    java.sql.Types.TIME -> ColumnType.Timestamp
-    java.sql.Types.TIMESTAMP -> ColumnType.Timestamp
-    java.sql.Types.TINYINT -> ColumnType.Int
-    java.sql.Types.VARBINARY -> ColumnType.Binary
-    java.sql.Types.VARCHAR -> ColumnType.String
-    else -> ColumnType.Unsupported
+  override fun fromJdbcType(i: Int): FieldType = when (i) {
+    java.sql.Types.BIGINT -> FieldType.Long
+    java.sql.Types.BINARY -> FieldType.Binary
+    java.sql.Types.BIT -> FieldType.Boolean
+    java.sql.Types.BLOB -> FieldType.Binary
+    java.sql.Types.BOOLEAN -> FieldType.Boolean
+    java.sql.Types.CHAR -> FieldType.String
+    java.sql.Types.CLOB -> FieldType.String
+    java.sql.Types.DATALINK -> throw UnsupportedOperationException()
+    java.sql.Types.DATE -> FieldType.Date
+    java.sql.Types.DECIMAL -> FieldType.Decimal
+    java.sql.Types.DISTINCT -> throw UnsupportedOperationException()
+    java.sql.Types.DOUBLE -> FieldType.Double
+    java.sql.Types.FLOAT -> FieldType.Float
+    java.sql.Types.INTEGER -> FieldType.Int
+    java.sql.Types.JAVA_OBJECT -> FieldType.String
+    java.sql.Types.LONGNVARCHAR -> FieldType.String
+    java.sql.Types.LONGVARBINARY -> FieldType.Binary
+    java.sql.Types.LONGVARCHAR -> FieldType.String
+    java.sql.Types.NCHAR -> FieldType.String
+    java.sql.Types.NCLOB -> FieldType.String
+    java.sql.Types.NULL -> FieldType.String
+    java.sql.Types.NUMERIC -> FieldType.Decimal
+    java.sql.Types.NVARCHAR -> FieldType.String
+    java.sql.Types.OTHER -> FieldType.String
+    java.sql.Types.REAL -> FieldType.Double
+    java.sql.Types.REF -> FieldType.String
+    java.sql.Types.ROWID -> FieldType.Long
+    java.sql.Types.SMALLINT -> FieldType.Int
+    java.sql.Types.SQLXML -> FieldType.String
+    java.sql.Types.STRUCT -> FieldType.String
+    java.sql.Types.TIME -> FieldType.Timestamp
+    java.sql.Types.TIMESTAMP -> FieldType.Timestamp
+    java.sql.Types.TINYINT -> FieldType.Int
+    java.sql.Types.VARBINARY -> FieldType.Binary
+    java.sql.Types.VARCHAR -> FieldType.String
+    else -> FieldType.String
   }
 
   override fun create(schema: Schema, table: String): String {
-    val columns = schema.columns.map { "${it.name} ${toJdbcType(it)}" }.joinToString("(", ",", ")")
+    val columns = schema.fields.map { "${it.name} ${toJdbcType(it)}" }.joinToString("(", ",", ")")
     return "CREATE TABLE $table $columns"
   }
 
   override fun insertQuery(schema: Schema, table: String): String {
     val columns = schema.columnNames().joinToString(",")
-    val parameters = Array(schema.columns.size, { "?" }).joinToString(",")
+    val parameters = Array(schema.fields.size, { "?" }).joinToString(",")
     return "INSERT INTO $table ($columns) VALUES ($parameters)"
   }
 

@@ -1,7 +1,7 @@
 package io.eels.component.sequence
 
 import au.com.bytecode.opencsv.CSVReader
-import io.eels.schema.Column
+import io.eels.schema.Field
 import io.eels.util.Logging
 import io.eels.Row
 import io.eels.schema.Schema
@@ -45,11 +45,11 @@ interface SequenceSupport : Logging, Using {
     return using(createReader(path)) {
       val k = IntWritable()
       val v = BytesWritable()
-      val columns: List<Column> = {
+      val fields: List<Field> = {
         it.next(k, v)
-        toValues(v).map { Column(it) }
+        toValues(v).map { Field(it) }
       }()
-      Schema(columns)
+      Schema(fields)
     }
   }
 }

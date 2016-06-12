@@ -2,8 +2,8 @@ package io.eels.component.parquet
 
 import java.util.UUID
 
-import io.eels.schema.Column
-import io.eels.schema.ColumnType
+import io.eels.schema.Field
+import io.eels.schema.FieldType
 import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 import org.apache.avro.SchemaBuilder
@@ -40,7 +40,7 @@ class ParquetReaderSupportTest : WordSpec() {
     writer.write(record)
     writer.close()
 
-    val schema = Schema(Column("str"), Column("looong", ColumnType.Long, true), Column("dooble", ColumnType.Double, true))
+    val schema = Schema(Field("str"), Field("looong", FieldType.Long, true), Field("dooble", FieldType.Double, true))
 
     "ParquetReaderSupport" should     {
       "support projections on doubles" {
