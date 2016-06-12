@@ -14,45 +14,54 @@ object HiveSchemaFns : Logging {
 
   val VarcharRegex = "varchar\\((.*?)\\)".toRegex()
   val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".toRegex()
+  val StructRegex = "struct<(.*?)>".toRegex()
 
-  // converts an eel column into a hive FieldSchema
+  // converts an eel field into a hive FieldSchema
   fun toHiveField(field: Field): FieldSchema = FieldSchema(field.name.toLowerCase(), toHiveType(field), field.comment)
 
-  // converts an eel column into a list of hive FieldSchema's
+  // converts an eel Schema into a list of hive FieldSchema's
   fun toHiveFields(schema: Schema): List<FieldSchema> = toHiveFields(schema.fields)
 
-  // converts a list of eel columns into a list of hive FieldSchema's
+  // converts a list of eel fields into a list of hive FieldSchema's
   fun toHiveFields(fields: List<Field>): List<FieldSchema> = fields.map { toHiveField(it) }
 
   /**
-   * converts a hive FieldSchema into an eel Column type, with the given nullability.
+   * Converts a hive FieldSchema into an eel Column type, with the given nullability.
    * Nullability has to be specified manually, since all hive fields are always nullable, but eel supports non nulls too
    */
-  fun fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Field {
-    val (ColumnType, precision, scale) = toFieldType(fieldSchema.type)
-    return Field(fieldSchema.name, ColumnType, nullable, precision = precision, scale = scale, comment = fieldSchema.comment)
-  }
+  fun fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Field =
+      fromHive(fieldSchema.name, fieldSchema.type, nullable, fieldSchema.comment)
 
-  // returns the eel columnType, precision and scale for a given hive field type "text" description
-  fun toFieldType(str: String): Triple<FieldType, Precision, Scale> = when (str) {
-    "tinyint" -> Triple(FieldType.Short, Precision(0), Scale(0))
-    "smallint" -> Triple(FieldType.Short, Precision(0), Scale(0))
-    "int" -> Triple(FieldType.Int, Precision(0), Scale(0))
-    "boolean" -> Triple(FieldType.Boolean, Precision(0), Scale(0))
-    "bigint" -> Triple(FieldType.BigInt, Precision(0), Scale(0))
-    "float" -> Triple(FieldType.Float, Precision(0), Scale(0))
-    "double" -> Triple(FieldType.Double, Precision(0), Scale(0))
-    "string" -> Triple(FieldType.String, Precision(0), Scale(0))
-    "binary" -> Triple(FieldType.Binary, Precision(0), Scale(0))
-    "char" -> Triple(FieldType.String, Precision(0), Scale(0))
-    "date" -> Triple(FieldType.Date, Precision(0), Scale(0))
-    "timestamp" -> Triple(FieldType.Timestamp, Precision(0), Scale(0))
-  //DecimalRegex(precision, scale) -> (ColumnType.Decimal, precision.toInt, scale.toInt)
-  //VarcharRegex(precision) -> (ColumnType.String, precision.toInt, 0)
-    else -> {
-      logger.warn("Unknown hive type $str; defaulting to string")
-      Triple(FieldType.String, Precision(0), Scale(0))
-    }
+  fun fromHive(name: String, type: String, nullable: Boolean, comment: String?): Field {
+
+    return when {
+      type == "tinyint" -> Field(name, FieldType.Short, nullable, Precision(0), Scale(0))
+      type == "smallint" -> Field(name, FieldType.Short, nullable, Precision(0), Scale(0))
+      type == "int" -> Field(name, FieldType.Int, nullable, Precision(0), Scale(0))
+      type == "boolean" -> Field(name, FieldType.Boolean, nullable, Precision(0), Scale(0))
+      type == "bigint" -> Field(name, FieldType.BigInt, nullable, Precision(0), Scale(0))
+      type == "float" -> Field(name, FieldType.Float, nullable, Precision(0), Scale(0))
+      type == "double" -> Field(name, FieldType.Double, nullable, Precision(0), Scale(0))
+      type == "string" -> Field(name, FieldType.String, nullable, Precision(0), Scale(0))
+      type == "binary" -> Field(name, FieldType.Binary, nullable, Precision(0), Scale(0))
+      type == "char" -> Field(name, FieldType.String, nullable, Precision(0), Scale(0))
+      type == "date" -> Field(name, FieldType.Date, nullable, Precision(0), Scale(0))
+      type == "timestamp" -> Field(name, FieldType.Timestamp, nullable, Precision(0), Scale(0))
+    //DecimalRegex(precision, scale) -> (ColumnType.Decimal, precision.toInt, scale.toInt)
+    //VarcharRegex(precision) -> (ColumnType.String, precision.toInt, 0)
+      StructRegex.matches(type) -> {
+        val value = StructRegex.matchEntire(type)!!.groupValues[1]
+        val fields = value.split(",").map {
+          val (name, type) = it.split(":")
+          fromHive(name, type, nullable, null)
+        }
+        Field.createStruct(name, fields).withNullable(nullable)
+      }
+      else -> {
+        logger.warn("Unknown hive type $type; defaulting to string")
+        Field(name, FieldType.String, nullable, Precision(0), Scale(0))
+      }
+    }.withComment(comment)
   }
 
   /**
@@ -77,7 +86,8 @@ object HiveSchemaFns : Logging {
     }
   }
 
-  fun toStructDDL(field: Field): String {
+  fun toStructDDL(field: Field)
+      : String {
     require(field.type == FieldType.Struct, { "Invoked struct method on non struct type" })
     val types = field.fields.map { it.name + ":" + toHiveType(it) }.joinToString(",")
     return "struct<$types>"

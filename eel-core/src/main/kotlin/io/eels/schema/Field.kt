@@ -12,8 +12,12 @@ data class Field(val name: String,
   // Creates a lowercase version of this column
   fun toLowerCase(): Field = copy(name = name.toLowerCase())
 
+  fun withComment(comment: String?): Field = copy(comment = comment)
+  fun withNullable(nullable: Boolean): Field = copy(nullable = nullable)
+
   companion object {
-    fun createStruct(name: String, vararg fields: Field): Field = Field(name, type = FieldType.Struct, fields = fields.asList())
+    fun createStruct(name: String, vararg fields: Field): Field = createStruct(name, fields.asList())
+    fun createStruct(name: String, fields: List<Field>): Field = Field(name, type = FieldType.Struct, fields = fields)
   }
 }
 
