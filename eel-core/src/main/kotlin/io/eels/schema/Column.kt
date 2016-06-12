@@ -5,8 +5,8 @@ data class Column(val name: String,
                   val nullable: Boolean = true,
                   val precision: Precision = Precision(0),
                   val scale: Scale = Scale(0),
-                  val signed: Boolean = true,
-                  val comment: String = "") {
+                  val signed: Boolean = false,
+                  val comment: String? = null) {
   // Creates a lowercase version of this column
   fun toLowerCase(): Column = copy(name = name.toLowerCase())
 }

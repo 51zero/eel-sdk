@@ -8,7 +8,7 @@ import io.eels.SourceParser
 
 object CsvSourceParser : SourceParser {
   val Regex = "csv:([^?].*?)(\\?.*)?"
-  override fun parse(str: String): Builder<CsvSource>? = when (str) {
+  override fun parse(url: String): Builder<CsvSource>? = when (url) {
   //Regex -> CsvSourceBuilder(path, params)
     else -> null
   }
@@ -20,7 +20,7 @@ class CsvSourceBuilder(val path: String, params: Map<String, List<String>>) : Bu
 
 object CsvSinkParser : SinkParser {
   val Regex = "csv:([^?].*?)(\\?.*)?"
-  override fun parse(str: String): Builder<CsvSink>? = when (str) {
+  override fun parse(url: String): Builder<CsvSink>? = when (url) {
   // Regex -> Some(CsvSinkBuilder(path, Option(params).map(UrlParamParser.apply).getOrElse(Map.empty)))
     else -> null
   }

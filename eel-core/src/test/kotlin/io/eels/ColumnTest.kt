@@ -7,7 +7,7 @@ class FieldTest : WordSpec() {
 
   init {
     "Column.toLowerCase" should {
-      "return new column with lower case name" with {
+      "return new column with lower case name" {
         val col = Column("MyName")
         col.toLowerCase().name shouldBe "myname"
       }

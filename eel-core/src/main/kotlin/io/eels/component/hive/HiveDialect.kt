@@ -51,8 +51,3 @@ interface HiveDialect : Logging {
     }
   }
 }
-
-interface HiveWriter {
-  fun write(row: Row): Unit
-  fun close(): Unit
-}

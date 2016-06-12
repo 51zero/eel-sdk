@@ -43,7 +43,7 @@ class ParquetReaderSupportTest : WordSpec() {
     val schema = Schema(Column("str"), Column("looong", ColumnType.Long, true), Column("dooble", ColumnType.Double, true))
 
     "ParquetReaderSupport" should     {
-      "support projections on doubles" with {
+      "support projections on doubles" {
 
         val reader = ParquetReaderSupport.create(path, true, null, schema.removeColumn("looong"))
         val record = reader.read()
@@ -52,7 +52,7 @@ class ParquetReaderSupportTest : WordSpec() {
         record.get("str").toString() shouldBe "wibble"
         record.get("dooble") shouldBe 12.34
       }
-      "support projections on longs" with {
+      "support projections on longs" {
 
         val reader = ParquetReaderSupport.create(path, true, null, schema.removeColumn("str"))
         val record = reader.read()
@@ -60,7 +60,7 @@ class ParquetReaderSupportTest : WordSpec() {
 
         record.get("looong") shouldBe 999L
       }
-      "support full projections" with {
+      "support full projections" {
 
         val reader = ParquetReaderSupport.create(path, true, null, schema)
         val record = reader.read()
@@ -71,7 +71,7 @@ class ParquetReaderSupportTest : WordSpec() {
         record.get("dooble") shouldBe 12.34
 
       }
-      "support non projections" with {
+      "support non projections" {
 
         val reader = ParquetReaderSupport.create(path, false, null, null)
         val record = reader.read()

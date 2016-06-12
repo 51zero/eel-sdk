@@ -10,6 +10,7 @@ import io.eels.util.Option
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
+import org.apache.hadoop.hive.metastore.api.Database
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 import org.apache.hadoop.hive.metastore.api.SerDeInfo
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor
@@ -18,14 +19,7 @@ import org.apache.hadoop.hive.metastore.api.Partition as HivePartition
 
 class HiveOps(val client: IMetaStoreClient) : Logging {
 
-  // returns all the partitions for the given db:table
-  fun partitions(dbName: String, tableName: String): List<Partition> {
-    // returns hive partition names, which are in the format key1=value1/key2=value2
-    val names = client.listPartitionNames(dbName, tableName, Short.MAX_VALUE)
-    // should be at least one = for each partition as every partition must have at least one key value pair
-    assert(names.all { it.contains("=") })
-    return names.map { Partition.parsePath(it) }
-  }
+
 
 //  /**
 //   * Returns a map of all partition keys to their values.
@@ -96,8 +90,17 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
 
   fun createTimeAsInt(): Int = (System.currentTimeMillis() / 1000).toInt()
 
-  fun partitionKeys(dbName: String, tableName: String): List<FieldSchema> =
-      client.getTable(dbName, tableName).partitionKeys
+  // returns all the partitions for the given db:table in the form of eel Partitions
+  fun partitions(dbName: String, tableName: String): List<Partition> {
+    // returns hive partition names, which are in the format key1=value1/key2=value2
+    val names = client.listPartitionNames(dbName, tableName, Short.MAX_VALUE)
+    // should be at least one = for each partition as every partition must have at least one key value pair
+    assert(names.all { it.contains("=") })
+    return names.map { Partition.parsePath(it) }
+  }
+
+  // returns all the partition keys for a table as hive FieldSchemas
+  fun partitionKeys(dbName: String, tableName: String): List<FieldSchema> = client.getTable(dbName, tableName).partitionKeys
 
   fun partitionKeyNames(dbName: String, tableName: String): List<String> = partitionKeys(dbName, tableName).map { it.name }
 
@@ -201,10 +204,10 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
                   format: HiveFormat = HiveFormat.Text,
                   props: Map<String, String> = emptyMap(),
                   tableType: TableType = TableType.MANAGED_TABLE,
-                  location: Option<String> = Option.None,
+                  location: String?,
                   overwrite: Boolean = false): Boolean {
     for (partitionKey in partitionKeys) {
-      if (schema.contains(partitionKey)) {
+      if (!schema.contains(partitionKey)) {
         throw IllegalArgumentException("Schema must define all partition keys but it does not define $partitionKey")
       }
     }
@@ -237,7 +240,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
       )
       sd.inputFormat = format.inputFormatClass()
       sd.outputFormat = format.outputFormatClass()
-      location.forEach { sd.location = it }
+      sd.location = location
 
       val table = Table()
       table.dbName = databaseName
@@ -258,6 +261,19 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
       true
     } else {
       false
+    }
+  }
+
+  fun createDatabase(name: String, description: String? = null, overwrite: Boolean = false) {
+    val exists = client.getDatabase(name) != null
+    if (exists && overwrite) {
+      logger.info("Database exists, overwrite=true; dropping database $name")
+      client.dropDatabase(name)
+    }
+    if (overwrite || !exists) {
+      val database = Database(name, description, null, null)
+      logger.info("Creating database $name")
+      client.createDatabase(database)
     }
   }
 }

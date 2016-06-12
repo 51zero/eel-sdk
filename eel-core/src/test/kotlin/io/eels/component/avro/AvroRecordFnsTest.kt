@@ -13,7 +13,7 @@ class AvroRecordFnTest : WordSpec() {
 
   init {
     "fromRecord" should {
-      "create eel row from supplied avro record" with {
+      "create eel row from supplied avro record" {
         val schema = Schema(Column("a"), Column("b"), Column("c"))
         val record = GenericData.Record(schemaToAvroSchema(schema))
         record.put("a", "aaaa")

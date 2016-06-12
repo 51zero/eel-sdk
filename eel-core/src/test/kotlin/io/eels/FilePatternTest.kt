@@ -13,19 +13,19 @@ class FilePatternTest : WordSpec() {
 
   init {
     "FilePattern" should {
-      "detect single hdfs path without name server" with {
+      "detect single hdfs path without name server" {
         FilePattern("hdfs:///mypath", fs).toPaths() shouldBe listOf(Path("hdfs:///mypath"))
       }
-      "detect single hdfs path with name server" with {
+      "detect single hdfs path with name server" {
         FilePattern("hdfs://nameserver/mypath", fs).toPaths() shouldBe listOf(Path("hdfs://nameserver/mypath"))
       }
-      "detect absolute local file" with {
+      "detect absolute local file" {
         FilePattern("file:///absolute/file", fs).toPaths() shouldBe listOf(Path("file:///absolute/file"))
       }
-      "detect relative local file" with {
+      "detect relative local file" {
         FilePattern("file://local/file", fs).toPaths() shouldBe listOf(Path("file://local/file"))
       }
-      "detect relative local file expansion" with {
+      "detect relative local file expansion" {
         val dir = Files.createTempDirectory("filepatterntest")
         val files = listOf("a", "b", "c").map { dir.resolve(it) }
         val hdfsPaths = files.map { Path("file://" + it) }
@@ -36,7 +36,7 @@ class FilePatternTest : WordSpec() {
       }
 
       //not working on windows
-      "detect relative local file expansion with schema" with  {
+      "detect relative local file expansion with schema"  {
         val dir = Files.createTempDirectory("filepatterntest")
         val files = listOf("a", "b", "c").map { dir.resolve(it) }
         val hdfsPaths = files.map { Path("file://" + it) }
@@ -46,7 +46,7 @@ class FilePatternTest : WordSpec() {
         Files.deleteIfExists(dir)
       }
 
-      "use filter if supplied" with {
+      "use filter if supplied" {
         val dir = Files.createTempDirectory("filepatterntest")
         val files = listOf("a", "b", "c").map { dir.resolve(it) }
         files.forEach { Files.createFile(it) }

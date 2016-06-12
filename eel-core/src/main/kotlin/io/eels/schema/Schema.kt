@@ -75,11 +75,11 @@ data class Schema(val columns: List<Column>) {
     if (it.name == from) it.copy(name = to) else it
   })
 
-  fun print(): String {
-    return columns.map { column ->
+  fun show(): String {
+    return "Schema\n" + columns.map { column ->
       val signedString = if (column.signed) "signed" else "unsigned"
-      val nullString = if (column.nullable) "null" else "not null"
-      "- ${column.name} [${column.`type`} $nullString scale=${column.scale} precision=${column.precision} $signedString]"
+      val nullString = if (column.nullable) "nullable" else "not nullable"
+      "- ${column.name} [${column.`type`} $nullString scale=${column.scale.value} precision=${column.precision.value} $signedString]"
     }.joinToString ("\n")
   }
 

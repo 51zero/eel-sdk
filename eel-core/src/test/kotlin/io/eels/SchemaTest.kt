@@ -17,13 +17,13 @@ class SchemaTest : WordSpec() {
   init {
 
     "Schema.toLowerCase" should {
-      "lower case all column names" with {
+      "lower case all column names" {
         Schema(listOf(Column("a"), Column("B"))).toLowerCase() shouldBe Schema(listOf(Column("a"), Column("b")))
       }
     }
 
     "Schema.contains" should {
-      "return true if the schema contains the column" with {
+      "return true if the schema contains the column" {
         schema.contains("a") shouldBe true
         schema.contains("b") shouldBe true
         schema.contains("C") shouldBe false
@@ -32,7 +32,7 @@ class SchemaTest : WordSpec() {
     }
 
     "Schema" should {
-      "return -1 if the column is not found" with {
+      "return -1 if the column is not found" {
         val schema = Schema(listOf(
             Column("name", ColumnType.String, true, Precision(0), Scale(0), true),
             Column("age", ColumnType.Int, true, Precision(0), Scale(0), true),
@@ -45,8 +45,8 @@ class SchemaTest : WordSpec() {
         schema.indexOf("value4") shouldBe -1
       }
 
-      "pretty print in desired format" with {
-        schema.print() shouldBe "- a [Boolean null scale=22 precision=0 signed]\n- b [String not null scale=0 precision=14 unsigned]"
+      "pretty print in desired format" {
+        schema.show() shouldBe "- a [Boolean null scale=22 precision=0 signed]\n- b [String not null scale=0 precision=14 unsigned]"
       }
       //      "be inferred from the inner Person case class" in {
       //        Schema.from[Person] shouldBe {
@@ -77,7 +77,7 @@ class SchemaTest : WordSpec() {
     }
 
     "Schema.updateColumnType" should {
-      "set new schema type and leave other fields untouched" with {
+      "set new schema type and leave other fields untouched" {
         Schema(
             Column("a", ColumnType.Int, true),
             Column("b", ColumnType.Short, false, scale = Scale(2), precision = Precision(3))

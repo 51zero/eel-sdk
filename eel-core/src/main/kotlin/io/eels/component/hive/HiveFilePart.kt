@@ -8,7 +8,6 @@ import io.eels.component.Predicate
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
 import rx.Observable
-import rx.Subscriber
 import rx.Subscription
 
 class HiveFilePart(val dialect: HiveDialect,

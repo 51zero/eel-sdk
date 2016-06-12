@@ -18,7 +18,7 @@ class SchemaInferrerTest : WordSpec() {
     val path = Paths.get(file)
 
     "SchemaInferrer" should {
-      "use rules to infer column types" with {
+      "use rules to infer column types" {
         val inferrer = SchemaInferrer(ColumnType.String, SchemaRule("a", ColumnType.Int, false), SchemaRule("b", ColumnType.Boolean))
         CsvSource(path).withHeader(Header.FirstRow).withSchemaInferrer(inferrer).schema() shouldBe Schema(listOf(
             Column("a", ColumnType.Int, false),

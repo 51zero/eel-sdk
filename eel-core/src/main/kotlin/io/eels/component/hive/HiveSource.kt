@@ -48,13 +48,7 @@ data class HiveSource(val dbName: String,
 //  fun partitionValues(key: String): List<String> =
 //      HiveOps.partitionValues(dbName, tableName, key)(client)
 //
-//  /**
-//   * Returns all partition values for the given partition keys.
-//   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
-//   * directly from the hive metastore.
-//   */
-//  fun partitionValues(keys: List<String>): List<List<String>> =
-//      HiveOps.partitionValues(dbName, tableName, keys)(client)
+
 //
 //  fun partitionMap(): Map<String, List<String>> = HiveOps.partitionMap(dbName, tableName)(client)
 //
