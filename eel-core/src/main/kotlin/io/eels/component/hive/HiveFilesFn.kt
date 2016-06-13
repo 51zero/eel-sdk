@@ -1,7 +1,7 @@
 import com.typesafe.config.ConfigFactory
 import io.eels.util.Logging
 import io.eels.component.hive.HiveFileScanner
-import io.eels.schema.Partition
+import io.eels.component.hive.PartitionSpec
 import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
@@ -20,21 +20,21 @@ object HiveFilesFn : Logging {
   operator fun invoke(table: Table,
                       partitionConstraints: List<PartitionConstraint>,
                       fs: FileSystem,
-                      client: IMetaStoreClient): List<Pair<LocatedFileStatus, Partition>> {
+                      client: IMetaStoreClient): List<Pair<LocatedFileStatus, PartitionSpec>> {
 
     // returns true if the partition meets the partition constraint
     fun eval(partition: HivePartition, constraints: List<PartitionConstraint>): Boolean {
       val location = partition.sd.location
-      val eelPartition = Partition.parsePath(location)
+      val eelPartition = PartitionSpec.parsePath(location)
       return constraints.all { it.eval(eelPartition) }
     }
 
-    fun rootScan(): List<Pair<LocatedFileStatus, Partition>> {
+    fun rootScan(): List<Pair<LocatedFileStatus, PartitionSpec>> {
       val location = Path(table.sd.location)
-      return HiveFileScanner(location, fs).map { Pair(it, Partition.empty) }
+      return HiveFileScanner(location, fs).map { Pair(it, PartitionSpec.empty) }
     }
 
-    fun partitionsScan(partitions: List<HivePartition>): List<Pair<LocatedFileStatus, Partition>> {
+    fun partitionsScan(partitions: List<HivePartition>): List<Pair<LocatedFileStatus, PartitionSpec>> {
       // first we filter out any partitions that don't meet our partition constraints
       val filteredPartitions = partitions.filter { eval(it, partitionConstraints) }
       return filteredPartitions.flatMap {
@@ -43,7 +43,7 @@ object HiveFilesFn : Logging {
         // the partition location might not actually exist, as it might just have been created in the metastore only
         when {
           fs.exists(path) ->
-            HiveFileScanner(path, fs).map { Pair(it, Partition.parsePath(location)) }
+            HiveFileScanner(path, fs).map { Pair(it, PartitionSpec.parsePath(location)) }
           errorOnMissingPartitions ->
             throw IllegalStateException("Partition [$location] was specified in the hive metastore but did not exist on disk. To disable these exceptions set eel.hive.source.errorOnMissingPartitions=false")
           warnOnMissingPartitions ->

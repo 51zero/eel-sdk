@@ -8,12 +8,14 @@ data class Field(val name: String,
                  val signed: Boolean = false,
                  val arrayType: FieldType? = null, // if an array then the type of the array elements
                  val fields: List<Field> = emptyList(), // if a struct, then the fields of that struct
+                 val partition: Boolean = false,
                  val comment: String? = null) {
   // Creates a lowercase version of this column
   fun toLowerCase(): Field = copy(name = name.toLowerCase())
 
   fun withComment(comment: String?): Field = copy(comment = comment)
   fun withNullable(nullable: Boolean): Field = copy(nullable = nullable)
+  fun withPartition(partition: Boolean) = copy(partition = partition)
 
   companion object {
     fun createStruct(name: String, vararg fields: Field): Field = createStruct(name, fields.asList())

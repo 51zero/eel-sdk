@@ -13,7 +13,7 @@ object HiveSchemaEvolve : Logging {
     val ops = HiveOps(client)
 
     // these will be lower case
-    val fields = client.getSchema(dbName, tableName).plus(ops.partitionFieldSchemas(dbName, tableName))
+    val fields = client.getSchema(dbName, tableName).plus(ops.partitionKeys(dbName, tableName))
     val existingColumns = fields.map { it.name }
     logger.debug("hive:$dbName:$tableName fields: " + existingColumns.joinToString (","))
 

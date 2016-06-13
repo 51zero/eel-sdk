@@ -79,7 +79,8 @@ data class Schema(val fields: List<Field>) {
     return "Schema\n" + fields.map { column ->
       val signedString = if (column.signed) "signed" else "unsigned"
       val nullString = if (column.nullable) "nullable" else "not nullable"
-      "- ${column.name} [${column.`type`} $nullString scale=${column.scale.value} precision=${column.precision.value} $signedString]"
+      val partitionString = if (column.partition) "partition" else ""
+      "- ${column.name} [${column.`type`} $nullString scale=${column.scale.value} precision=${column.precision.value} $signedString $partitionString]"
     }.joinToString ("\n")
   }
 

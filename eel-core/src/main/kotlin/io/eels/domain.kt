@@ -1,7 +1,6 @@
 package io.eels
 
 import io.eels.schema.Field
-import io.eels.schema.PartitionPartValues
 import io.eels.schema.Schema
 
 data class Row(val schema: Schema, val values: List<Any?>) {
@@ -39,11 +38,3 @@ data class Row(val schema: Schema, val values: List<Any?>) {
 
   fun add(name: String, value: Any): Row = copy(schema = schema.addColumn(name), values = values + value)
 }
-
-
-data class Database(val name: String, val tables: List<Table>)
-
-data class Table(val name: String,
-                 val columns: Field,
-                 val partitionPartValues: List<PartitionPartValues>,
-                 val props: Map<String, String>)

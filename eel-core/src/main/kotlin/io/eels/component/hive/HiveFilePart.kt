@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.Partition
+import io.eels.component.hive.PartitionSpec
 import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.component.Part
@@ -12,7 +12,7 @@ import rx.Subscription
 
 class HiveFilePart(val dialect: HiveDialect,
                    val file: LocatedFileStatus,
-                   val partition: Partition,
+                   val partition: PartitionSpec,
                    val metastoreSchema: Schema,
                    val schema: Schema,
                    val predicate: Predicate?,

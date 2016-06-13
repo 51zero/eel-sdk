@@ -1,5 +1,5 @@
 import io.eels.Row
-import io.eels.schema.PartitionPart
+import io.eels.component.hive.PartitionPart
 import io.eels.util.Logging
 
 object PartitionPartsFn : Logging {

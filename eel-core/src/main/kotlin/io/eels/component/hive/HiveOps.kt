@@ -2,8 +2,8 @@ package io.eels.component.hive
 
 import io.eels.Constants
 import io.eels.util.Logging
-import io.eels.schema.Partition
-import io.eels.schema.PartitionPart
+import io.eels.component.hive.PartitionSpec
+import io.eels.component.hive.PartitionPart
 import io.eels.schema.Field
 import io.eels.schema.Schema
 import io.eels.util.Option
@@ -53,7 +53,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
    * partition key values as a subdirectory of the table location. The values for the serialzation formats are
    * taken from the values for the table.
    */
-  fun createPartition(dbName: String, tableName: String, partition: Partition): Unit {
+  fun createPartition(dbName: String, tableName: String, partition: PartitionSpec): Unit {
     val table = client.getTable(dbName, tableName)
     val location = Path(table.sd.location, partition.name())
     createPartition(dbName, tableName, partition, location)
@@ -64,7 +64,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
    * specified. If you want to use the default location then use the other variant that doesn't require the
    * location path. The values for the serialzation formats are taken from the values for the table.
    */
-  fun createPartition(dbName: String, tableName: String, partition: Partition, location: Path): Unit {
+  fun createPartition(dbName: String, tableName: String, partition: PartitionSpec, location: Path): Unit {
 
     // we fetch the table so we can copy the serde/format values from the table. It makes no sense
     // to store a partition with different serialization formats to other partitions.
@@ -85,24 +85,21 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
     client.add_partition(hivePartition)
   }
 
-  fun hivePartitions(dbName: String, tableName: String): List<org.apache.hadoop.hive.metastore.api.Partition> =
+  /**
+   * Returns hive API partitions for the given dbName:tableName
+   */
+  fun partitions(dbName: String, tableName: String): List<org.apache.hadoop.hive.metastore.api.Partition> =
       client.listPartitions(dbName, tableName, Short.MAX_VALUE)
 
   fun createTimeAsInt(): Int = (System.currentTimeMillis() / 1000).toInt()
 
-  // returns all the partitions for the given db:table in the form of eel Partitions
-  fun partitions(dbName: String, tableName: String): List<Partition> {
-    // returns hive partition names, which are in the format key1=value1/key2=value2
-    val names = client.listPartitionNames(dbName, tableName, Short.MAX_VALUE)
-    // should be at least one = for each partition as every partition must have at least one key value pair
-    assert(names.all { it.contains("=") })
-    return names.map { Partition.parsePath(it) }
-  }
+  /**
+   * Returns the hive FieldSchema's for partition columns.
+   * Hive calls these "partition keys"
+   */
+  fun partitionKeys(dbName: String, tableName: String): List<FieldSchema> = client.getTable(dbName, tableName).partitionKeys
 
-  fun partitionFieldSchemas(dbName: String, tableName: String): List<FieldSchema> =
-      client.getTable(dbName, tableName).partitionKeys
-
-  fun partitionKeyNames(dbName: String, tableName: String): List<String> = partitionFieldSchemas(dbName, tableName).map { it.name }
+  fun partitionKeyNames(dbName: String, tableName: String): List<String> = partitionKeys(dbName, tableName).map { it.name }
 
   fun tableExists(databaseName: String, tableName: String): Boolean = client.tableExists(databaseName, tableName)
 
@@ -121,14 +118,14 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
   fun partitionPathString(parts: List<PartitionPart>, tablePath: Path): String =
       tablePath.toString() + "/" + parts.map { it.unquoted() }.joinToString("/")
 
-  // Returns the eel schema for the hive db:table
+  // Returns the eel schema for the hive dbName:tableName
   fun schema(dbName: String, tableName: String): Schema {
     val table = client.getTable(dbName, tableName)
 
     // hive columns are always nullable, and hive partitions are never nullable so we can set
     // the nullable fields appropriately
     val cols = table.sd.cols.map { HiveSchemaFns.fromHiveField(it, true) }
-    val partitions = table.partitionKeys.map { HiveSchemaFns.fromHiveField(it, false) }
+    val partitions = table.partitionKeys.map { HiveSchemaFns.fromHiveField(it, false) }.map { it.withPartition(true) }
 
     val columns = cols.plus(partitions)
     return Schema(columns)
@@ -193,7 +190,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
       val path = partitionPath(dbName, tableName, parts)
       logger.debug("Creating partition '$partitionName' at $path")
 
-      val partition = Partition(parts.toList())
+      val partition = PartitionSpec(parts.toList())
       createPartition(dbName, tableName, partition)
     }
   }
