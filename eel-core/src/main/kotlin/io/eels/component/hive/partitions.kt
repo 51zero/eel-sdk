@@ -35,12 +35,6 @@ data class PartitionSpec(val parts: List<PartitionPart>) {
   }
 }
 
-@Deprecated("use partition actual")
-data class PartitionPart(val key: String, val value: String) {
-  // returns the key value part in the standard hive key=value format
-  fun unquoted(): String = "$key=$value"
-}
-
 data class PartitionKey(val field: Field,
                         val createTime: Long,
                         val parameters: Map<String, String>)
@@ -49,19 +43,28 @@ data class PartitionKey(val field: Field,
 // eg key1=value1/key2=value2/key3=value3 is a partition
 data class Partition(val createTime: Long,
                      val sd: StorageDescriptor,
-                     val values: List<PartitionKeyValue>) {
+                     val values: List<PartitionPart>) {
   // returns the partition in normalized directory representation, eg key1=value1/key2=value2/...
   // hive calls this the partition name, eg client.listPartitionNames returns these
   fun name(): String = values.map { it.unquoted() }.joinToString ("/")
+
+  companion object {
+    fun fromName(name: String): Partition {
+      val parts = name.split('/').map {
+        val (key, value) = it.split('=')
+        PartitionPart(key, value)
+      }
+      return Partition(0, StorageDescriptor(), parts)
+    }
+  }
 }
 
 // a single "part" in a partition, ie in country=usa/state=alabama, a value would be state=alabama
-// todo better name for this, like PartitionPart or PartitionPath or something
-data class PartitionKeyValue(val key: PartitionKey, val value: String) {
+data class PartitionPart(val key: String, val value: String) {
 
   // returns the key value part in the standard hive key=value format with unquoted values
-  fun unquoted(): String = "${key.field.name}=$value"
+  fun unquoted(): String = "$key=$value"
 
   // returns the key value part in the standard hive key=value format with quoted values
-  fun quoted(): String = "${key.field.name}='$value'"
+  fun quoted(): String = "$key='$value'"
 }

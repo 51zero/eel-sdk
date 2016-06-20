@@ -1,10 +1,10 @@
 package io.eels.component.hive
 
-import io.eels.component.hive.PartitionSpec
 import io.eels.Row
-import io.eels.schema.Schema
 import io.eels.component.Part
 import io.eels.component.Predicate
+import io.eels.schema.Schema
+import io.eels.util.Option
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
 import rx.Observable
@@ -12,10 +12,8 @@ import rx.Subscription
 
 class HiveFilePart(val dialect: HiveDialect,
                    val file: LocatedFileStatus,
-                   val partition: PartitionSpec,
-                   val metastoreSchema: Schema,
                    val schema: Schema,
-                   val predicate: Predicate?,
+                   val predicate: Option<Predicate>,
                    val partitionKeys: List<String>,
                    val fs: FileSystem) : Part {
 

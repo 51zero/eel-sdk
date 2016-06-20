@@ -45,6 +45,7 @@ fun main(args: Array<String>): Unit {
 
   val eelPartitionKeys = table.partitionKeys()
   val eelPartitions = table.partitions()
+  println(eelPartitions)
   val eelPartitionNames = table.partitionNames()
 
 }

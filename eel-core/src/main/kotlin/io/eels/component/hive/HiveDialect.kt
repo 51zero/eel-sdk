@@ -25,8 +25,8 @@ interface HiveDialect : Logging {
    *
    */
   fun reader(path: Path,
-             dataSchema: Schema,
-             projection: Schema,
+             metastoreSchema: Schema,
+             readerSchema: Schema,
              predicate: Option<Predicate>,
              fs: FileSystem): Observable<Row>
 

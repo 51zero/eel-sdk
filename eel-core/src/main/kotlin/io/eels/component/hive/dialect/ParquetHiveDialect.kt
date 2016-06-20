@@ -13,7 +13,7 @@ import rx.Observable
 
 object ParquetHiveDialect : HiveDialect, Logging {
 
-  override fun reader(path: Path, dataSchema: Schema, projection: Schema, predicate: Option<Predicate>, fs: FileSystem): Observable<Row> {
+  override fun reader(path: Path, metastoreSchema: Schema, readerSchema: Schema, predicate: Option<Predicate>, fs: FileSystem): Observable<Row> {
     throw UnsupportedOperationException()
 
 //    override def reader(path: Path, dataSchema: Schema, targetSchema: Schema, predicate: Option[Predicate])
