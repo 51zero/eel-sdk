@@ -70,10 +70,15 @@ data class HiveSource(val dbName: String,
     return schema
   }
 
-  // returns the full underlying schema from the metastore including partition keys
+  // returns the full underlying schema from the metastore including partition partitionKeys
   val metastoreSchema: Schema = ops.schema(dbName, tableName)
 
   //fun spec(): HiveSpec = HiveSpecFn.toHiveSpec(dbName, tableName)
+
+  fun isPartitionOnlyProjection(): Boolean {
+    val partitionKeyNames = HiveTable(dbName, tableName, fs, client).partitionKeys().map { it.field.name }
+    return projection.isNotEmpty() && projection.map { it.toLowerCase() }.all { partitionKeyNames.contains(it) }
+  }
 
   override fun parts(): List<Part> {
     // if we requested only partition columns, then we can get this information by scanning the file system
@@ -82,23 +87,19 @@ data class HiveSource(val dbName: String,
 
     val projectionSchema = schema()
     val fieldNames = metastoreSchema.fields.map { it.name }
-    val partitionKeys = HiveTable(dbName, tableName, fs, client).partitionKeys().map { it.field.name }
     val table = client.getTable(dbName, tableName)
     val dialect = io.eels.component.hive.HiveDialect(table)
+    val partitionKeys = HiveTable(dbName, tableName, fs, client).partitionKeys()
 
-    // partition only if we have a projection and all the projection fields are partitions
-    val isPartitionOnlyProjection: Boolean =
-        projection.isNotEmpty() && projection.map { it.toLowerCase() }.all { partitionKeys.contains(it) }
-
-    return if (isPartitionOnlyProjection) {
-      logger.debug("Requested projection contains only partitions; reading directly from metastore")
+    return if (isPartitionOnlyProjection()) {
+      logger.info("Requested projection contains only partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       listOf(HivePartitionPart(dbName, tableName, fieldNames, emptyList(), metastoreSchema, predicate, dialect, fs, client))
     } else {
-      val paths = HiveFilesFn.invoke(table, constraints, fs, client)
+      val paths = HiveFilesFn.invoke(table, constraints, partitionKeys, fs, client)
       logger.debug("Found ${paths.size} visible hive files from all locations for $dbName:$tableName")
       paths.map {
-        HiveFilePart(dialect, it.first, schema(), predicate, emptyList(), fs)
+        HiveFilePart(dialect, it, schema(), predicate, emptyList(), fs)
       }
     }
   }

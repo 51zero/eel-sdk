@@ -14,7 +14,7 @@ import rx.Observable
 
 /**
  * A Hive Part that can read values from the metastore, rather than reading values from files.
- * This can be used only when the requested fields are all partition keys.
+ * This can be used only when the requested fields are all partition partitionKeys.
  */
 class HivePartitionPart(val dbName: String,
                         val tableName: String,

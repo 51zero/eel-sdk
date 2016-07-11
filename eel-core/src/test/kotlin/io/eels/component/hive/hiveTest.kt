@@ -15,7 +15,7 @@ fun main(args: Array<String>): Unit {
 
   val client = HiveMetaStoreClient(conf)
   val ops = HiveOps(client)
-  val fs = FileSystem.getLocal(conf)
+  val fs = FileSystem.get(conf)
 
   val dbName = "sam"
   val tableName = "people3"
@@ -49,5 +49,9 @@ fun main(args: Array<String>): Unit {
   val eelPartitions = table.partitions()
   println(eelPartitions)
   val eelPartitionNames = table.partitionNames()
+
+  val source = table.toSource()
+  val parts = source.parts()
+  println(parts)
 
 }

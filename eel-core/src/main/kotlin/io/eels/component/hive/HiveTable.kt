@@ -20,7 +20,7 @@ class HiveTable(val dbName: String, val tableName: String, val fs: FileSystem, v
   fun partitionKeys(): List<PartitionKey> {
     val keys = client.getTable(dbName, tableName).partitionKeys
     val parts = client.listPartitions(dbName, tableName, Short.MAX_VALUE)
-    assert(keys.size == parts.size, { "Differing amount of keys (${keys.size}) to parts (${parts.size})" })
+    assert(keys.size == parts.size, { "Differing amount of partitionKeys (${keys.size}) to parts (${parts.size})" })
     return keys.zip(parts).map {
       val field = HiveSchemaFns.fromHiveField(it.first, false).withPartition(true)
       PartitionKey(field, it.second.createTime * 1000L, it.second.parameters)

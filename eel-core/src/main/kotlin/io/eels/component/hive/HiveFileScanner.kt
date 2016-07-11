@@ -23,7 +23,12 @@ object HiveFileScanner : Logging {
   operator fun invoke(path: Path, fs: FileSystem): List<LocatedFileStatus> {
     logger.debug("Scanning $path, filtering=$ignoreHiddenFiles, pattern=$hiddenFilePattern")
     val files: List<LocatedFileStatus> = if (fs.exists(path)) {
-      HdfsIterator(fs.listFiles(path, true)).asSequence().filter { it.isFile }.filterNot { !skip(it) }.toList()
+      val files = fs.listFiles(path, true)
+      HdfsIterator(files)
+          .asSequence()
+          .filter { it.isFile }
+          .filterNot { skip(it) }
+          .toList()
     } else {
       emptyList<LocatedFileStatus>()
     }

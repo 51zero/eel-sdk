@@ -2,11 +2,8 @@ package io.eels.component.hive
 
 import io.eels.Constants
 import io.eels.util.Logging
-import io.eels.component.hive.PartitionSpec
-import io.eels.component.hive.PartitionPart
 import io.eels.schema.Field
 import io.eels.schema.Schema
-import io.eels.util.Option
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
@@ -22,7 +19,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
 
 
 //  /**
-//   * Returns a map of all partition keys to their values.
+//   * Returns a map of all partition partitionKeys to their values.
 //   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
 //   * directly from the hive metastore.
 //   */
@@ -33,12 +30,12 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
 //        .map { key, values -> Pair(key, values.map { it.value }) }
 //
 //  /**
-//   * Returns all partition values for the given partition keys.
+//   * Returns all partition values for the given partition partitionKeys.
 //   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
 //   * directly from the hive metastore.
 //   */
-//  fun partitionValues(dbName: String, tableName: String, keys: List<String>): List<PartitionPartValues> =
-//    partitionMap(dbName, tableName).collect { case (key, values) if keys contains key => values }.toList
+//  fun partitionValues(dbName: String, tableName: String, partitionKeys: List<String>): List<PartitionPartValues> =
+//    partitionMap(dbName, tableName).collect { case (key, values) if partitionKeys contains key => values }.toList
 
 //  /**
 //   * Returns all partition values for a given partition key.
@@ -95,7 +92,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
 
   /**
    * Returns the hive FieldSchema's for partition columns.
-   * Hive calls these "partition keys"
+   * Hive calls these "partition partitionKeys"
    */
   fun partitionKeys(dbName: String, tableName: String): List<FieldSchema> = client.getTable(dbName, tableName).partitionKeys
 
@@ -206,7 +203,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
                   overwrite: Boolean = false): Boolean {
     for (partitionKey in partitionKeys) {
       if (!schema.contains(partitionKey)) {
-        throw IllegalArgumentException("Schema must define all partition keys but it does not define $partitionKey")
+        throw IllegalArgumentException("Schema must define all partition partitionKeys but it does not define $partitionKey")
       }
     }
 
@@ -229,7 +226,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
 
       val sd = StorageDescriptor()
 
-      // hive expects that the table fields will not contain partition keys
+      // hive expects that the table fields will not contain partition partitionKeys
       sd.cols = lowerColumns.filterNot { lowerPartitionKeys.contains(it.name) }.map { HiveSchemaFns.toHiveField(it) }
       sd.serdeInfo = SerDeInfo(
           null,
