@@ -70,7 +70,7 @@ object HiveSchemaFns : Logging {
   fun toHiveType(field: Field): String = when (field.type) {
     FieldType.BigInt -> "bigint"
     FieldType.Boolean -> "boolean"
-    FieldType.Decimal -> "decimal(${field.scale},${field.precision})"
+    FieldType.Decimal -> "decimal(${field.scale.value},${field.precision.value})"
     FieldType.Double -> "double"
     FieldType.Float -> "float"
     FieldType.Int -> "int"

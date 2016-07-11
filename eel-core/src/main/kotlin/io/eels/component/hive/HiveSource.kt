@@ -28,12 +28,12 @@ data class HiveSource(val dbName: String,
 
   val ops = HiveOps(client)
 
+  fun select(vararg columns: String): HiveSource = withProjection(columns.asList())
+  fun withProjection(vararg columns: String): HiveSource = withProjection(columns.asList())
   fun withProjection(columns: List<String>): HiveSource {
     require(columns.isNotEmpty())
     return copy(projection = columns)
   }
-
-  fun withProjection(vararg columns: String): HiveSource = withProjection(columns.asList())
 
   fun withPredicate(predicate: Predicate): HiveSource = copy(predicate = Option.Some(predicate))
 
