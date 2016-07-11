@@ -1,6 +1,7 @@
 package io.eels.plan
 
 import io.eels._
+import io.eels.component.Using
 
 object HeadPlan extends Using {
   def apply(frame: Frame): Option[InternalRow] = {

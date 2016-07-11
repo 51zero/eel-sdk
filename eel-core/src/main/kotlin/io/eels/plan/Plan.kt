@@ -1,6 +1,5 @@
 package io.eels.plan
 
-import com.google.common.util.concurrent.Futures
 import com.typesafe.config.ConfigFactory
 
 abstract class Plan {
