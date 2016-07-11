@@ -17,7 +17,7 @@ abstract class Plan {
   val timeout = config.getDuration("eel.execution.timeout").toNanos()
 
   // do we want to fail execution if one of the plan tasks fail
-  val failureEnabled = config.getBoolean("eel.execution.plan.fail.enable")
+//  val failureEnabled = config.getBoolean("eel.execution.plan.fail.enable")
 
   //  fun <T> raiseExceptionOnFailure(futures: List<Future<T>>): Unit {
   //    if (failureEnabled) {

@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import io.eels.Frame
 import io.eels.schema.PartitionConstraint
 import io.eels.schema.PartitionEquals
 import io.eels.Source

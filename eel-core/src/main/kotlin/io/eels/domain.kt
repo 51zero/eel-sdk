@@ -6,13 +6,13 @@ import io.eels.schema.Schema
 data class Row(val schema: Schema, val values: List<Any?>) {
 
   init {
-    require(schema.size() == values.size, { "Row should have a value for each column (${schema.fields.size} columns=${schema.fields.joinToString { "," }}, ${values.size} values=${values.joinToString { "," }})" })
+    require(schema.size() == values.size, { "Row should have a value for each field (${schema.fields.size} fields=${schema.fields.joinToString { "," }}, ${values.size} values=${values.joinToString { "," }})" })
   }
 
   override fun toString(): String {
-    return schema.fieldNames().zip(values).map { it ->
-      "${it.first} = ${if (it.second == null) "" else it.second.toString()}"
-    }.joinToString ("[", ",", "]")
+    return schema.fieldNames().zip(values).map {
+      "${it.first} = ${if (it.second == null) "NULL" else it.second.toString()}"
+    }.joinToString(",", "[", "]")
   }
 
   fun get(k: Int): Any? = values[k]

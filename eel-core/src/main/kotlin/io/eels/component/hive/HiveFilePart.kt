@@ -8,7 +8,6 @@ import io.eels.util.Option
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
 import rx.Observable
-import rx.Subscription
 
 class HiveFilePart(val dialect: HiveDialect,
                    val file: LocatedFileStatus,
@@ -18,25 +17,14 @@ class HiveFilePart(val dialect: HiveDialect,
                    val fs: FileSystem) : Part {
 
   override fun data(): Observable<Row> {
-    return Observable.create {
-      it.add(object : Subscription {
-        override fun isUnsubscribed(): Boolean {
-          throw UnsupportedOperationException()
-        }
-
-        override fun unsubscribe() {
-          throw UnsupportedOperationException()
-        }
-      })
-      it.onStart()
-
-      it.onCompleted()
+    return Observable.create { subscriber ->
+      // todo use dialect reader to read the rows from the file
+      subscriber.onStart()
+      subscriber.onNext(Row(schema, schema.fieldNames()))
+      subscriber.onNext(Row(schema, schema.fieldNames().reversed()))
+      subscriber.onNext(Row(schema, schema.fieldNames()))
+      subscriber.onCompleted()
     }
-//
-//    val obs = data()
-//    val sub = obs.subscribe(object : Subscriber<Row>() {
-//    })
-//    sub.unsubscribe()
   }
 
   // the schema we send to the reader must have any partitions removed, because those columns won't exist

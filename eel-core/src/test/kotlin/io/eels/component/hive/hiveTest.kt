@@ -54,4 +54,8 @@ fun main(args: Array<String>): Unit {
   val parts = source.parts()
   println(parts)
 
+  val frame = source.toFrame(1)
+  val rows = frame.toList()
+  println(rows)
+
 }
