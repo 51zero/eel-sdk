@@ -36,7 +36,7 @@ data class HiveSink(private val dbName: String,
     return io.eels.component.hive.HiveDialect(format)
   }
 
-  private fun containsUpperCase(schema: Schema): Boolean = schema.columnNames().all { it == it.toLowerCase() }
+  private fun containsUpperCase(schema: Schema): Boolean = schema.fieldNames().all { it == it.toLowerCase() }
 
   override fun writer(schema: Schema): SinkWriter {
     if (containsUpperCase(schema)) {

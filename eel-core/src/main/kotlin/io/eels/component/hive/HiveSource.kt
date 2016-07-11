@@ -7,7 +7,6 @@ import io.eels.component.Part
 import io.eels.component.Predicate
 import io.eels.component.Using
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.schema.Field
 import io.eels.schema.Schema
 import io.eels.util.Logging
 import io.eels.util.Option
@@ -83,7 +82,7 @@ data class HiveSource(val dbName: String,
 
     val projectionSchema = schema()
     val fieldNames = metastoreSchema.fields.map { it.name }
-    val partitionKeys = HiveTable(dbName, tableName, client).partitionKeys().map { it.field.name }
+    val partitionKeys = HiveTable(dbName, tableName, fs, client).partitionKeys().map { it.field.name }
     val table = client.getTable(dbName, tableName)
     val dialect = io.eels.component.hive.HiveDialect(table)
 
@@ -91,7 +90,7 @@ data class HiveSource(val dbName: String,
     val isPartitionOnlyProjection: Boolean =
         projection.isNotEmpty() && projection.map { it.toLowerCase() }.all { partitionKeys.contains(it) }
 
-    if (isPartitionOnlyProjection) {
+    return if (isPartitionOnlyProjection) {
       logger.debug("Requested projection contains only partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       listOf(HivePartitionPart(dbName, tableName, fieldNames, emptyList(), metastoreSchema, predicate, dialect, fs, client))

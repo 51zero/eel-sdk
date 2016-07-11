@@ -25,7 +25,7 @@ class OrcSinkWriter(schema: Schema, path: Path) : SinkWriter, Logging {
     PrimitiveObjectInspectorFactory.javaStringObjectInspector
   )
   val writer = OrcFile.createWriter(path, OrcFile.writerOptions(Configuration()).inspector(inspector)).apply {
-    this.addRow(schema.columnNames().toTypedArray())
+    this.addRow(schema.fieldNames().toTypedArray())
   }
 
   override fun write(row: Row): Unit {

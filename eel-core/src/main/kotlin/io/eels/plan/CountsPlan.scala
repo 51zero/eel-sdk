@@ -28,7 +28,7 @@ object CountsPlan extends Plan with Using with Logging {
         try {
           val maps = mutable.Map.empty[ColumnName, Counts]
           buffer.iterator.takeWhile(_ => running.get).foreach { row =>
-            for ((value, columnName) <- row.zip(schema.columnNames)) {
+            for ((value, columnName) <- row.zip(schema.fieldNames)) {
               val counts = maps.getOrElseUpdate(columnName, mutable.Map.empty[Value, ValueCount])
               if (counts.contains(value) || counts.size < DistinctValueCap) {
                 val count = counts.getOrElse(value, 0l)
@@ -66,7 +66,7 @@ object CountsPlan extends Plan with Using with Logging {
     }
 
     def combineMaps(m1: Map[ColumnName, Counts], m2: Map[ColumnName, Counts]): Map[ColumnName, Counts] = {
-      schema.columnNames.map { columnName =>
+      schema.fieldNames.map { columnName =>
         columnName -> combineValues(m1(columnName), m2(columnName))
       }.toMap
     }

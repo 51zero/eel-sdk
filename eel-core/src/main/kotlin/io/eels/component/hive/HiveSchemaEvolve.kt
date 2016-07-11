@@ -17,7 +17,7 @@ object HiveSchemaEvolve : Logging {
     val existingColumns = fields.map { it.name }
     logger.debug("hive:$dbName:$tableName fields: " + existingColumns.joinToString (","))
 
-    val schemaColumnsLowerCase = schema.columnNames().map { it.toLowerCase() }
+    val schemaColumnsLowerCase = schema.fieldNames().map { it.toLowerCase() }
     logger.debug("Schema columns: " + schemaColumnsLowerCase.joinToString(","))
 
     // our schema can be mixed case so we must lower case to match hive
@@ -27,6 +27,6 @@ object HiveSchemaEvolve : Logging {
       logger.debug("Columns to be added for evolution: " + missingColumns.joinToString(","))
     else
       logger.debug("Hive schema is up to date - no evolution required")
-    //missingColumns.forEach { HiveOps.addColumn(dbName, tableName, _) }
+    //missingColumns.forEach { HiveOps.addField(dbName, tableName, _) }
   }
 }

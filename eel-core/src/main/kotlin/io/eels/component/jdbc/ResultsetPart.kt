@@ -22,7 +22,7 @@ class ResultsetPart(val rs: ResultSet,
       try {
         it.onStart()
         while (rs.next()) {
-          val values = schema.columnNames().map { rs.getObject(it) }
+          val values = schema.fieldNames().map { rs.getObject(it) }
           val row = Row(schema, values)
           it.onNext(row)
         }

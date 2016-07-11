@@ -8,7 +8,7 @@ object PartitionPartsFn : Logging {
    * For a given row, will return the list of PartitionPart's that match the given list of part names.
    */
   fun rowPartitionParts(row: Row, partNames: List<String>): List<PartitionPart> {
-    require(partNames.all { row.schema.columnNames().contains(it) }, { "Schema must contain all partitions $partNames" })
+    require(partNames.all { row.schema.fieldNames().contains(it) }, { "Schema must contain all partitions $partNames" })
 
     return partNames.map {
       val index = row.schema.indexOf(it)

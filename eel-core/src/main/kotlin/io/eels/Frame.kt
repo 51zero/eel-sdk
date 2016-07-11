@@ -62,7 +62,7 @@ interface Frame {
   }
 
   /**
-   * For each row, the value corresponding to the given columnName is applied to the function.
+   * For each row, the value corresponding to the given fieldName is applied to the function.
    * The result of the function is the new value for that cell.
    */
   fun replace(columnName: String, fn: (Any?) -> Any?): Frame = object : Frame {
@@ -91,7 +91,7 @@ interface Frame {
   }
 
   fun updateColumnType(columnName: String, fieldType: FieldType): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().updateColumnType(columnName, fieldType)
+    override fun schema(): Schema = outer().schema().updateFieldType(columnName, fieldType)
     override fun observable(): Observable<Row> = outer().observable()
   }
 
@@ -132,9 +132,9 @@ interface Frame {
    * value was 1.3
    */
   fun addColumn(field: Field, defaultValue: Any): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().addColumn(field)
+    override fun schema(): Schema = outer().schema().addField(field)
     override fun observable(): Observable<Row> {
-      val exists = outer().schema().columnNames().contains(field.name)
+      val exists = outer().schema().fieldNames().contains(field.name)
       if (exists) throw IllegalArgumentException("Cannot add column $field as it already exists")
       val newSchema = schema()
       return outer().observable().map { Row(newSchema, it.values.plus(defaultValue)) }
@@ -144,15 +144,15 @@ interface Frame {
   fun addColumnIfNotExists(name: String, defaultValue: Any): Frame = addColumnIfNotExists(Field(name), defaultValue)
 
   fun addColumnIfNotExists(field: Field, defaultValue: Any): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().addColumnIfNotExists(field)
+    override fun schema(): Schema = outer().schema().addFieldIfNotExists(field)
     override fun observable(): Observable<Row> {
-      val exists = outer().schema().columnNames().contains(field.name)
+      val exists = outer().schema().fieldNames().contains(field.name)
       return if (exists) outer().observable() else addColumn(field, defaultValue).observable()
     }
   }
 
   fun removeColumn(columnName: String, caseSensitive: Boolean = true): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().removeColumn(columnName, caseSensitive)
+    override fun schema(): Schema = outer().schema().removeField(columnName, caseSensitive)
     override fun observable(): Observable<Row> {
       val index = outer().schema().indexOf(columnName, caseSensitive)
       val newSchema = schema()
@@ -168,7 +168,7 @@ interface Frame {
       throw UnsupportedOperationException()
     }
 
-    override fun schema(): Schema = outer().schema().updateColumn(field)
+    override fun schema(): Schema = outer().schema().replaceField(field.name, field)
 
     //    override fun buffer(): Buffer = object : Buffer {
     //      val buffer = outer().buffer()
@@ -179,12 +179,12 @@ interface Frame {
   }
 
   fun renameColumn(nameFrom: String, nameTo: String): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().renameColumn(nameFrom, nameTo)
+    override fun schema(): Schema = outer().schema().renameField(nameFrom, nameTo)
     override fun observable(): Observable<Row> = outer().observable()
   }
 
   fun stripFromColumnName(chars: List<Char>): Frame = object : Frame {
-    override fun schema(): Schema = outer().schema().stripFromColumnName(chars)
+    override fun schema(): Schema = outer().schema().stripFromFieldNames(chars)
     override fun observable(): Observable<Row> = outer().observable()
   }
 
@@ -237,7 +237,7 @@ interface Frame {
       val newSchema = schema()
 
       return outer().observable().map { row ->
-        val values = newSchema.columnNames().map {
+        val values = newSchema.fieldNames().map {
           val k = oldSchema.indexOf(it)
           row.values[k]
         }

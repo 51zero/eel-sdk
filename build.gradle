@@ -1,8 +1,9 @@
 buildscript {
-    ext.kotlin_version = '1.0.2'
-    ext.kotlin_test_version = "1.2.0"
+    ext.kotlin_version = '1.0.3'
+    ext.kotlin_test_version = "1.3.1"
     ext.hadoop_version = "2.6.1"
     ext.hive_version = "1.1.0"
+    ext.mysql_version = "5.1.39"
 
     repositories {
         mavenCentral()
@@ -116,6 +117,6 @@ project(':eel-core') {
         testCompile "io.kotlintest:kotlintest:$kotlin_test_version"
         testCompile 'org.slf4j:slf4j-log4j12:1.7.21'
         testCompile 'log4j:log4j:1.2.17'
-        testCompile 'mysql:mysql-connector-java:5.1.39'
+        testCompile "mysql:mysql-connector-java:$mysql_version"
     }
 }

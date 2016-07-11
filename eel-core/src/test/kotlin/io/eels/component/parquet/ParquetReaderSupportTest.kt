@@ -45,7 +45,7 @@ class ParquetReaderSupportTest : WordSpec() {
     "ParquetReaderSupport" should     {
       "support projections on doubles" {
 
-        val reader = ParquetReaderSupport.create(path, true, null, schema.removeColumn("looong"))
+        val reader = ParquetReaderSupport.create(path, true, null, schema.removeField("looong"))
         val record = reader.read()
         reader.close()
 
@@ -54,7 +54,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support projections on longs" {
 
-        val reader = ParquetReaderSupport.create(path, true, null, schema.removeColumn("str"))
+        val reader = ParquetReaderSupport.create(path, true, null, schema.removeField("str"))
         val record = reader.read()
         reader.close()
 

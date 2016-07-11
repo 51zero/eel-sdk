@@ -47,9 +47,9 @@ class HiveFilePart(val dialect: HiveDialect,
 //      // when we read a row back from the dialect reader, we must repopulate any partition columns requested,
 //      // because those values are not stored in hive, but inferred from the meta store
 //      override fun iterator(): Iterator<Row> = reader.iterator().map { row ->
-//        schema.columnNames().map {
+//        schema.fieldNames().map {
 //          // todo add in partition columns
-//          // map.getOrElse(it, partition.get(columnName).orNull)
+//          // map.getOrElse(it, partition.get(fieldName).orNull)
 //          row
 //        }
 //        row

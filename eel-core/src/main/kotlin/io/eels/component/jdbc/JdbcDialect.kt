@@ -85,14 +85,14 @@ open class GenericJdbcDialect : JdbcDialect, Logging {
   }
 
   override fun insertQuery(schema: Schema, table: String): String {
-    val columns = schema.columnNames().joinToString(",")
+    val columns = schema.fieldNames().joinToString(",")
     val parameters = Array(schema.fields.size, { "?" }).joinToString(",")
     return "INSERT INTO $table ($columns) VALUES ($parameters)"
   }
 
   override fun insert(row: Row, table: String): String {
     // todo use proper statements
-    val columns = row.schema.columnNames().joinToString(",")
+    val columns = row.schema.fieldNames().joinToString(",")
     val values = row.values.joinToString("'", "','", "'")
     return "INSERT INTO $table ($columns) VALUES ($values)"
   }

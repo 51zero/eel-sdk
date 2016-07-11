@@ -64,7 +64,7 @@ fun avroRecordToRow(record: GenericRecord): Row {
 //    else sys.error(s"Record is missing value for column $field")
 //  }
 //
-//  val map = sourceSchema.columnNames.zip(row).toMap
+//  val map = sourceSchema.fieldNames.zip(row).toMap
 //  val record = new Record(avroSchema)
 //  for (field <- avroSchema.getFields.asScala) {
 //    val value = map.getOrElse(field.name, default(field))

@@ -18,7 +18,7 @@ case class JsonSink(path: Path) extends Sink {
     override def close(): Unit = out.close()
 
     override def write(row: InternalRow): Unit = {
-      val map = schema.columnNames.zip(row).toMap.asJava
+      val map = schema.fieldNames.zip(row).toMap.asJava
       val json = mapper.writeValueAsString(map)
       self.synchronized {
         out.writeBytes(json)

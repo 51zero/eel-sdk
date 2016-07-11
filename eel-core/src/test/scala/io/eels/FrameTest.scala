@@ -15,7 +15,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   val frame = Frame(List("a", "b"), List("1", "2"), List("3", "4"))
 
-  "Frame.addColumnIfNotExists" should {
+  "Frame.addFieldIfNotExists" should {
     "not add column if already exists" in {
       val f = frame.addColumnIfNotExists("a", "bibble")
       f.schema shouldBe Schema(List(Column("a"), Column("b")))
@@ -28,7 +28,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
-  "Frame.addColumn" should {
+  "Frame.addField" should {
     "support adding columns" in {
       val f = frame.addColumn("testy", "bibble")
       f.schema shouldBe Schema(List(Column("a"), Column("b"), Column("testy")))
@@ -46,7 +46,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
-  "Frame.stripFromColumnName" should {
+  "Frame.stripFromFieldNames" should {
     "remove offending characters" in {
       val frame = Frame(
         List("name", "#location", "!postcode"),
@@ -58,7 +58,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
-  "Frame.removeColumn" should {
+  "Frame.removeField" should {
     "remove column" in {
       val frame = Frame(
         List("name", "location", "postcode"),

@@ -10,7 +10,7 @@ data class Row(val schema: Schema, val values: List<Any?>) {
   }
 
   override fun toString(): String {
-    return schema.columnNames().zip(values).map { it ->
+    return schema.fieldNames().zip(values).map { it ->
       "${it.first} = ${if (it.second == null) "" else it.second.toString()}"
     }.joinToString ("[", ",", "]")
   }
@@ -36,5 +36,5 @@ data class Row(val schema: Schema, val values: List<Any?>) {
     return copy(values = newValues.toList())
   }
 
-  fun add(name: String, value: Any): Row = copy(schema = schema.addColumn(name), values = values + value)
+  fun add(name: String, value: Any): Row = copy(schema = schema.addField(name), values = values + value)
 }

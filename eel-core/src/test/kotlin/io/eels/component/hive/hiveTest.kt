@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -14,6 +15,7 @@ fun main(args: Array<String>): Unit {
 
   val client = HiveMetaStoreClient(conf)
   val ops = HiveOps(client)
+  val fs = FileSystem.getLocal(conf)
 
   val dbName = "sam"
   val tableName = "people3"
@@ -30,7 +32,7 @@ fun main(args: Array<String>): Unit {
 //      location = "file:/user/hive/warehouse/sam.db/bibble"
 //  )
 
-  val database = HiveDatabase(dbName, client)
+  val database = HiveDatabase(dbName, fs, client)
   val tables = database.tables()
   println(tables)
 

@@ -23,7 +23,7 @@ object OrcHiveDialect extends HiveDialect with StrictLogging {
       override def write(row: InternalRow): Unit = {
         // builds a map of the column names to the row values (by using the source schema), then generates
         // a new sequence of values ordered by the columns in the target schema
-        val map = schema.columnNames.zip(row).map { case (columName, value) => columName -> value }.toMap
+        val map = schema.fieldNames.zip(row).map { case (columName, value) => columName -> value }.toMap
         writer.addRow(row.toArray)
       }
     }

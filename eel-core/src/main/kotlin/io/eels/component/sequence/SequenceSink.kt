@@ -29,7 +29,7 @@ class SequenceSinkWriter(schema: Schema, path: Path) : SinkWriter {
 
   val key = IntWritable(0)
 
-  val headers = valuesToCsv(schema.columnNames()).apply {
+  val headers = valuesToCsv(schema.fieldNames()).apply {
     writer.append(key, BytesWritable(this.toByteArray()))
   }
 

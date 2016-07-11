@@ -3,10 +3,11 @@ package io.eels.component.hive
 import io.eels.component.parquet.ParquetLogMute
 import io.eels.schema.Schema
 import io.eels.util.zipWithIndex
+import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.api.Partition as HivePartition
 
-class HiveTable(val dbName: String, val tableName: String, val client: IMetaStoreClient) {
+class HiveTable(val dbName: String, val tableName: String, val fs: FileSystem, val client: IMetaStoreClient) {
   init {
     ParquetLogMute()
   }
@@ -44,7 +45,7 @@ class HiveTable(val dbName: String, val tableName: String, val client: IMetaStor
 
   }
 
-  fun toSource(): HiveSource = HiveSource(dbName, tableName, client = client)
+  fun toSource(): HiveSource = HiveSource(dbName, tableName, fs = fs, client = client)
 
   override fun toString(): String {
     return "HiveTable(dbName='$dbName', tableName='$tableName')"

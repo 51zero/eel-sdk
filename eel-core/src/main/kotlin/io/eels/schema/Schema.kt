@@ -1,12 +1,20 @@
 package io.eels.schema
 
-// todo rename columns to fields
+/**
+ * An eel schema contains:
+ *
+ * - Tables: Which contain fields
+ * - Fields: Which can be set as a partition.
+ *
+ * Not all components can support partitions. In those cases the partitions are ignored.
+ *
+ */
 data class Schema(val fields: List<Field>) {
 
   constructor(vararg fields: Field) : this(fields.asList())
 
   init {
-    require(fields.map { it.name }.distinct().size == fields.size, { "Schema cannot have duplicated column name" })
+    require(fields.map { it.name }.distinct().size == fields.size, { "Schema cannot have duplicated field name" })
     require(fields.size > 0, { "Schema cannot be empty" })
   }
 
@@ -15,41 +23,47 @@ data class Schema(val fields: List<Field>) {
   fun indexOf(field: Field): Int = indexOf(field.name, true)
   fun indexOf(field: Field, caseSensitive: Boolean): Int = indexOf(field.name, caseSensitive)
 
-  fun indexOf(columnName: String): Int = indexOf(columnName, true)
-  fun indexOf(columnName: String, caseSensitive: Boolean): Int = fields.indexOfFirst { it ->
-    if (caseSensitive) columnName == it.name else columnName.equals(it.name, true)
-  }
+  fun indexOf(fieldName: String): Int = indexOf(fieldName, true)
+  fun indexOf(fieldName: String, caseSensitive: Boolean): Int =
+      fields.indexOfFirst { fieldName.equals(it.name, !caseSensitive) }
 
   fun toLowerCase(): Schema = copy(fields = fields.map { it.copy(name = it.name.toLowerCase()) })
 
-  fun columnNames(): List<String> = fields.map { it.name }
+  fun fieldNames(): List<String> = fields.map { it.name }
 
-  fun addColumn(name: String): Schema = addColumn(Field(name))
+  fun addField(name: String): Schema = addField(Field(name))
 
-  fun addColumn(col: Field): Schema {
-    require(!columnNames().contains(col.name), { "Column ${col.name} already exist" })
+  fun addField(col: Field): Schema {
+    require(!fieldNames().contains(col.name), { "Field ${col.name} already exist" })
     return copy(fields + col)
   }
 
-  fun contains(columnName: String): Boolean = indexOf(columnName) >= 0
+  fun contains(fieldName: String, caseSensitive: Boolean = true): Boolean {
+    fun contains(fields: List<Field>): Boolean = fields.any {
+      fieldName.equals(it.name, !caseSensitive)
+    } || fields.filter { it.type == FieldType.Struct }.any { contains(it.fields) }
+    return contains(fields)
+  }
 
-  fun stripFromColumnName(chars: List<Char>): Schema {
+  fun stripFromFieldNames(chars: List<Char>): Schema {
     fun strip(name: String): String = chars.fold(name, { str, char -> str.replace(char.toString(), "") })
     return Schema(fields.map { it.copy(name = strip(it.name)) })
   }
 
-  fun addColumnIfNotExists(col: Field): Schema = if (columnNames().contains(col.name)) this else addColumn(col)
+  fun addFieldIfNotExists(name: String): Schema = if (fieldNames().contains(name)) this else addField(Field(name))
+  fun addFieldIfNotExists(field: Field): Schema = if (fieldNames().contains(field.name)) this else addField(field)
 
-  fun updateColumnType(columnName: String, FieldType: FieldType): Schema {
-    return Schema(
-        fields.map {
-          if (it.name == columnName) it.copy(type = FieldType)
-          else it
-        }
-    )
-  }
+  fun updateFieldType(fieldName: String, FieldType: FieldType): Schema = Schema(
+      fields.map {
+        if (it.name == fieldName) it.copy(type = FieldType)
+        else it
+      }
+  )
 
-  fun removeColumn(name: String, caseSensitive: Boolean = true): Schema {
+  fun removeFields(vararg names: String): Schema = removeFields(names.asList())
+  fun removeFields(names: List<String>): Schema = copy(fields = fields.filterNot { names.contains(it.name) })
+
+  fun removeField(name: String, caseSensitive: Boolean = true): Schema {
     return copy(fields = fields.filterNot {
       if (caseSensitive) it.name == name else it.name.equals(name, true)
     })
@@ -57,31 +71,29 @@ data class Schema(val fields: List<Field>) {
 
   fun size(): Int = fields.size
 
-  fun removeColumns(names: List<String>): Schema = copy(fields = fields.filterNot { names.contains(it.name) })
-
   fun join(other: Schema): Schema {
     require(
         fields.map { it.name }.intersect(other.fields.map { it.name }).isEmpty(),
-        { "Cannot join two frames which have duplicated column name" }
+        { "Cannot join two schemas which have duplicated field names" }
     )
     return Schema(fields + other.fields)
   }
 
-  fun updateColumn(field: Field): Schema = Schema(fields.map {
-    if (it.name == field.name) field else it
+  fun replaceField(name: String, field: Field): Schema = Schema(fields.map {
+    if (it.name == name) field else it
   })
 
-  fun renameColumn(from: String, to: String): Schema = Schema(fields.map {
+  fun renameField(from: String, to: String): Schema = Schema(fields.map {
     if (it.name == from) it.copy(name = to) else it
   })
 
   fun show(): String {
-    return "Schema\n" + fields.map { column ->
-      val signedString = if (column.signed) "signed" else "unsigned"
-      val nullString = if (column.nullable) "nullable" else "not nullable"
-      val partitionString = if (column.partition) "partition" else ""
-      "- ${column.name} [${column.`type`} $nullString scale=${column.scale.value} precision=${column.precision.value} $signedString $partitionString]"
-    }.joinToString ("\n")
+    return "Schema\n" + fields.map {
+      val signedString = if (it.signed) "signed" else "unsigned"
+      val nullString = if (it.nullable) "nullable" else "not nullable"
+      val partitionString = if (it.partition) "partition" else ""
+      "- ${it.name} [${it.`type`} $nullString scale=${it.scale.value} precision=${it.precision.value} $signedString $partitionString]"
+    }.joinToString("\n")
   }
 
   fun ddl(table: String): String {

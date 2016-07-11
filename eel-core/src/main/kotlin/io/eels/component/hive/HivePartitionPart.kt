@@ -54,7 +54,7 @@ class HivePartitionPart(val dbName: String,
 
 //        .map {
 //      val map = partitionKeys.zip(it.getValues.asScala).toMap
-//      columnNames.map(map(_)).toVector
+//      fieldNames.map(map(_)).toVector
 //    }
 
     throw UnsupportedOperationException()
