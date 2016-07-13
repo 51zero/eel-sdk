@@ -42,7 +42,7 @@ class HivePartitionPart(val dbName: String,
     val values = client.listPartitions(dbName, tableName, Short.MAX_VALUE).filter {
       !partitionPartFileCheck || HiveFileScanner(Path(it.sd.location), fs).any {
         try {
-          val reader = dialect.reader(it.path, metastoreSchema, metastoreSchema, predicate, fs)
+          // val reader = dialect.reader(it.path, metastoreSchema, metastoreSchema, predicate, fs)
           // todo fix this
           true
         } catch(t: Throwable) {

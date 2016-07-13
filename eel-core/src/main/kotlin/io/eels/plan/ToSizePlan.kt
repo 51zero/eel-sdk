@@ -6,8 +6,6 @@ import io.eels.util.Logging
 object ToSizePlan : Plan(), Logging {
 
   fun apply(frame: Frame): Long {
-    logger.info("Plan will execute with $tasks tasks")
-
     //   val latch = CountDownLatch(tasks)
     //   val running = AtomicBoolean(true)
     val stream = frame.observable()

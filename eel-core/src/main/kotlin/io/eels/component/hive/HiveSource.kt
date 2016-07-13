@@ -1,6 +1,5 @@
 package io.eels.component.hive
 
-import io.eels.Frame
 import io.eels.schema.PartitionConstraint
 import io.eels.schema.PartitionEquals
 import io.eels.Source
@@ -16,6 +15,12 @@ import io.eels.util.getOrElse
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
+/**
+ * @constraints optional constraits on the partition data to narrow which partitions are read
+ * @projection sets which fields are required by the caller.
+ * @predicate optional predicate which will filter rows at the read level
+ *
+ */
 data class HiveSource(val dbName: String,
                       val tableName: String,
                       private val constraints: List<PartitionConstraint> = emptyList(),
@@ -82,25 +87,28 @@ data class HiveSource(val dbName: String,
   }
 
   override fun parts(): List<Part> {
-    // if we requested only partition columns, then we can get this information by scanning the file system
-    // to see which partitions have been created. Then the presence of files in a partition location means that
-    // that partition must have data.
 
-    val projectionSchema = schema()
-    val fieldNames = metastoreSchema.fields.map { it.name }
     val table = client.getTable(dbName, tableName)
     val dialect = io.eels.component.hive.HiveDialect(table)
     val partitionKeys = HiveTable(dbName, tableName, fs, client).partitionKeys()
 
+    // all field names from the underlying hive schema
+    val fieldNames = metastoreSchema.fields.map { it.name }
+
+    // if we requested only partition columns, then we can get this information by scanning the file system
+    // to see which partitions have been created. Then the presence of files in a partition location means that
+    // that partition must have data.
     return if (isPartitionOnlyProjection()) {
       logger.info("Requested projection contains only partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       listOf(HivePartitionPart(dbName, tableName, fieldNames, emptyList(), metastoreSchema, predicate, dialect, fs, client))
     } else {
-      val paths = HiveFilesFn.invoke(table, constraints, partitionKeys, fs, client)
-      logger.debug("Found ${paths.size} visible hive files from all locations for $dbName:$tableName")
-      paths.map {
-        HiveFilePart(dialect, it, schema(), predicate, emptyList(), fs)
+      val files = HiveFilesFn.invoke(table, constraints, partitionKeys, fs, client)
+      logger.debug("Found ${files.size} visible hive files from all locations for $dbName:$tableName")
+
+      // for each seperate hive file part we must pass in the metastore schema
+      files.map {
+        HiveFilePart(dialect, it.first, metastoreSchema, schema(), predicate, it.second.parts, fs)
       }
     }
   }

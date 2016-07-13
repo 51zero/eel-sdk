@@ -5,6 +5,7 @@ import java.util.UUID
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Schema
+import io.eels.util.Option
 import io.kotlintest.specs.WordSpec
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.GenericData
@@ -45,7 +46,7 @@ class ParquetReaderSupportTest : WordSpec() {
     "ParquetReaderSupport" should     {
       "support projections on doubles" {
 
-        val reader = ParquetReaderSupport.create(path, true, null, schema.removeField("looong"))
+        val reader = ParquetReaderSupport.create(path, Option.None, Option(schema.removeField("looong")))
         val record = reader.read()
         reader.close()
 
@@ -54,7 +55,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support projections on longs" {
 
-        val reader = ParquetReaderSupport.create(path, true, null, schema.removeField("str"))
+        val reader = ParquetReaderSupport.create(path, Option.None, Option(schema.removeField("str")))
         val record = reader.read()
         reader.close()
 
@@ -62,7 +63,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support full projections" {
 
-        val reader = ParquetReaderSupport.create(path, true, null, schema)
+        val reader = ParquetReaderSupport.create(path, Option.None, Option(schema))
         val record = reader.read()
         reader.close()
 
@@ -73,7 +74,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support non projections" {
 
-        val reader = ParquetReaderSupport.create(path, false, null, null)
+        val reader = ParquetReaderSupport.create(path, Option.None, Option.None)
         val record = reader.read()
         reader.close()
 

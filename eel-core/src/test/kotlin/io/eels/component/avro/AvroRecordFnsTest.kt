@@ -1,5 +1,6 @@
 package io.eels.component.avro
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.Field
 import io.eels.Row
@@ -9,7 +10,7 @@ import org.apache.avro.generic.GenericData
 
 class AvroRecordFnTest : WordSpec() {
 
-  val config = ConfigFactory.parseString("""  eel.avro.fillMissingValues : true  """)
+  val config: Config = ConfigFactory.parseString("""  eel.avro.fillMissingValues : true  """)
 
   init {
     "fromRecord" should {

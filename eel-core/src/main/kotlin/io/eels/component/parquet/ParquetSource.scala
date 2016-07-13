@@ -1,6 +1,7 @@
 package io.eels.component.parquet
 
 import io.eels._
+import io.eels.component.{Part, Using}
 import io.eels.component.avro.AvroSchemaMerge
 import io.eels.schema.Schema
 import io.eels.util.Logging

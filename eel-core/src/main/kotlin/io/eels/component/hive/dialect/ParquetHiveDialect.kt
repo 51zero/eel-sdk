@@ -4,6 +4,8 @@ import io.eels.Row
 import io.eels.component.Predicate
 import io.eels.component.hive.HiveDialect
 import io.eels.component.hive.HiveWriter
+import io.eels.component.parquet.ParquetReaderSupport
+import io.eels.component.parquet.parquetRowIterator
 import io.eels.schema.Schema
 import io.eels.util.Logging
 import io.eels.util.Option
@@ -13,22 +15,25 @@ import rx.Observable
 
 object ParquetHiveDialect : HiveDialect, Logging {
 
-  override fun reader(path: Path, metastoreSchema: Schema, readerSchema: Schema, predicate: Option<Predicate>, fs: FileSystem): Observable<Row> {
-    throw UnsupportedOperationException()
+  override fun read(path: Path,
+                    metastoreSchema: Schema,
+                    projectionSchema: Schema,
+                    predicate: Option<Predicate>,
+                    fs: FileSystem): Observable<Row> {
 
-//    override def reader(path: Path, dataSchema: Schema, targetSchema: Schema, predicate: Option[Predicate])
-//    (implicit fs: FileSystem): SourceReader = new SourceReader {
-//      require(targetSchema.columns.nonEmpty, "Cannot create parquet reader for a target schema that has no columns")
-//      val reader = ParquetReaderSupport.createReader(path, targetSchema.size < dataSchema.size, predicate, targetSchema)
-//      override def close(): Unit = reader.close()
-//      override def iterator: Iterator[InternalRow] = ParquetIterator(reader, targetSchema)
-//    }
+    val reader = ParquetReaderSupport.create(path, predicate, Option(projectionSchema))
+    return Observable.create<Row> { subscriber ->
+      subscriber.onStart()
+      parquetRowIterator(reader).forEach {
+        subscriber.onNext(it)
+      }
+      subscriber.onCompleted()
+    }
   }
 
   override fun writer(schema: Schema, path: Path, fs: FileSystem): HiveWriter = ParquetWriter()
 
 }
-
 
 class ParquetWriter : HiveWriter {
 

@@ -28,15 +28,5 @@ class AvroRecordFnTest extends WordSpec with Matchers {
     }
   }
 
-  "AvroRecordFn.fromRecord" should {
-    "return record in same order as target schema" in {
-      val schema = Schema(Column("a"), Column("b"), Column("c"))
-      val targetSchema = Schema(Column("c"), Column("a"))
-      val record = new Record(AvroSchemaFn.toAvro(schema))
-      record.put("a", "aaaa")
-      record.put("b", "bbbb")
-      record.put("c", "cccc")
-      recordFn.fromRecord(record, AvroSchemaFn.toAvro(targetSchema)) shouldBe Vector("cccc", "aaaa")
-    }
-  }
+
 }

@@ -1,11 +1,12 @@
 package io.eels.component.parquet
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.FieldType
-import io.eels.util.Logging
 import io.eels.component.Predicate
-import org.apache.avro.Schema
-import org.apache.avro.SchemaBuilder
+import io.eels.component.avro.schemaToAvroSchema
+import io.eels.util.Logging
+import io.eels.util.Option
+import io.eels.util.getOrElse
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -16,60 +17,36 @@ import org.apache.parquet.hadoop.ParquetReader
 
 object ParquetReaderSupport : Logging {
 
-  val config = ConfigFactory.load()
-  val parallelism: String = config.getInt("eel.parquet.parallelism").toString()
+  val config: Config = ConfigFactory.load()
 
-  init {
-    logger.debug("Parquet readers will have parallelism = $parallelism")
+  val parallelism = config.getInt("eel.parquet.parallelism").toString().apply {
+    logger.debug("Parquet readers will use parallelism = $this")
   }
 
   /**
-   * Creates a new reader from the given path. If projection is set then a projected
-   * schema is generated from the given schema.
+   * Creates a new reader for the given path.
+   *
+   * @predicate if set then a parquet predicate is applied to the rows
+   * @projectionSchema if set then the schema is used to narrow the fields returned
    */
   fun create(path: Path,
-             isProjection: Boolean,
-             predicate: Predicate?,
-             schema: io.eels.schema.Schema?): ParquetReader<GenericRecord> {
-    require(!isProjection || schema != null, { "Schema cannot be null if projection is set" })
+             predicate: Option<Predicate>,
+             projectionSchema: Option<io.eels.schema.Schema>): ParquetReader<GenericRecord> {
 
-    fun projection(): Schema {
-      val builder = SchemaBuilder.record("row").namespace("namespace")
-      return schema!!.fields.fold(builder.fields(), { fields, col ->
-        val name = col.name
-        when (col.type) {
-          FieldType.BigInt -> fields.optionalLong(name)
-          FieldType.Boolean -> fields.optionalBoolean(name)
-          FieldType.Double -> fields.optionalDouble(name)
-          FieldType.Float -> fields.optionalFloat(name)
-          FieldType.Int -> fields.optionalInt(name)
-          FieldType.Long -> fields.optionalLong(name)
-          FieldType.String -> fields.optionalString(name)
-          FieldType.Short -> fields.optionalInt(name)
-          else -> {
-            logger.warn("Unknown schema type ${col.type}; defaulting to string")
-            fields.optionalString(name)
-          }
-        }
-      }).endRecord()
-    }
-
+    // The parquet reader can use a projection by setting a projected schema onto a conf object
     fun configuration(): Configuration {
       val conf = Configuration()
-      if (isProjection) {
-
-
-        AvroReadSupport.setAvroReadSchema(conf, projection())
-        AvroReadSupport.setRequestedProjection(conf, projection())
+      projectionSchema.forEach {
+        val projection = schemaToAvroSchema(it, false)
+        AvroReadSupport.setAvroReadSchema(conf, projection)
+        AvroReadSupport.setRequestedProjection(conf, projection)
         conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
       }
       return conf
     }
 
-    fun filter(): FilterCompat.Filter = when (predicate) {
-      null -> FilterCompat.NOOP
-      else -> FilterCompat.get(predicate.apply())
-    }
+    // a filter is set when we have a predicate for the read
+    fun filter(): FilterCompat.Filter = predicate.map { FilterCompat.get(it.apply()) }.getOrElse { FilterCompat.NOOP }
 
     @Suppress("UNCHECKED_CAST")
     return AvroParquetReader.builder<GenericRecord>(path)

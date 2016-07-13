@@ -1,16 +1,10 @@
 package io.eels
 
-import io.eels.plan.Plan
-import io.eels.plan.ToListPlan
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Schema
-import io.eels.util.Logging
 import org.apache.hadoop.hdfs.server.namenode.Content
 import rx.Observable
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 interface Frame {
 
@@ -314,7 +308,7 @@ interface Frame {
   fun to(sink: Sink): Long = SinkPlan.execute(sink, this)
   fun size(): Long = ToSizePlan.execute(this)
   fun counts(): Map<String, Content.Counts> = CountsPlan.execute(this)
-  fun toList(): List<Row> = ToListPlan.execute(this)
+  fun toList(): List<Row> = observable().toList().toBlocking().single()
   fun toSet(): Set<Row> = ToSetPlan.execute(this)
 
   companion object {
