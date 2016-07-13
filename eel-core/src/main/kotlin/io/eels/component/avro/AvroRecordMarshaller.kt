@@ -7,12 +7,16 @@ import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
 
 /**
- * Writes eel rows as avro records using the given avro schema.
- * Each row must provide a value for each field in the schema.
+ * Marshalls rows as avro records using the given write schema.
+ *
+ * @recordSchema the schema to be used in the record. Each row must
+ * provide all the fields listed in the record schema.
+ *
  */
-class AvroRecordMarshaller(val schema: Schema) : Logging {
+class AvroRecordMarshaller(val recordSchema: Schema) : Logging {
 
-  val fields = schema.fields
+  val fields = recordSchema.fields
+  val converters = fields.map { converter(it.schema()) }
 
   //val converters = fields.map { OptionalConverter(converter(field.schema)) }
   init {
@@ -20,34 +24,29 @@ class AvroRecordMarshaller(val schema: Schema) : Logging {
   }
 
   fun toRecord(row: Row, caseInsensitive: Boolean = false): GenericRecord {
-    require(
-        row.size() == schema.fields.size,
-        {
-          """AvroRecordMarshaller cannot marshall; size of row and size of schema differ;schema=${fields.map { it.name() }.joinToString (", ")};values=$row"""
-        }
-    )
-    val record = GenericData.Record(schema)
-    for (field in fields) {
+    require(row.size() == recordSchema.fields.size, { "row must provide all fields of the record schema $recordSchema" })
+    val record = GenericData.Record(recordSchema)
+    for ((field, converter) in fields.zip(converters)) {
       val value = row.get(field.name(), caseInsensitive)
-      record.put(field.name(), value)
+      val converted = if (value == null) null else converter.convert(value)
+      record.put(field.name(), converted)
     }
     return record
   }
 
-  //  private fun converter(schema: Schema): Converter[_]   {
-  //    schema.getType match {
-  //      case Schema.Type.BOOLEAN => BooleanConverter
-  //          case Schema.Type.DOUBLE => DoubleConverter
-  //          case Schema.Type.ENUM => StringConverter
-  //          case Schema.Type.FLOAT => FloatConverter
-  //          case Schema.Type.INT => IntConverter
-  //          case Schema.Type.LONG => LongConverter
-  //          case Schema.Type.STRING => StringConverter
-  //          case Schema.Type.UNION => converter(schema.getTypes.asScala.find(_.getType != Schema.Type.NULL).get)
-  //      case other =>
-  //      logger.warn(s"No converter exists for fieldType=$other; defaulting to StringConverter")
-  //      StringConverter
-  //    }
+  private fun converter(schema: Schema): AvroConverter<*> = when (schema.type) {
+    Schema.Type.BOOLEAN -> BooleanConverter
+    Schema.Type.DOUBLE -> DoubleConverter
+    Schema.Type.ENUM -> StringConverter
+    Schema.Type.FLOAT -> FloatConverter
+    Schema.Type.INT -> IntConverter
+    Schema.Type.LONG -> LongConverter
+    Schema.Type.STRING -> StringConverter
+    else -> {
+      logger.warn("No converter exists for fieldType=${schema.type}; defaulting to StringConverter")
+      StringConverter
+    }
+  }
 
   //  def default(field: AvroSchema.Field) = {
   //    if (field.defaultValue != null) field.defaultValue.getTextValue

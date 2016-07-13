@@ -12,7 +12,7 @@ class AvroRecordMarshallerTest : WordSpec() {
   val marshaller = AvroRecordMarshaller(avroSchema)
 
   init {
-    "ConvertingAvroRecordMarshaller" should {
+    "AvroRecordMarshaller" should {
       "create field from values in row" {
         val eelSchema = Schema(Field("s"), Field("l"), Field("b"))
         val record = marshaller.toRecord(Row(eelSchema, listOf("a", 1L, false)))
@@ -21,7 +21,7 @@ class AvroRecordMarshallerTest : WordSpec() {
         record.get("b") shouldBe false
       }
       "only accept rows with same number of values as schema fields" {
-        expecting(IllegalArgumentException::class) {
+        shouldThrow<IllegalArgumentException> {
           val eelSchema = Schema(Field("a"), Field("b"))
           marshaller.toRecord(Row(eelSchema, listOf("a", 1L)))
         }
@@ -37,14 +37,22 @@ class AvroRecordMarshallerTest : WordSpec() {
         record.get("l") shouldBe 1L
         record.get("b") shouldBe false
       }
-      //      "convert strings to longs" with {
-      //        val record = marshaller.toRecord(Seq("1", "2", "true"))
-      //        record.get("l") shouldBe 2l
-      //      }
-      //      "convert strings to booleans" with {
-      //        val record = marshaller.toRecord(Seq("1", "2", "true"))
-      //        record.get("b") shouldBe true
-      //      }
+      "convert strings to longs"  {
+        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf("1", "2", "true")))
+        record.get("l") shouldBe 2L
+      }
+      "convert strings to booleans"  {
+        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf("1", "2", "true")))
+        record.get("b") shouldBe true
+      }
+      "convert longs to strings"  {
+        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf(1L, "2", "true")))
+        record.get("s") shouldBe "1"
+      }
+      "convert booleans to strings"  {
+        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf(true, "2", "true")))
+        record.get("s") shouldBe "true"
+      }
     }
   }
 }
