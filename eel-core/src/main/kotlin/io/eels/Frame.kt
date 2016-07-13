@@ -1,6 +1,5 @@
 package io.eels
 
-import io.eels.plan.ToSizePlan
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Schema
@@ -299,12 +298,12 @@ interface Frame {
   }
 
   // -- actions --
-  fun <A> fold(a: A, fn: (A, Row) -> A): A = FoldPlan.execute(this, a, fn)
+  fun <A> fold(a: A, fn: (A, Row) -> A): A = observable().reduce(a, { a, row -> fn(a, row) }).toBlocking().single()
 
   fun forall(p: (Row) -> Boolean): Boolean = ForallPlan.execute(this, p)
-  fun exists(p: (Row) -> Boolean): Boolean = ExistsPlan.execute(this, p)
-  fun find(p: (Row) -> Boolean): Row? = FindPlan.execute(this, p)
-  fun head(): Row? = HeadPlan.execute(this)
+  fun exists(p: (Row) -> Boolean): Boolean = observable().exists { p(it) }.toBlocking().single()
+  fun find(p: (Row) -> Boolean): Row? = observable().first { p(it) }.toBlocking().single()
+  fun head(): Row? = observable().first().toBlocking().single()
 
   fun to(sink: Sink): Long = SinkPlan.execute(sink, this)
   fun size(): Int = observable().count().toBlocking().single()
@@ -321,24 +320,8 @@ interface Frame {
   }
 }
 
-object FoldPlan {
-  fun <A> execute(frame: Frame, a: A, p: (A, Row) -> A): A = throw RuntimeException()
-}
-
 object ForallPlan {
   fun execute(frame: Frame, p: (Row) -> Boolean): Boolean = false
-}
-
-object ExistsPlan {
-  fun execute(frame: Frame, p: (Row) -> Boolean): Boolean = false
-}
-
-object FindPlan {
-  fun execute(frame: Frame, p: (Row) -> Boolean): Row? = null
-}
-
-object HeadPlan {
-  fun execute(frame: Frame): Row? = null
 }
 
 object SinkPlan {

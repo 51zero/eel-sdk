@@ -4,7 +4,6 @@ import java.util.UUID
 
 import com.typesafe.config.ConfigFactory
 import io.eels.component.jdbc.JdbcSink
-import io.eels.component.jdbc.JdbcSinkProps
 import io.eels.component.jdbc.JdbcSource
 
 class SqlContext {
@@ -24,7 +23,7 @@ class SqlContext {
   }
 
   fun registerFrame(name: String, frame: Frame): Unit {
-    frame.to(JdbcSink(uri, name, JdbcSinkProps(createTable = true)))
+    frame.to(JdbcSink(uri, name, createTable = true))
   }
 
   fun sql(query: String): Frame = JdbcSource(uri, query).toFrame(1)
