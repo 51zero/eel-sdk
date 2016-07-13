@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
 import io.eels.Row
-import io.eels.component.avro.avroRecordToRow
+import io.eels.component.avro.AvroRecordDeserializer
 import io.eels.util.map
 import io.eels.util.nullTerminatedIterator
 import org.apache.avro.generic.GenericRecord
@@ -17,7 +17,7 @@ import java.util.stream.Stream
  */
 fun parquetRowIterator(reader: ParquetReader<GenericRecord>): Iterator<Row> = object : Iterator<Row> {
 
-  val iter = Stream.generate { reader.read() }.nullTerminatedIterator().map { avroRecordToRow(it) }
+  val iter = Stream.generate { reader.read() }.nullTerminatedIterator().map { AvroRecordDeserializer().toRow(it) }
 
   override fun hasNext(): Boolean {
     val hasNext = iter.hasNext()

@@ -6,10 +6,10 @@ import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 import org.apache.avro.SchemaBuilder
 
-class AvroRecordMarshallerTest : WordSpec() {
+class AvroRecordSerializerTest : WordSpec() {
 
   val avroSchema = SchemaBuilder.record("row").fields().requiredString("s").requiredLong("l").requiredBoolean("b").endRecord()
-  val marshaller = AvroRecordMarshaller(avroSchema)
+  val marshaller = AvroRecordSerializer(avroSchema)
 
   init {
     "AvroRecordMarshaller" should {
@@ -38,21 +38,31 @@ class AvroRecordMarshallerTest : WordSpec() {
         record.get("b") shouldBe false
       }
       "convert strings to longs"  {
-        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf("1", "2", "true")))
+        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf("1", "2", "true")))
         record.get("l") shouldBe 2L
       }
       "convert strings to booleans"  {
-        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf("1", "2", "true")))
+        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf("1", "2", "true")))
         record.get("b") shouldBe true
       }
       "convert longs to strings"  {
-        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf(1L, "2", "true")))
+        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf(1L, "2", "true")))
         record.get("s") shouldBe "1"
       }
       "convert booleans to strings"  {
-        val record = marshaller.toRecord(Row(avroSchemaToSchema(avroSchema), listOf(true, "2", "true")))
+        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf(true, "2", "true")))
         record.get("s") shouldBe "true"
       }
     }
   }
 }
+
+//    "AvroRecordFn" should
+//        {
+//          "replace missing values if flag set" in {
+//            val schema = Schema(Column("a"), Column("b"), Column("c"))
+//            toRecord(listOf("1", "3"), schema, Schema(Column("a"), Column("c")), config).toString shouldBe
+//                """{"a": "1", "b": null, "c": "3"}"""
+//          }
+//          }
+//

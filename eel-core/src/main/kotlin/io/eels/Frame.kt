@@ -309,7 +309,7 @@ interface Frame {
   fun size(): Int = observable().count().toBlocking().single()
   fun counts(): Map<String, Content.Counts> = CountsPlan.execute(this)
   fun toList(): List<Row> = observable().toList().toBlocking().single()
-  fun toSet(): Set<Row> = ToSetPlan.execute(this)
+  fun toSet(): Set<Row> = toList().toSet()
 
   companion object {
     operator fun invoke(_schema: Schema, vararg rows: Row): Frame = invoke(_schema, rows.asList())
@@ -330,8 +330,4 @@ object SinkPlan {
 
 object CountsPlan {
   fun execute(frame: Frame): Map<String, Content.Counts> = mapOf()
-}
-
-object ToSetPlan {
-  fun execute(frame: Frame): Set<Row> = setOf()
 }

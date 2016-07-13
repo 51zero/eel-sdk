@@ -13,9 +13,9 @@ import org.apache.avro.generic.GenericRecord
  * provide all the fields listed in the record schema.
  *
  */
-class AvroRecordMarshaller(val recordSchema: Schema) : Logging {
+class AvroRecordSerializer(val recordSchema: Schema) : Logging {
 
-  val fields = recordSchema.fields
+  val fields: List<Schema.Field> = recordSchema.fields
   val converters = fields.map { converter(it.schema()) }
 
   //val converters = fields.map { OptionalConverter(converter(field.schema)) }

@@ -5,27 +5,30 @@ import io.eels.Row
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
 
-private val config = ConfigFactory.load()
-private val useJavaString = config.getBoolean("eel.avro.java.string")
-
 /**
  * Returns an row from the given avro record using the schema present in the record.
  * The row values will be created in the order that the record schema fields are declared.
  */
-fun avroRecordToRow(record: GenericRecord): Row {
-  val eelSchema = avroSchemaToSchema(record.schema)
-  val values = record.schema.fields.map { field ->
-    val value = record.get(field.name())
-    if (useJavaString) {
-      when (value) {
-        is Utf8 -> String(value.bytes)
-        else -> value
+class AvroRecordDeserializer {
+
+  private val config = ConfigFactory.load()
+  private val useJavaString = config.getBoolean("eel.avro.java.string")
+
+  fun toRow(record: GenericRecord): Row {
+    val eelSchema = fromAvroSchema(record.schema)
+    val values = record.schema.fields.map { field ->
+      val value = record.get(field.name())
+      if (useJavaString) {
+        when (value) {
+          is Utf8 -> String(value.bytes)
+          else -> value
+        }
+      } else {
+        value
       }
-    } else {
-      value
     }
+    return Row(eelSchema, values)
   }
-  return Row(eelSchema, values)
 }
 
 //   private val config = ConfigFactory.load()

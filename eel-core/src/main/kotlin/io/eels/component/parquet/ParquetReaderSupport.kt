@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.eels.component.Predicate
-import io.eels.component.avro.schemaToAvroSchema
+import io.eels.component.avro.toAvroSchema
 import io.eels.util.Logging
 import io.eels.util.Option
 import io.eels.util.getOrElse
@@ -37,7 +37,7 @@ object ParquetReaderSupport : Logging {
     fun configuration(): Configuration {
       val conf = Configuration()
       projectionSchema.forEach {
-        val projection = schemaToAvroSchema(it, false)
+        val projection = toAvroSchema(it, false)
         AvroReadSupport.setAvroReadSchema(conf, projection)
         AvroReadSupport.setRequestedProjection(conf, projection)
         conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)

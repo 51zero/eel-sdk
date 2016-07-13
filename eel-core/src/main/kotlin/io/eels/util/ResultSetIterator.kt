@@ -1,4 +1,4 @@
-package io.eels.component
+package io.eels.util
 
 import java.sql.ResultSet
 

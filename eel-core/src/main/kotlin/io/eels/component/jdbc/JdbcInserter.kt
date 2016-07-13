@@ -1,7 +1,7 @@
 package io.eels.component.jdbc
 
 import io.eels.Row
-import io.eels.component.ResultSetIterator
+import io.eels.util.ResultSetIterator
 import io.eels.schema.Schema
 import io.eels.util.Logging
 import io.eels.util.zipWithIndex

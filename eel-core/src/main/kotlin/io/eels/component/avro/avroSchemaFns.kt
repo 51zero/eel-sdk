@@ -6,20 +6,20 @@ import io.eels.schema.Schema
 import org.apache.avro.SchemaBuilder
 import org.codehaus.jackson.node.NullNode
 
-fun schemaToAvroSchema(schema: Schema, caseSensitive: Boolean = true, name: String = "row", namespace: String = "namespace"): org.apache.avro.Schema {
+fun toAvroSchema(schema: Schema, caseSensitive: Boolean = true, name: String = "row", namespace: String = "namespace"): org.apache.avro.Schema {
   val avroFields = schema.fields.map { toAvroField(it, caseSensitive) }
   val avroSchema = org.apache.avro.Schema.createRecord(name, null, namespace, false)
   avroSchema.fields = avroFields
   return avroSchema
 }
 
-fun avroSchemaToSchema(avro: org.apache.avro.Schema): Schema {
+fun fromAvroSchema(avro: org.apache.avro.Schema): Schema {
   require(avro.type == org.apache.avro.Schema.Type.RECORD, { "Can only convert avro records to eel schemas" })
-  val cols = avro.fields.map(::toColumn)
+  val cols = avro.fields.map(::fromAvroField)
   return Schema(cols)
 }
 
-fun toSchemaType(schema: org.apache.avro.Schema): FieldType = when (schema.type) {
+fun toFieldType(schema: org.apache.avro.Schema): FieldType = when (schema.type) {
   org.apache.avro.Schema.Type.BOOLEAN -> FieldType.Boolean
   org.apache.avro.Schema.Type.DOUBLE -> FieldType.Double
   org.apache.avro.Schema.Type.ENUM -> FieldType.String
@@ -33,14 +33,14 @@ fun toSchemaType(schema: org.apache.avro.Schema): FieldType = when (schema.type)
   }
 }
 
-fun toColumn(field: org.apache.avro.Schema.Field): Field = when (field.schema().type) {
+fun fromAvroField(field: org.apache.avro.Schema.Field): Field = when (field.schema().type) {
   org.apache.avro.Schema.Type.UNION -> {
     val schema = field.schema().types.find { it.type != org.apache.avro.Schema.Type.NULL }
-    val fieldType = toSchemaType(schema!!)
+    val fieldType = toFieldType(schema!!)
     Field(field.name(), fieldType, true)
   }
   else -> {
-    val schemaType = toSchemaType(field.schema())
+    val schemaType = toFieldType(field.schema())
     Field(field.name(), schemaType, false)
   }
 }
