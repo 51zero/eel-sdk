@@ -1,5 +1,6 @@
 package io.eels.component.jdbc
 
+import io.eels.Source
 import io.eels.schema.Schema
 import io.eels.util.Timed
 import io.eels.component.Part
@@ -9,20 +10,22 @@ import io.eels.util.zipWithIndex
 import java.sql.CallableStatement
 import java.sql.Connection
 
-class JdbcStoredProcSource(url: String,
-                           val storedProcedure: String,
-                           val params: List<Any>,
-                           val fetchSize: Int = 100,
-                           providedSchema: Option<Schema> = Option.None,
-                           providedDialect: Option<JdbcDialect> = Option.None) : AbstractJdbcSource(url, providedSchema, providedDialect), Timed {
+data class JdbcStoredProcSource(val url: String,
+                                val storedProcedure: String,
+                                val params: List<Any>,
+                                val fetchSize: Int = 100,
+                                val providedSchema: Option<Schema> = Option.None,
+                                val providedDialect: Option<JdbcDialect> = Option.None) : Source, JdbcPrimitives, Timed {
 
   override fun schema(): Schema = providedSchema.getOrElse { fetchSchema() }
 
-  fun withProvidedSchema(schema: Schema): JdbcStoredProcSource = JdbcStoredProcSource(url = url, storedProcedure = storedProcedure, params = params, providedSchema = Option(schema), providedDialect = providedDialect)
-  fun withProvidedDialect(dialect: JdbcDialect): JdbcStoredProcSource = JdbcStoredProcSource(url = url, storedProcedure = storedProcedure, params = params, providedSchema = providedSchema, providedDialect = Option(dialect))
+  fun withProvidedSchema(schema: Schema): JdbcStoredProcSource = copy(providedSchema = Option(schema), providedDialect = providedDialect)
+  fun withDialect(dialect: JdbcDialect): JdbcStoredProcSource = copy(providedDialect = Option(dialect))
+
+  private fun dialect(): JdbcDialect = providedDialect.getOrElse(GenericJdbcDialect())
 
   private fun setup(): Pair<Connection, CallableStatement> {
-    val conn = connect()
+    val conn = connect(url)
     val stmt = conn.prepareCall(storedProcedure)
     stmt.fetchSize = fetchSize
     for ((param, index) in params.zipWithIndex()) {
@@ -41,12 +44,12 @@ class JdbcStoredProcSource(url: String,
       stmt.resultSet
     }
 
-    val schema = schemaFor(rs)
+    val schema = schemaFor(url, dialect(), rs)
     val part = ResultsetPart(rs, stmt, conn, schema)
     return listOf(part)
   }
 
-  override fun fetchSchema(): Schema {
+  fun fetchSchema(): Schema {
 
     val (conn, stmt) = setup()
 
@@ -58,7 +61,7 @@ class JdbcStoredProcSource(url: String,
         logger.debug("Stored proc result=$result")
         stmt.resultSet
       }
-      val schema = schemaFor(rs)
+      val schema = schemaFor(url, dialect(), rs)
       rs.close()
       return schema
 

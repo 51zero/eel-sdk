@@ -1,5 +1,6 @@
 package io.eels
 
+import io.eels.plan.ToSizePlan
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Schema
@@ -306,7 +307,7 @@ interface Frame {
   fun head(): Row? = HeadPlan.execute(this)
 
   fun to(sink: Sink): Long = SinkPlan.execute(sink, this)
-  fun size(): Long = ToSizePlan.execute(this)
+  fun size(): Int = observable().count().toBlocking().single()
   fun counts(): Map<String, Content.Counts> = CountsPlan.execute(this)
   fun toList(): List<Row> = observable().toList().toBlocking().single()
   fun toSet(): Set<Row> = ToSetPlan.execute(this)
@@ -346,10 +347,6 @@ object SinkPlan {
 
 object CountsPlan {
   fun execute(frame: Frame): Map<String, Content.Counts> = mapOf()
-}
-
-object ToSizePlan {
-  fun execute(frame: Frame): Long = 0
 }
 
 object ToSetPlan {
