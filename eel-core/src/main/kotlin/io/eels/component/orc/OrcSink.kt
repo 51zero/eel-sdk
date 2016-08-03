@@ -11,6 +11,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectIn
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.hive.ql.io.orc.Writer
+import org.apache.hadoop.hive.serde2.objectinspector.StandardListObjectInspector
 
 class OrcSink(val path: Path) : Sink, Logging {
   override fun writer(schema: Schema): SinkWriter = OrcSinkWriter(schema, path)
@@ -21,10 +23,11 @@ class OrcSinkWriter(schema: Schema, path: Path) : SinkWriter, Logging {
     logger.debug("Creating orc writer $schema")
   }
 
-  val inspector = ObjectInspectorFactory.getStandardListObjectInspector(
+  val inspector: StandardListObjectInspector = ObjectInspectorFactory.getStandardListObjectInspector(
     PrimitiveObjectInspectorFactory.javaStringObjectInspector
   )
-  val writer = OrcFile.createWriter(path, OrcFile.writerOptions(Configuration()).inspector(inspector)).apply {
+
+  val writer: Writer = OrcFile.createWriter(path, OrcFile.writerOptions(Configuration()).inspector(inspector)).apply {
     this.addRow(schema.fieldNames().toTypedArray())
   }
 

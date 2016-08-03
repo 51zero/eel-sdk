@@ -6,7 +6,12 @@ import io.eels.schema.Schema
 data class Row(val schema: Schema, val values: List<Any?>) {
 
   init {
-    require(schema.size() == values.size, { "Row should have a value for each field (${schema.fields.size} fields=${schema.fields.joinToString { "," }}, ${values.size} values=${values.joinToString { "," }})" })
+    require(
+        schema.size() == values.size,
+        {
+          "Row should have a value for each field (${schema.fields.size} fields=${schema.fieldNames().joinToString(",")}, ${values.size} values=${values.joinToString(",")})"
+        }
+    )
   }
 
   override fun toString(): String {

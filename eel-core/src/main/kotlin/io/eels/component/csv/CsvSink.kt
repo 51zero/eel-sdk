@@ -43,6 +43,7 @@ class CsvSinkWriter(val schema: Schema,
 
   override fun write(row: Row): Unit {
     synchronized(lock) {
+      // nulls should be written as empty strings
       val array = row.values.map { it?.toString() }.toTypedArray()
       writer.writeRow(array)
     }

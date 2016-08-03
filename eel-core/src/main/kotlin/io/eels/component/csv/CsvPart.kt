@@ -4,11 +4,10 @@ import com.univocity.parsers.csv.CsvParser
 import io.eels.Row
 import io.eels.schema.Schema
 import io.eels.component.Part
-import one.util.streamex.StreamEx
 import rx.Observable
 import java.nio.file.Path
 
-class CsvPart(val createParsernFn: () -> CsvParser,
+class CsvPart(val createParser: () -> CsvParser,
               val path: Path,
               val header: Header,
               val verifyRows: Boolean,
@@ -16,29 +15,33 @@ class CsvPart(val createParsernFn: () -> CsvParser,
 
   override fun data(): Observable<Row> {
 
-    val parser = createParsernFn()
+    val parser = createParser()
     parser.beginParsing(path.toFile())
 
-    val rowsToSkip: Long = when (header) {
-      Header.FirstRow -> 1L
-      else -> 0L
+    val rowsToSkip: Int = when (header) {
+      Header.FirstRow -> 1
+      else -> 0
     }
 
-    val iterator = object : AbstractIterator<Array<String>>() {
-      override fun computeNext() {
-        val values = parser.parseNext()
-        if (values == null) done()
-        else setNext(values)
-      }
-    }
+//    val iterator = object : AbstractIterator<Array<String>>() {
+//      override fun computeNext() {
+//        val values = parser.parseNext()
+//        if (values == null) done()
+//        else setNext(values)
+//      }
+//    }
 
     return Observable.create { sub ->
-      val stream = StreamEx.generate { parser.parseNext() }.takeWhile { it != null }.takeWhile { !sub.isUnsubscribed }.skip(rowsToSkip)
       sub.onStart()
-      stream.forEach {
-        val values = iterator.next()
-        val row = Row(schema, values.asList())
-        sub.onNext(row)
+      var next: Array<String>? = parser.parseNext()
+      var toDrop: Int = rowsToSkip
+      while (next != null) {
+        val row = Row(schema, next.asList())
+        if (toDrop == 0)
+          sub.onNext(row)
+        else
+          toDrop -= 1
+        next = parser.parseNext()
       }
       if (!sub.isUnsubscribed)
         sub.onCompleted()

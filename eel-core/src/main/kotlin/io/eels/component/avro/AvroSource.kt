@@ -35,5 +35,7 @@ class AvroSourcePart(val path: Path, val schema: Schema) : Part {
 
     if (!subscriber.isUnsubscribed)
       subscriber.onCompleted()
+
+    reader.close()
   }
 }
