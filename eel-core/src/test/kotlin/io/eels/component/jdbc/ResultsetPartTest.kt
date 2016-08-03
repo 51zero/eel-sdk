@@ -1,5 +1,6 @@
 package io.eels.component.jdbc
 
+import io.eels.RowListener
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Precision
@@ -27,7 +28,7 @@ class ResultsetPartTest : StringSpec() {
 
       val stmt = conn.createStatement()
       val rs = stmt.executeQuery("select * from mytable")
-      val data = ResultsetPart(rs, stmt, conn, schema).data().toBlocking().first()
+      val data = ResultsetPart(rs, stmt, conn, schema, RowListener.Noop).data().toBlocking().first()
       data.values shouldBe listOf(3L, true, 1)
     }
   }

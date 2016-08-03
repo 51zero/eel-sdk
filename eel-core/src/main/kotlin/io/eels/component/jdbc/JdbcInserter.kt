@@ -1,6 +1,7 @@
 package io.eels.component.jdbc
 
 import io.eels.Row
+import io.eels.RowListener
 import io.eels.util.ResultSetIterator
 import io.eels.schema.Schema
 import io.eels.util.Logging
@@ -12,7 +13,8 @@ class JdbcInserter(val url: String,
                    val table: String,
                    val schema: Schema,
                    val autoCommit: Boolean,
-                   val dialect: JdbcDialect) : Logging {
+                   val dialect: JdbcDialect,
+                   val listener: RowListener) : Logging {
 
   val conn: Connection = DriverManager.getConnection(url)
 
@@ -34,6 +36,7 @@ class JdbcInserter(val url: String,
       val result = stmt.executeBatch()
       logger.debug("Batch completed; ${result.size} rows inserted")
       if (!autoCommit) conn.commit()
+      batch.forEach { listener.onRow(it) }
     } catch (e: Exception) {
       logger.error("Batch failure", e)
       if (!autoCommit)

@@ -1,6 +1,7 @@
 package io.eels.component.jdbc
 
 import io.eels.Row
+import io.eels.RowListener
 import io.eels.SinkWriter
 import io.eels.schema.Schema
 import io.eels.util.Logging
@@ -8,16 +9,16 @@ import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
-class JdbcWriter(val schema: Schema,
-                 val url: String,
-                 val table: String,
+class JdbcWriter(schema: Schema,
+                 url: String,
+                 table: String,
                  createTable: Boolean,
-                 val dialect: JdbcDialect,
+                 dialect: JdbcDialect,
                  threads: Int,
                  batchSize: Int,
                  autoCommit: Boolean,
                  bufferSize: Int,
-                 val swallowExceptions: Boolean) : SinkWriter, Logging {
+                 listener: RowListener) : SinkWriter, Logging {
   init {
     logger.info("Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
     require(bufferSize >= batchSize)
@@ -32,7 +33,7 @@ class JdbcWriter(val schema: Schema,
   private val coordinatorPool = Executors.newSingleThreadExecutor()
 
   private val inserter: JdbcInserter by lazy {
-    val inserter = JdbcInserter(url, table, schema, autoCommit, dialect)
+    val inserter = JdbcInserter(url, table, schema, autoCommit, dialect, listener)
     if (createTable) {
       inserter.ensureTableCreated()
     }

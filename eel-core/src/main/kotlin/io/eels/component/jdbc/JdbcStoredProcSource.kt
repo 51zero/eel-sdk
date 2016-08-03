@@ -1,5 +1,6 @@
 package io.eels.component.jdbc
 
+import io.eels.RowListener
 import io.eels.Source
 import io.eels.schema.Schema
 import io.eels.util.Timed
@@ -15,7 +16,8 @@ data class JdbcStoredProcSource(val url: String,
                                 val params: List<Any>,
                                 val fetchSize: Int = 100,
                                 val providedSchema: Option<Schema> = Option.None,
-                                val providedDialect: Option<JdbcDialect> = Option.None) : Source, JdbcPrimitives, Timed {
+                                val providedDialect: Option<JdbcDialect> = Option.None,
+                                val listener: RowListener = RowListener.Noop) : Source, JdbcPrimitives, Timed {
 
   override fun schema(): Schema = providedSchema.getOrElse { fetchSchema() }
 
@@ -45,7 +47,7 @@ data class JdbcStoredProcSource(val url: String,
     }
 
     val schema = schemaFor(url, dialect(), rs)
-    val part = ResultsetPart(rs, stmt, conn, schema)
+    val part = ResultsetPart(rs, stmt, conn, schema, listener)
     return listOf(part)
   }
 
