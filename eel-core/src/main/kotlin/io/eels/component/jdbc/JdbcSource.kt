@@ -13,11 +13,9 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
 
-fun String.asConnectionFn(): () -> Connection = { DriverManager.getConnection(this) }
-
 data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
                                                 val query: String,
-                                                val bind: (PreparedStatement) -> Unit = {},
+                                                val bind: (PreparedStatement) -> Any = {},
                                                 val fetchSize: Int = 100,
                                                 val providedSchema: Option<Schema> = Option.None,
                                                 val providedDialect: Option<JdbcDialect> = Option.None,
@@ -28,7 +26,7 @@ data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
 
   override fun schema(): Schema = providedSchema.getOrElse { fetchSchema() }
 
-  fun withBind(bind: (PreparedStatement) -> Unit) = copy(bind = bind)
+  fun withBind(bind: (PreparedStatement) -> Any) = copy(bind = bind)
   fun withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
   fun withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = Option(schema))
   fun withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = Option(dialect))
@@ -69,6 +67,6 @@ data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
       }
     }
   }
-}
 
-data class Bucketing(val columnName: String, val numberOfBuckets: Int)
+  data class Bucketing(val columnName: String, val numberOfBuckets: Int)
+}
