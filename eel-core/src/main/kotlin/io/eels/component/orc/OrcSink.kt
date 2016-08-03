@@ -15,27 +15,30 @@ import org.apache.hadoop.hive.ql.io.orc.Writer
 import org.apache.hadoop.hive.serde2.objectinspector.StandardListObjectInspector
 
 class OrcSink(val path: Path) : Sink, Logging {
+  
   override fun writer(schema: Schema): SinkWriter = OrcSinkWriter(schema, path)
-}
 
-class OrcSinkWriter(schema: Schema, path: Path) : SinkWriter, Logging {
-  init {
-    logger.debug("Creating orc writer $schema")
-  }
-
-  val inspector: StandardListObjectInspector = ObjectInspectorFactory.getStandardListObjectInspector(
-    PrimitiveObjectInspectorFactory.javaStringObjectInspector
-  )
-
-  val writer: Writer = OrcFile.createWriter(path, OrcFile.writerOptions(Configuration()).inspector(inspector)).apply {
-    this.addRow(schema.fieldNames().toTypedArray())
-  }
-
-  override fun write(row: Row): Unit {
-    synchronized(this) {
-      writer.addRow(row.values)
+  class OrcSinkWriter(schema: Schema, path: Path) : SinkWriter, Logging {
+    init {
+      logger.debug("Creating orc writer $schema")
     }
-  }
 
-  override fun close(): Unit = writer.close()
+    val inspector: StandardListObjectInspector = ObjectInspectorFactory.getStandardListObjectInspector(
+        PrimitiveObjectInspectorFactory.javaStringObjectInspector
+    )
+
+    val writer: Writer = OrcFile.createWriter(path, OrcFile.writerOptions(Configuration()).inspector(inspector)).apply {
+      this.addRow(schema.fieldNames().toTypedArray())
+    }
+
+    override fun write(row: Row): Unit {
+      synchronized(this) {
+        writer.addRow(row.values)
+      }
+    }
+
+    override fun close(): Unit = writer.close()
+  }
 }
+
+

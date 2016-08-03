@@ -11,31 +11,31 @@ import java.nio.file.Path
 class AvroSource(val path: Path) : Source, Using {
 
   override fun schema(): Schema {
-    return using(createAvroReader(path), { reader ->
+    return using(AvroReaderFns.createAvroReader(path), { reader ->
       val record = reader.next()
       AvroSchemaFns.fromAvroSchema(record.schema)
     })
   }
 
   override fun parts(): List<Part> = listOf(AvroSourcePart(path, schema()))
-}
 
-class AvroSourcePart(val path: Path, val schema: Schema) : Part {
+  class AvroSourcePart(val path: Path, val schema: Schema) : Part {
 
-  override fun data(): Observable<Row> = Observable.create<Row> { subscriber ->
+    override fun data(): Observable<Row> = Observable.create<Row> { subscriber ->
 
-    val reader = createAvroReader(path)
-    subscriber.onStart()
+      val reader = AvroReaderFns.createAvroReader(path)
+      subscriber.onStart()
 
-    while (reader.hasNext() && !subscriber.isUnsubscribed) {
-      val record = reader.next()
-      val row = AvroRecordDeserializer().toRow(record)
-      subscriber.onNext(row)
+      while (reader.hasNext() && !subscriber.isUnsubscribed) {
+        val record = reader.next()
+        val row = AvroRecordDeserializer().toRow(record)
+        subscriber.onNext(row)
+      }
+
+      if (!subscriber.isUnsubscribed)
+        subscriber.onCompleted()
+
+      reader.close()
     }
-
-    if (!subscriber.isUnsubscribed)
-      subscriber.onCompleted()
-
-    reader.close()
   }
 }

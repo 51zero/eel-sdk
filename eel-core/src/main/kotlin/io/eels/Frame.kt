@@ -1,5 +1,7 @@
 package io.eels
 
+import io.eels.plan.CountsPlan
+import io.eels.plan.ForallPlan
 import io.eels.plan.SinkPlan
 import io.eels.schema.Field
 import io.eels.schema.FieldType
@@ -319,12 +321,4 @@ interface Frame {
       override fun rows(): Observable<Row> = Observable.from(rows)
     }
   }
-}
-
-object ForallPlan {
-  fun execute(frame: Frame, p: (Row) -> Boolean): Boolean = false
-}
-
-object CountsPlan {
-  fun execute(frame: Frame): Map<String, Content.Counts> = mapOf()
 }

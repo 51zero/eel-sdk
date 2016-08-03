@@ -100,8 +100,6 @@ data class Schema(val fields: List<Field>) {
     return "CREATE TABLE $table " + fields.map { it.name + " " + it.`type` }.joinToString("(", ", ", ")")
   }
 
-  companion object {
-    fun apply(vararg fields: Field): Schema = Schema(fields.toList())
     //  fun apply(first: String, vararg rest: String): Schema = apply(first + rest)
 
     //    fun apply(strs: Seq<String>): io.eels.schema.Schema = Schema(strs.map(Column.apply).toList)
@@ -116,7 +114,6 @@ data class Schema(val fields: List<Field>) {
     //      }
     //      Schema(columns.toList)
     //    }
-  }
 }
 
 //object SchemaFn {

@@ -15,14 +15,12 @@ class OrcComponentTest : WordSpec() {
     val fs = FileSystem.get(Configuration())
 
     "OrcComponent" should {
-      "read and write orc files"  {
+      "read and write orc files" {
 
         val schema = Schema(Field("name"), Field("job"), Field("location"))
-
         val frame = Frame(
             schema,
             Row(schema, listOf("clint eastwood", "actor", "carmel")),
-            Row(schema, listOf("elton john", "musician", "pinner")),
             Row(schema, listOf("david bowie", "musician", "surrey"))
         )
 
@@ -32,12 +30,13 @@ class OrcComponentTest : WordSpec() {
         val rows = OrcSource(path, fs).toFrame(1).toSet()
         fs.delete(path, false)
 
+        rows.first().schema shouldBe frame.schema()
+
         rows shouldBe setOf(
             Row(frame.schema(), listOf("clint eastwood", "actor", "carmel")),
-            Row(frame.schema(), listOf("elton john", "musician", "pinner")),
             Row(frame.schema(), listOf("david bowie", "musician", "surrey"))
         )
-      }.config(ignored = true)
+      }
     }
   }
 }
