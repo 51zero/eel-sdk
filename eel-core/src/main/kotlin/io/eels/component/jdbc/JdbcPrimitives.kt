@@ -15,7 +15,7 @@ interface JdbcPrimitives : Logging {
     return conn
   }
 
-  fun schemaFor(url: String, dialect: JdbcDialect, rs: ResultSet): Schema {
+  fun schemaFor(dialect: JdbcDialect, rs: ResultSet): Schema {
     val schema = JdbcSchemaFn(rs, dialect)
     logger.debug("Fetched schema:\n" + schema.show())
     return schema

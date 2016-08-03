@@ -9,19 +9,30 @@ import io.eels.util.Logging
 import io.eels.util.Option
 import io.eels.util.Timed
 import io.eels.util.getOrElse
+import java.sql.Connection
+import java.sql.DriverManager
 import java.sql.PreparedStatement
 
-data class JdbcSource(val url: String,
+fun String.asConnectionFn(): () -> Connection = { DriverManager.getConnection(this) }
+
+data class JdbcSource(val connFn: () -> Connection,
                       val query: String,
-                      val fetchSize: Int = 100,
                       val bind: (PreparedStatement) -> Unit = {},
+                      val fetchSize: Int = 100,
                       val providedSchema: Option<Schema> = Option.None,
                       val providedDialect: Option<JdbcDialect> = Option.None,
                       val bucketing: Option<Bucketing> = Option.None,
                       val listener: RowListener = RowListener.Noop) : Source, JdbcPrimitives, Logging, Using, Timed {
 
+  companion object {
+    operator fun invoke(url: String, query: String, bind: (PreparedStatement) -> Unit = {}): JdbcSource =
+        JdbcSource(url.asConnectionFn(), query, bind)
+  }
+
   override fun schema(): Schema = providedSchema.getOrElse { fetchSchema() }
 
+  fun withBind(bind: (PreparedStatement) -> Unit) = copy(bind = bind)
+  fun withListener(listener: RowListener) = copy(listener = listener)
   fun withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = Option(schema))
   fun withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = Option(dialect))
   fun withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
@@ -30,7 +41,7 @@ data class JdbcSource(val url: String,
 
   override fun parts(): List<Part> {
 
-    val conn = connect(url)
+    val conn = connFn()
     val stmt = conn.prepareStatement(query)
     stmt.fetchSize = fetchSize
     bind(stmt)
@@ -39,13 +50,13 @@ data class JdbcSource(val url: String,
       stmt.executeQuery()
     }
 
-    val schema = schemaFor(url, dialect(), rs)
+    val schema = schemaFor(dialect(), rs)
     val part = ResultsetPart(rs, stmt, conn, schema, listener)
     return listOf(part)
   }
 
   fun fetchSchema(): Schema {
-    return using(connect(url)) { conn ->
+    return using(connFn()) { conn ->
       using(conn.createStatement()) { stmt ->
 
         stmt.fetchSize = fetchSize
@@ -55,7 +66,7 @@ data class JdbcSource(val url: String,
           stmt.executeQuery(schemaQuery)
         }
 
-        val schema = schemaFor(url, dialect(), rs)
+        val schema = schemaFor(dialect(), rs)
         rs.close()
         schema
       }

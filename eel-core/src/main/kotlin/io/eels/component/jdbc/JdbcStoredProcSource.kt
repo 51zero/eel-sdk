@@ -46,7 +46,7 @@ data class JdbcStoredProcSource(val url: String,
       stmt.resultSet
     }
 
-    val schema = schemaFor(url, dialect(), rs)
+    val schema = schemaFor(dialect(), rs)
     val part = ResultsetPart(rs, stmt, conn, schema, listener)
     return listOf(part)
   }
@@ -63,7 +63,7 @@ data class JdbcStoredProcSource(val url: String,
         logger.debug("Stored proc result=$result")
         stmt.resultSet
       }
-      val schema = schemaFor(url, dialect(), rs)
+      val schema = schemaFor(dialect(), rs)
       rs.close()
       return schema
 

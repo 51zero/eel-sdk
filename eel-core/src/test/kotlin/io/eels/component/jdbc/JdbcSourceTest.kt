@@ -36,7 +36,7 @@ class JdbcSourceTest : WordSpec() {
         conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
-        JdbcSource("jdbc:h2:mem:test2", "select * from mytable", listener = object : RowListener {
+        JdbcSource("jdbc:h2:mem:test2".asConnectionFn(), "select * from mytable", listener = object : RowListener {
           override fun onRow(row: Row) {
             latch.countDown()
           }
@@ -48,7 +48,9 @@ class JdbcSourceTest : WordSpec() {
         conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
-        JdbcSource("jdbc:h2:mem:test3", "select * from mytable where a=4").toFrame(1).size() shouldBe 1
+        JdbcSource({
+          DriverManager.getConnection("jdbc:h2:mem:test3")
+        }, "select * from mytable where a=4").toFrame(1).size() shouldBe 1
         val a = JdbcSource("jdbc:h2:mem:test3", "select a,c from mytable where a=4").toFrame(1).toList()
         a.first().values.first() shouldBe 4
         a.first().values.get(1) shouldBe 6L
@@ -65,7 +67,7 @@ class JdbcSourceTest : WordSpec() {
         conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
-        JdbcSource("jdbc:h2:mem:test5", "select * from mytable where a=?", bind = { it.setLong(1, 4) }).toFrame(1).size() shouldBe 1
+        JdbcSource("jdbc:h2:mem:test5".asConnectionFn(), "select * from mytable where a=?", bind = { it.setLong(1, 4) }).toFrame(1).size() shouldBe 1
       }
     }
   }
