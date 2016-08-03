@@ -1,5 +1,6 @@
 package io.eels
 
+import io.eels.plan.SinkPlan
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Schema
@@ -19,7 +20,7 @@ interface Frame {
    * Returns an Observable which can be subscribed to in order to receieve all
    * the rows held by this Frame.
    */
-  fun observable(): Observable<Row>
+  fun rows(): Observable<Row>
 
   /**
    * Combines two frames together such that the columns from this frame are joined with the columns
@@ -29,10 +30,10 @@ interface Frame {
   fun join(other: Frame): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().join(other.schema())
 
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val schema = schema()
       val func: (Row, Row) -> Row = { a, b -> Row(schema, a.values.plus(b.values)) }
-      return outer().observable().zipWith(other.observable(), func)
+      return outer().rows().zipWith(other.rows(), func)
     }
   }
 
@@ -42,7 +43,7 @@ interface Frame {
    */
   fun replace(from: String, target: Any?): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable().map {
+    override fun rows(): Observable<Row> = outer().rows().map {
       val values = it.values.map { if (it == from) target else it }
       Row(it.schema, values)
     }
@@ -54,9 +55,9 @@ interface Frame {
    */
   fun replace(columnName: String, from: String, target: Any?): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val index = schema().indexOf(columnName)
-      return outer().observable().map {
+      return outer().rows().map {
         val values = it.values.toMutableList()
         if (values[index] == from)
           values[index] = target
@@ -71,9 +72,9 @@ interface Frame {
    */
   fun replace(columnName: String, fn: (Any?) -> Any?): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val index = schema().indexOf(columnName)
-      return outer().observable().map {
+      return outer().rows().map {
         val values = it.values.toMutableList()
         values[index] = fn(values[index])
         Row(it.schema, values.toList())
@@ -83,32 +84,32 @@ interface Frame {
 
   fun takeWhile(pred: (Row) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable().takeWhile(pred)
+    override fun rows(): Observable<Row> = outer().rows().takeWhile(pred)
   }
 
   fun takeWhile(columnName: String, pred: (Any?) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val index = outer().schema().indexOf(columnName)
-      return outer().observable().takeWhile { pred(it.values[index]) }
+      return outer().rows().takeWhile { pred(it.values[index]) }
     }
   }
 
   fun updateColumnType(columnName: String, fieldType: FieldType): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().updateFieldType(columnName, fieldType)
-    override fun observable(): Observable<Row> = outer().observable()
+    override fun rows(): Observable<Row> = outer().rows()
   }
 
   fun dropWhile(pred: (Row) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable().skipWhile(pred)
+    override fun rows(): Observable<Row> = outer().rows().skipWhile(pred)
   }
 
   fun dropWhile(columnName: String, pred: (Any?) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val index = outer().schema().indexOf(columnName)
-      return outer().observable().skipWhile { pred(it.values[index]) }
+      return outer().rows().skipWhile { pred(it.values[index]) }
     }
   }
 
@@ -120,7 +121,7 @@ interface Frame {
    */
   fun sample(k: Int): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable()
+    override fun rows(): Observable<Row> = outer().rows()
   }
 
   /**
@@ -137,11 +138,11 @@ interface Frame {
    */
   fun addColumn(field: Field, defaultValue: Any): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().addField(field)
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val exists = outer().schema().fieldNames().contains(field.name)
       if (exists) throw IllegalArgumentException("Cannot add column $field as it already exists")
       val newSchema = schema()
-      return outer().observable().map { Row(newSchema, it.values.plus(defaultValue)) }
+      return outer().rows().map { Row(newSchema, it.values.plus(defaultValue)) }
     }
   }
 
@@ -149,18 +150,18 @@ interface Frame {
 
   fun addColumnIfNotExists(field: Field, defaultValue: Any): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().addFieldIfNotExists(field)
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val exists = outer().schema().fieldNames().contains(field.name)
-      return if (exists) outer().observable() else addColumn(field, defaultValue).observable()
+      return if (exists) outer().rows() else addColumn(field, defaultValue).rows()
     }
   }
 
   fun removeColumn(columnName: String, caseSensitive: Boolean = true): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().removeField(columnName, caseSensitive)
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val index = outer().schema().indexOf(columnName, caseSensitive)
       val newSchema = schema()
-      return outer().observable().map {
+      return outer().rows().map {
         val newValues = it.values.slice(0..index).plus(it.values.slice(index + 1..it.values.size))
         Row(newSchema, newValues)
       }
@@ -168,7 +169,7 @@ interface Frame {
   }
 
   fun updateColumn(field: Field): Frame = object : Frame {
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       throw UnsupportedOperationException()
     }
 
@@ -184,21 +185,21 @@ interface Frame {
 
   fun renameColumn(nameFrom: String, nameTo: String): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().renameField(nameFrom, nameTo)
-    override fun observable(): Observable<Row> = outer().observable()
+    override fun rows(): Observable<Row> = outer().rows()
   }
 
   fun stripFromColumnName(chars: List<Char>): Frame = object : Frame {
     override fun schema(): Schema = outer().schema().stripFromFieldNames(chars)
-    override fun observable(): Observable<Row> = outer().observable()
+    override fun rows(): Observable<Row> = outer().rows()
   }
 
   fun explode(fn: (Row) -> List<Row>): Frame = object : Frame {
-    override fun observable(): Observable<Row> = outer().observable().flatMap { Observable.from(fn(it)) }
+    override fun rows(): Observable<Row> = outer().rows().flatMap { Observable.from(fn(it)) }
     override fun schema(): Schema = outer().schema()
   }
 
   fun fill(defaultValue: String): Frame = object : Frame {
-    override fun observable(): Observable<Row> = observable().map {
+    override fun rows(): Observable<Row> = rows().map {
       val newValues = it.values.map {
         when (it) {
           null -> defaultValue
@@ -219,7 +220,7 @@ interface Frame {
     // todo check schemas are compatible
     override fun schema(): Schema = outer().schema()
 
-    override fun observable(): Observable<Row> = outer().observable().concatWith(other.observable())
+    override fun rows(): Observable<Row> = outer().rows().concatWith(other.rows())
   }
 
   fun projectionExpression(expr: String): Frame = projection(expr.split(',').map { it.trim() })
@@ -235,12 +236,12 @@ interface Frame {
       return Schema(newColumns)
     }
 
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
 
       val oldSchema = outer().schema()
       val newSchema = schema()
 
-      return outer().observable().map { row ->
+      return outer().rows().map { row ->
         val values = newSchema.fieldNames().map {
           val k = oldSchema.indexOf(it)
           row.values[k]
@@ -258,7 +259,7 @@ interface Frame {
    */
   fun <U> foreach(fn: (Row) -> U): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable().map {
+    override fun rows(): Observable<Row> = outer().rows().map {
       fn(it)
       it
     }
@@ -266,11 +267,11 @@ interface Frame {
 
   fun drop(k: Int): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable().skip(k)
+    override fun rows(): Observable<Row> = outer().rows().skip(k)
   }
 
   fun map(f: (Row) -> Row): Frame = object : Frame {
-    override fun observable(): Observable<Row> = outer().observable().map(f)
+    override fun rows(): Observable<Row> = outer().rows().map(f)
     override fun schema(): Schema = outer().schema()
   }
 
@@ -278,7 +279,7 @@ interface Frame {
 
   fun filter(p: (Row) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> = outer().observable().filter(p)
+    override fun rows(): Observable<Row> = outer().rows().filter(p)
   }
 
   /**
@@ -286,46 +287,42 @@ interface Frame {
    */
   fun filter(columnName: String, p: (Any?) -> Boolean): Frame = object : Frame {
     override fun schema(): Schema = outer().schema()
-    override fun observable(): Observable<Row> {
+    override fun rows(): Observable<Row> {
       val index = schema().indexOf(columnName)
-      return outer().observable().filter { p(it.values[index]) }
+      return outer().rows().filter { p(it.values[index]) }
     }
   }
 
   fun dropNullRows(): Frame = object : Frame {
-    override fun observable(): Observable<Row> = outer().observable().filter { !it.values.contains(null) }
+    override fun rows(): Observable<Row> = outer().rows().filter { !it.values.contains(null) }
     override fun schema(): Schema = outer().schema()
   }
 
   // -- actions --
-  fun <A> fold(a: A, fn: (A, Row) -> A): A = observable().reduce(a, { a, row -> fn(a, row) }).toBlocking().single()
+  fun <A> fold(a: A, fn: (A, Row) -> A): A = rows().reduce(a, { a, row -> fn(a, row) }).toBlocking().single()
 
   fun forall(p: (Row) -> Boolean): Boolean = ForallPlan.execute(this, p)
-  fun exists(p: (Row) -> Boolean): Boolean = observable().exists { p(it) }.toBlocking().single()
-  fun find(p: (Row) -> Boolean): Row? = observable().first { p(it) }.toBlocking().single()
-  fun head(): Row? = observable().first().toBlocking().single()
+  fun exists(p: (Row) -> Boolean): Boolean = rows().exists { p(it) }.toBlocking().single()
+  fun find(p: (Row) -> Boolean): Row? = rows().first { p(it) }.toBlocking().single()
+  fun head(): Row? = rows().first().toBlocking().single()
 
   fun to(sink: Sink): Long = SinkPlan.execute(sink, this)
-  fun size(): Int = observable().count().toBlocking().single()
+  fun size(): Int = rows().count().toBlocking().single()
   fun counts(): Map<String, Content.Counts> = CountsPlan.execute(this)
-  fun toList(): List<Row> = observable().toList().toBlocking().single()
+  fun toList(): List<Row> = rows().toList().toBlocking().single()
   fun toSet(): Set<Row> = toList().toSet()
 
   companion object {
     operator fun invoke(_schema: Schema, vararg rows: Row): Frame = invoke(_schema, rows.asList())
     operator fun invoke(_schema: Schema, rows: List<Row>): Frame = object : Frame {
       override fun schema(): Schema = _schema
-      override fun observable(): Observable<Row> = Observable.from(rows)
+      override fun rows(): Observable<Row> = Observable.from(rows)
     }
   }
 }
 
 object ForallPlan {
   fun execute(frame: Frame, p: (Row) -> Boolean): Boolean = false
-}
-
-object SinkPlan {
-  fun execute(sink: Sink, frame: Frame): Long = 0
 }
 
 object CountsPlan {

@@ -14,7 +14,7 @@ import rx.Observable
 interface HiveDialect : Logging {
 
   /**
-   * Creates an observable that will read from the given hadoop path.
+   * Creates an rows that will read from the given hadoop path.
    *
    * @path where to load the data from
    *

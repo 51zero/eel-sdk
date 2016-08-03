@@ -22,16 +22,16 @@ class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Usin
   override fun schema(): Schema = source.schema()
 
   // this method may be invoked multiple times, each time generating a new "load action" and a new
-  // resultant observable from it.
+  // resultant rows from it.
   // todo is this is the behaviour I want?
-  override fun observable(): Observable<Row> {
+  override fun rows(): Observable<Row> {
 
     // the number of ioThreads here will determine how we parallelize the loading of data
-    // into the observable. Each thread will read from a single part, so the more threads
+    // into the rows. Each thread will read from a single part, so the more threads
     // the more parts will be read concurrently.
     //
     // Each thread will read its part into an intermediate queue, which we use in order to eagerly
-    // buffer values, and the queue is read from by the observable to produce values.
+    // buffer values, and the queue is read from by the rows to produce values.
     //
     val executor = Executors.newFixedThreadPool(ioThreads)
     logger.info("Source will read using a FixedThreadPool [ioThreads=$ioThreads]")
@@ -80,7 +80,7 @@ class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Usin
       logger.info("All source parts completed; latch released")
       try {
         queue.put(Row.PoisonPill)
-        logger.debug("PoisonPill added to source queue to close source observable")
+        logger.debug("PoisonPill added to source queue to close source rows")
       } catch (e: Exception) {
         logger.error("Error adding PoisonPill", e)
       }
@@ -94,7 +94,7 @@ class FrameSource(val ioThreads: Int, val source: Source) : Frame, Logging, Usin
         val next = queue.take()
         when (next) {
           Row.PoisonPill -> {
-            logger.debug("Poison pill detected by observable, notifying subscriber of end of data")
+            logger.debug("Poison pill detected by rows, notifying subscriber of end of data")
             subscriber.onCompleted()
             running = false
           }

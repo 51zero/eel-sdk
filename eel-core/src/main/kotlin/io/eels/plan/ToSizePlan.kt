@@ -8,7 +8,7 @@ object ToSizePlan : Plan(), Logging {
   fun apply(frame: Frame): Long {
     //   val latch = CountDownLatch(tasks)
     //   val running = AtomicBoolean(true)
-    val stream = frame.observable()
+    val stream = frame.rows()
 
     // todo this must change to be multithreaded
     var count = 0L
