@@ -29,10 +29,10 @@ data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
   override fun schema(): Schema = providedSchema.getOrElse { fetchSchema() }
 
   fun withBind(bind: (PreparedStatement) -> Unit) = copy(bind = bind)
-  fun withListener(listener: RowListener) = copy(listener = listener)
+  fun withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
   fun withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = Option(schema))
   fun withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = Option(dialect))
-  fun withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
+  fun withListener(listener: RowListener) = copy(listener = listener)
 
   private fun dialect(): JdbcDialect = providedDialect.getOrElse(GenericJdbcDialect())
 

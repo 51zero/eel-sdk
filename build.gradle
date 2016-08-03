@@ -14,13 +14,17 @@ buildscript {
     }
 }
 
+plugins {
+    id 'net.researchgate.release' version '2.4.0'
+}
+
 allprojects {
     apply plugin: 'kotlin'
     apply plugin: 'maven'
     apply plugin: 'signing'
 
     group = "io.eels"
-    version = "0.80.1"
+    version = "0.80.2-SNAPSHOT"
 
     repositories {
         mavenCentral()
