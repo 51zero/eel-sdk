@@ -8,11 +8,11 @@ import io.eels.SinkWriter
 import io.eels.schema.Schema
 import java.nio.file.Path
 
-data class CsvSink(val path: Path,
-                   val headers: Header = Header.None,
-                   val format: CsvFormat = CsvFormat(),
-                   val ignoreLeadingWhitespaces: Boolean = false,
-                   val ignoreTrailingWhitespaces: Boolean = false) : Sink {
+data class CsvSink @JvmOverloads constructor(val path: Path,
+                                             val headers: Header = Header.None,
+                                             val format: CsvFormat = CsvFormat(),
+                                             val ignoreLeadingWhitespaces: Boolean = false,
+                                             val ignoreTrailingWhitespaces: Boolean = false) : Sink {
 
   override fun writer(schema: Schema): SinkWriter = CsvSinkWriter(schema, path, headers, format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces)
 

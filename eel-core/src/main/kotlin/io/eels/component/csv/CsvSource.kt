@@ -18,17 +18,17 @@ enum class Header {
   None, FirstComment, FirstRow
 }
 
-data class CsvSource(val path: Path,
-                     val overrideSchema: Option<Schema> = Option.None,
-                     val format: CsvFormat = CsvFormat(),
-                     val inferrer: SchemaInferrer = StringInferrer,
-                     val ignoreLeadingWhitespaces: Boolean = true,
-                     val ignoreTrailingWhitespaces: Boolean = true,
-                     val skipEmptyLines: Boolean = true,
-                     val emptyCellValue: String? = null,
-                     val nullValue: String? = null,
-                     val verifyRows: Option<Boolean> = Option.None,
-                     val header: Header = Header.FirstRow) : Source, Using {
+data class CsvSource @JvmOverloads constructor(val path: Path,
+                                               val overrideSchema: Option<Schema> = Option.None,
+                                               val format: CsvFormat = CsvFormat(),
+                                               val inferrer: SchemaInferrer = StringInferrer,
+                                               val ignoreLeadingWhitespaces: Boolean = true,
+                                               val ignoreTrailingWhitespaces: Boolean = true,
+                                               val skipEmptyLines: Boolean = true,
+                                               val emptyCellValue: String? = null,
+                                               val nullValue: String? = null,
+                                               val verifyRows: Option<Boolean> = Option.None,
+                                               val header: Header = Header.FirstRow) : Source, Using {
 
   val config: Config = ConfigFactory.load()
   val defaultVerifyRows = verifyRows.getOrElse(config.getBoolean("eel.csv.verifyRows"))

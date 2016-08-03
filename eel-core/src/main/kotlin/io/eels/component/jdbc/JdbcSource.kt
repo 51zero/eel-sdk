@@ -15,14 +15,14 @@ import java.sql.PreparedStatement
 
 fun String.asConnectionFn(): () -> Connection = { DriverManager.getConnection(this) }
 
-data class JdbcSource(val connFn: () -> Connection,
-                      val query: String,
-                      val bind: (PreparedStatement) -> Unit = {},
-                      val fetchSize: Int = 100,
-                      val providedSchema: Option<Schema> = Option.None,
-                      val providedDialect: Option<JdbcDialect> = Option.None,
-                      val bucketing: Option<Bucketing> = Option.None,
-                      val listener: RowListener = RowListener.Noop) : Source, JdbcPrimitives, Logging, Using, Timed {
+data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
+                                                val query: String,
+                                                val bind: (PreparedStatement) -> Unit = {},
+                                                val fetchSize: Int = 100,
+                                                val providedSchema: Option<Schema> = Option.None,
+                                                val providedDialect: Option<JdbcDialect> = Option.None,
+                                                val bucketing: Option<Bucketing> = Option.None,
+                                                val listener: RowListener = RowListener.Noop) : Source, JdbcPrimitives, Logging, Using, Timed {
 
   companion object {
     operator fun invoke(url: String, query: String, bind: (PreparedStatement) -> Unit = {}): JdbcSource =
