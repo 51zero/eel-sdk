@@ -12,6 +12,7 @@ class AvroRecordSerializerTest : WordSpec() {
   val marshaller = AvroRecordSerializer(avroSchema)
 
   init {
+
     "AvroRecordMarshaller" should {
       "create field from values in row" {
         val eelSchema = Schema(Field("s"), Field("l"), Field("b"))
@@ -38,19 +39,19 @@ class AvroRecordSerializerTest : WordSpec() {
         record.get("b") shouldBe false
       }
       "convert strings to longs"  {
-        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf("1", "2", "true")))
+        val record = marshaller.toRecord(Row(AvroSchemaFns.fromAvroSchema(avroSchema), listOf("1", "2", "true")))
         record.get("l") shouldBe 2L
       }
       "convert strings to booleans"  {
-        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf("1", "2", "true")))
+        val record = marshaller.toRecord(Row(AvroSchemaFns.fromAvroSchema(avroSchema), listOf("1", "2", "true")))
         record.get("b") shouldBe true
       }
       "convert longs to strings"  {
-        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf(1L, "2", "true")))
+        val record = marshaller.toRecord(Row(AvroSchemaFns.fromAvroSchema(avroSchema), listOf(1L, "2", "true")))
         record.get("s") shouldBe "1"
       }
       "convert booleans to strings"  {
-        val record = marshaller.toRecord(Row(fromAvroSchema(avroSchema), listOf(true, "2", "true")))
+        val record = marshaller.toRecord(Row(AvroSchemaFns.fromAvroSchema(avroSchema), listOf(true, "2", "true")))
         record.get("s") shouldBe "true"
       }
     }

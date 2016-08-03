@@ -13,7 +13,7 @@ class AvroSource(val path: Path) : Source, Using {
   override fun schema(): Schema {
     return using(createAvroReader(path), { reader ->
       val record = reader.next()
-      fromAvroSchema(record.schema)
+      AvroSchemaFns.fromAvroSchema(record.schema)
     })
   }
 

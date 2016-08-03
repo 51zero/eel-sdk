@@ -15,7 +15,7 @@ class AvroRecordDeserializer {
   private val useJavaString = config.getBoolean("eel.avro.java.string")
 
   fun toRow(record: GenericRecord): Row {
-    val eelSchema = fromAvroSchema(record.schema)
+    val eelSchema = AvroSchemaFns.fromAvroSchema(record.schema)
     val values = record.schema.fields.map { field ->
       val value = record.get(field.name())
       if (useJavaString) {
