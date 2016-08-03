@@ -1,14 +1,10 @@
 package io.eels.component.parquet
 
-import io.eels.{Column, Frame, Schema, SchemaType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
   ParquetLogMute()
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val frame = Frame(
     List("name", "job", "location"),

@@ -15,17 +15,19 @@ import java.util.stream.Stream
  * @reader the underlying parquet reader to use to load records
  *
  */
-fun parquetRowIterator(reader: ParquetReader<GenericRecord>): Iterator<Row> = object : Iterator<Row> {
+object ParquetIterator {
+  operator fun invoke(reader: ParquetReader<GenericRecord>): Iterator<Row> = object : Iterator<Row> {
 
-  val iter = Stream.generate { reader.read() }.nullTerminatedIterator().map { AvroRecordDeserializer().toRow(it) }
+    val iter = Stream.generate { reader.read() }.nullTerminatedIterator().map { AvroRecordDeserializer().toRow(it) }
 
-  override fun hasNext(): Boolean {
-    val hasNext = iter.hasNext()
-    if (!hasNext) {
-      reader.close()
+    override fun hasNext(): Boolean {
+      val hasNext = iter.hasNext()
+      if (!hasNext) {
+        reader.close()
+      }
+      return hasNext
     }
-    return hasNext
-  }
 
-  override fun next(): Row = iter.next()
+    override fun next(): Row = iter.next()
+  }
 }

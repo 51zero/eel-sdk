@@ -2,23 +2,17 @@ package io.eels.component.parquet
 
 import java.io.File
 
-import io.eels.{Column, Schema, SchemaType}
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
-import org.scalatest.{Matchers, WordSpec}
-
-import scala.util.Try
 
 class ParquetSourceTest extends WordSpec with Matchers {
   ParquetLogMute()
 
   implicit val fs = FileSystem.get(new Configuration)
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val personFile = new File(getClass.getResource("/parquetfiles/person.pq").getFile)
   val resourcesDir = personFile.getParentFile.getAbsolutePath

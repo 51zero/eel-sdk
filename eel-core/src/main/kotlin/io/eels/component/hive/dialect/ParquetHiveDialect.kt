@@ -4,8 +4,8 @@ import io.eels.Row
 import io.eels.component.Predicate
 import io.eels.component.hive.HiveDialect
 import io.eels.component.hive.HiveWriter
+import io.eels.component.parquet.ParquetIterator
 import io.eels.component.parquet.ParquetReaderSupport
-import io.eels.component.parquet.parquetRowIterator
 import io.eels.schema.Schema
 import io.eels.util.Logging
 import io.eels.util.Option
@@ -24,7 +24,7 @@ object ParquetHiveDialect : HiveDialect, Logging {
     val reader = ParquetReaderSupport.create(path, predicate, Option(projectionSchema))
     return Observable.create<Row> { subscriber ->
       subscriber.onStart()
-      parquetRowIterator(reader).forEach {
+      ParquetIterator(reader).forEach {
         subscriber.onNext(it)
       }
       subscriber.onCompleted()
