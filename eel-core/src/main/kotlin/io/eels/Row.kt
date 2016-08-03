@@ -5,6 +5,8 @@ import io.eels.schema.Schema
 
 data class Row(val schema: Schema, val values: List<Any?>) {
 
+  constructor(schema: Schema, vararg values: Any?) : this(schema, values.toList())
+
   init {
     require(
         schema.size() == values.size,

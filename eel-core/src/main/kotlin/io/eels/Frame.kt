@@ -315,6 +315,7 @@ interface Frame {
   fun toSet(): Set<Row> = toList().toSet()
 
   companion object {
+    operator fun invoke(schema: Schema, vararg rows: List<Any?>) = invoke(schema, rows.map { Row(schema, it) })
     operator fun invoke(_schema: Schema, vararg rows: Row): Frame = invoke(_schema, rows.asList())
     operator fun invoke(_schema: Schema, rows: List<Row>): Frame = object : Frame {
       override fun schema(): Schema = _schema
