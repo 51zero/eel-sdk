@@ -2,17 +2,19 @@ package io.eels.component.jdbc
 
 import io.eels.RowListener
 import io.eels.Source
-import io.eels.util.Logging
-import io.eels.schema.Schema
-import io.eels.util.Timed
 import io.eels.component.Part
 import io.eels.component.Using
+import io.eels.schema.Schema
+import io.eels.util.Logging
 import io.eels.util.Option
+import io.eels.util.Timed
 import io.eels.util.getOrElse
+import java.sql.PreparedStatement
 
 data class JdbcSource(val url: String,
                       val query: String,
                       val fetchSize: Int = 100,
+                      val bind: (PreparedStatement) -> Unit = {},
                       val providedSchema: Option<Schema> = Option.None,
                       val providedDialect: Option<JdbcDialect> = Option.None,
                       val bucketing: Option<Bucketing> = Option.None,
@@ -29,11 +31,12 @@ data class JdbcSource(val url: String,
   override fun parts(): List<Part> {
 
     val conn = connect(url)
-    val stmt = conn.createStatement()
+    val stmt = conn.prepareStatement(query)
     stmt.fetchSize = fetchSize
+    bind(stmt)
 
-    val rs = timed("Executing query") {
-      stmt.executeQuery(query)
+    val rs = timed("Executing query $query") {
+      stmt.executeQuery()
     }
 
     val schema = schemaFor(url, dialect(), rs)

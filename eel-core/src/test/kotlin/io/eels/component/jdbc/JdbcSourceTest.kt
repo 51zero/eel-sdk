@@ -17,7 +17,6 @@ class JdbcSourceTest : WordSpec() {
 
     Class.forName("org.h2.Driver")
 
-
     "JdbcSource" should {
       "read schema"  {
         val conn = DriverManager.getConnection("jdbc:h2:mem:test")
@@ -60,6 +59,13 @@ class JdbcSourceTest : WordSpec() {
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
         JdbcSource("jdbc:h2:mem:test4", "select * from mytable").toFrame(1).size() shouldBe 2
+      }
+      "support bind" {
+        val conn = DriverManager.getConnection("jdbc:h2:mem:test5")
+        conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
+        conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
+        conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
+        JdbcSource("jdbc:h2:mem:test5", "select * from mytable where a=?", bind = { it.setLong(1, 4) }).toFrame(1).size() shouldBe 1
       }
     }
   }
