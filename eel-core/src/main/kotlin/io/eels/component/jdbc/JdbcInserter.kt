@@ -5,6 +5,7 @@ import io.eels.util.ResultSetIterator
 import io.eels.schema.Schema
 import io.eels.util.Logging
 import io.eels.util.zipWithIndex
+import java.sql.Connection
 import java.sql.DriverManager
 
 class JdbcInserter(val url: String,
@@ -13,7 +14,7 @@ class JdbcInserter(val url: String,
                    val autoCommit: Boolean,
                    val dialect: JdbcDialect) : Logging {
 
-  val conn = DriverManager.getConnection(url)
+  val conn: Connection = DriverManager.getConnection(url)
 
   init {
     logger.debug("Connecting to jdbc $url...")
@@ -44,12 +45,12 @@ class JdbcInserter(val url: String,
   }
 
   fun ensureTableCreated(): Unit {
-    logger.debug("Ensuring table [$table] is created")
+    logger.info("Ensuring table [$table] is created")
 
     fun tableExists(): Boolean {
       logger.debug("Fetching list of tables to detect if $table exists")
       val tables = ResultSetIterator(conn.metaData.getTables(null, null, null, arrayOf("TABLE"))).asSequence().toList()
-      val tableNames = tables.map { it.get(3).toLowerCase() }
+      val tableNames = tables.map { it.get(3)!!.toLowerCase() }
       val exists = tableNames.contains(table.toLowerCase())
       logger.debug("${tables.size} tables found; $table exists == $exists")
       return exists

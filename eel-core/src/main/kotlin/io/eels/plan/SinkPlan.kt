@@ -20,7 +20,7 @@ object SinkPlan : Logging {
 
     frame.rows().subscribe(object : Subscriber<Row>() {
       override fun onError(e: Throwable?) {
-        logger.warn("Error writing row", e)
+        logger.error("Error writing row", e)
       }
 
       override fun onNext(row: Row?) {

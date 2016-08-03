@@ -65,7 +65,7 @@ open class GenericJdbcDialect : JdbcDialect, Logging {
   }
 
   override fun create(schema: Schema, table: String): String {
-    val columns = schema.fields.map { "${it.name} ${toJdbcType(it)}" }.joinToString("(", ",", ")")
+    val columns = schema.fields.map { "${it.name} ${toJdbcType(it)}" }.joinToString(",", "(", ")")
     return "CREATE TABLE $table $columns"
   }
 

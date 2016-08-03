@@ -7,7 +7,7 @@ import io.eels.util.Logging
 
 data class JdbcSink(val url: String, val table: String,
                     val createTable: Boolean = false,
-                    val batchSize: Int = 10000,
+                    val batchSize: Int = 1000,
                     val threads: Int = 4) : Sink, Logging {
 
   private val config = ConfigFactory.load()
@@ -26,5 +26,5 @@ data class JdbcSink(val url: String, val table: String,
   }
 
   override fun writer(schema: Schema) =
-      JdbcWriter(schema, url, table, GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize, swallowExceptions)
+      JdbcWriter(schema, url, table, createTable, GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize, swallowExceptions)
 }

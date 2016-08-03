@@ -3,88 +3,80 @@ package io.eels.component.jdbc
 import io.eels.Row
 import io.eels.SinkWriter
 import io.eels.schema.Schema
-import io.eels.util.BoundedThreadPoolExecutor
 import io.eels.util.Logging
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 class JdbcWriter(val schema: Schema,
                  val url: String,
                  val table: String,
+                 createTable: Boolean,
                  val dialect: JdbcDialect,
-                 val threads: Int,
-                 val batchSize: Int,
-                 val autoCommit: Boolean,
-                 val bufferSize: Int,
+                 threads: Int,
+                 batchSize: Int,
+                 autoCommit: Boolean,
+                 bufferSize: Int,
                  val swallowExceptions: Boolean) : SinkWriter, Logging {
   init {
     logger.info("Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
+    require(bufferSize >= batchSize)
   }
 
-  // the buffer is a concurrent receiver for the write method. It needs to hold enough elements to keep the
-  // frame threads busy until the coordinator thread gets a time slice and empties it via its iterator.
-  // controlled by eel.jdbc.sink.bufferSize
+  // the buffer is a concurrent receiver for the write method. It needs to hold enough elements so that
+  // the invokers of this class can keek pumping in rows while we wait for a buffer to fill up.
+  // the buffer size must be >= batch size or we'll never fill up enough to trigger a batch
   private val buffer = LinkedBlockingQueue<Row>(bufferSize)
 
-  // We use a bounded executor because otherwise the executor would very quickly fill up with pending tasks
-  // for all rows in the source. Then effectively we would have loaded the entire frame into memory and stored it
-  // inside the worker tasks.
-  private val workers = BoundedThreadPoolExecutor(threads, threads)
-  private val batchCount = AtomicLong(0)
-  private val coordinator = Executors.newSingleThreadExecutor()
-  private var inserter: JdbcInserter? = null
+  // the coordinator pool is just a single thread that runs the coordinator
+  private val coordinatorPool = Executors.newSingleThreadExecutor()
 
-  init {
-    coordinator.submit {
-      logger.debug("Starting Jdbc Writer Coordinator")
-//      BlockingQueueConcurrentIterator(buffer, Row.PoisonPill)
-//          .grouped(props.batchSize)
-//          .withPartial(true)
-//          .foreach {
-//            ensureInserterCreated()
-//            workers.submit {
-//              try {
-//                val offset = batchCount.addAndGet(props.batchSize)
-//                logger.debug("Inserting batch $offset / ? =>")
-//                inserter.insertBatch(it)
-//              } catch(t: Throwable) {
-//                if (swallowExceptions) {
-//                  logger.error("Exception when inserting batch; continuing", t)
-//                } else {
-//                  logger.error("Exception when inserting batch; aborting writers", t)
-//                  workers.shutdownNow()
-//                  coordinator.shutdownNow()
-//                }
-//              }
-//            }
-//          }
-      logger.debug("End of buffer reached; shutting down workers")
-      workers.shutdown()
+  private val inserter: JdbcInserter by lazy {
+    val inserter = JdbcInserter(url, table, schema, autoCommit, dialect)
+    if (createTable) {
+      inserter.ensureTableCreated()
     }
-
-    // the coordinate only runs the one task, that is to read all the data from the buffer and populate worker jobs
-    // so it can be shut down immediately after that ask is submitted
-    coordinator.shutdown()
+    inserter
   }
 
-
-  private fun ensureInserterCreated(): Unit {
-    // coordinator is single threaded, so simple var with null is fine
-//    if (inserter == null) {
-//      inserter = JdbcInserter(url, table, schema, autoCommit, dialect)
-//      if (props.createTable)
-//        inserter.ensureTableCreated()
-//    }
+  init {
+    // todo this needs to allow multiple batches at once
+    coordinatorPool.submit {
+      try {
+        logger.debug("Starting JdbcWriter Coordinator")
+        val toWrite = mutableListOf<Row>()
+        var row: Row = buffer.take()
+        // once we receive the pill its all over for the writer
+        while (row != Row.PoisonPill) {
+          toWrite.add(row)
+          if (toWrite.size == batchSize) {
+            inserter.insertBatch(toWrite)
+            toWrite.clear()
+          }
+          row = buffer.take()
+        }
+        if (toWrite.isNotEmpty()) {
+          inserter.insertBatch(toWrite)
+          toWrite.clear()
+        }
+        logger.debug("Write completed; shutting down coordinator")
+      } catch (e: Exception) {
+        logger.error("Some error in coordinator", e)
+      }
+    }
+    // the coordinate only runs the one task, that is to read from the buffer
+    // and do the inserts
+    coordinatorPool.shutdown()
   }
 
   override fun close(): Unit {
     buffer.put(Row.PoisonPill)
-    logger.debug("Closing JDBC Writer... blocking until workers completed")
-    workers.awaitTermination(1, TimeUnit.DAYS)
+    logger.info("Closing JDBC Writer... waiting on writes to finish")
+    coordinatorPool.awaitTermination(1, TimeUnit.DAYS)
   }
 
+  // when we get a row to write, we won't commit it immediately to the database,
+  // but we'll buffer it so we can do batched inserts
   override fun write(row: Row): Unit {
     buffer.put(row)
   }

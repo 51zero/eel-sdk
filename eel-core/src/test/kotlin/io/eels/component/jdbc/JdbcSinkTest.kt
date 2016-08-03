@@ -22,23 +22,24 @@ class JdbcSinkTest : WordSpec() {
         frame.to(JdbcSink("jdbc:h2:mem:test", "mytab"))
         val rs = conn.createStatement().executeQuery("select count(*) from mytab")
         rs.next()
-        rs.getLong(1) shouldBe 3
+        rs.getLong(1) shouldBe 2L
         rs.close()
       }
-      "create table"  {
+      "create table if createTable is true"  {
         frame.to(JdbcSink("jdbc:h2:mem:test", "qwerty", createTable = true))
         val rs = conn.createStatement().executeQuery("select count(*) from qwerty")
         rs.next()
-        rs.getLong(1) shouldBe 3
+        rs.getLong(1) shouldBe 2L
         rs.close()
       }
       "support multiple writers"  {
         val rows = Array(100000, { Row(schema, listOf("1", "2", "3")) }).asList()
         val mframe = io.eels.Frame(schema, rows)
-        mframe.to(JdbcSink("jdbc:h2:mem:test", "multithreads", createTable = true, threads = 4))
+        val sink = JdbcSink("jdbc:h2:mem:test", "multithreads", createTable = true, threads = 4)
+        mframe.to(sink)
         val rs = conn.createStatement().executeQuery("select count(*) from multithreads")
         rs.next()
-        rs.getLong(1) shouldBe 100000
+        rs.getLong(1) shouldBe 100000L
         rs.close()
       }
     }
