@@ -8,10 +8,10 @@ import org.codehaus.jackson.node.NullNode
 
 object AvroSchemaFns {
 
-  fun toAvroSchema(schema: Schema,
-                   caseSensitive: Boolean = true,
-                   name: String = "row",
-                   namespace: String = "namespace"): org.apache.avro.Schema {
+  @JvmOverloads fun toAvroSchema(schema: Schema,
+                                 caseSensitive: Boolean = true,
+                                 name: String = "row",
+                                 namespace: String = "namespace"): org.apache.avro.Schema {
 
     fun toAvroField(field: Field, caseSensitive: Boolean = true): org.apache.avro.Schema.Field {
 
