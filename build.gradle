@@ -29,6 +29,7 @@ allprojects {
 
     group = "io.eels"
 
+    afterReleaseBuild.dependsOn uploadArchives
 
     repositories {
         mavenCentral()
