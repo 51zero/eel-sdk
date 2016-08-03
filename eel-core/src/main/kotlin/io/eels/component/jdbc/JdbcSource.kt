@@ -24,10 +24,7 @@ data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
                                                 val bucketing: Option<Bucketing> = Option.None,
                                                 val listener: RowListener = RowListener.Noop) : Source, JdbcPrimitives, Logging, Using, Timed {
 
-  companion object {
-    operator fun invoke(url: String, query: String, bind: (PreparedStatement) -> Unit = {}): JdbcSource =
-        JdbcSource(url.asConnectionFn(), query, bind)
-  }
+  constructor(url: String, query: String) : this({ DriverManager.getConnection(url) }, query)
 
   override fun schema(): Schema = providedSchema.getOrElse { fetchSchema() }
 
