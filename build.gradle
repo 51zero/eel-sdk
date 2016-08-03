@@ -28,7 +28,7 @@ allprojects {
     apply plugin: 'signing'
 
     group = "io.eels"
-    version = "0.80.2-SNAPSHOT"
+
 
     repositories {
         mavenCentral()
