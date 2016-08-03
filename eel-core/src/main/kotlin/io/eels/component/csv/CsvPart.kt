@@ -13,35 +13,23 @@ class CsvPart(val createParser: () -> CsvParser,
               val verifyRows: Boolean,
               val schema: Schema) : Part {
 
+  val rowsToSkip: Int = when (header) {
+    Header.FirstRow -> 1
+    else -> 0
+  }
+
   override fun data(): Observable<Row> {
 
     val parser = createParser()
     parser.beginParsing(path.toFile())
 
-    val rowsToSkip: Int = when (header) {
-      Header.FirstRow -> 1
-      else -> 0
-    }
-
-//    val iterator = object : AbstractIterator<Array<String>>() {
-//      override fun computeNext() {
-//        val values = parser.parseNext()
-//        if (values == null) done()
-//        else setNext(values)
-//      }
-//    }
+    val iterator = generateSequence { parser.parseNext() }.drop(rowsToSkip)
 
     return Observable.create { sub ->
       sub.onStart()
-      var next: Array<String>? = parser.parseNext()
-      var toDrop: Int = rowsToSkip
-      while (next != null) {
-        val row = Row(schema, next.asList())
-        if (toDrop == 0)
-          sub.onNext(row)
-        else
-          toDrop -= 1
-        next = parser.parseNext()
+      iterator.forEach {
+        val row = Row(schema, it.asList())
+        sub.onNext(row)
       }
       if (!sub.isUnsubscribed)
         sub.onCompleted()

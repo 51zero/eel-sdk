@@ -11,8 +11,6 @@ import io.kotlintest.specs.WordSpec
 
 class CsvSourceTest : WordSpec() {
   init {
-
-
     "CsvSource" should {
       "read schema"  {
         val file = javaClass.getResource("/csvtest.csv").toURI()
