@@ -22,15 +22,6 @@ class AvroRecordDeserializerTest : WordSpec() {
         record.put("c", "cccc")
         AvroRecordDeserializer().toRow(record) shouldBe Row(schema, listOf("aaaa", "bbbb", "cccc"))
       }
-      "return row in same order as target schema" {
-        val schema = Schema(Field("a"), Field("b"), Field("c"))
-        val targetSchema = Schema(Field("c"), Field("b"), Field("a"))
-        val record = GenericData.Record(toAvroSchema(schema))
-        record.put("a", "aaaa")
-        record.put("b", "bbbb")
-        record.put("c", "cccc")
-        AvroRecordDeserializer().toRow(record) shouldBe Row(targetSchema, listOf("cccc", "bbbb", "aaaa"))
-      }
     }
   }
 }

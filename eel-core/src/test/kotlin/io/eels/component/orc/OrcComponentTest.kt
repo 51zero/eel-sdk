@@ -37,7 +37,7 @@ class OrcComponentTest : WordSpec() {
             Row(frame.schema(), listOf("elton john", "musician", "pinner")),
             Row(frame.schema(), listOf("david bowie", "musician", "surrey"))
         )
-      }
+      }.config(ignored = true)
     }
   }
 }
