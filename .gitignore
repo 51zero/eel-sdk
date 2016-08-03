@@ -20,3 +20,4 @@ credentials.sbt
 target
 data
 big.csv
+.gradle
