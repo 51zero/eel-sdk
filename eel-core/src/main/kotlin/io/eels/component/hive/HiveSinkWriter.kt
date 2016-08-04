@@ -111,11 +111,11 @@ class HiveSinkWriter(sourceSchema: Schema,
       val filePath = Path(partPath, "part_" + System.nanoTime() + "_" + writerId)
       logger.debug("Creating hive writer for $filePath")
 
-      // if dynamic partition is enabled then we will try to create the hive partition automatically
+      // if dynamic partition is enabled then we will try to createReader the hive partition automatically
       if (dynamicPartitioning) {
         if (parts.isNotEmpty()) {
           // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
-          // trying to create a partition at the same time. This is virtually guaranteed to happen if
+          // trying to createReader a partition at the same time. This is virtually guaranteed to happen if
           // the data is in any way sorted
           if (!createdPartitions.contains(partPath.toString())) {
             synchronized(lock) {

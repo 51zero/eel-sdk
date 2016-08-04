@@ -13,7 +13,7 @@ interface Part {
 
   /**
    * Returns the data contained in this part in the form of an Observable that a subscriber can subscribe to.
-   * This function should create a clean rows on each invocation. By clean, we mean that each
+   * This function should createReader a clean rows on each invocation. By clean, we mean that each
    * seperate rows should provide the full set of data contained in the part, in a thread safe manner.
    * Ie, it should be possible to invoke this method k times, and subscribe to those k observables concurrently,
    * and each rows should emit the same data.

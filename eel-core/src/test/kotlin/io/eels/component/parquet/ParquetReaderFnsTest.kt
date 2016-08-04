@@ -16,7 +16,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
 
 @Suppress("NAME_SHADOWING")
-class ParquetReaderSupportTest : WordSpec() {
+class ParquetReaderFnsTest : WordSpec() {
 
   val path = Path(UUID.randomUUID().toString())
 
@@ -46,7 +46,7 @@ class ParquetReaderSupportTest : WordSpec() {
     "ParquetReaderSupport" should     {
       "support projections on doubles" {
 
-        val reader = ParquetReaderSupport.create(path, Option.None, Option(schema.removeField("looong")))
+        val reader = ParquetReaderFns.createReader(path, Option.None, Option(schema.removeField("looong")))
         val record = reader.read()
         reader.close()
 
@@ -55,7 +55,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support projections on longs" {
 
-        val reader = ParquetReaderSupport.create(path, Option.None, Option(schema.removeField("str")))
+        val reader = ParquetReaderFns.createReader(path, Option.None, Option(schema.removeField("str")))
         val record = reader.read()
         reader.close()
 
@@ -63,7 +63,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support full projections" {
 
-        val reader = ParquetReaderSupport.create(path, Option.None, Option(schema))
+        val reader = ParquetReaderFns.createReader(path, Option.None, Option(schema))
         val record = reader.read()
         reader.close()
 
@@ -74,7 +74,7 @@ class ParquetReaderSupportTest : WordSpec() {
       }
       "support non projections" {
 
-        val reader = ParquetReaderSupport.create(path, Option.None, Option.None)
+        val reader = ParquetReaderFns.createReader(path, Option.None, Option.None)
         val record = reader.read()
         reader.close()
 

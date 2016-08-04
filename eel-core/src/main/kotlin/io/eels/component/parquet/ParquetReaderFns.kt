@@ -15,7 +15,7 @@ import org.apache.parquet.avro.AvroReadSupport
 import org.apache.parquet.filter2.compat.FilterCompat
 import org.apache.parquet.hadoop.ParquetReader
 
-object ParquetReaderSupport : Logging {
+object ParquetReaderFns : Logging {
 
   val config: Config = ConfigFactory.load()
 
@@ -29,9 +29,9 @@ object ParquetReaderSupport : Logging {
    * @predicate if set then a parquet predicate is applied to the rows
    * @projectionSchema if set then the schema is used to narrow the fields returned
    */
-  fun create(path: Path,
-             predicate: Option<Predicate>,
-             projectionSchema: Option<io.eels.schema.Schema>): ParquetReader<GenericRecord> {
+  fun createReader(path: Path,
+                   predicate: Option<Predicate>,
+                   projectionSchema: Option<io.eels.schema.Schema>): ParquetReader<GenericRecord> {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     fun configuration(): Configuration {

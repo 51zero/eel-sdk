@@ -15,7 +15,7 @@ class JdbcSinkTest : WordSpec() {
 
     Class.forName("org.h2.Driver")
     val conn = DriverManager.getConnection("jdbc:h2:mem:test")
-    conn.createStatement().executeUpdate("create table mytab (a integer, b integer, c integer)")
+    conn.createStatement().executeUpdate("createReader table mytab (a integer, b integer, c integer)")
 
     val schema = Schema(Field("a"), Field("b"), Field("c"))
     val frame = io.eels.Frame(schema, Row(schema, listOf("1", "2", "3")), Row(schema, listOf("4", "5", "6")))
@@ -28,7 +28,7 @@ class JdbcSinkTest : WordSpec() {
         rs.getLong(1) shouldBe 2L
         rs.close()
       }
-      "create table if createTable is true"  {
+      "createReader table if createTable is true"  {
         frame.to(JdbcSink("jdbc:h2:mem:test", "qwerty", createTable = true))
         val rs = conn.createStatement().executeQuery("select count(*) from qwerty")
         rs.next()

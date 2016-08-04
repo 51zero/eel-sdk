@@ -14,7 +14,7 @@ class AvroRecordSerializerTest : WordSpec() {
   init {
 
     "AvroRecordMarshaller" should {
-      "create field from values in row" {
+      "createReader field from values in row" {
         val eelSchema = Schema(Field("s"), Field("l"), Field("b"))
         val record = marshaller.toRecord(Row(eelSchema, listOf("a", 1L, false)))
         record.get("s") shouldBe "a"

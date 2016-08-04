@@ -17,10 +17,10 @@ object ParquetWriterFns : Logging {
   val config: Config = ConfigFactory.load()
 
   val blockSize: Int = config.getIntOrElse("eel.parquet.blockSize", ParquetWriter.DEFAULT_BLOCK_SIZE).apply {
-    ParquetReaderSupport.logger.debug("Parquet writer will use blockSize = $this")
+    ParquetReaderFns.logger.debug("Parquet writer will use blockSize = $this")
   }
   val pageSize: Int = config.getIntOrElse("eel.parquet.pageSize", ParquetWriter.DEFAULT_PAGE_SIZE).apply {
-    ParquetReaderSupport.logger.debug("Parquet writer will use pageSize = $this")
+    ParquetReaderFns.logger.debug("Parquet writer will use pageSize = $this")
   }
 
   val compressionCodec: CompressionCodecName by lazy {

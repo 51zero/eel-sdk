@@ -17,7 +17,7 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
   val fs = FileSystem.getLocal(new Configuration)
 
   "InMemoryMetaStoreClientTest.createDatabase" should {
-    "create database home folder" in {
+    "createReader database home folder" in {
       val client = new InMemoryMetaStoreClient(dir.toString, fs)
       val db = new Database("test", "", "", Map.empty[String, String].asJava)
       client.createDatabase(db)
@@ -77,7 +77,7 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
   }
 
   "InMemoryMetaStoreClientTest.createTable" should {
-    "create table folder using default location when sd location not set" in {
+    "createReader table folder using default location when sd location not set" in {
       val table = new Table()
       table.setDbName("sam")
       table.setTableName("tab")
@@ -89,7 +89,7 @@ class InMemoryMetaStoreClientTest extends WordSpec with Matchers {
 
       dir.resolve("sam").resolve("tab").toFile.exists shouldBe true
     }
-    "create table folder using sd location when external table" in {
+    "createReader table folder using sd location when external table" in {
 
       val tablePath = Files.createTempDirectory("testy")
 

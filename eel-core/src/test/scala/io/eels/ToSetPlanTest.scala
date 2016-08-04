@@ -7,7 +7,7 @@ class ToSetPlanTest extends WordSpec with Matchers {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   "ToSetPlan" should {
-    "create set from frame" in {
+    "createReader set from frame" in {
       val frame = Frame(
         List("name", "location"),
         List("sam", "aylesbury"),

@@ -8,7 +8,7 @@ import io.eels.schema.Schema
 import io.eels.util.Logging
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 
-// create FrameSchema from hive FieldSchemas
+// createReader FrameSchema from hive FieldSchemas
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns : Logging {
 

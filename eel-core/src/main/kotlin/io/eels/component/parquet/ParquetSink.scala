@@ -11,7 +11,7 @@ case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with St
 
 class ParquetSinkWriter(schema: Schema, path: Path)
                        (implicit fs: FileSystem) extends SinkWriter with StrictLogging {
-  logger.debug(s"Parquet will write to $path")
+  logger.debug("Parquet will write to $path")
 
   private val config = ConfigFactory.load()
   private val caseSensitive = config.getBoolean("eel.parquet.caseSensitive")

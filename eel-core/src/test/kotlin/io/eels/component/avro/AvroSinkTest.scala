@@ -1,5 +1,8 @@
 package io.eels.component.avro
 
+import io.kotlintest.matchers.Matchers
+import io.kotlintest.specs.WordSpec
+
 class AvroSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(

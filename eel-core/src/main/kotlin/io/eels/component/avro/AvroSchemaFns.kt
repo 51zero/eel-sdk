@@ -3,10 +3,11 @@ package io.eels.component.avro
 import io.eels.schema.Field
 import io.eels.schema.FieldType
 import io.eels.schema.Schema
+import io.eels.util.Logging
 import org.apache.avro.SchemaBuilder
 import org.codehaus.jackson.node.NullNode
 
-object AvroSchemaFns {
+object AvroSchemaFns : Logging {
 
   @JvmOverloads @JvmStatic
   fun toAvroSchema(schema: Schema,
@@ -26,7 +27,7 @@ object AvroSchemaFns {
         FieldType.Long -> SchemaBuilder.builder().longType()
         FieldType.BigInt -> SchemaBuilder.builder().longType()
         else -> {
-          //LoggerFactory.getLogger(this.javaClass).warn("Unknown column type ${column.name}= ${column.`type`}; defaulting to string")
+          logger.warn("Unknown field type ${field.name}= ${field.`type`}; defaulting to string")
           org.apache.avro.Schema.create(org.apache.avro.Schema.Type.STRING)
         }
       }

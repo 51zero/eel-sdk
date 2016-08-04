@@ -61,7 +61,7 @@ class HiveSourceTest extends WordSpec with Matchers with HiveTestKit {
       HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) shouldBe Set(Vector("4"), Vector("7"))
     }
     "not load a partition which exists in the metastore, but doesn't have associated partition directory" in {
-      // this will add the partition in hive but not create the directory
+      // this will add the partition in hive but not createReader the directory
       HiveOps.createPartition("sam", "hivesourcetest", Partition("p=100/q=100"))
       // the partition should exist in the metatstore
       client.listPartitionNames("sam", "hivesourcetest", Short.MaxValue).asScala.toSet shouldBe Set("p=7/q=8", "p=4/q=5", "p=100/q=100")
@@ -69,7 +69,7 @@ class HiveSourceTest extends WordSpec with Matchers with HiveTestKit {
       HiveSource("sam", "hivesourcetest").withColumns("p").toSet.map(_.values) should not contain "100"
     }
     "not load a partition which exists in the metastore, but has no data" in {
-      // this will add the partition in hive but not create the directory
+      // this will add the partition in hive but not createReader the directory
       HiveOps.createPartition("sam", "hivesourcetest", Partition("p=100/q=100"))
       val location = client.getPartition("sam", "hivesourcetest", "p=100/q=100").getSd.getLocation
       val emptyData = new Path(location, "empty")

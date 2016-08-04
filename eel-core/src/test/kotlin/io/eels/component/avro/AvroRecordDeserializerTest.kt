@@ -14,7 +14,7 @@ class AvroRecordDeserializerTest : WordSpec() {
 
   init {
     "toRow" should {
-      "create eel row from supplied avro record" {
+      "createReader eel row from supplied avro record" {
         val schema = Schema(Field("a"), Field("b"), Field("c"))
         val record = GenericData.Record(AvroSchemaFns.toAvroSchema(schema))
         record.put("a", "aaaa")

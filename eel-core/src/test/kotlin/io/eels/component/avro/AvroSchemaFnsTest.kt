@@ -11,7 +11,7 @@ import io.kotlintest.specs.WordSpec
 import org.codehaus.jackson.node.NullNode
 import java.util.*
 
-class AvroSchemaFnTest : WordSpec() {
+class AvroSchemaFnsTest : WordSpec() {
 
   init {
     "toAvro" should {

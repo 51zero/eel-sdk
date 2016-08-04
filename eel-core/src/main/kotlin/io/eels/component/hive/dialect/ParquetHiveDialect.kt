@@ -6,9 +6,9 @@ import io.eels.component.avro.AvroRecordSerializer
 import io.eels.component.avro.AvroSchemaFns
 import io.eels.component.hive.HiveDialect
 import io.eels.component.hive.HiveWriter
-import io.eels.component.parquet.ParquetIterator
+import io.eels.component.parquet.ParquetRowIterator
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.component.parquet.ParquetReaderSupport
+import io.eels.component.parquet.ParquetReaderFns
 import io.eels.component.parquet.ParquetRowWriter
 import io.eels.schema.Schema
 import io.eels.util.Logging
@@ -25,10 +25,10 @@ object ParquetHiveDialect : HiveDialect, Logging {
                     predicate: Option<Predicate>,
                     fs: FileSystem): Observable<Row> {
 
-    val reader = ParquetReaderSupport.create(path, predicate, Option(projectionSchema))
+    val reader = ParquetReaderFns.createReader(path, predicate, Option(projectionSchema))
     return Observable.create<Row> { subscriber ->
       subscriber.onStart()
-      ParquetIterator(reader).forEach {
+      ParquetRowIterator(reader).forEach {
         subscriber.onNext(it)
       }
       subscriber.onCompleted()
