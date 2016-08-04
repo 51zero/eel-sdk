@@ -1,17 +1,12 @@
 package io.eels.component.parquet
 
 import com.typesafe.config.ConfigFactory
-import io.eels.Frame
-import io.eels.component.avro.{AvroRecordFn, AvroSchemaFn}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
 
 class RollingParquetWriterTest extends WordSpec with Matchers with BeforeAndAfterEach {
 
   ParquetLogMute()
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val frame = Frame(
     List("name", "job", "location"),

@@ -33,7 +33,7 @@ interface SequenceSupport : Logging, Using {
 
   fun toValues(v: BytesWritable): Array<String> = toValues(String(v.copyBytes(), charset("UTF8")))
 
-  fun toValues(str: String): Array<String> {
+  private fun toValues(str: String): Array<String> {
     val csv = CSVReader(StringReader(str))
     val row = csv.readNext()
     csv.close()
@@ -65,6 +65,8 @@ class SequencePart(val path: Path) : Part, SequenceSupport {
 
     return Observable.create {
       it.onStart()
+      // throw away top row as that's header
+      reader.next(k, v)
       while (reader.next(k, v)) {
         val row = Row(schema, toValues(v).asList())
         it.onNext(row)

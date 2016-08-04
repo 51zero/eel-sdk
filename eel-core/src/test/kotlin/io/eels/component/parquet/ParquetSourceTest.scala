@@ -2,6 +2,8 @@ package io.eels.component.parquet
 
 import java.io.File
 
+import io.kotlintest.matchers.Matchers
+import io.kotlintest.specs.WordSpec
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.GenericData.Record
 import org.apache.avro.generic.GenericRecord

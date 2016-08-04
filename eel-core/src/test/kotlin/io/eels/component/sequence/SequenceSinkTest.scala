@@ -1,14 +1,12 @@
 package io.eels.component.sequence
 
-import io.eels.Frame
+import io.kotlintest.matchers.Matchers
+import io.kotlintest.specs.WordSpec
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
-import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSinkTest extends WordSpec with Matchers {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val frame = Frame(
     List("a", "b", "c", "d"),
