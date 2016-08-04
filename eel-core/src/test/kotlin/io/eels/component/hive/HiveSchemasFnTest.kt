@@ -26,6 +26,15 @@ class HiveSchemasFnTest : StringSpec() {
       HiveSchemaFns.toHiveField(Field("a", type = FieldType.Int)) shouldBe FieldSchema("a", "int", null)
       HiveSchemaFns.toHiveField(Field("a", type = FieldType.Long)) shouldBe FieldSchema("a", "bigint", null)
       HiveSchemaFns.toHiveField(Field("a", type = FieldType.Timestamp)) shouldBe FieldSchema("a", "timestamp", null)
+      HiveSchemaFns.toHiveField(Field("a", type = FieldType.String, precision = Precision(5))) shouldBe FieldSchema("a", "string", null)
+    }
+
+    "fromHiveField should support decimals" {
+      HiveSchemaFns.fromHiveField(FieldSchema("a", "decimal(10,5)", null), true) shouldBe Field("a", type = FieldType.Decimal, scale = Scale(10), precision = Precision(5))
+    }
+
+    "fromHiveField should support varchar" {
+      HiveSchemaFns.fromHiveField(FieldSchema("a", "varchar(200)", null), true) shouldBe Field("a", type = FieldType.String, precision = Precision(200))
     }
 
     "fromHiveField should support structs" {

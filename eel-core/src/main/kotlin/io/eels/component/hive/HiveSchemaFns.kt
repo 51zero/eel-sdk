@@ -33,7 +33,6 @@ object HiveSchemaFns : Logging {
       fromHive(fieldSchema.name, fieldSchema.type, nullable, fieldSchema.comment)
 
   fun fromHive(name: String, type: String, nullable: Boolean, comment: String?): Field {
-
     return when {
       type == "tinyint" -> Field(name, FieldType.Short, nullable, Precision(0), Scale(0))
       type == "smallint" -> Field(name, FieldType.Short, nullable, Precision(0), Scale(0))
@@ -47,8 +46,14 @@ object HiveSchemaFns : Logging {
       type == "char" -> Field(name, FieldType.String, nullable, Precision(0), Scale(0))
       type == "date" -> Field(name, FieldType.Date, nullable, Precision(0), Scale(0))
       type == "timestamp" -> Field(name, FieldType.Timestamp, nullable, Precision(0), Scale(0))
-    //DecimalRegex(precision, scale) -> (ColumnType.Decimal, precision.toInt, scale.toInt)
-    //VarcharRegex(precision) -> (ColumnType.String, precision.toInt, 0)
+      DecimalRegex.matches(type) -> {
+        val match = DecimalRegex.matchEntire(type)!!
+        Field(name, FieldType.Decimal, nullable, Precision(match.groupValues[2].toInt()), Scale(match.groupValues[1].toInt()))
+      }
+      VarcharRegex.matches(type) -> {
+        val match = VarcharRegex.matchEntire(type)!!
+        Field(name, FieldType.String, nullable, Precision(match.groupValues[1].toInt()))
+      }
       StructRegex.matches(type) -> {
         val value = StructRegex.matchEntire(type)!!.groupValues[1]
         val fields = value.split(",").map {
@@ -86,8 +91,7 @@ object HiveSchemaFns : Logging {
     }
   }
 
-  fun toStructDDL(field: Field)
-      : String {
+  fun toStructDDL(field: Field): String {
     require(field.type == FieldType.Struct, { "Invoked struct method on non struct type" })
     val types = field.fields.map { it.name + ":" + toHiveType(it) }.joinToString(",")
     return "struct<$types>"
