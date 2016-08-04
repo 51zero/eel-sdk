@@ -35,7 +35,6 @@ data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
   private fun dialect(): JdbcDialect = providedDialect.getOrElse(GenericJdbcDialect())
 
   override fun parts(): List<Part> {
-
     val conn = connFn()
     val stmt = conn.prepareStatement(query)
     stmt.fetchSize = fetchSize
@@ -52,13 +51,14 @@ data class JdbcSource @JvmOverloads constructor(val connFn: () -> Connection,
 
   fun fetchSchema(): Schema {
     return using(connFn()) { conn ->
-      using(conn.createStatement()) { stmt ->
+      val schemaQuery = "SELECT * FROM ($query) tmp WHERE 1=0"
+      using(conn.prepareStatement(schemaQuery)) { stmt ->
 
         stmt.fetchSize = fetchSize
+        bind(stmt)
 
-        val schemaQuery = "SELECT * FROM ($query) tmp WHERE 1=0"
-        val rs = timed("Query for schema [$schemaQuery]...") {
-          stmt.executeQuery(schemaQuery)
+        val rs = timed("Executing query $query") {
+          stmt.executeQuery()
         }
 
         val schema = schemaFor(dialect(), rs)
