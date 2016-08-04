@@ -20,7 +20,7 @@ class JdbcSourceTest : WordSpec() {
     "JdbcSource" should {
       "read schema"  {
         val conn = DriverManager.getConnection("jdbc:h2:mem:test")
-        conn.createStatement().executeUpdate("createReader table mytable (a integer, b bit, c bigint)")
+        conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
         JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema() shouldBe
@@ -33,7 +33,7 @@ class JdbcSourceTest : WordSpec() {
       "trigger callbacks per row" {
         val latch = CountDownLatch(2)
         val conn = DriverManager.getConnection("jdbc:h2:mem:test2")
-        conn.createStatement().executeUpdate("createReader table mytable (a integer, b bit, c bigint)")
+        conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
         JdbcSource("jdbc:h2:mem:test2", "select * from mytable").withListener(object : RowListener {
@@ -45,7 +45,7 @@ class JdbcSourceTest : WordSpec() {
       }
       "use supplied query"  {
         val conn = DriverManager.getConnection("jdbc:h2:mem:test3")
-        conn.createStatement().executeUpdate("createReader table mytable (a integer, b bit, c bigint)")
+        conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
         JdbcSource({
@@ -57,14 +57,14 @@ class JdbcSourceTest : WordSpec() {
       }
       "read from jdbc"  {
         val conn = DriverManager.getConnection("jdbc:h2:mem:test4")
-        conn.createStatement().executeUpdate("createReader table mytable (a integer, b bit, c bigint)")
+        conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
         JdbcSource("jdbc:h2:mem:test4", "select * from mytable").toFrame(1).size() shouldBe 2
       }
       "support bind" {
         val conn = DriverManager.getConnection("jdbc:h2:mem:test5")
-        conn.createStatement().executeUpdate("createReader table mytable (a integer, b bit, c bigint)")
+        conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
         conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
         JdbcSource("jdbc:h2:mem:test5", "select * from mytable where a=?").withBind { it.setLong(1, 4) }.toFrame(1).size() shouldBe 1

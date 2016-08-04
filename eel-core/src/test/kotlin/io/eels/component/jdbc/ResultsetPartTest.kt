@@ -14,7 +14,7 @@ class ResultsetPartTest : StringSpec() {
 
     Class.forName("org.h2.Driver")
     val conn = DriverManager.getConnection("jdbc:h2:mem:ResultsetPartTest")
-    conn.createStatement().executeUpdate("createReader table mytable (a integer, b bit, c bigint)")
+    conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
     conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
     conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
 
