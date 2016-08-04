@@ -25,16 +25,17 @@ class HiveSinkTest : WordSpec() {
 
   init {
 
-    val tableName = "hivesinktest" + System.currentTimeMillis()
-
-    val schema = Schema("a", "b")
-    ops.createTable("sam", tableName, schema, format = HiveFormat.Parquet, partitionKeys = listOf("b"))
-
-    val frame = Frame.create(schema, Array(100) { listOf("HOLLY", "QUEEG") }.toList())
-    frame.to(HiveSink("sam", tableName, fs, client))
-
     "HiveSink" should {
       "not write partition data to the data file" {
+
+        val tableName = "hivesinktest" + System.currentTimeMillis()
+
+        val schema = Schema("a", "b")
+        ops.createTable("sam", tableName, schema, format = HiveFormat.Parquet, partitionKeys = listOf("b"))
+
+        val frame = Frame.create(schema, Array(100) { listOf("HOLLY", "QUEEG") }.toList())
+        frame.to(HiveSink("sam", tableName, fs, client))
+
         val table = client.getTable("sam", tableName)
         val paths = HiveFilesFn(table, fs, client, listOf("b")).map { it.first.path }
         // none of these files should contain col b as that's a partition
