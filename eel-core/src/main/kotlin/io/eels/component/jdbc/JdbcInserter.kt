@@ -34,7 +34,6 @@ class JdbcInserter(val url: String,
         stmt.addBatch()
       }
       val result = stmt.executeBatch()
-      logger.debug("Batch completed; ${result.size} rows inserted")
       if (!autoCommit) conn.commit()
       batch.forEach { listener.onRow(it) }
     } catch (e: Exception) {
