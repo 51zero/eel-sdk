@@ -21,13 +21,13 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
  * @predicate optional predicate which will filter rows at the read level
  *
  */
-data class HiveSource(val dbName: String,
-                      val tableName: String,
-                      private val constraints: List<PartitionConstraint> = emptyList(),
-                      private val projection: List<String> = emptyList(),
-                      private val predicate: Option<Predicate> = Option.None,
-                      private val fs: FileSystem,
-                      private val client: IMetaStoreClient) : Source, Logging, Using {
+data class HiveSource @JvmOverloads constructor(val dbName: String,
+                                                val tableName: String,
+                                                private val constraints: List<PartitionConstraint> = emptyList(),
+                                                private val projection: List<String> = emptyList(),
+                                                private val predicate: Option<Predicate> = Option.None,
+                                                private val fs: FileSystem,
+                                                private val client: IMetaStoreClient) : Source, Logging, Using {
   init {
     ParquetLogMute()
   }

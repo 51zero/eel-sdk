@@ -14,13 +14,13 @@ import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
-data class HiveSink(private val dbName: String,
-                    private val tableName: String,
-                    val fs: FileSystem = FileSystem.get(Configuration()),
-                    val client: IMetaStoreClient = HiveMetaStoreClient(HiveConf()),
-                    private val ioThreads: Int = 4,
-                    private val dynamicPartitioning: Option<Boolean> = Option.None,
-                    private val schemaEvolution: Option<Boolean> = Option.None) : Sink, Logging {
+data class HiveSink @JvmOverloads constructor(private val dbName: String,
+                                              private val tableName: String,
+                                              val fs: FileSystem = FileSystem.get(Configuration()),
+                                              val client: IMetaStoreClient = HiveMetaStoreClient(HiveConf()),
+                                              private val ioThreads: Int = 4,
+                                              private val dynamicPartitioning: Option<Boolean> = Option.None,
+                                              private val schemaEvolution: Option<Boolean> = Option.None) : Sink, Logging {
 
   val config: Config = ConfigFactory.load()
   val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
