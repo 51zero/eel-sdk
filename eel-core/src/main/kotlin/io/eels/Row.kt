@@ -26,6 +26,8 @@ data class Row(val schema: Schema, val values: List<Any?>) {
 
   fun get(name: String, caseInsensitive: Boolean = false): Any? {
     val index = schema.indexOf(name, caseInsensitive)
+    if (index < 0)
+      error("$name did not exist in row")
     return values[index]
   }
 
