@@ -20,47 +20,47 @@ data class CsvSink @JvmOverloads constructor(val path: Path,
   fun withIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces: Boolean): CsvSink = copy(ignoreLeadingWhitespaces = ignoreLeadingWhitespaces)
   fun withIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces: Boolean): CsvSink = copy(ignoreTrailingWhitespaces = ignoreTrailingWhitespaces)
   fun withFormat(format: CsvFormat): CsvSink = copy(format = format)
-}
 
-class CsvSinkWriter(val schema: Schema,
-                    val path: Path,
-                    val headers: Header,
-                    val format: CsvFormat,
-                    val ignoreLeadingWhitespaces: Boolean = false,
-                    val ignoreTrailingWhitespaces: Boolean = false) : SinkWriter {
+  inner class CsvSinkWriter(val schema: Schema,
+                            val path: Path,
+                            val headers: Header,
+                            val format: CsvFormat,
+                            val ignoreLeadingWhitespaces: Boolean = false,
+                            val ignoreTrailingWhitespaces: Boolean = false) : SinkWriter {
 
-  private val lock = Any()
+    private val lock = Any()
 
-  private fun createWriter(): CsvWriter {
-    val settings = CsvWriterSettings()
-    settings.format.delimiter = format.delimiter
-    settings.format.quote = format.quoteChar
-    settings.format.quoteEscape = format.quoteEscape
-    // we will handle header writing ourselves
-    settings.isHeaderWritingEnabled = false
-    settings.ignoreLeadingWhitespaces = ignoreLeadingWhitespaces
-    settings.ignoreTrailingWhitespaces = ignoreTrailingWhitespaces
-    return CsvWriter(path.toFile(), settings)
-  }
-
-  private val writer: CsvWriter by lazy {
-    val writer = createWriter()
-    when (headers) {
-      Header.FirstComment -> writer.commentRow(schema.fieldNames().joinToString(format.delimiter.toString()))
-      Header.FirstRow -> writer.writeHeaders(schema.fieldNames())
-      else -> {
-      }
+    private fun createWriter(): CsvWriter {
+      val settings = CsvWriterSettings()
+      settings.format.delimiter = format.delimiter
+      settings.format.quote = format.quoteChar
+      settings.format.quoteEscape = format.quoteEscape
+      // we will handle header writing ourselves
+      settings.isHeaderWritingEnabled = false
+      settings.ignoreLeadingWhitespaces = ignoreLeadingWhitespaces
+      settings.ignoreTrailingWhitespaces = ignoreTrailingWhitespaces
+      return CsvWriter(path.toFile(), settings)
     }
-    writer
-  }
 
-  override fun close(): Unit = writer.close()
+    private val writer: CsvWriter by lazy {
+      val writer = createWriter()
+      when (headers) {
+        Header.FirstComment -> writer.commentRow(schema.fieldNames().joinToString(format.delimiter.toString()))
+        Header.FirstRow -> writer.writeHeaders(schema.fieldNames())
+        else -> {
+        }
+      }
+      writer
+    }
 
-  override fun write(row: Row): Unit {
-    synchronized(lock) {
-      // nulls should be written as empty strings
-      val array = row.values.map { it?.toString() }.toTypedArray()
-      writer.writeRow(array)
+    override fun close(): Unit = writer.close()
+
+    override fun write(row: Row): Unit {
+      synchronized(lock) {
+        // nulls should be written as empty strings
+        val array = row.values.map { it?.toString() }.toTypedArray()
+        writer.writeRow(array)
+      }
     }
   }
 }

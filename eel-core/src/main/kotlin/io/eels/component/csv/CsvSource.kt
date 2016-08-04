@@ -14,10 +14,6 @@ import io.eels.util.Option
 import io.eels.util.getOrElse
 import java.nio.file.Path
 
-enum class Header {
-  None, FirstComment, FirstRow
-}
-
 data class CsvSource @JvmOverloads constructor(val path: Path,
                                                val overrideSchema: Option<Schema> = Option.None,
                                                val format: CsvFormat = CsvFormat(),
