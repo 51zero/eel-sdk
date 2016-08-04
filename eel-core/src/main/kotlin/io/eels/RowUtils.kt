@@ -5,9 +5,15 @@ import io.eels.schema.Schema
 object RowUtils {
 
   /**
-   * Accepts a row and a schema, and returns a new row with
+   * Accepts a Row and reformats it according to the target schema, using the lookup map for the missing values.
    */
-  fun rowAlign(row: Row, schema: Schema): Row {
-    throw RuntimeException()
+  fun rowAlign(row: Row, targetSchema: Schema, lookup: Map<String, Any> = emptyMap()): Row {
+    val values = targetSchema.fieldNames().map { fieldName ->
+      when {
+        lookup.containsKey(fieldName) -> lookup[fieldName]
+        else -> row.get(fieldName) ?: error("Missing value for field $fieldName")
+      }
+    }
+    return Row(targetSchema, values)
   }
 }

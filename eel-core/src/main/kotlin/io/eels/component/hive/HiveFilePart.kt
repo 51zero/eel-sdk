@@ -1,6 +1,7 @@
 package io.eels.component.hive
 
 import io.eels.Row
+import io.eels.RowUtils
 import io.eels.component.Part
 import io.eels.component.Predicate
 import io.eels.schema.Schema
@@ -43,19 +44,6 @@ class HiveFilePart(val dialect: HiveDialect,
     val reader = dialect.read(file.path, metastoreSchema, projectionWithoutPartitions, predicate, fs)
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
-    return reader.map { rowRepopulator(it, projectionSchema, map) }
+    return reader.map { RowUtils.rowAlign(it, projectionSchema, map) }
   }
-}
-
-/**
- * Accepts a Row and reformats it according to the target schema, using the lookup map for the missing values.
- */
-fun rowRepopulator(row: Row, targetSchema: Schema, lookup: Map<String, Any> = emptyMap()): Row {
-  val values = targetSchema.fieldNames().map { fieldName ->
-    when {
-      lookup.containsKey(fieldName) -> lookup[fieldName]
-      else -> row.get(fieldName)
-    }
-  }
-  return Row(targetSchema, values)
 }
