@@ -32,6 +32,7 @@ object HiveFileScanner : Logging {
     } else {
       emptyList<LocatedFileStatus>()
     }
+    logger.debug("Scanner found ${files.size} files")
     return files
   }
 }

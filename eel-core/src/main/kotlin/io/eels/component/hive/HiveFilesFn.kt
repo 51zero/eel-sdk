@@ -24,10 +24,10 @@ object HiveFilesFn : Logging {
 
   // for a given table returns hadoop paths that match the partition constraints
   operator fun invoke(table: Table,
-                      partitionConstraints: List<PartitionConstraint>,
-                      partitionKeys: List<PartitionKey>,
                       fs: FileSystem,
-                      client: IMetaStoreClient): List<Pair<LocatedFileStatus, PartitionSpec>> {
+                      client: IMetaStoreClient,
+                      partitionKeys: List<String>,
+                      partitionConstraints: List<PartitionConstraint> = listOf()): List<Pair<LocatedFileStatus, PartitionSpec>> {
 
     fun rootScan(): List<Pair<LocatedFileStatus, PartitionSpec>> {
       logger.debug("No partitions for ${table.tableName}; performing root scan")
@@ -39,11 +39,11 @@ object HiveFilesFn : Logging {
       logger.debug("partitionsScan for $partitions")
       // first we filter out any partitions that don't meet our partition constraints
       val filteredPartitions = partitions.filter {
-        assert(it.values.size == partitionKeys.size, { "Partition values must equal partition keys" })
+        assert(it.values.size == partitionKeys.size, { "Cardinality of partition values (${it.values}) must equal partition keys (${partitionKeys})" })
         // for each partition we need to combine the values with the partition keys as the
         // partition objects don't contain that
         val parts = partitionKeys.zip(it.values).map {
-          PartitionPart(it.component1().field.name, it.component2())
+          PartitionPart(it.component1(), it.component2())
         }
         val spec = PartitionSpec(parts)
         partitionConstraints.all { it.eval(spec) }
@@ -58,7 +58,7 @@ object HiveFilesFn : Logging {
         when {
           fs.exists(path) ->
             HiveFileScanner(path, fs).map {
-              val parts = partitionKeys.map { it.field.name }.zip(part.values).map { PartitionPart(it.first, it.second) }
+              val parts = partitionKeys.zip(part.values).map { PartitionPart(it.first, it.second) }
               Pair(it, PartitionSpec(parts))
             }
           missingPartitionAction == "error" ->

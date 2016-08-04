@@ -10,9 +10,9 @@ import org.apache.parquet.avro.AvroParquetWriter
 import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
-object ParquetWriterSupport : Logging {
+object ParquetWriterFns : Logging {
 
-  fun Config.getIntOrElse(key: String, default: Int): Int = if (config.hasPath(key)) this.getInt(key) else default
+  private fun Config.getIntOrElse(key: String, default: Int): Int = if (config.hasPath(key)) this.getInt(key) else default
 
   val config: Config = ConfigFactory.load()
 

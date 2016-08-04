@@ -15,8 +15,8 @@ import org.apache.avro.generic.GenericRecord
  */
 class AvroRecordSerializer(val recordSchema: Schema) : Logging {
 
-  val fields: List<Schema.Field> = recordSchema.fields
-  val converters = fields.map { converter(it.schema()) }
+  private val fields: List<Schema.Field> = recordSchema.fields
+  private val converters = fields.map { converter(it.schema()) }
 
   //val converters = fields.map { OptionalConverter(converter(field.schema)) }
   init {

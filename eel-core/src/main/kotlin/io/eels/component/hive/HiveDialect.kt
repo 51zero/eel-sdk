@@ -48,9 +48,9 @@ interface HiveDialect : Logging {
 
     operator fun invoke(format: String): HiveDialect = when (format) {
       "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat" -> ParquetHiveDialect
-//      "org.apache.hadoop.mapred.TextInputFormat" -> TextHiveDialect
-//      "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" -> AvroHiveDialect
-//      "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" -> OrcHiveDialect
+    //      "org.apache.hadoop.mapred.TextInputFormat" -> TextHiveDialect
+    //      "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" -> AvroHiveDialect
+    //      "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" -> OrcHiveDialect
       else -> throw UnsupportedOperationException("Unknown hive input format $format")
     }
 

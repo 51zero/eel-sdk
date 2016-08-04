@@ -16,8 +16,6 @@ import org.apache.hadoop.hive.metastore.api.Partition as HivePartition
 
 class HiveOps(val client: IMetaStoreClient) : Logging {
 
-
-
 //  /**
 //   * Returns a map of all partition partitionKeys to their values.
 //   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
@@ -199,7 +197,7 @@ class HiveOps(val client: IMetaStoreClient) : Logging {
                   format: HiveFormat = HiveFormat.Text,
                   props: Map<String, String> = emptyMap(),
                   tableType: TableType = TableType.MANAGED_TABLE,
-                  location: String?,
+                  location: String? = null,
                   overwrite: Boolean = false): Boolean {
     for (partitionKey in partitionKeys) {
       if (!schema.contains(partitionKey)) {

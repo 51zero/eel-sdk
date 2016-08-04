@@ -68,7 +68,7 @@ data class HiveSource(val dbName: String,
       // in the same order as the requested projection
       val columns = projection.map { fieldName ->
         val field = metastoreSchema.fields.findOptional { it.name.equals(fieldName, true) }
-        field.getOrElse(error("Requested field $fieldName does not exist in the hive schema"))
+        field.getOrElse { error("Requested field $fieldName does not exist in the hive schema") }
       }
       Schema(columns)
     }
@@ -103,7 +103,7 @@ data class HiveSource(val dbName: String,
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       listOf(HivePartitionPart(dbName, tableName, fieldNames, emptyList(), metastoreSchema, predicate, dialect, fs, client))
     } else {
-      val files = HiveFilesFn.invoke(table, constraints, partitionKeys, fs, client)
+      val files = HiveFilesFn.invoke(table, fs, client, partitionKeys.map { it.field.name }, constraints)
       logger.debug("Found ${files.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema

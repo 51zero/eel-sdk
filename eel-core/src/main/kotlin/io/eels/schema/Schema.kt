@@ -12,6 +12,7 @@ package io.eels.schema
 data class Schema(val fields: List<Field>) {
 
   constructor(vararg fields: Field) : this(fields.asList())
+  constructor(vararg fieldNames: String) : this(fieldNames.map { Field(it) })
 
   init {
     require(fields.map { it.name }.distinct().size == fields.size, { "Schema cannot have duplicated field name" })
