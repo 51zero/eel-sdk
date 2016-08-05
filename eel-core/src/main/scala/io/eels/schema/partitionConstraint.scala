@@ -1,8 +1,6 @@
 package io.eels.schema
 
-import io.eels.component.hive.PartitionPart
-import io.eels.component.hive.PartitionSpec
-import io.eels.util.findOptional
+import io.eels.{PartitionPart, PartitionSpec}
 
 trait PartitionConstraint {
   // returns true if the partition name and value matches any of the parts of the given partition
@@ -11,25 +9,25 @@ trait PartitionConstraint {
 
 class PartitionEquals(val name: String, val value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.contains(PartitionPart(name, value))
+    partition.parts.contains(PartitionPart(name, value))
 }
 
 class PartitionLt(val name: String, val value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.findOptional { it.key == name }.exists { it.value.compareTo(value) < 0 }
+    partition.parts.find(_.key == name).exists(_.value.compareTo(value) < 0)
 }
 
 class PartitionLte(val name: String, val value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.findOptional { it.key == name }.exists { it.value.compareTo(value) <= 0 }
+    partition.parts.find(_.key == name).exists(_.value.compareTo(value) <= 0)
 }
 
 class PartitionGt(val name: String, val value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.findOptional { it.key == name }.exists { it.value.compareTo(value) > 0 }
+    partition.parts.find(_.key == name).exists(_.value.compareTo(value) > 0)
 }
 
 class PartitionGte(val name: String, val value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.findOptional { it.key == name }.exists { it.value.compareTo(value) >= 0 }
+    partition.parts.find(_.key == name).exists(_.value.compareTo(value) >= 0)
 }

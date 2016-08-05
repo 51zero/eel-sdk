@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
-import Frame._
+import org.apache.calcite.sql.SqlWriter.Frame._
 
 import scala.reflect.internal.util.TableDef.Column
 

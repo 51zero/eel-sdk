@@ -105,8 +105,7 @@ case class Schema(fields: Seq[Field]) {
 
 object Schema {
   def apply(first: Field, rest: Field*): Schema = apply(first +: rest)
-  def apply(first: String, rest: String*): Schema = apply(first +: rest)
-  def apply(fieldNames: Seq[String]): Schema = apply(fieldNames.map(name => Field(name)))
+  def apply(first: String, rest: String*): Schema = apply((first +: rest).map(name => Field(name)))
 
   //    def from[T <: Product : TypeTag : ClassTag]: Schema =
   //    {
