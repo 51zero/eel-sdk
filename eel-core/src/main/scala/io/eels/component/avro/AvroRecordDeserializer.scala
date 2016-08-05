@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigFactory
 import io.eels.Row
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
+import scala.collection.JavaConverters._
 
 /**
  * Returns an row from the given avro record using the schema present in the record.
@@ -14,20 +15,20 @@ class AvroRecordDeserializer {
   private val config = ConfigFactory.load()
   private val useJavaString = config.getBoolean("eel.avro.java.string")
 
-  fun toRow(record: GenericRecord): Row {
-    val eelSchema = AvroSchemaFns.fromAvroSchema(record.schema)
-    val values = record.schema.fields.map { field ->
+  def toRow(record: GenericRecord): Row = {
+    val eelSchema = AvroSchemaFns.fromAvroSchema(record.getSchema)
+    val values = record.getSchema.getFields.asScala.map { field =>
       val value = record.get(field.name())
       if (useJavaString) {
-        when (value) {
-          is Utf8 -> String(value.bytes)
-          else -> value
+        value match {
+          case u: Utf8 => new String(u.getBytes)
+          case _ => value
         }
       } else {
         value
       }
-    }
-    return Row(eelSchema, values)
+    }.toVector
+    Row(eelSchema, values)
   }
 }
 
