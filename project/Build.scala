@@ -46,7 +46,8 @@ object Build extends Build {
       "one.util" % "streamex" % "0.6.0",
       "io.reactivex" % "rxjava" % "1.1.5",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
-      "io.dropwizard.metrics" % "metrics-jvm" % "3.1.2"
+      "io.dropwizard.metrics" % "metrics-jvm" % "3.1.2",
+      "org.scalatest" %% "scalatest" % "3.0.0" % "test"
     ),
     publishTo <<= version {
       (v: String) =>
