@@ -32,6 +32,7 @@ object Build extends Build {
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "io.reactivex" %% "rxscala" % "0.26.2",
       "com.typesafe" % "config" % "1.3.0",
+      "com.sksamuel.exts" %% "exts" % "1.29.0",
       "com.univocity" % "univocity-parsers" % "2.0.0",
       "com.h2database" % "h2" % "1.4.192",
       "org.apache.hadoop" % "hadoop-common" % HadoopVersion,
