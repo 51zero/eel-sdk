@@ -1,16 +1,52 @@
 import com.typesafe.sbt.pgp.PgpKeys
 import sbt._
 import sbt.Keys._
-import xerial.sbt.Pack._
+
+import scala.languageFeature.experimental
+import scala.languageFeature.experimental.macros
 
 object Build extends Build {
 
+  val org = "com.sksamuel.scalafunc"
 
+  val ScalaVersion = "2.11.8"
+  val ScalatestVersion = "3.0.0"
+  val Slf4jVersion = "1.7.12"
+  val Log4jVersion = "1.2.17"
+  val HadoopVersion = "2.6.1"
+  val HiveVersion = "1.1.0"
+
+  val rootSettings = Seq(
+    organization := org,
+    scalaVersion := ScalaVersion,
+    crossScalaVersions := Seq(ScalaVersion),
+    publishMavenStyle := true,
+    resolvers += Resolver.mavenLocal,
+    publishArtifact in Test := false,
+    parallelExecution in Test := false,
+    scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
+    javacOptions := Seq("-source", "1.8", "-target", "1.8"),
+    sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "com.google.guava"            % "guava"                 % "18.0",
-      "org.scalatest"               %% "scalatest"            % ScalatestVersion  % "test",
-      "org.slf4j"                   % "slf4j-log4j12"         % Slf4jVersion      % "test",
-      "log4j"                       % "log4j"                 % Log4jVersion      % "test"
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "io.reactivex" %% "rxscala" % "0.26.2",
+      "com.typesafe" % "config" % "1.3.0",
+      "com.univocity" % "univocity-parsers" % "2.0.0",
+      "com.h2database" % "h2" % "1.4.192",
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce-client" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-yarn" % HadoopVersion,
+      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", ""),
+      "org.apache.parquet" % "parquet-avro" % "1.8.1",
+      "org.slf4j" % "slf4j-api" % "1.7.21",
+      "one.util" % "streamex" % "0.6.0",
+      "io.reactivex" % "rxjava" % "1.1.5",
+      "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
+      "io.dropwizard.metrics" % "metrics-jvm" % "3.1.2"
     ),
     publishTo <<= version {
       (v: String) =>
@@ -25,7 +61,7 @@ object Build extends Build {
         <licenses>
           <license>
             <name>MIT</name>
-            <url>https://opensource.org/licenses/MIT</url>
+            <url>https://opensource.org/licenses/Apache2</url>
             <distribution>repo</distribution>
           </license>
         </licenses>
@@ -45,39 +81,10 @@ object Build extends Build {
 
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
-    .settings(publish := {})
-    .settings(publishArtifact := false)
     .settings(name := "eel")
-    .aggregate(core, cli)
-
+    .aggregate(core)
+   
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
-    .settings(libraryDependencies ++= Seq(
-
-      "org.apache.hadoop"     % "hadoop-common"     % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-client"     % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-hdfs"       % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-mapreduce"  % HadoopVersion,
-      "org.apache.hadoop"     % "hadoop-mapreduce-client" % HadoopVersion,
-      "org.apache.hive"       % "hive-common"       % HiveVersion,
-      "com.fasterxml.jackson.core"      %  "jackson-databind"           % "2.7.2",
-      "com.fasterxml.jackson.module"    %% "jackson-module-scala"       % "2.7.2",
-      "mysql"                           % "mysql-connector-java"        % "5.1.38"
-    ))
     .settings(name := "eel-core")
-
-  lazy val cli = Project("eel-cli", file("eel-cli"))
-    .settings(rootSettings: _*)
-    .settings(packAutoSettings: _*)
-    .settings(
-      name := "eel-cli",
-      packMain := Map("eel" -> "io.eels.cli.Main"),
-      packExtraClasspath := Map("eel" -> Seq("${HADOOP_HOME}/etc/hadoop", "${HIVE_HOME}/conf")),
-      packGenerateWindowsBatFile := true,
-      packJarNameConvention := "default"
-    )
-    .settings(libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "3.3.0"
-    ))
-    .dependsOn(core)
 }

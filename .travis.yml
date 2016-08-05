@@ -1,15 +1,8 @@
-language: java
-
+language: scala
+scala:
+- 2.11.8
+script:
+- sbt clean test
 jdk:
-  - oraclejdk8
-
+- oraclejdk8
 sudo: false
-
-cache:
-  directories:
-  - $HOME/.m2
-  - $HOME/.gradle
-
-install: /bin/true
-
-script: gradle test

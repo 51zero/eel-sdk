@@ -7,6 +7,8 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
 import Frame._
 
+import scala.reflect.internal.util.TableDef.Column
+
 case class Wibble(name: String, location: String, postcode: String)
 
 class FrameTest extends WordSpec with Matchers with Eventually {
