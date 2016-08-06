@@ -1,15 +1,10 @@
 package io.eels
 
 import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicLong
 
-import com.sksamuel.scalax.metrics.Timed
-import com.univocity.parsers.csv.CsvParserSettings
-import io.eels.component.csv.CsvSource
+import com.sksamuel.exts.metrics.Timed
 
 object SpeedTest extends App with Timed {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val path = Paths.get("big.csv")
 
@@ -31,9 +26,9 @@ object SpeedTest extends App with Timed {
   //    }
   //  }
 
-  timed("eel") {
-    val source = CsvSource(path).withDelimiter(',')
-    val size = source.size
-    println("size=" + size)
-  }
+//  timed("eel") {
+  //    val source = CsvSource(path).withDelimiter(',')
+  //    val size = source.size
+  //    println("size=" + size)
+  //  }
 }

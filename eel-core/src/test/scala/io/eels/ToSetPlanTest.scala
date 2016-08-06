@@ -1,15 +1,18 @@
 package io.eels
 
+import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 
 class ToSetPlanTest extends WordSpec with Matchers {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   "ToSetPlan" should {
     "createReader set from frame" in {
+      val schema = Schema(
+        Field("name"),
+        Field("location")
+      )
       val frame = Frame(
-        List("name", "location"),
+        schema,
         List("sam", "aylesbury"),
         List("sam", "aylesbury"),
         List("sam", "aylesbury"),

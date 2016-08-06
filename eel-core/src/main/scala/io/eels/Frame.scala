@@ -171,18 +171,10 @@ trait Frame {
   }
 
   def updateColumn(field: Field): Frame = new Frame {
+    override def schema(): Schema = outer.schema().replaceField(field.name, field)
     override def rows(): Observable[Row] = {
       throw new UnsupportedOperationException()
     }
-
-    override def schema(): Schema = outer.schema().replaceField(field.name, field)
-
-    //    override def buffer(): Buffer = new  Buffer {
-    //      val buffer = outer().buffer()
-    //      val index = outer().schema().indexOf(column)
-    //      override def close(): Unit = buffer.close()
-    //      override def stream(): Observable<Row> = buffer.stream()
-    //    }
   }
 
   def renameColumn(nameFrom: String, nameTo: String): Frame = new Frame {
@@ -190,16 +182,16 @@ trait Frame {
     override def rows(): Observable[Row] = outer.rows()
   }
 
-  def stripFromColumnName(chars: List[Char]): Frame = new Frame {
+  def stripFromColumnName(chars: Seq[Char]): Frame = new Frame {
     override def schema(): Schema = outer.schema().stripFromFieldNames(chars)
     override def rows(): Observable[Row] = outer.rows()
   }
 
-  def explode(fn: (Row) => List[Row]): Frame = new Frame {
+  def explode(fn: (Row) => Seq[Row]): Frame = new Frame {
+    override def schema(): Schema = outer.schema()
     override def rows(): Observable[Row] = outer.rows().flatMap { row =>
       Observable.from(fn(row))
     }
-    override def schema(): Schema = outer.schema()
   }
 
   def fill(defaultValue: String): Frame = new Frame {
@@ -219,6 +211,7 @@ trait Frame {
     * Joins two frames together, such that the elements of the given frame are appended to the
     * end of this frame. This operation is the same as a concat operation.
     */
+  def ++(other: Frame): Frame = union(other)
   def union(other: Frame): Frame = new Frame {
     // todo check schemas are compatible
     override def schema(): Schema = outer.schema()
@@ -307,11 +300,11 @@ trait Frame {
   }
 
   // -- actions --
-  def fold[A](initial: A, fn: (A, Row) => A): A = {
+  def fold[A](initial: A)(fn: (A, Row) => A): A = {
     rows().foldLeft(initial) { case (a, row) => fn(a, row) }.toBlocking.single
   }
 
-  //def forall(p: (Row) => Boolean): Boolean = ForallPlan.execute(this, p)
+  def forall(p: (Row) => Boolean): Boolean = rows().forall(p).toBlocking.single
   def exists(p: (Row) => Boolean): Boolean = rows().exists(row => p(row)).toBlocking.single
   def find(p: (Row) => Boolean): Row = rows().filter(p).first.toBlocking.single
 
@@ -321,12 +314,13 @@ trait Frame {
   def size(): Long = rows().countLong.toBlocking.single
   //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
 
-  def toList(): List[Row] = rows().toList.toBlocking.single
-  def toSet(): Set[Row] = toList().toSet
+  def toSeq(): Seq[Row] = rows().toList.toBlocking.single
+  def toSet(): Set[Row] = toSeq().toSet
 }
 
 object Frame {
   def apply(schema: Schema, rows: List[List[Any]]): Frame = apply(schema, rows.map { row => Row(schema, row) })
+  def apply(schema: Schema, first: Seq[Any], rest: Seq[Any]*): Frame = apply(schema, (first +: rest).map(_.toVector))
   def apply(_schema: Schema, first: Row, rest: Row*): Frame = apply(_schema, first +: rest)
   def apply(_schema: Schema, _rows: Seq[Row]): Frame = new Frame {
     override def schema(): Schema = _schema

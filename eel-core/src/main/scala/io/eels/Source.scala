@@ -2,7 +2,6 @@ package io.eels
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.Schema
-import org.apache.calcite.sql.SqlWriter.Frame
 
 /**
  * A Source is a provider of data.

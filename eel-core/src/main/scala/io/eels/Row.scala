@@ -19,6 +19,7 @@ case class Row(schema: Schema, values: Vector[Any]) {
     }.mkString("[", ",", "]")
   }
 
+  def apply(k: Int): Any = get(k)
   def get(k: Int): Any = values(k)
 
   def get(name: String, caseInsensitive: Boolean = false): Any = {

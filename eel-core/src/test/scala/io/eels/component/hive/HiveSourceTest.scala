@@ -1,17 +1,19 @@
 package io.eels.component.hive
 
+import io.eels.schema.Schema
 import io.eels.testkit.HiveTestKit
-import io.eels.{Column, Frame, Schema, SchemaType}
+import io.eels._
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
+import scala.reflect.internal.util.TableDef.Column
 
 class HiveSourceTest extends WordSpec with Matchers with HiveTestKit {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  val schema = Schema(Column("a"), Column("b"), Column("c"), Column("p"), Column("q"))
+  val schema = Schema("a", "b", "c", "p", "q")
   HiveOps.createTable("sam", "hivesourcetest", schema, format = HiveFormat.Parquet, partitionKeys = List("p", "q"))
 
   Frame(schema, Array("1", "2", "3", "4", "5"), Array("4", "5", "6", "7", "8")).to(HiveSink("sam", "hivesourcetest"))
