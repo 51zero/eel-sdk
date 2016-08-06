@@ -1,15 +1,28 @@
 package io.eels.component.avro
 
+import org.apache.avro.Schema
+
 /**
- * Avro requires that the types of values passed to its JavaAPI match the types in the schema.
- * So if you have an Avro Boolean field, you can't pass "true" but it must be true. So it's less
- * "forgiving" than JDBC for example.
- *
- * An AvroConverter instance will convert an incoming type into the a type appropriate for
- * the output type that the implementation supports.
- */
+  * Avro requires that the types of values passed to its JavaAPI match the types in the schema.
+  * So if you have an Avro Boolean field, you can't pass "true" but it must be true. So it's less
+  * "forgiving" than JDBC for example.
+  *
+  * An AvroConverter will convert a JVM type into a suitable Avro type. The avro type being specified by
+  * the instances type parameter.
+  */
 trait AvroConverter[T] {
   def convert(value: Any): T
+}
+
+object AvroConverter {
+  def apply(`type`: Schema.Type): AvroConverter[_] = `type` match {
+    case Schema.Type.LONG => LongConverter
+    case Schema.Type.INT => IntConverter
+    case Schema.Type.BOOLEAN => BooleanConverter
+    case Schema.Type.STRING => StringConverter
+    case Schema.Type.DOUBLE => DoubleConverter
+    case Schema.Type.FLOAT => FloatConverter
+  }
 }
 
 object StringConverter extends AvroConverter[String] {

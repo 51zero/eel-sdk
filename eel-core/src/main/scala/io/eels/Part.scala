@@ -1,7 +1,6 @@
-package io.eels.component
+package io.eels
 
-import io.eels.Row
-import rx.Observable
+import rx.lang.scala.Observable
 
 /**
  * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
@@ -9,7 +8,7 @@ import rx.Observable
  * implementations must ensure that different parts can be safely read in parallel.
  * A single part is always read by a single thread.
  */
-interface Part {
+trait Part {
 
   /**
    * Returns the data contained in this part in the form of an Observable that a subscriber can subscribe to.
@@ -18,5 +17,5 @@ interface Part {
    * Ie, it should be possible to invoke this method k times, and subscribe to those k observables concurrently,
    * and each rows should emit the same data.
    */
-  fun data(): Observable<Row>
+  def data(): Observable[Row]
 }

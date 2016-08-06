@@ -1,8 +1,8 @@
 package io.eels
 
-import io.eels.component.Part
+import com.sksamuel.exts.Logging
 import io.eels.schema.Schema
-import io.eels.util.Logging
+import org.apache.calcite.sql.SqlWriter.Frame
 
 /**
  * A Source is a provider of data.
@@ -17,8 +17,8 @@ import io.eels.util.Logging
  * reading of that data. For example a part could be a single file in a multi-file source, or
  * a partition in a partitioned source.
  */
-interface Source : Logging {
-  fun toFrame(ioThreads: Int): Frame = FrameSource(ioThreads, this)
-  fun schema(): Schema
-  fun parts(): List<Part>
+trait Source extends Logging {
+  def toFrame(ioThreads: Int): Frame = new FrameSource(ioThreads, this)
+  def schema(): Schema
+  def parts(): List[Part]
 }

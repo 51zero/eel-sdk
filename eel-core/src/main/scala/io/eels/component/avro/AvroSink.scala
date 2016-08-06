@@ -5,7 +5,7 @@ import java.nio.file.{Files, Path}
 
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema.Schema
-import io.eels.{Sink, SinkWriter}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic
 import org.apache.avro.generic.GenericRecord
@@ -19,15 +19,15 @@ class AvroSinkWriter(schema: Schema, out: OutputStream, config: Config) extends 
 
   private val caseSensitive = config.getBoolean("eel.avro.caseSensitive")
 
-  val avroSchema = AvroSchemaFn.toAvro(schema, caseSensitive = caseSensitive)
+  val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = caseSensitive)
   val datumWriter = new generic.GenericDatumWriter[GenericRecord](avroSchema)
   val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
   dataFileWriter.create(avroSchema, out)
 
-  private val marshaller = new ConvertingAvroRecordMarshaller(avroSchema)
+  private val serializer = new AvroRecordSerializer(avroSchema)
 
-  override def write(row: InternalRow): Unit = {
-    val record = marshaller.toRecord(row)
+  override def write(row: Row): Unit = {
+    val record = serializer.toRecord(row)
     dataFileWriter.append(record)
   }
 

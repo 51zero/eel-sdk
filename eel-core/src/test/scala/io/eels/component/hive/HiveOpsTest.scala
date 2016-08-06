@@ -3,7 +3,6 @@ package io.eels.component.hive
 import java.util
 
 import io.eels.testkit.HiveTestKit
-import io.eels.{Column, Schema, SchemaType}
 import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, StorageDescriptor, Table}
 import org.scalatest.{Matchers, WordSpec}
 
