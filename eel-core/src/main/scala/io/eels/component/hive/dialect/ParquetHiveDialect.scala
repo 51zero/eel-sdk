@@ -1,5 +1,6 @@
 package io.eels.component.hive.dialect
 
+import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.component.Predicate
 import io.eels.component.avro.AvroRecordSerializer
@@ -17,16 +18,17 @@ import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
 import rx.Observable
 
-object ParquetHiveDialect : HiveDialect, Logging {
+object ParquetHiveDialect extends HiveDialect with Logging {
 
-  override fun read(path: Path,
+  override def read(path: Path,
                     metastoreSchema: Schema,
                     projectionSchema: Schema,
-                    predicate: Option<Predicate>,
-                    fs: FileSystem): Observable<Row> {
+                    predicate: Option[Predicate],
+                    fs: FileSystem): Observable[Row] = {
 
     val reader = ParquetReaderFns.createReader(path, predicate, Option(projectionSchema))
-    return Observable.create<Row> { subscriber ->
+    Observable.create < Row > {
+      subscriber ->
       subscriber.onStart()
       ParquetRowIterator(reader).forEach {
         subscriber.onNext(it)
@@ -35,12 +37,10 @@ object ParquetHiveDialect : HiveDialect, Logging {
     }
   }
 
-  override fun writer(schema: Schema,
+  override def writer(schema: Schema,
                       path: Path,
-                      fs: FileSystem): HiveWriter = object : HiveWriter {
-    init {
+                      fs: FileSystem): HiveWriter = new HiveWriter {
       ParquetLogMute()
-    }
 
     // hive is case insensitive so we must lower case the fields everything to keep it consistent
     val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = false)
