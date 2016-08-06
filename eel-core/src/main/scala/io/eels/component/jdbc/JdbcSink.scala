@@ -1,16 +1,16 @@
 package io.eels.component.jdbc
 
+import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.RowListener
-import io.eels.Sink
 import io.eels.schema.Schema
-import io.eels.util.Logging
+import io.eels.{NoopRowListener, RowListener, Sink}
 
-data class JdbcSink @JvmOverloads constructor(val url: String, val table: String,
-                                              val createTable: Boolean = false,
-                                              val batchSize: Int = 1000,
-                                              val threads: Int = 4,
-                                              val listener: RowListener = RowListener.Noop) : Sink, Logging {
+case class JdbcSink(url: String,
+                    table: String,
+                    createTable: Boolean = false,
+                    batchSize: Int = 1000,
+                    threads: Int = 4,
+                    listener: RowListener = NoopRowListener) extends Sink with Logging {
 
   private val config = ConfigFactory.load()
   private val bufferSize = config.getInt("eel.jdbc.sink.bufferSize")
@@ -18,15 +18,13 @@ data class JdbcSink @JvmOverloads constructor(val url: String, val table: String
   private val warnIfMissingRewriteBatchedStatements = config.getBoolean("eel.jdbc.sink.warnIfMissingRewriteBatchedStatements")
   private val swallowExceptions = config.getBoolean("eel.jdbc.sink.swallowExceptions")
 
-  init {
     if (!url.contains("rewriteBatchedStatements")) {
       if (warnIfMissingRewriteBatchedStatements) {
         logger.warn("JDBC connection string does not contain the property 'rewriteBatchedStatements=true' which can be a major performance boost when writing data via JDBC. " +
             "Add this property to your connection string, or to remove this warning set eel.jdbc.warnIfMissingRewriteBatchedStatements=false")
       }
-    }
   }
 
-  override fun writer(schema: Schema) =
-      JdbcWriter(schema, url, table, createTable, GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize, listener)
+  override def writer(schema: Schema) =
+      new JdbcWriter(schema, url, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize, listener)
 }

@@ -15,12 +15,12 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   "Frame.addFieldIfNotExists" should {
     "not add column if already exists" in {
-      val f = frame.addColumnIfNotExists("a", "bibble")
+      val f = frame.addFieldIfNotExists("a", "bibble")
       f.schema shouldBe Schema("a", "b")
       f.head shouldBe List("1", "2")
     }
     "add column if it does not exist" in {
-      val f = frame.addColumnIfNotExists("testy", "bibble")
+      val f = frame.addFieldIfNotExists("testy", "bibble")
       f.schema shouldBe Schema("a", "b", "testy")
       f.head shouldBe List("1", "2", "bibble")
     }
@@ -28,7 +28,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   "Frame.addField" should {
     "support adding columns" in {
-      val f = frame.addColumn("testy", "bibble")
+      val f = frame.addField("testy", "bibble")
       f.schema shouldBe Schema("a", "b", "testy")
       f.head shouldBe List("1", "2", "bibble")
     }
@@ -51,7 +51,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
-      frame.stripFromColumnName(Seq('#', '!', 'p')).schema shouldBe
+      frame.stripCharsFromFieldNames(Seq('#', '!', 'p')).schema shouldBe
         Schema("name", "location", "ostcode")
     }
   }
@@ -63,7 +63,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
-      val f = frame.removeColumn("location")
+      val f = frame.removeField("location")
       f.schema shouldBe Schema("name", "postcode")
       f.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
@@ -73,7 +73,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
-      val f = frame.removeColumn("POSTcode")
+      val f = frame.removeField("POSTcode")
       f.schema shouldBe Schema("name", "location", "postcode")
       f.toSet shouldBe Set(Row(f.schema, "sam", "aylesbury", "hp22"), Row(f.schema, "ham", "buckingham", "mk10"))
     }
@@ -83,7 +83,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
-      val f = frame.removeColumn("locATION", false)
+      val f = frame.removeField("locATION", false)
       f.schema shouldBe Schema("name", "postcode")
       f.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
@@ -367,7 +367,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.updateColumn(Field("name", FieldType.Int, true)).schema shouldBe Schema(Field("name", FieldType.Int, true), Field("location", FieldType.String, false))
+      frame.updateField(Field("name", FieldType.Int, true)).schema shouldBe Schema(Field("name", FieldType.Int, true), Field("location", FieldType.String, false))
     }
     "support column rename" in {
       val frame = Frame(
@@ -375,7 +375,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.renameColumn("name", "blame").schema shouldBe Schema("blame", "location")
+      frame.renameField("name", "blame").schema shouldBe Schema("blame", "location")
     }
     //    "convert from a Seq[T<:Product]" ignore {
     //      val p1 = PersonA("name1", 2, 1.2, true, 11, 3, 1)
@@ -393,6 +393,6 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     //    }
   }
 
-  case class PersonA(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long) extends StrictLogging
+  case class PersonA(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long)
 
 }

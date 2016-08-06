@@ -3,6 +3,7 @@ package io.eels
 import java.util.UUID
 
 import com.typesafe.config.ConfigFactory
+import io.eels.component.jdbc.{JdbcSink, JdbcSource}
 
 class SqlContext {
   Class.forName("org.h2.Driver")

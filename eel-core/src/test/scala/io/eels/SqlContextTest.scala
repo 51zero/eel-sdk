@@ -1,5 +1,6 @@
 package io.eels
 
+import com.sksamuel.exts.io.IO
 import io.eels.schema.{Field, FieldType, Precision, Schema}
 import org.scalatest.{Matchers, WordSpec}
 

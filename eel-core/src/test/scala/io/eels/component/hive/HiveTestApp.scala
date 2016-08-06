@@ -4,6 +4,7 @@ import com.sksamuel.scalax.Logging
 import com.sksamuel.scalax.metrics.Timed
 import io.eels.Frame
 import io.eels.component.parquet.ParquetSource
+import io.eels.schema.Schema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -41,7 +42,7 @@ object HiveTestApp extends App with Logging with Timed {
   )
 
   val rows = List.fill(100000)(data(Random.nextInt(data.length)) ++ List(Random.nextBoolean().toString, Random.nextBoolean.toString, Random.nextBoolean.toString))
-  val frame = Frame(Seq("artist", "album", "year", "j", "k", "l"), rows).addColumn("bibble", "myvalue").addColumn("timestamp", System.currentTimeMillis)
+  val frame = Frame(Schema("artist", "album", "year", "j", "k", "l"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
   println(frame.schema.print)
 
   timed("creating table") {

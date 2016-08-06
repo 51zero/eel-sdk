@@ -1,23 +1,24 @@
 package io.eels.component.jdbc
 
 import io.eels.schema.Schema
-import io.eels.util.Logging
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.ResultSet
 
-interface JdbcPrimitives : Logging {
+import com.sksamuel.exts.Logging
 
-  fun connect(url: String): Connection {
+trait JdbcPrimitives extends Logging {
+
+  def connect(url: String): Connection = {
     logger.info("Connecting to jdbc source $url...")
     val conn = DriverManager.getConnection(url)
     logger.debug("Connected to $url")
-    return conn
+    conn
   }
 
-  fun schemaFor(dialect: JdbcDialect, rs: ResultSet): Schema {
-    val schema = JdbcSchemaFn(rs, dialect)
+  def schemaFor(dialect: JdbcDialect, rs: ResultSet): Schema = {
+    val schema = JdbcSchemaFns.fromJdbcResultset(rs, dialect)
     logger.debug("Fetched schema:\n" + schema.show())
-    return schema
+    schema
   }
 }

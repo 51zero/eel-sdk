@@ -1,8 +1,11 @@
 package io.eels.component.hive
 
+import io.eels.Frame
+import io.eels.schema.Schema
 import io.eels.testkit.HiveTestKit
-import io.eels.{Column, Frame, Schema}
 import org.scalatest.{Matchers, WordSpec}
+
+import scala.reflect.internal.util.TableDef.Column
 
 class HiveFilesFnTest extends WordSpec with Matchers with HiveTestKit {
 
@@ -13,7 +16,7 @@ class HiveFilesFnTest extends WordSpec with Matchers with HiveTestKit {
   "HiveFilesFn" should {
     "scan table root on non partitioned table" in {
 
-      val schema = Schema(Column("a"), Column("b"))
+      val schema = Schema("a", "b")
       HiveOps.createTable("sam", "hivefilesfn1", schema, format = HiveFormat.Parquet)
       Frame(schema, data).to(HiveSink("sam", "hivefilesfn1").withIOThreads(2))
 
@@ -24,7 +27,7 @@ class HiveFilesFnTest extends WordSpec with Matchers with HiveTestKit {
     }
     "scan partition paths for partitioned table" in {
 
-      val schema = Schema(Column("a"), Column("b"))
+      val schema = Schema("a", "b")
       HiveOps.createTable("sam", "hivefilesfn2", schema, format = HiveFormat.Parquet, partitionKeys = List("a"))
       Frame(schema, data).to(HiveSink("sam", "hivefilesfn2").withIOThreads(2))
 

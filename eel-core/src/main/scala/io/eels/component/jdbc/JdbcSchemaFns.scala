@@ -3,24 +3,25 @@ package io.eels.component.jdbc
 import io.eels.schema.Field
 import io.eels.schema.Precision
 import io.eels.schema.Scale
-import io.eels.util.Logging
 import io.eels.schema.Schema
 import java.sql.ResultSet
 import java.sql.ResultSetMetaData
 
+import com.sksamuel.exts.Logging
+
 /**
  * Generates an eel schema from the metadata in a resultset.
  */
-object JdbcSchemaFn : Logging {
+object JdbcSchemaFns extends Logging {
 
-  operator fun invoke(rs: ResultSet, dialect: JdbcDialect): Schema {
+  def fromJdbcResultset(rs: ResultSet, dialect: JdbcDialect): Schema = {
     logger.debug("Building frame schema from resultset")
 
-    val md = rs.metaData
-    val columnCount = md.columnCount
-    logger.debug("Resultset column count is $columnCount")
+    val md = rs.getMetaData
+    val columnCount = md.getColumnCount
+    logger.debug(s"Resultset column count is $columnCount")
 
-    val cols = (1..columnCount).map { k ->
+    val cols = (1 to columnCount).map { k =>
       Field(
           name = md.getColumnLabel(k),
           `type` = dialect.fromJdbcType(md.getColumnType(k)),
@@ -31,6 +32,6 @@ object JdbcSchemaFn : Logging {
       )
     }
 
-    return Schema(cols)
+    Schema(cols)
   }
 }
