@@ -7,7 +7,7 @@ import io.eels.component.hive.dialect.ParquetHiveDialect
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.Table
-import rx.Observable
+import rx.lang.scala.Observable
 
 trait HiveDialect extends Logging {
 
@@ -54,7 +54,7 @@ object HiveDialect extends Logging {
   }
 
   def apply(table: Table): HiveDialect = {
-    val format = table.sd.inputFormat
+    val format = table.getSd.getInputFormat
     logger.debug("Table format is $format")
     val dialect = HiveDialect(format)
     logger.debug("HiveDialect is $dialect")

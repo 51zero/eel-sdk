@@ -12,7 +12,7 @@ object HiveFileScanner extends Logging {
   private val hiddenFilePattern = config.getString("eel.hive.source.hiddenFilePattern")
 
   // returns true if the given file should be considered based on the config settings
-  def skip(file: LocatedFileStatus): Boolean = {
+  private def skip(file: LocatedFileStatus): Boolean = {
     file.getLen == 0L || ignoreHiddenFiles && file.getPath.getName.matches(hiddenFilePattern)
   }
 

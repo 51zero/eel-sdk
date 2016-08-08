@@ -9,7 +9,7 @@ package io.eels.schema
   * Not all components can support partitions. In those cases the partitions are ignored.
   *
   */
-case class Schema(fields: Seq[Field]) {
+case class Schema(fields: List[Field]) {
   require(fields.map(_.name).distinct.length == fields.size, "Schema cannot have duplicated field name")
   require(fields.nonEmpty, "Schema cannot be empty")
 

@@ -2,18 +2,11 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.util.Logging
-import io.eels.{Part, Predicate, Row}
 import io.eels.schema.Schema
-import io.eels.component.Part
-import io.eels.component.Predicate
-import io.eels.util.Option
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import io.eels.{Part, Predicate, Row}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import rx.lang.scala.Observable
-
-import scala.reflect.io.Path
 
 /**
  * A Hive Part that can read values from the metastore, rather than reading values from files.
@@ -41,14 +34,16 @@ class HivePartitionPart(val dbName: String,
   override def data(): Observable[Row] = {
     // the schema we use for the parquet reader must have at least one field specified, so we can
     // just use the full metastore schema
-    val values = client.listPartitions(dbName, tableName, Short.MaxValue).filter {
-      !partitionPartFileCheck || new HiveFileScanner(Path(it.sd.location), fs).any {
+    import scala.collection.JavaConverters._
+    val values = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { it =>
+      !partitionPartFileCheck || HiveFileScanner(new Path(it.getSd.getLocation), fs).exists { it =>
         try {
           // val reader = dialect.reader(it.path, metastoreSchema, metastoreSchema, predicate, fs)
           // todo fix this
           true
-        } catch(t: Throwable) {
-          logger.warn(s"Error reading ${it.path} to check for data")
+        } catch {
+          case t: Throwable =>
+          logger.warn(s"Error reading ${it.getPath} to check for data")
           false
         }
       }

@@ -173,9 +173,9 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   // creates (if not existing) the partition for the given partition parts
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
-                                 parts: List<PartitionPart>): Unit {
+                                 parts: List < PartitionPart >): Unit = {
     val partitionName = parts.map { it.unquoted() }.joinToString("/")
-    logger.debug("Ensuring partition exists '$partitionName'")
+    logger.debug(s"Ensuring partition exists '$partitionName'")
     val exists = try {
       client.getPartition(dbName, tableName, partitionName) != null
     } catch(t: Throwable) {
@@ -185,7 +185,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     if (!exists) {
 
       val path = partitionPath(dbName, tableName, parts)
-      logger.debug("Creating partition '$partitionName' at $path")
+      logger.debug(s"Creating partition '$partitionName' at $path")
 
       val partition = PartitionSpec(parts.toList())
       createPartition(dbName, tableName, partition)

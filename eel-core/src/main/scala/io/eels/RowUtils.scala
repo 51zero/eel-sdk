@@ -1,6 +1,5 @@
 package io.eels
 
-import com.sun.xml.bind.v2.schemagen.xmlschema.Any
 import io.eels.schema.Schema
 
 object RowUtils {

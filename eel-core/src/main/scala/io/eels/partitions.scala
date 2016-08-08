@@ -42,7 +42,7 @@ case class PartitionKey(field: Field,
 // eg key1=value1/key2=value2/key3=value3 is a partition
 case class Partition(createTime: Long,
                      sd: StorageDescriptor,
-                     values: Array[PartitionPart]) {
+                     values: List[PartitionPart]) {
   // returns the partition in normalized directory representation, eg key1=value1/key2=value2/...
   // hive calls this the partition name, eg client.listPartitionNames returns these
   def name(): String = values.map(_.unquoted()).mkString("/")
@@ -54,7 +54,7 @@ object Partition {
       val xs = x.split('=')
       PartitionPart(xs.head, xs.last)
     }
-    Partition(0, new StorageDescriptor(), parts)
+    Partition(0, new StorageDescriptor(), parts.toList)
   }
 }
 

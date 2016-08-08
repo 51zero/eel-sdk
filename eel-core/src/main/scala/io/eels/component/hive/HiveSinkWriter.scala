@@ -24,7 +24,7 @@ class HiveSinkWriter(sourceSchema: Schema,
                      includePartitionsInData: Boolean,
                      bufferSize: Int,
                      val fs: FileSystem,
-                     client: IMetaStoreClient) : SinkWriter, Logging {
+                     client: IMetaStoreClient) extends SinkWriter with Logging {
 
   val ops = HiveOps(client)
   val tablePath = ops.tablePath(dbName, tableName)
