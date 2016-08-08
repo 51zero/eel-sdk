@@ -32,6 +32,6 @@ object JdbcSchemaFns extends Logging {
       )
     }
 
-    Schema(cols)
+    Schema(cols.toList)
   }
 }

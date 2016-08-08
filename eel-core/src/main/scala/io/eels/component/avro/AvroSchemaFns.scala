@@ -25,7 +25,7 @@ object AvroSchemaFns extends Logging {
         case FieldType.Long => SchemaBuilder.builder().longType()
         case FieldType.BigInt => SchemaBuilder.builder().longType()
         case _ =>
-          logger.warn(s"Unknown field type ${field.name}= ${field.`type`}; defaulting to string")
+          logger.warn(s"Unknown field type ${field.name}=${field.`type`}; defaulting to string")
           org.apache.avro.Schema.create(org.apache.avro.Schema.Type.STRING)
       }
 
@@ -59,7 +59,7 @@ object AvroSchemaFns extends Logging {
         case org.apache.avro.Schema.Type.INT => FieldType.Int
         case org.apache.avro.Schema.Type.LONG => FieldType.Long
         case _ =>
-          logger.warn("Unrecognized avro type ${schema.type}; defaulting to string")
+          logger.warn(s"Unrecognized avro type ${schema.getType}; defaulting to string")
           FieldType.String
       }
 
@@ -76,6 +76,6 @@ object AvroSchemaFns extends Logging {
 
     require(avro.getType == org.apache.avro.Schema.Type.RECORD, "Can only convert avro records to eel schemas")
     val cols = avro.getFields.asScala.map(fromAvroField)
-    io.eels.schema.Schema(cols)
+    io.eels.schema.Schema(cols.toList)
   }
 }

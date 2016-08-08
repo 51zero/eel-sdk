@@ -14,20 +14,15 @@ import org.apache.parquet.hadoop.ParquetFileReader
 import rx.lang.scala.Observable
 
 object ParquetSource {
-  def apply(path: java.nio.file.Path,
-            fs: FileSystem = FileSystem.get(new Configuration()),
-            configuration: Configuration = new Configuration()): ParquetSource =
-    apply(FilePattern(path, fs), fs, configuration)
 
-  def apply(path: Path,
-            fs: FileSystem = FileSystem.get(new Configuration()),
-            configuration: Configuration = new Configuration()): ParquetSource =
-    apply(FilePattern(path, fs), fs, configuration)
+  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+    apply(FilePattern(path, fs))
+
+  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+    apply(FilePattern(path, fs))
 }
 
-case class ParquetSource(pattern: FilePattern,
-                         fs: FileSystem = FileSystem.get(new Configuration()),
-                         configuration: Configuration = new Configuration()) extends Source with Logging with Using {
+case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
 
   // the schema returned by the parquet source should be a merged version of the
@@ -49,8 +44,8 @@ case class ParquetSource(pattern: FilePattern,
   override def parts(): List[Part] = {
     val paths = pattern.toPaths()
     logger.debug(s"Parquet source will read from $paths")
-    val schema = schema()
-    paths.map { it => new ParquetPart(it, schema) }
+    val _schema = schema()
+    paths.map { it => new ParquetPart(it, _schema) }
   }
 
   import scala.collection.JavaConverters._
@@ -60,8 +55,8 @@ case class ParquetSource(pattern: FilePattern,
     logger.debug(s"Parquet source will read from $paths")
     paths.flatMap { it =>
       val status = fs.getFileStatus(it)
-      logger.debug("status=$status; path=$it")
-      ParquetFileReader.readAllFootersInParallel(configuration, status).asScala
+      logger.debug(s"status=$status; path=$it")
+      ParquetFileReader.readAllFootersInParallel(conf, status).asScala
     }
   }
 }

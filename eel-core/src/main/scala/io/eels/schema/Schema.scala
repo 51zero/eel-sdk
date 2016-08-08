@@ -104,8 +104,8 @@ case class Schema(fields: List[Field]) {
 }
 
 object Schema {
-  def apply(first: Field, rest: Field*): Schema = apply(first +: rest)
-  def apply(first: String, rest: String*): Schema = apply((first +: rest).map(name => Field(name)))
+  def apply(first: Field, rest: Field*): Schema = apply((first +: rest).toList)
+  def apply(first: String, rest: String*): Schema = apply((first +: rest).map(name => Field(name)).toList)
 
   //    def from[T <: Product : TypeTag : ClassTag]: Schema =
   //    {

@@ -28,11 +28,11 @@ case class JsonSource(path: Path)(implicit fs: FileSystem, conf: Configuration) 
 
   class JsonPart(val path: Path) extends Part {
 
-    val schema = schema()
+    val _schema = schema()
 
     def nodeToRow(node: JsonNode): Row = {
-      val values = node.getElements.asScala.map { it => it.getTextValue }.asSequence().toList()
-      Row(schema, values)
+      val values = node.getElements.asScala.map { it => it.getTextValue }.toList
+      Row(_schema, values)
     }
 
     override def data(): Observable[Row] = Observable.apply { sub =>
@@ -43,8 +43,8 @@ case class JsonSource(path: Path)(implicit fs: FileSystem, conf: Configuration) 
           val row = nodeToRow(it)
           sub.onNext(row)
         }
-      } catch (t: Throwable) {
-        sub.onError(t)
+      } catch {
+        case t: Throwable => sub.onError(t)
       }
       sub.onCompleted()
     }

@@ -26,7 +26,7 @@ case class HiveSource(dbName: String,
   val ops = new HiveOps(client)
 
   def select(first: String, rest: String*): HiveSource = withProjection(first +: rest)
-  def withProjection(columns: String*): HiveSource = withProjection(columns)
+  def withProjection(first: String, rest: String*): HiveSource = withProjection(first +: rest)
   def withProjection(columns: Seq[String]): HiveSource = {
     require(columns.nonEmpty)
     copy(projection = columns.toList)
