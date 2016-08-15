@@ -5,7 +5,8 @@ import io.eels.schema.Schema
 object RowUtils {
 
   /**
-   * Accepts a Row and reformats it according to the target schema, using the lookup map for the missing values.
+    * Accepts a Row and reformats it according to the target schema, using the lookup map
+    * for missing or replacement values.
    */
   def rowAlign(row: Row, targetSchema: Schema, lookup: Map[String, Any] = Map.empty): Row = {
     val values = targetSchema.fieldNames().map { name =>

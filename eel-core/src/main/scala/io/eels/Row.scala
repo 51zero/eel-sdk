@@ -25,7 +25,7 @@ case class Row(schema: Schema, values: Vector[Any]) {
   def get(name: String, caseInsensitive: Boolean = false): Any = {
     val index = schema.indexOf(name, caseInsensitive)
     if (index < 0)
-      sys.error("$name did not exist in row")
+      sys.error(s"$name did not exist in row")
     values(index)
   }
 

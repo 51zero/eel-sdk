@@ -19,8 +19,12 @@ case class Schema(fields: List[Field]) {
   def indexOf(field: Field, caseSensitive: Boolean): Int = indexOf(field.name, caseSensitive)
 
   def indexOf(fieldName: String): Int = indexOf(fieldName, true)
-  def indexOf(fieldName: String, caseSensitive: Boolean): Int = fields.indexWhere { field =>
-    fieldName.equals(field.name, !caseSensitive)
+  def indexOf(fieldName: String, caseSensitive: Boolean): Int = {
+    if (caseSensitive) {
+      fields.indexWhere(_.name == fieldName)
+    } else {
+      fields.indexWhere(_.name.equalsIgnoreCase(fieldName))
+    }
   }
 
   def toLowerCase(): Schema = copy(fields = fields.map(_.toLowerCase()))
