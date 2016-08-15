@@ -21,3 +21,4 @@ target
 data
 big.csv
 .gradle
+metastore_db
