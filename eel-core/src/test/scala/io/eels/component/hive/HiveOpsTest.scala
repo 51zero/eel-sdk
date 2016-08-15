@@ -2,11 +2,13 @@ package io.eels.component.hive
 
 import java.util
 
+import io.eels.schema.{Field, FieldType, Schema}
 import io.eels.testkit.HiveTestKit
 import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, StorageDescriptor, Table}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
+import scala.reflect.internal.util.TableDef.Column
 
 class HiveOpsTest extends WordSpec with Matchers with HiveTestKit {
 
@@ -22,7 +24,7 @@ class HiveOpsTest extends WordSpec with Matchers with HiveTestKit {
       client.createDatabase(new Database("db", "", "", new util.HashMap))
       client.createTable(table)
 
-      HiveOps.tableFormat("db", "tywin") shouldBe "testformat"
+      new HiveOps(client).tableFormat("db", "tywin") shouldBe "testformat"
     }
   }
 
@@ -39,7 +41,7 @@ class HiveOpsTest extends WordSpec with Matchers with HiveTestKit {
       client.createDatabase(new Database("db", "", "", new util.HashMap))
       client.createTable(table)
 
-      HiveOps.location("db", "brianne") shouldBe "mytestlocation"
+      new HiveOps(client).location("db", "brianne") shouldBe "mytestlocation"
     }
   }
 
@@ -57,13 +59,13 @@ class HiveOpsTest extends WordSpec with Matchers with HiveTestKit {
       client.createDatabase(new Database("db", "", "", new util.HashMap))
       client.createTable(table)
 
-      HiveOps.schema("db", "jaime") shouldBe
-        Schema(List(
-          Column("p", SchemaType.String, true, 0, 0, true, None),
-          Column("q", SchemaType.String, true, 0, 0, true, None),
-          Column("a", SchemaType.String, false, 0, 0, true, None),
-          Column("b", SchemaType.String, false, 0, 0, true, None)
-        ))
+      new HiveOps(client).schema("db", "jaime") shouldBe
+        Schema(
+          Field("p", FieldType.String),
+          Field("q", FieldType.String),
+          Field("a", FieldType.String),
+          Field("b", FieldType.String)
+        )
     }
   }
 }

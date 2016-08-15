@@ -5,14 +5,18 @@ import java.io.File
 import com.sksamuel.exts.Logging
 import org.apache.hadoop.fs.{FileSystem, Path}
 
+import scala.language.implicitConversions
+
 object FilePattern {
-  def apply(path: Path, fs: FileSystem): FilePattern = apply(path.toString(), fs)
-  def apply(path: java.nio.file.Path, fs: FileSystem): FilePattern = apply(path.toAbsolutePath().toString(), fs, { _ => true })
+  def apply(path: Path)(implicit fs: FileSystem): FilePattern = apply(path.toString())
+  def apply(path: java.nio.file.Path)(implicit fs: FileSystem): FilePattern = apply(path.toAbsolutePath().toString(), { _ => true })
+
+  implicit def stringToFilePattern(str: String)(implicit fs: FileSystem): FilePattern = FilePattern(str)
 }
 
 case class FilePattern(pattern: String,
-                       fs: FileSystem,
-                       filter: org.apache.hadoop.fs.Path => Boolean = { _ => true }) extends Logging {
+                       filter: org.apache.hadoop.fs.Path => Boolean = { _ => true })
+                      (implicit fs: FileSystem) extends Logging {
 
   val FileExpansionRegex = "(file:|hdfs:)?(?://)?(.*?)/\\*"
 

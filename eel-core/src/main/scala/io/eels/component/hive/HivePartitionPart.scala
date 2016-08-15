@@ -12,15 +12,15 @@ import rx.lang.scala.Observable
  * A Hive Part that can read values from the metastore, rather than reading values from files.
  * This can be used only when the requested fields are all partition partitionKeys.
  */
-class HivePartitionPart(val dbName: String,
-                        val tableName: String,
-                        val fieldNames: List[String],
-                        val partitionKeys: List[String],
-                        val metastoreSchema: Schema,
-                        val predicate: Option[Predicate],
-                        val dialect: HiveDialect,
-                        val fs: FileSystem,
-                        val client: IMetaStoreClient) extends Part with Logging {
+class HivePartitionPart(dbName: String,
+                        tableName: String,
+                        fieldNames: List[String],
+                        partitionKeys: List[String],
+                        metastoreSchema: Schema,
+                        predicate: Option[Predicate],
+                        dialect: HiveDialect)
+                       (implicit fs: FileSystem,
+                        client: IMetaStoreClient) extends Part with Logging {
 
   private val config = ConfigFactory.load()
 
@@ -36,7 +36,7 @@ class HivePartitionPart(val dbName: String,
     // just use the full metastore schema
     import scala.collection.JavaConverters._
     val values = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { it =>
-      !partitionPartFileCheck || HiveFileScanner(new Path(it.getSd.getLocation), fs).exists { it =>
+      !partitionPartFileCheck || HiveFileScanner(new Path(it.getSd.getLocation)).exists { it =>
         try {
           // val reader = dialect.reader(it.path, metastoreSchema, metastoreSchema, predicate, fs)
           // todo fix this

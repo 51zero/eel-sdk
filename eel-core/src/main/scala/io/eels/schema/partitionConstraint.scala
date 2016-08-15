@@ -7,27 +7,27 @@ trait PartitionConstraint {
   def eval(partition: PartitionSpec): Boolean
 }
 
-class PartitionEquals(val name: String, val value: String) extends PartitionConstraint {
+case class PartitionEquals(name: String, value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
     partition.parts.contains(PartitionPart(name, value))
 }
 
-class PartitionLt(val name: String, val value: String) extends PartitionConstraint {
+case class PartitionLt(name: String, value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
     partition.parts.find(_.key == name).exists(_.value.compareTo(value) < 0)
 }
 
-class PartitionLte(val name: String, val value: String) extends PartitionConstraint {
+case class PartitionLte(name: String, value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
     partition.parts.find(_.key == name).exists(_.value.compareTo(value) <= 0)
 }
 
-class PartitionGt(val name: String, val value: String) extends PartitionConstraint {
+case class PartitionGt(name: String, value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
     partition.parts.find(_.key == name).exists(_.value.compareTo(value) > 0)
 }
 
-class PartitionGte(val name: String, val value: String) extends PartitionConstraint {
+case class PartitionGte(name: String, value: String) extends PartitionConstraint {
   override def eval(partition: PartitionSpec): Boolean =
     partition.parts.find(_.key == name).exists(_.value.compareTo(value) >= 0)
 }

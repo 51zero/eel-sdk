@@ -8,8 +8,8 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import scala.collection.JavaConverters._
 
 case class HiveTable(dbName: String,
-                     tableName: String,
-                     fs: FileSystem,
+                     tableName: String)
+                    (implicit fs: FileSystem,
                      client: IMetaStoreClient) {
   ParquetLogMute()
 
@@ -43,7 +43,7 @@ case class HiveTable(dbName: String,
 
   def movePartition(partition: String, location: String): Unit = ()
 
-  def toSource(): HiveSource = new HiveSource(dbName, tableName, fs = fs, client = client)
+  def toSource(): HiveSource = HiveSource(dbName, tableName)
 
   override def toString: String = s"HiveTable(dbName='$dbName', tableName='$tableName')"
 }

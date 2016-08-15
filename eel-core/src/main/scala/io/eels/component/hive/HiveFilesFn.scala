@@ -26,15 +26,15 @@ object HiveFilesFn extends Logging {
 
   // for a given table returns hadoop paths that match the partition constraints
   def apply(table: Table,
-            fs: FileSystem,
-            client: IMetaStoreClient,
             partitionKeys: List[String],
-            partitionConstraints: List[PartitionConstraint] = Nil): List[(LocatedFileStatus, PartitionSpec)] = {
+            partitionConstraints: List[PartitionConstraint] = Nil)
+           (implicit fs: FileSystem,
+            client: IMetaStoreClient): List[(LocatedFileStatus, PartitionSpec)] = {
 
     def rootScan(): List[Pair[LocatedFileStatus, PartitionSpec]] = {
       logger.debug(s"No partitions for ${table.getTableName}; performing root scan")
       val location = new Path(table.getSd.getLocation)
-      HiveFileScanner(location, fs).map { it =>
+      HiveFileScanner(location).map { it =>
         Pair(it, PartitionSpec.empty)
       }
     }
@@ -64,7 +64,7 @@ object HiveFilesFn extends Logging {
         val path = new Path(location)
         // the partition location might not actually exist, as it might have been created in the metastore only
         if (fs.exists(path)) {
-          HiveFileScanner(path, fs).map { it =>
+          HiveFileScanner(path).map { it =>
             val parts = partitionKeys.zip(part.getValues.asScala).map { case (key, value) =>
               PartitionPart(key, value)
             }

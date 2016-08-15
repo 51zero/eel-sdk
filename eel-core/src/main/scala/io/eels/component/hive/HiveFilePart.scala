@@ -22,8 +22,8 @@ class HiveFilePart(val dialect: HiveDialect,
                    val metastoreSchema: Schema,
                    val projectionSchema: Schema,
                    val predicate: Option[Predicate],
-                   val partitions: List[PartitionPart],
-                   val fs: FileSystem) extends Part {
+                   val partitions: List[PartitionPart])
+                  (implicit fs: FileSystem) extends Part {
 
   override def data(): Observable[Row] = {
     require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
@@ -33,7 +33,7 @@ class HiveFilePart(val dialect: HiveDialect,
     // the schema we send to the dialect must have any partitions removed, because those fields won't exist
     // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
     val projectionWithoutPartitions = Schema(projectionSchema.fields.filterNot { it => map.contains(it.name) })
-    val reader = dialect.read(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate, fs)
+    val reader = dialect.read(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     reader.map { it => RowUtils.rowAlign(it, projectionSchema, map) }

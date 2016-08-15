@@ -18,8 +18,8 @@ case class HiveSource(dbName: String,
                       tableName: String,
                       constraints: List[PartitionConstraint] = Nil,
                       projection: List[String] = Nil,
-                      predicate: Option[Predicate] = None,
-                      fs: FileSystem,
+                      predicate: Option[Predicate] = None)
+                     (implicit fs: FileSystem,
                       client: IMetaStoreClient) extends Source with Logging with Using {
     ParquetLogMute()
 
@@ -34,7 +34,7 @@ case class HiveSource(dbName: String,
 
   def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))
 
-  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(new PartitionEquals(name, value))
+  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(PartitionEquals(name, value))
 
   def withPartitionConstraint(expr: PartitionConstraint): HiveSource = {
     copy(constraints = constraints :+ expr)
@@ -73,7 +73,7 @@ case class HiveSource(dbName: String,
   //def  spec(): HiveSpec = HiveSpecFn.toHiveSpec(dbName, tableName)
 
   def isPartitionOnlyProjection(): Boolean = {
-    val partitionKeyNames = HiveTable(dbName, tableName, fs, client).partitionKeys().map(_.field.name)
+    val partitionKeyNames = HiveTable(dbName, tableName).partitionKeys().map(_.field.name)
     projection.nonEmpty && projection.map { it => it.toLowerCase() }.forall { it => partitionKeyNames.contains(it) }
   }
 
@@ -81,7 +81,7 @@ case class HiveSource(dbName: String,
 
     val table = client.getTable(dbName, tableName)
     val dialect = io.eels.component.hive.HiveDialect(table)
-    val partitionKeys = HiveTable(dbName, tableName, fs, client).partitionKeys()
+    val partitionKeys = HiveTable(dbName, tableName).partitionKeys()
 
     // all field names from the underlying hive schema
     val fieldNames = metastoreSchema.fields.map(_.name)
@@ -92,14 +92,14 @@ case class HiveSource(dbName: String,
     if (isPartitionOnlyProjection()) {
       logger.info("Requested projection contains only partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
-      List(new HivePartitionPart(dbName, tableName, fieldNames, Nil, metastoreSchema, predicate, dialect, fs, client))
+      List(new HivePartitionPart(dbName, tableName, fieldNames, Nil, metastoreSchema, predicate, dialect))
     } else {
-      val files = HiveFilesFn(table, fs, client, partitionKeys.map(_.field.name), constraints)
+      val files = HiveFilesFn(table, partitionKeys.map(_.field.name), constraints)
       logger.debug(s"Found ${files.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema
       files.map { case (file, spec) =>
-        new HiveFilePart(dialect, file, metastoreSchema, schema(), predicate, spec.parts.toList, fs)
+        new HiveFilePart(dialect, file, metastoreSchema, schema(), predicate, spec.parts.toList)
       }
     }
   }

@@ -3,7 +3,8 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.Schema
+import io.eels.Frame
+import io.eels.schema.{PartitionLte, Schema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -85,7 +86,7 @@ object HiveBenchmarkApp extends App with Logging {
 
   logger.info(s"Generated ${rows.size} rows")
 
-  HiveOps.createTable(
+  new HiveOps(client).createTable(
     "sam",
     "people",
     schema,
@@ -105,7 +106,7 @@ object HiveBenchmarkApp extends App with Logging {
 
   val result = HiveSource("sam", "people")
     .withPartitionConstraint(PartitionLte("state", "Iowa"))
-    .withColumns("id", "foo", "woo").toFrame(4).toSeq
+    .withProjection("id", "foo", "woo").toFrame(4).toSeq
 
   val end = System.currentTimeMillis()
 

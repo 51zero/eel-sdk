@@ -18,7 +18,7 @@ object HiveFileScanner extends Logging {
 
   // given a hadoop path, will look for files inside that path that match the
   // configured settings for hidden files
-  def apply(path: Path, fs: FileSystem): List[LocatedFileStatus] = {
+  def apply(path: Path)(implicit fs: FileSystem): List[LocatedFileStatus] = {
     logger.debug(s"Scanning $path, filtering=$ignoreHiddenFiles, pattern=$hiddenFilePattern")
     val files: List[LocatedFileStatus] = if (fs.exists(path)) {
       val files = fs.listFiles(path, true)

@@ -16,10 +16,10 @@ import rx.lang.scala.Observable
 object ParquetSource {
 
   def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
-    apply(FilePattern(path, fs))
+    apply(FilePattern(path))
 
   def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
-    apply(FilePattern(path, fs))
+    apply(FilePattern(path))
 }
 
 case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {

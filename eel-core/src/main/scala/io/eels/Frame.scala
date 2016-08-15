@@ -126,7 +126,7 @@ trait Frame {
     * Returns a new Frame with the new field of type String added at the end. The value of
     * this field for each Row is specified by the default value.
     */
-  def addField(name: String, defaultValue: String): Frame = addField(Field(name), defaultValue)
+  def addField(name: String, defaultValue: Any): Frame = addField(Field(name), defaultValue)
 
   /**
     * Returns a new Frame with the given field added at the end. The value of this field

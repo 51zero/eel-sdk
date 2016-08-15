@@ -16,8 +16,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
   override def read(path: Path,
                     metastoreSchema: Schema,
                     projectionSchema: Schema,
-                    predicate: Option[Predicate],
-                    fs: FileSystem): Observable[Row] = {
+                    predicate: Option[Predicate])(implicit fs: FileSystem): Observable[Row] = {
 
     val reader = ParquetReaderFns.createReader(path, predicate, Option(projectionSchema))
     Observable.apply { subscriber =>

@@ -37,8 +37,8 @@ trait HiveDialect extends Logging {
   def read(path: Path,
            metastoreSchema: Schema,
            projectionSchema: Schema,
-           predicate: Option[Predicate],
-           fs: FileSystem): Observable[Row]
+           predicate: Option[Predicate])
+          (implicit fs: FileSystem): Observable[Row]
 
   def writer(schema: Schema, path: Path, fs: FileSystem): HiveWriter
 }

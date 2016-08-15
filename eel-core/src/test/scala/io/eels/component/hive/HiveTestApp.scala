@@ -1,7 +1,6 @@
 package io.eels.component.hive
 
-import com.sksamuel.scalax.Logging
-import com.sksamuel.scalax.metrics.Timed
+import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
 import io.eels.component.parquet.ParquetSource
 import io.eels.schema.Schema
@@ -10,12 +9,9 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-import scala.collection.JavaConverters._
 import scala.util.Random
 
-object HiveTestApp extends App with Logging with Timed {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
+object HiveTestApp extends App with Timed {
 
   val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
@@ -43,10 +39,10 @@ object HiveTestApp extends App with Logging with Timed {
 
   val rows = List.fill(100000)(data(Random.nextInt(data.length)) ++ List(Random.nextBoolean().toString, Random.nextBoolean.toString, Random.nextBoolean.toString))
   val frame = Frame(Schema("artist", "album", "year", "j", "k", "l"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
-  println(frame.schema.print)
+  println(frame.schema.show())
 
   timed("creating table") {
-    HiveOps.createTable(
+    new HiveOps(client).createTable(
       "sam",
       "albums",
       frame.schema,
@@ -56,7 +52,7 @@ object HiveTestApp extends App with Logging with Timed {
     )
   }
 
-  val table = HiveOps.tablePath("sam", "albums")
+  val table = new HiveOps(client).tablePath("sam", "albums")
 
   val sink = HiveSink("sam", "albums").withIOThreads(4)
   timed("writing data") {
@@ -65,6 +61,8 @@ object HiveTestApp extends App with Logging with Timed {
   }
 
   val footers = ParquetSource("hdfs:/user/hive/warehouse/sam.db/albums/*").footers
+
+  import scala.collection.JavaConverters._
 
   val sum = footers.flatMap(_.getParquetMetadata.getBlocks.asScala.map(_.getRowCount)).sum
   println(sum)
@@ -79,8 +77,8 @@ object HiveTestApp extends App with Logging with Timed {
 //    println(source.size)
 //  }
 
-  val counts = HiveSource("sam", "albums").toFrame(4).counts
-  println(counts)
+  val size = HiveSource("sam", "albums").toFrame(4).size()
+  println(size)
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
   //  println(partitionNames.asScala.toList)
