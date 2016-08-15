@@ -12,7 +12,6 @@ import scala.collection.JavaConverters._
   *
   * @param recordSchema the schema to be used in the record. Each row must
   *                     provide all the fields listed in the record schema.
-  *
   */
 class AvroRecordSerializer(val recordSchema: Schema) extends Logging {
 

@@ -1,8 +1,10 @@
 package io.eels.component.avro
 
+import com.sksamuel.exts.StringOption
 import org.apache.avro.Schema
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 
 object AvroSchemaMerge {
 
@@ -12,18 +14,19 @@ object AvroSchemaMerge {
     // documentations can just be a concat
     val doc = schemas.map(_.getDoc).filter(_ != null).mkString("; ")
 
-    val schema = Schema.createRecord(name, if (doc.isEmpty()) null else doc, namespace, false)
-    val fields = schemas.flatMap(_.getFields.asScala).groupBy(_.name).map { case (name, fields) =>
-
-      // documentations can just be a concat
-      val fieldDoc = fields.map(_.doc).filterNot(_ == null).mkString("; ")
-      val default = fields.map(_.defaultValue).find(_ != null).orNull
-
-      // simple impl to start, just take the first field
-      val merged = fields.head
-      new Schema.Field(name, merged.schema(), if (fieldDoc.isEmpty()) null else fieldDoc, default)
+    // simple impl to start: take all the fields from the first schema, and then add in the missing ones
+    // from second 2 and so on
+    val fields = new ArrayBuffer[Schema.Field]()
+    schemas.foreach { schema =>
+      schema.getFields.asScala.filterNot { field => fields.exists(_.name() == field.name) }.foreach { field =>
+        // avro is funny about sharing fields, so need to copy it
+        val copy = new Schema.Field(field.name(), field.schema(), StringOption(field.doc).orNull, field.defaultValue())
+        fields.append(copy)
+      }
     }
-    schema.setFields(fields.toList.asJava)
+
+    val schema = Schema.createRecord(name, if (doc.isEmpty()) null else doc, namespace, false)
+    schema.setFields(fields.result().asJava)
     schema
   }
 }

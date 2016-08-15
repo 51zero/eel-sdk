@@ -2,15 +2,11 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
-import io.eels.{FilePattern, Part, Row, Source}
-import io.eels.component.avro.AvroSchemaFns
-import io.eels.component.avro.AvroSchemaMerge
+import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
 import io.eels.schema.Schema
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
-import org.apache.parquet.hadoop.Footer
-import org.apache.parquet.hadoop.ParquetFileReader
+import io.eels.{FilePattern, Part, Row, Source}
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 import rx.lang.scala.Observable
 
 object ParquetSource {

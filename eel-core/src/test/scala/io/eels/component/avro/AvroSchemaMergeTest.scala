@@ -12,9 +12,9 @@ class AvroSchemaMergeTest extends WordSpec with Matchers {
           SchemaBuilder.record("finalname").namespace("finalnamespace")
               .fields()
               .nullableString("str1", "moo")
-              .requiredFloat("g")
-              .nullableString("str2", "foo")
               .requiredFloat("f")
+              .nullableString("str2", "foo")
+              .requiredFloat("g")
               .endRecord()
     }
 
@@ -25,8 +25,8 @@ class AvroSchemaMergeTest extends WordSpec with Matchers {
           SchemaBuilder.record("finalname").namespace("finalnamespace")
               .fields()
               .nullableString("str1", "moo")
-              .nullableString("str2", "foo")
               .requiredFloat("f")
+              .nullableString("str2", "foo")
               .endRecord()
     }
   }
