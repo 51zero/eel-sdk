@@ -26,10 +26,9 @@ object HiveFilesFn extends Logging {
 
   // for a given table returns hadoop paths that match the partition constraints
   def apply(table: Table,
-            partitionKeys: List[String],
+            partitionKeys: List[String] = Nil,
             partitionConstraints: List[PartitionConstraint] = Nil)
-           (implicit fs: FileSystem,
-            client: IMetaStoreClient): List[(LocatedFileStatus, PartitionSpec)] = {
+           (implicit fs: FileSystem, client: IMetaStoreClient): List[(LocatedFileStatus, PartitionSpec)] = {
 
     def rootScan(): List[Pair[LocatedFileStatus, PartitionSpec]] = {
       logger.debug(s"No partitions for ${table.getTableName}; performing root scan")

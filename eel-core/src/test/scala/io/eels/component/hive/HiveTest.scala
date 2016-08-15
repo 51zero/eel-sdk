@@ -5,17 +5,17 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-fun main(args: Array<String>): Unit {
+object HiveTest extends App {
 
-  val conf = HiveConf()
-  conf.addResource(Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.addResource(Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
+  val conf = new HiveConf()
+  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
+  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
+  conf.addResource(new Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
   conf.reloadConfiguration()
 
-  val client = HiveMetaStoreClient(conf)
-  val ops = HiveOps(client)
-  val fs = FileSystem.get(conf)
+  implicit val client = new HiveMetaStoreClient(conf)
+  implicit val ops = new HiveOps(client)
+  implicit val fs = FileSystem.get(conf)
 
   val dbName = "sam"
   val tableName = "people3"
@@ -32,7 +32,7 @@ fun main(args: Array<String>): Unit {
 //      location = "file:/user/hive/warehouse/sam.db/bibble"
 //  )
 
-  val database = HiveDatabase(dbName, fs, client)
+  val database = HiveDatabase(dbName)
   val tables = database.tables()
   println(tables)
 
@@ -42,8 +42,8 @@ fun main(args: Array<String>): Unit {
   println(schema.show())
 
   val partitions = ops.partitions(dbName, tableName)
-  val partitionKeys = client.getTable(dbName, tableName).partitionKeys
-  val partitionNames = client.listPartitionNames(dbName, tableName, Short.MAX_VALUE)
+  val partitionKeys = client.getTable(dbName, tableName).getPartitionKeys
+  val partitionNames = client.listPartitionNames(dbName, tableName, Short.MaxValue)
 
   val eelPartitionKeys = table.partitionKeys()
   val eelPartitions = table.partitions()
