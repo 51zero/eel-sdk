@@ -15,14 +15,14 @@ import rx.lang.scala.Observable
 
 object ParquetSource {
 
-  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+  def apply(path: java.nio.file.Path)(implicit fs: FileSystem): ParquetSource =
     apply(FilePattern(path))
 
-  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+  def apply(path: Path)(implicit fs: FileSystem): ParquetSource =
     apply(FilePattern(path))
 }
 
-case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
+case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends Source with Logging with Using {
 
 
   // the schema returned by the parquet source should be a merged version of the
@@ -56,7 +56,7 @@ case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem, conf: Co
     paths.flatMap { it =>
       val status = fs.getFileStatus(it)
       logger.debug(s"status=$status; path=$it")
-      ParquetFileReader.readAllFootersInParallel(conf, status).asScala
+      ParquetFileReader.readAllFootersInParallel(fs.getConf, status).asScala
     }
   }
 }
