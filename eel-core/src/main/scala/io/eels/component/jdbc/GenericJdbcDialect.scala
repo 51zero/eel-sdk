@@ -64,7 +64,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
   }
 
   override def create(schema: Schema, table: String): String = {
-    val columns = schema.fields.map { it => s"${it.name} ${toJdbcType(it)}" }.mkString(",", "(", ")")
+    val columns = schema.fields.map { it => s"${it.name} ${toJdbcType(it)}" }.mkString("(", ",", ")")
     s"CREATE TABLE $table $columns"
   }
 

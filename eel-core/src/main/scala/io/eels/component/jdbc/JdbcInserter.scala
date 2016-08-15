@@ -3,8 +3,8 @@ package io.eels.component.jdbc
 import java.sql.{Connection, DriverManager}
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.jdbc.ResultSetIterator
 import io.eels.schema.Schema
-import io.eels.util.ResultSetIterator
 import io.eels.{Row, RowListener}
 
 class JdbcInserter(val url: String,
@@ -16,9 +16,9 @@ class JdbcInserter(val url: String,
 
   val conn: Connection = DriverManager.getConnection(url)
 
-  logger.debug("Connecting to jdbc $url...")
+  logger.debug(s"Connecting to jdbc $url...")
   conn.setAutoCommit(autoCommit)
-  logger.debug("Connected to $url")
+  logger.debug(s"Connected to $url")
 
   def insertBatch(batch: Seq[Row]): Unit = {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
@@ -48,8 +48,8 @@ class JdbcInserter(val url: String,
 
     def tableExists(): Boolean = {
       logger.debug(s"Fetching list of tables to detect if $table exists")
-      val tables = ResultSetIterator(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
-      val tableNames = tables.map(_.getString(3).toLowerCase)
+      val tables = ResultSetIterator.strings(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
+      val tableNames = tables.map(x => x(3).toLowerCase)
       val exists = tableNames.contains(table.toLowerCase())
       logger.debug(s"${tables.size} tables found; $table exists == $exists")
       exists
@@ -57,7 +57,7 @@ class JdbcInserter(val url: String,
 
     if (!tableExists()) {
       val sql = dialect.create(schema, table)
-      logger.info("Creating table $table [$sql]")
+      logger.info(s"Creating table $table [$sql]")
       val stmt = conn.createStatement()
       try {
         stmt.executeUpdate(sql)

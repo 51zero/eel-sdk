@@ -22,9 +22,7 @@ case class JdbcSource(connFn: () => Connection,
                       listener: RowListener = NoopRowListener)
   extends Source with JdbcPrimitives with Logging with Using with Timed {
 
-  override def schema(): Schema = providedSchema.getOrElse {
-    fetchSchema()
-  }
+  override def schema(): Schema = providedSchema.getOrElse(fetchSchema())
 
   def withBind(bind: (PreparedStatement) => Unit) = copy(bind = bind)
   def withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
@@ -51,7 +49,7 @@ case class JdbcSource(connFn: () => Connection,
 
   def fetchSchema(): Schema = {
     using(connFn()) { conn =>
-      val schemaQuery = "SELECT * FROM ($query) tmp WHERE 1=0"
+      val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
       using(conn.prepareStatement(schemaQuery)) { stmt =>
 
         stmt.setFetchSize(fetchSize)
