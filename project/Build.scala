@@ -7,7 +7,7 @@ import scala.languageFeature.experimental.macros
 
 object Build extends Build {
 
-  val org = "com.sksamuel.scalafunc"
+  val org = "io.eels"
 
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
@@ -37,6 +37,7 @@ object Build extends Build {
       "com.sksamuel.exts" %% "exts" % "1.29.0",
       "com.univocity" % "univocity-parsers" % "2.0.0",
       "com.h2database" % "h2" % "1.4.192",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.7.5",
       "org.apache.hadoop" % "hadoop-common" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-mapreduce" % HadoopVersion,

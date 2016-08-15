@@ -277,7 +277,7 @@ trait Frame {
     override def rows(): Observable[Row] = {
       val index = schema().indexOf(fieldName)
       if (index < 0)
-        sys.error(s"Unknown field ${fieldName}")
+        sys.error(s"Unknown field $fieldName")
       outer.rows().filter { row =>
         p(row.values(index))
       }

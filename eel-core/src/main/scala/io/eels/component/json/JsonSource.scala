@@ -3,7 +3,6 @@ package io.eels.component.json
 import com.sksamuel.exts.io.Using
 import io.eels.schema.{Field, Schema}
 import io.eels.{Part, Row, Source}
-import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
@@ -11,7 +10,8 @@ import rx.lang.scala.Observable
 
 import scala.collection.JavaConverters._
 
-case class JsonSource(path: Path)(implicit fs: FileSystem, conf: Configuration) extends Source with Using {
+case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
+  require(fs.exists(path), s"$path must exist")
 
   private val reader: ObjectReader = new ObjectMapper().reader(classOf[JsonNode])
 
@@ -19,6 +19,7 @@ case class JsonSource(path: Path)(implicit fs: FileSystem, conf: Configuration) 
 
   override def schema(): Schema = using(createInputStream(path)) { in =>
     val roots = reader.readValues[JsonNode](in)
+    assert(roots.hasNext, "Cannot read schema, no data in file")
     val node = roots.next()
     val fields = node.getFieldNames.asScala.map(name => Field(name)).toList
     Schema(fields)

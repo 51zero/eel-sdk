@@ -1,19 +1,21 @@
 package io.eels.component.json
 
-import io.eels.{Row, Sink, SinkWriter}
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import io.eels.schema.Schema
-import org.apache.hadoop.conf.Configuration
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.codehaus.jackson.map.ObjectMapper
 
-case class JsonSink(path: Path)(implicit fs: FileSystem, conf: Configuration) extends Sink {
+case class JsonSink(path: Path)(implicit fs: FileSystem) extends Sink {
 
   override def writer(schema: Schema): SinkWriter = new SinkWriter {
 
     val lock = new AnyRef()
     val out = fs.create(path)
 
-    val mapper = new ObjectMapper()
+    val mapper = new ObjectMapper with ScalaObjectMapper
+    mapper.registerModule(DefaultScalaModule)
 
     override def write(row: Row) {
       val map = schema.fieldNames.zip(row.values).toMap
