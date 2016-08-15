@@ -106,7 +106,7 @@ object HiveBenchmarkApp extends App with Logging {
 
   val result = HiveSource("sam", "people")
     .withPartitionConstraint(PartitionLte("state", "Iowa"))
-    .withProjection("id", "foo", "woo").toFrame(4).toSeq
+    .withProjection("id", "foo", "woo").toFrame(4).toList
 
   val end = System.currentTimeMillis()
 

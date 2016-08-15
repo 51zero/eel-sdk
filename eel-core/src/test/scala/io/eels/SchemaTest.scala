@@ -71,8 +71,8 @@ class SchemaTest extends WordSpec with Matchers {
     }
   }
 
-  "Schema.replaceField " should {
-    " replace the given field with the new field" in {
+  "Schema.replaceField" should {
+    "replace the given field with the new field" in {
       Schema(Field("a"), Field("b"), Field("c")).replaceField("b", Field("d")) shouldBe Schema(Field("a"), Field("d"), Field("c"))
     }
   }

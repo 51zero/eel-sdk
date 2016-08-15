@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.FieldType
+import io.eels.schema.{FieldType, Precision, Scale}
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 import org.scalatest.{Matchers, WordSpec}
 
@@ -25,13 +25,13 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
     "convert varcar to short" in {
       val column = HiveSchemaFns.fromHiveField(new FieldSchema("name", "varchar(12)", null), true)
       column.`type` shouldBe FieldType.String
-      column.precision shouldBe 12
+      column.precision shouldBe Precision(12)
     }
     "parse hive decimal" in {
       val column = HiveSchemaFns.fromHiveField(new FieldSchema("name", "decimal(12,4)", null), true)
       column.`type` shouldBe FieldType.Decimal
-      column.scale shouldBe 4
-      column.precision shouldBe 12
+      column.scale shouldBe Scale(12)
+      column.precision shouldBe Precision(4)
     }
     "convert float to float" in {
       HiveSchemaFns.fromHiveField(new FieldSchema("name", "float", null), true).`type` shouldBe FieldType.Float

@@ -25,8 +25,9 @@ object Build extends Build {
     publishArtifact in Test := false,
     parallelExecution in Test := false,
     scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
-    javacOptions := Seq("-Xmx2G", "-source", "1.8", "-target", "1.8"),
-    javacOptions in Test += "-Xmx2G",
+    javacOptions := Seq("-source", "1.8", "-target", "1.8"),
+    fork in test := true,
+    javaOptions in test ++= Seq("-Xms256M", "-Xmx2G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC"),
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(

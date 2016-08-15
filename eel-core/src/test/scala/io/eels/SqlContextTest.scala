@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, WordSpec}
 class SqlContextTest extends WordSpec with Matchers {
 
   "SqlContext" should {
-    "accept simple queries" in {
+    "accept simple queries" ignore {
       val frame = CsvSource(IO.pathFromResource("/us-500.csv")).toFrame(1)
       val sqlContext = new SqlContext()
       sqlContext.registerFrame("people", frame)
@@ -19,7 +19,7 @@ class SqlContextTest extends WordSpec with Matchers {
       )
       result.size shouldBe 500
     }
-    "accept group by queries" in {
+    "accept group by queries" ignore {
       val frame = CsvSource(IO.pathFromResource("/us-500.csv")).toFrame(1)
       val sqlContext = new SqlContext()
       sqlContext.registerFrame("people", frame)

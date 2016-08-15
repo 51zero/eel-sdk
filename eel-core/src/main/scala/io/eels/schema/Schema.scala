@@ -10,6 +10,7 @@ package io.eels.schema
   *
   */
 case class Schema(fields: List[Field]) {
+
   require(fields.map(_.name).distinct.length == fields.size, "Schema cannot have duplicated field name")
   require(fields.nonEmpty, "Schema cannot be empty")
 
@@ -26,6 +27,14 @@ case class Schema(fields: List[Field]) {
       fields.indexWhere(_.name.equalsIgnoreCase(fieldName))
     }
   }
+
+  def projection(fieldNames: Seq[String]): Schema = Schema(
+    fieldNames.flatMap { name =>
+      field(name)
+    }.toList
+  )
+
+  def field(name: String): Option[Field] = fields.find(_.name == name)
 
   def toLowerCase(): Schema = copy(fields = fields.map(_.toLowerCase()))
 
@@ -85,9 +94,12 @@ case class Schema(fields: List[Field]) {
     Schema(fields ++ other.fields)
   }
 
-  def replaceField(name: String, field: Field): Schema = Schema(fields.map { field =>
-    if (field.name == name) field else field
-  })
+  def replaceField(sourceFieldName: String, targetField: Field): Schema = Schema(
+    fields.map {
+      case field if field.name == sourceFieldName => targetField
+      case field => field
+    }
+  )
 
   def renameField(from: String, to: String): Schema = Schema(fields.map { field =>
     if (field.name == from) field.copy(name = to) else field

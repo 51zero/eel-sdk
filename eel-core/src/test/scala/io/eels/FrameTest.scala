@@ -16,13 +16,13 @@ class FrameTest extends WordSpec with Matchers with Eventually {
   "Frame.addFieldIfNotExists" should {
     "not add column if already exists" in {
       val f = frame.addFieldIfNotExists("a", "bibble")
-      f.schema shouldBe Schema("a", "b")
-      f.head shouldBe List("1", "2")
+      f.schema() shouldBe schema
+      f.toList() shouldBe List(Row(schema, Vector("1", "2")), Row(schema, Vector("3", "4")))
     }
     "add column if it does not exist" in {
       val f = frame.addFieldIfNotExists("testy", "bibble")
       f.schema shouldBe Schema("a", "b", "testy")
-      f.head shouldBe List("1", "2", "bibble")
+      f.toList() shouldBe List(Row(schema.addFieldIfNotExists("testy"), Vector("1", "2", "bibble")), Row(schema.addFieldIfNotExists("testy"), Vector("3", "4", "bibble")))
     }
   }
 
@@ -30,7 +30,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     "support adding columns" in {
       val f = frame.addField("testy", "bibble")
       f.schema shouldBe Schema("a", "b", "testy")
-      f.head shouldBe List("1", "2", "bibble")
+      f.head.values shouldBe Vector("1", "2", "bibble")
     }
   }
 
@@ -121,6 +121,15 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
+  "Frame.join" should {
+    "cat two frames" in {
+      val frame1 = Frame(Schema("a", "b"), List("sam", "bam"))
+      val frame2 = Frame(Schema("c", "d"), List("ham", "jam"))
+      frame1.join(frame2).schema shouldBe Schema("a", "b", "c", "d")
+      frame1.join(frame2).head.values shouldBe Vector("sam", "bam", "ham", "jam")
+    }
+  }
+
   "Frame" should {
     "be immutable and repeatable" in {
       val f = frame.drop(1)
@@ -141,8 +150,9 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       frame.drop(2).size shouldBe 0
     }
     "be thread safe when using drop" in {
-      val rows = Iterator.tabulate(10000)(k => Seq("1")).toList
-      val frame = Frame(Schema("k"), rows)
+      val schema = Schema("k")
+      val rows = Iterator.tabulate(10000)(k => Row(schema, Vector("1"))).toList
+      val frame = Frame(schema, rows)
       frame.drop(100).size shouldBe 9900
     }
     "support column projection" in {
@@ -153,7 +163,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("ham", "buckingham")
       )
       val f = frame.projection("location")
-      f.head shouldBe Seq("aylesbury")
+      f.head.values shouldBe Seq("aylesbury")
       f.schema shouldBe Schema("location")
     }
     "support column projection expressions" in {
@@ -164,7 +174,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("ham", "buckingham")
       )
       val f = frame.projectionExpression("location,name")
-      f.head shouldBe Seq("aylesbury", "sam")
+      f.head.values shouldBe Vector("aylesbury", "sam")
       f.schema shouldBe Schema("location", "name")
     }
     "support column projection re-ordering" in {
@@ -176,7 +186,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
       val f = frame.projection("location", "name")
       f.schema shouldBe Schema("location", "name")
-      f.head shouldBe List("aylesbury", "sam")
+      f.head.values shouldBe Vector("aylesbury", "sam")
     }
     "support union" in {
       frame.union(frame).size shouldBe 4
@@ -195,12 +205,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     "support ++" in {
       frame.++(frame).size shouldBe 4
     }
-    "support joins" in {
-      val frame1 = Frame(Schema("a", "b"), List("sam", "bam"))
-      val frame2 = Frame(Schema("c", "d"), List("ham", "jam"))
-      frame1.join(frame2).schema shouldBe Schema("a", "b", "c", "d")
-      frame1.join(frame2).head shouldBe List("sam", "bam", "ham", "jam")
-    }
+
 //    "support except" in {
     //      val frame1 = Frame(
     //        Schema("name", "location"),
@@ -253,7 +258,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.dropWhile(_.get(1) == "aylesbury").toSeq shouldBe List(Row(frame.schema, "ham", "buckingham"))
+      frame.dropWhile(_.get(1) == "aylesbury").toList shouldBe List(Row(frame.schema, "ham", "buckingham"))
     }
     "support drop while with column predicate" in {
       val frame = Frame(
@@ -262,7 +267,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.dropWhile("location", _ == "aylesbury").toSeq shouldBe List(
+      frame.dropWhile("location", _ == "aylesbury").toList shouldBe List(
         Row(frame.schema, "ham", "buckingham")
       )
     }
@@ -291,7 +296,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("jam", "aylesbury"),
         List(null, "buckingham")
       )
-      f.fill("foo").toSet shouldBe {
+      f.replaceNullValues("foo").toSet shouldBe {
         Set(
           Row(f.schema, "sam", "foo"),
           Row(f.schema, "jam", "aylesbury"),
@@ -305,8 +310,8 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      intercept[IllegalArgumentException] {
-        frame.filter("bibble", v => sys.error("Should not be here")).toSeq
+      intercept[RuntimeException] {
+        frame.filter("bibble", row => true).toList
       }
     }
     "support replace" in {
@@ -355,7 +360,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", null),
         List("ham", "buckingham")
       )
-      frame.dropNullRows.toSeq shouldBe {
+      frame.dropNullRows.toList shouldBe {
         List(
           Row(frame.schema, "ham", "buckingham")
         )
@@ -367,7 +372,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.updateField(Field("name", FieldType.Int, true)).schema shouldBe Schema(Field("name", FieldType.Int, true), Field("location", FieldType.String, false))
+      frame.updateField(Field("name", FieldType.Int, true)).schema shouldBe Schema(Field("name", FieldType.Int, true), Field("location"))
     }
     "support column rename" in {
       val frame = Frame(

@@ -14,7 +14,7 @@ case class Field(name: String,
   // Creates a lowercase version of this column
   def toLowerCase(): Field = copy(name = name.toLowerCase())
 
-  def withComment(comment: String): Field = copy(comment = Some(comment))
+  def withComment(comment: String): Field = copy(comment = Option(comment))
   def withNullable(nullable: Boolean): Field = copy(nullable = nullable)
   def withPartition(partition: Boolean) = copy(partition = partition)
 }

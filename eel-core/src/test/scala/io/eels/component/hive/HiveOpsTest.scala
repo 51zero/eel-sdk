@@ -8,7 +8,6 @@ import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, StorageDescr
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters._
-import scala.reflect.internal.util.TableDef.Column
 
 class HiveOpsTest extends WordSpec with Matchers with HiveTestKit {
 
@@ -61,10 +60,10 @@ class HiveOpsTest extends WordSpec with Matchers with HiveTestKit {
 
       new HiveOps(client).schema("db", "jaime") shouldBe
         Schema(
-          Field("p", FieldType.String),
-          Field("q", FieldType.String),
-          Field("a", FieldType.String),
-          Field("b", FieldType.String)
+          Field("p", FieldType.String, nullable = true),
+          Field("q", FieldType.String, nullable = true),
+          Field("a", FieldType.String, nullable = false, partition = true),
+          Field("b", FieldType.String, nullable = false, partition = true)
         )
     }
   }

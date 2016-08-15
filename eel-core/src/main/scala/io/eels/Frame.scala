@@ -138,7 +138,7 @@ trait Frame {
     override def schema(): Schema = outer.schema().addField(field)
     override def rows(): Observable[Row] = {
       val exists = outer.schema().fieldNames().contains(field.name)
-      if (exists) throw new IllegalArgumentException(s"Cannot add field $field as it already exists")
+      if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema()
       outer.rows().map { row =>
         Row(newSchema, row.values :+ defaultValue)
@@ -148,12 +148,9 @@ trait Frame {
 
   def addFieldIfNotExists(name: String, defaultValue: Any): Frame = addFieldIfNotExists(Field(name), defaultValue)
 
-  def addFieldIfNotExists(field: Field, defaultValue: Any): Frame = new Frame {
-    override def schema(): Schema = outer.schema().addFieldIfNotExists(field)
-    override def rows(): Observable[Row] = {
-      val exists = outer.schema().fieldNames().contains(field.name)
-      if (exists) outer.rows() else addField(field, defaultValue).rows()
-    }
+  def addFieldIfNotExists(field: Field, defaultValue: Any): Frame = {
+    val exists = outer.schema().fieldNames().contains(field.name)
+    if (exists) this else addField(field, defaultValue)
   }
 
   def removeField(fieldName: String, caseSensitive: Boolean = true): Frame = new Frame {
@@ -192,10 +189,10 @@ trait Frame {
     }
   }
 
-  def fill(defaultValue: String): Frame = new Frame {
+  def replaceNullValues(defaultValue: String): Frame = new Frame {
     override def schema(): Schema = outer.schema()
     override def rows(): Observable[Row] = {
-      rows().map { row =>
+      outer.rows().map { row =>
         val newValues = row.values.map {
           case null => defaultValue
           case otherwise => otherwise
@@ -224,9 +221,7 @@ trait Frame {
     */
   def projection(fields: Seq[String]): Frame = new Frame {
 
-    override def schema(): Schema = Schema(outer.schema().fields.filter { field =>
-        fields.contains(field.name)
-    })
+    override def schema(): Schema = outer.schema().projection(fields)
 
     override def rows(): Observable[Row] = {
 
@@ -281,6 +276,8 @@ trait Frame {
     override def schema(): Schema = outer.schema()
     override def rows(): Observable[Row] = {
       val index = schema().indexOf(fieldName)
+      if (index < 0)
+        sys.error(s"Unknown field ${fieldName}")
       outer.rows().filter { row =>
         p(row.values(index))
       }
@@ -309,13 +306,15 @@ trait Frame {
   def size(): Long = rows().countLong.toBlocking.single
   //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
 
-  def toSeq(): Seq[Row] = rows().toList.toBlocking.single
-  def toSet(): Set[Row] = toSeq().toSet
+  def toList(): List[Row] = rows().toList.toBlocking.single
+  def toSet(): Set[Row] = toList().toSet
 }
 
 object Frame {
-  def apply(schema: Schema, rows: List[List[Any]]): Frame = apply(schema, rows.map { row => Row(schema, row) })
-  def apply(schema: Schema, first: Seq[Any], rest: Seq[Any]*): Frame = apply(schema, (first +: rest).map(_.toVector))
+
+  def apply(schema: Schema, first: Seq[Any], rest: Seq[Any]*): Frame =
+    apply(schema, (first +: rest).map(values => Row(schema, values)))
+
   def apply(_schema: Schema, first: Row, rest: Row*): Frame = apply(_schema, first +: rest)
   def apply(_schema: Schema, _rows: Seq[Row]): Frame = new Frame {
     override def schema(): Schema = _schema
