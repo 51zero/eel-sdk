@@ -7,15 +7,15 @@ import io.eels.schema.Schema
 import io.kotlintest.specs.WordSpec
 import org.apache.hadoop.fs.Path
 
-class SequenceSourceTest : WordSpec() {
+class SequenceSourceTest extends WordSpec with Matchers {
 
   val schema = Schema(Field("name"), Field("location"))
   val frame = io.eels.Frame(
     schema,
-    listOf("name", "location"),
-    listOf("sam", "aylesbury"),
-    listOf("jam", "aylesbury"),
-    listOf("ham", "buckingham")
+      Vector("name", "location"),
+      Vector("sam", "aylesbury"),
+      Vector("jam", "aylesbury"),
+      Vector("ham", "buckingham")
   )
 
   init {

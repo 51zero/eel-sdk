@@ -41,15 +41,15 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
           name = "structy_mcstructface",
           `type` = FieldType.Struct,
           nullable = true,
-          precision = Precision(value = 0),
-          scale = Scale(value = 0),
+          precision = Precision(0),
+          scale = Scale(0),
           signed = false,
-          arrayType = null,
+          arrayType = None,
           fields = List(
             Field(name = "a", `type` = FieldType.String, nullable = true, precision = Precision(value = 0), scale = Scale(value = 0)),
             Field(name = "b", `type` = FieldType.Double, nullable = true, precision = Precision(value = 0), scale = Scale(value = 0))
           ),
-          comment = Some("commy")
+          comment = Option("commy")
         )
     }
   }

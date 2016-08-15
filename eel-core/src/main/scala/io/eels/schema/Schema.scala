@@ -38,7 +38,7 @@ case class Schema(fields: List[Field]) {
 
   def toLowerCase(): Schema = copy(fields = fields.map(_.toLowerCase()))
 
-  def fieldNames(): Seq[String] = fields.map(_.name)
+  def fieldNames(): List[String] = fields.map(_.name)
 
   def addField(name: String): Schema = addField(Field(name))
 

@@ -30,7 +30,7 @@ object HiveSchemaFns extends Logging {
     * Nullability has to be specified manually, since all hive fields are always nullable, but eel supports non nulls too
     */
   def fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Field =
-  fromHive(fieldSchema.getName, fieldSchema.getType, nullable, fieldSchema.getComment)
+    fromHive(fieldSchema.getName, fieldSchema.getType, nullable, fieldSchema.getComment)
 
   def fromHive(name: String, `type`: String, nullable: Boolean, comment: String): Field = {
     val field = `type` match {
