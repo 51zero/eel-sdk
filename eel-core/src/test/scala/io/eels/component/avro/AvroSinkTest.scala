@@ -1,12 +1,13 @@
 package io.eels.component.avro
 
-import io.kotlintest.matchers.Matchers
-import io.kotlintest.specs.WordSpec
+import io.eels.Frame
+import io.eels.schema.Schema
+import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(
-    List("name", "job", "location"),
+    Schema("name", "job", "location"),
     List("clint eastwood", "actor", "carmel"),
     List("elton john", "musician", "pinner"),
     List("issac newton", "scientist", "heaven")

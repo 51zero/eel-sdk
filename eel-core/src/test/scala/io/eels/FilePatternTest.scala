@@ -32,7 +32,7 @@ class FilePatternTest extends WordSpec with Matchers {
         new Path("file://" + it)
       }
       files.foreach(file => Files.createFile(file))
-      FilePattern("file://" + dir.toAbsolutePath().toString() + "/*").toPaths().toSet() shouldBe hdfsPaths.toSet()
+      FilePattern("file://" + dir.toAbsolutePath().toString() + "/*").toPaths().toSet shouldBe hdfsPaths.toSet
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }
@@ -47,7 +47,7 @@ class FilePatternTest extends WordSpec with Matchers {
         new Path("file://" + it)
       }
       files.foreach(file => Files.createFile(file))
-      FilePattern(dir.toAbsolutePath().toString() + "/*").toPaths().toSet() shouldBe hdfsPaths.toSet()
+      FilePattern(dir.toAbsolutePath().toString() + "/*").toPaths().toSet shouldBe hdfsPaths.toSet
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }

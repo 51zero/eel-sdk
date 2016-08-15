@@ -7,7 +7,7 @@ import io.eels.schema.Schema
 import io.eels.{Part, Row, Source}
 import rx.lang.scala._
 
-class AvroSource(val path: Path) extends Source with Using {
+case class AvroSource(path: Path) extends Source with Using {
 
   override def schema(): Schema = {
     using(AvroReaderFns.createAvroReader(path)) { reader =>
