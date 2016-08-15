@@ -44,7 +44,7 @@ object Build extends Build {
       "org.apache.hadoop" % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-yarn" % HadoopVersion,
-      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", ""),
+      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core"),
       "org.apache.parquet" % "parquet-avro" % "1.8.1",
       "org.slf4j" % "slf4j-api" % "1.7.21",
       "one.util" % "streamex" % "0.6.0",
