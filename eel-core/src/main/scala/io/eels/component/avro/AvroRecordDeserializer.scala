@@ -16,19 +16,16 @@ class AvroRecordDeserializer {
   private val useJavaString = config.getBoolean("eel.avro.java.string")
 
   def toRow(record: GenericRecord): Row = {
-    val eelSchema = AvroSchemaFns.fromAvroSchema(record.getSchema)
+    val schema = AvroSchemaFns.fromAvroSchema(record.getSchema)
     val values = record.getSchema.getFields.asScala.map { field =>
       val value = record.get(field.name())
-      if (useJavaString) {
-        value match {
-          case u: Utf8 => new String(u.getBytes)
-          case _ => value
-        }
+      if (useJavaString && value.isInstanceOf[Utf8]) {
+        new String(value.asInstanceOf[Utf8].getBytes)
       } else {
         value
       }
     }.toVector
-    Row(eelSchema, values)
+    Row(schema, values)
   }
 }
 

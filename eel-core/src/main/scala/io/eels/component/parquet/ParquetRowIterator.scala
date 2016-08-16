@@ -15,6 +15,6 @@ import org.apache.parquet.hadoop.ParquetReader
 object ParquetRowIterator {
   def apply(reader: ParquetReader[GenericRecord]): Iterator[Row] = {
     val deserializer = new AvroRecordDeserializer()
-    Iterator.continually(reader.read()).takeWhile(_ != null).map { it => deserializer.toRow(it) }
+    Iterator.continually(reader.read).takeWhile(_ != null).map { it => deserializer.toRow(it) }
   }
 }

@@ -8,6 +8,7 @@ import io.eels.{FilePattern, Part, Row, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 import rx.lang.scala.Observable
+import scala.collection.JavaConverters._
 
 object ParquetSource {
 
@@ -19,7 +20,6 @@ object ParquetSource {
 }
 
 case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends Source with Logging with Using {
-
 
   // the schema returned by the parquet source should be a merged version of the
   // schemas contained in all the files.
@@ -40,11 +40,8 @@ case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends 
   override def parts(): List[Part] = {
     val paths = pattern.toPaths()
     logger.debug(s"Parquet source will read from $paths")
-    val _schema = schema()
-    paths.map { it => new ParquetPart(it, _schema) }
+    paths.map { it => new ParquetPart(it) }
   }
-
-  import scala.collection.JavaConverters._
 
   def footers(): List[Footer] = {
     val paths = pattern.toPaths()
@@ -57,19 +54,18 @@ case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends 
   }
 }
 
-class ParquetPart(val path: Path, val schema: Schema) extends Part {
+class ParquetPart(path: Path) extends Part {
   override def data(): Observable[Row] = Observable { sub =>
     try {
       sub.onStart()
-      val reader = ParquetReaderFn.apply(path, None, None)
-      ParquetRowIterator(reader).foreach { it =>
-        sub.onNext(it)
-      }
+      val reader = ParquetReaderFn(path, None, None)
+      ParquetRowIterator(reader).foreach(sub.onNext)
     } catch {
       case t: Throwable =>
         sub.onError(t)
+    } finally {
+      if (!sub.isUnsubscribed)
+        sub.onCompleted()
     }
-    if (!sub.isUnsubscribed)
-      sub.onCompleted()
   }
 }

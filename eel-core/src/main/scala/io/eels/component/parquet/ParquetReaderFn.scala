@@ -24,11 +24,11 @@ object ParquetReaderFn extends Logging {
   logger.debug(s"Parquet readers will use parallelism = $this")
 
   /**
-   * Creates a new reader for the given path.
-   *
+    * Creates a new reader for the given path.
+    *
     * @param predicate        if set then a parquet predicate is applied to the rows
     * @param projectionSchema if set then the schema is used to narrow the fields returned
-   */
+    */
   def apply(path: Path,
             predicate: Option[Predicate],
             projectionSchema: Option[io.eels.schema.Schema]): ParquetReader[GenericRecord] = {
@@ -49,8 +49,8 @@ object ParquetReaderFn extends Logging {
     def filter(): FilterCompat.Filter = predicate.map { pred => FilterCompat.get(pred()) }.getOrElse(FilterCompat.NOOP)
 
     AvroParquetReader.builder[GenericRecord](path)
-        .withConf(configuration())
-        .withFilter(filter())
+      .withConf(configuration())
+      .withFilter(filter())
       .build().asInstanceOf[ParquetReader[GenericRecord]]
   }
 }

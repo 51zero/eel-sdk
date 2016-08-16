@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import scala.util.Random
 
 /**
-  * v0.90 1m rows insertion:  reading:
+  * v0.90 1m rows insertion: 2500 reading: 4438
   */
 object ParquetSpeedTest extends App with Timed {
 
