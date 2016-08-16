@@ -2,10 +2,9 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 import java.util.UUID
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels.schema.{Field, Schema}
-import io.eels.{Frame, Row, RowListener}
+import io.eels.{Frame, Row}
 import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
@@ -42,15 +41,6 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
       rs.next()
       rs.getLong(1) shouldBe 10000L
       rs.close()
-    }
-    "support row callbacks" in {
-      val latch = new CountDownLatch(2)
-      frame.to(JdbcSink(url, "callymccallface", createTable = true, listener = new RowListener {
-        override def onRow(row: Row) {
-          latch.countDown()
-        }
-      }))
-      latch.await(10, TimeUnit.SECONDS) shouldBe true
     }
   }
 }

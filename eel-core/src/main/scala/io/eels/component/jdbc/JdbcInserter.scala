@@ -4,15 +4,14 @@ import java.sql.{Connection, DriverManager}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.jdbc.ResultSetIterator
+import io.eels.Row
 import io.eels.schema.Schema
-import io.eels.{Row, RowListener}
 
 class JdbcInserter(val url: String,
                    val table: String,
                    val schema: Schema,
                    val autoCommit: Boolean,
-                   val dialect: JdbcDialect,
-                   val listener: RowListener) extends Logging {
+                   val dialect: JdbcDialect) extends Logging {
 
   val conn: Connection = DriverManager.getConnection(url)
 
@@ -31,7 +30,6 @@ class JdbcInserter(val url: String,
       }
       val result = stmt.executeBatch()
       if (!autoCommit) conn.commit()
-      batch.foreach(listener.onRow)
     } catch {
       case t: Throwable =>
         logger.error("Batch failure", t)

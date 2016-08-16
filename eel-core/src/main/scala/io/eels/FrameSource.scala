@@ -7,9 +7,11 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.Schema
-import rx.lang.scala.{Observable, Subscriber}
+import rx.lang.scala.{Observable, Observer, Subscriber}
 
-class FrameSource(val ioThreads: Int, val source: Source) extends Frame with Logging with Using {
+class FrameSource(ioThreads: Int,
+                  source: Source,
+                  observer: Observer[Row] = NoopObserver) extends Frame with Logging with Using {
 
   private val config = ConfigFactory.load()
   private val bufferSize = config.getInt("eel.source.defaultBufferSize")
@@ -56,16 +58,19 @@ class FrameSource(val ioThreads: Int, val source: Source) extends Frame with Log
 
           override def onNext(row: Row) {
             queue.put(row)
+            observer.onNext(row)
           }
 
           override def onError(e: Throwable) {
             logger.error(s"Error while loading from part #$id; the remaining data in this part will be skipped", e)
             latch.countDown()
+            observer.onError(e)
           }
 
           override def onCompleted() {
             logger.info(s"Completed part #$id")
             latch.countDown()
+            observer.onCompleted()
           }
         })
       }

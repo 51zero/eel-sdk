@@ -2,7 +2,6 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.NoopRowListener
 import io.eels.schema.{Field, FieldType, Precision, Schema}
 import org.scalatest.{Matchers, WordSpec}
 
@@ -25,7 +24,7 @@ class ResultsetPartTest extends WordSpec with Matchers {
 
       val stmt = conn.createStatement()
       val rs = stmt.executeQuery("select * from mytable")
-      val data = new ResultsetPart(rs, stmt, conn, schema, NoopRowListener).data().toBlocking.head
+      val data = new ResultsetPart(rs, stmt, conn, schema).data().toBlocking.head
       data.values shouldBe Vector(3L, true, 1)
     }
   }

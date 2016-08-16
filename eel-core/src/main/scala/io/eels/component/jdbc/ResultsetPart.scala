@@ -4,7 +4,7 @@ import java.sql.{Connection, ResultSet, Statement}
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.Schema
-import io.eels.{Part, Row, RowListener}
+import io.eels.{Part, Row}
 import rx.lang.scala.Observable
 
 /**
@@ -13,8 +13,7 @@ import rx.lang.scala.Observable
 class ResultsetPart(val rs: ResultSet,
                     val stmt: Statement,
                     val conn: Connection,
-                    val schema: Schema,
-                    val listener: RowListener) extends Part with Logging {
+                    val schema: Schema) extends Part with Logging {
 
   override def data(): Observable[Row] = {
     Observable.apply { subscriber =>
@@ -24,7 +23,6 @@ class ResultsetPart(val rs: ResultSet,
           val values = schema.fieldNames().map(name => rs.getObject(name))
           val row = Row(schema, values)
           subscriber.onNext(row)
-          listener.onRow(row)
         }
         subscriber.onCompleted()
       } catch {

@@ -2,6 +2,7 @@ package io.eels
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.Schema
+import rx.lang.scala.Observer
 
 /**
  * A Source is a provider of data.
@@ -17,7 +18,8 @@ import io.eels.schema.Schema
  * a partition in a partitioned source.
  */
 trait Source extends Logging {
-  def toFrame(ioThreads: Int): Frame = new FrameSource(ioThreads, this)
+  def toFrame(ioThreads: Int, observer: Observer[Row] = NoopObserver): Frame =
+    new FrameSource(ioThreads, this, observer)
   def schema(): Schema
   def parts(): List[Part]
 }

@@ -2,15 +2,14 @@ package io.eels.component.jdbc
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
+import io.eels.Sink
 import io.eels.schema.Schema
-import io.eels.{NoopRowListener, RowListener, Sink}
 
 case class JdbcSink(url: String,
                     table: String,
                     createTable: Boolean = false,
                     batchSize: Int = 1000,
-                    threads: Int = 4,
-                    listener: RowListener = NoopRowListener) extends Sink with Logging {
+                    threads: Int = 4) extends Sink with Logging {
 
   private val config = ConfigFactory.load()
   private val bufferSize = config.getInt("eel.jdbc.sink.bufferSize")
@@ -26,5 +25,5 @@ case class JdbcSink(url: String,
   }
 
   override def writer(schema: Schema) =
-      new JdbcWriter(schema, url, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize, listener)
+      new JdbcWriter(schema, url, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize)
 }

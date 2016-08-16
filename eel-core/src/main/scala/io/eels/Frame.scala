@@ -1,7 +1,7 @@
 package io.eels
 
 import io.eels.schema.{Field, FieldType, Schema}
-import rx.lang.scala.Observable
+import rx.lang.scala.{Observable, Observer}
 
 trait Frame {
   outer =>
@@ -302,7 +302,7 @@ trait Frame {
 
   def head(): Row = rows().first.toBlocking.single
 
-  def to(sink: Sink): Long = SinkPlan.execute(sink, this)
+  def to(sink: Sink, observer: Observer[Row] = NoopObserver): Long = SinkPlan.execute(sink, this, observer)
   def size(): Long = rows().countLong.toBlocking.single
   //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
 

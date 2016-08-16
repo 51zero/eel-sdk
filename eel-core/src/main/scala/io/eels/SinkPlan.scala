@@ -5,11 +5,11 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 import com.sksamuel.exts.Logging
-import rx.lang.scala.Subscriber
+import rx.lang.scala.{Observer, Subscriber}
 
 object SinkPlan extends Logging {
 
-  def execute(sink: Sink, frame: Frame): Long = {
+  def execute(sink: Sink, frame: Frame, observer: Observer[Row]): Long = {
 
     val schema = frame.schema()
     val writer = sink.writer(schema)
@@ -19,17 +19,20 @@ object SinkPlan extends Logging {
     frame.rows().subscribe(new Subscriber[Row]() {
       override def onError(e: Throwable) {
         logger.error("Error writing row", e)
+        observer.onError(e)
       }
 
       override def onNext(row: Row) {
         if (row != null) {
           writer.write(row)
+          observer.onNext(row)
           count.incrementAndGet()
         }
       }
 
       override def onCompleted() {
         latch.countDown()
+        observer.onCompleted()
       }
     })
 
