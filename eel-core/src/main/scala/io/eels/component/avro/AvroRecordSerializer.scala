@@ -42,8 +42,11 @@ class AvroRecordSerializer(val recordSchema: Schema) extends Logging {
     case Schema.Type.INT => IntConverter
     case Schema.Type.LONG => LongConverter
     case Schema.Type.STRING => StringConverter
+    case Schema.Type.UNION =>
+      val nonNullType = schema.getTypes.asScala.find(_.getType != Schema.Type.NULL).getOrElse(sys.error("Bug"))
+      new NullableConverter(converter(nonNullType))
     case _ =>
-      logger.warn(s"No converter exists for fieldType=${schema.getType}; defaulting to StringConverter")
+      logger.warn(s"No converter exists for schema=$schema; defaulting to StringConverter")
       StringConverter
   }
 

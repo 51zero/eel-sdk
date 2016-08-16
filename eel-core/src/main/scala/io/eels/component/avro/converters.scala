@@ -25,6 +25,10 @@ object AvroConverter {
   }
 }
 
+class NullableConverter[T](converter: AvroConverter[T]) extends AvroConverter[T] {
+  override def convert(value: Any): T = if (value == null) null.asInstanceOf[T] else converter.convert(value)
+}
+
 object StringConverter extends AvroConverter[String] {
   override def convert(value: Any): String = value.toString()
 }

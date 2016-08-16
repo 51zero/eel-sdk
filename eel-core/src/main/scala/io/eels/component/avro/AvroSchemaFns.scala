@@ -58,8 +58,11 @@ object AvroSchemaFns extends Logging {
         case org.apache.avro.Schema.Type.FLOAT => FieldType.Float
         case org.apache.avro.Schema.Type.INT => FieldType.Int
         case org.apache.avro.Schema.Type.LONG => FieldType.Long
+        case org.apache.avro.Schema.Type.STRING => FieldType.String
+        // we shouldn't have unions in here, they should be handled outside
+        case org.apache.avro.Schema.Type.UNION => sys.error("Bug")
         case _ =>
-          logger.warn(s"Unrecognized avro type ${schema.getType}; defaulting to string")
+          logger.warn(s"Unrecognized avro type ${schema.getType}; defaulting to FieldType.String")
           FieldType.String
       }
 
