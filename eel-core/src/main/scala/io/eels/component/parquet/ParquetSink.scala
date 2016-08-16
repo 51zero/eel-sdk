@@ -2,17 +2,12 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.Row
-import io.eels.Sink
-import io.eels.SinkWriter
-import io.eels.component.avro.AvroRecordSerializer
-import io.eels.component.avro.AvroSchemaFns
+import io.eels.{Row, Sink, SinkWriter}
+import io.eels.component.avro.{AvroRecordSerializer, AvroSchemaFns}
 import io.eels.schema.Schema
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 
-case class ParquetSink(path: Path, fs: FileSystem = FileSystem.get(new Configuration())) extends Sink with Logging {
+case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with Logging {
 
   override def writer(schema: Schema): SinkWriter = new SinkWriter {
 
@@ -20,7 +15,7 @@ case class ParquetSink(path: Path, fs: FileSystem = FileSystem.get(new Configura
     private val caseSensitive = config.getBoolean("eel.parquet.caseSensitive")
 
     private val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = caseSensitive)
-    private val writer = new ParquetRowWriter(path, avroSchema, fs)
+    private val writer = new ParquetRowWriter(path, avroSchema)
     private val serializer = new AvroRecordSerializer(avroSchema)
 
     override def write(row: Row): Unit = {

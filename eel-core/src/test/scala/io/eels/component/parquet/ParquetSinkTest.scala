@@ -30,7 +30,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     "write schema" in {
       if (fs.exists(path))
         fs.delete(path, false)
-      frame.to(ParquetSink(path, fs))
+      frame.to(ParquetSink(path))
       val people = ParquetSource(path)
       people.schema() shouldBe Schema(
         Field("name", FieldType.String, false),

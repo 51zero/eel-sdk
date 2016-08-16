@@ -14,7 +14,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
-class ParquetReaderFnsTest extends WordSpec with Matchers with BeforeAndAfterAll {
+class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
   val path = new Path(UUID.randomUUID().toString())
 
@@ -42,7 +42,7 @@ class ParquetReaderFnsTest extends WordSpec with Matchers with BeforeAndAfterAll
   "ParquetReaderSupport" should {
     "support projections on doubles" in {
 
-      val reader = ParquetReaderFns.createReader(path, None, Option(schema.removeField("looong")))
+      val reader = ParquetReaderFn.apply(path, None, Option(schema.removeField("looong")))
       val record = reader.read()
       reader.close()
 
@@ -51,7 +51,7 @@ class ParquetReaderFnsTest extends WordSpec with Matchers with BeforeAndAfterAll
     }
     "support projections on longs" in {
 
-      val reader = ParquetReaderFns.createReader(path, None, Option(schema.removeField("str")))
+      val reader = ParquetReaderFn.apply(path, None, Option(schema.removeField("str")))
       val record = reader.read()
       reader.close()
 
@@ -59,7 +59,7 @@ class ParquetReaderFnsTest extends WordSpec with Matchers with BeforeAndAfterAll
     }
     "support full projections" in {
 
-      val reader = ParquetReaderFns.createReader(path, None, Option(schema))
+      val reader = ParquetReaderFn.apply(path, None, Option(schema))
       val record = reader.read()
       reader.close()
 
@@ -70,7 +70,7 @@ class ParquetReaderFnsTest extends WordSpec with Matchers with BeforeAndAfterAll
     }
     "support non projections" in {
 
-      val reader = ParquetReaderFns.createReader(path, None, None)
+      val reader = ParquetReaderFn.apply(path, None, None)
       val record = reader.read()
       reader.close()
 

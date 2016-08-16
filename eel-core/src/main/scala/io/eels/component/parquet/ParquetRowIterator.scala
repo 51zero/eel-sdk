@@ -6,11 +6,12 @@ import org.apache.avro.generic.GenericRecord
 import org.apache.parquet.hadoop.ParquetReader
 
 /**
-  * Creates an Iterator[Row] that will return a Row object for each GenericRecord containing in the parquet reader.
- * The Row objects returned will have the same schema as defined in the parquet records.
- *
- * @reader the underlying parquet reader to use to load records
- */
+  * Creates an Iterator[Row] that will return a Row object for each GenericRecord
+  * contained in the parquet reader. The Row objects returned will have the same
+  * schema as defined in the parquet records.
+  *
+  * @param reader the underlying parquet reader to use to load records
+  */
 object ParquetRowIterator {
   def apply(reader: ParquetReader[GenericRecord]): Iterator[Row] = {
     val deserializer = new AvroRecordDeserializer()

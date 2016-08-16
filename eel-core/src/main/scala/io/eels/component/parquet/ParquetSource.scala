@@ -26,7 +26,7 @@ case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends 
   override def schema(): Schema = {
     val paths = pattern.toPaths()
     val schemas = paths.map { path =>
-      using(ParquetReaderFns.createReader(path, None, None)) { reader =>
+      using(ParquetReaderFn.apply(path, None, None)) { reader =>
         val record = Option(reader.read()).getOrElse {
           sys.error(s"Cannot read $path for schema; file contains no records")
         }
@@ -61,7 +61,7 @@ class ParquetPart(val path: Path, val schema: Schema) extends Part {
   override def data(): Observable[Row] = Observable { sub =>
     try {
       sub.onStart()
-      val reader = ParquetReaderFns.createReader(path, None, None)
+      val reader = ParquetReaderFn.apply(path, None, None)
       ParquetRowIterator(reader).foreach { it =>
         sub.onNext(it)
       }

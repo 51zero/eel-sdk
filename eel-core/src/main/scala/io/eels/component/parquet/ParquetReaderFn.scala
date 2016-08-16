@@ -11,12 +11,17 @@ import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
 import org.apache.parquet.filter2.compat.FilterCompat
 import org.apache.parquet.hadoop.ParquetReader
 
-object ParquetReaderFns extends Logging {
+/**
+  * Helper function to create a parquet reader, using the apache parquet library.
+  * The reader supports optional predicate (for row level filtering) and a
+  * projection schema (for column level filtering).
+  */
+object ParquetReaderFn extends Logging {
 
   val config: Config = ConfigFactory.load()
 
   val parallelism = config.getInt("eel.parquet.parallelism").toString()
-    logger.debug("Parquet readers will use parallelism = $this")
+  logger.debug(s"Parquet readers will use parallelism = $this")
 
   /**
    * Creates a new reader for the given path.
@@ -24,9 +29,9 @@ object ParquetReaderFns extends Logging {
     * @param predicate        if set then a parquet predicate is applied to the rows
     * @param projectionSchema if set then the schema is used to narrow the fields returned
    */
-  def createReader(path: Path,
-                   predicate: Option[Predicate],
-                   projectionSchema: Option[io.eels.schema.Schema]): ParquetReader[GenericRecord] = {
+  def apply(path: Path,
+            predicate: Option[Predicate],
+            projectionSchema: Option[io.eels.schema.Schema]): ParquetReader[GenericRecord] = {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {

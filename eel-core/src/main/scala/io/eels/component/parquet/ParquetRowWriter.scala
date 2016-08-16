@@ -11,15 +11,14 @@ import org.apache.hadoop.fs.Path
 /**
   * Will write io.eel Rows out to a given path using an underlying apache parquet writer.
   */
-class ParquetRowWriter(val path: Path,
-                       avroSchema: Schema,
-                       val fs: FileSystem) extends Logging {
+class ParquetRowWriter(path: Path,
+                       avroSchema: Schema)(implicit fs: FileSystem) extends Logging {
 
   val config: Config = ConfigFactory.load()
   val skipCrc = config.getBoolean("eel.parquet.skipCrc")
   logger.info(s"Parquet writer will skipCrc = $this")
 
-  private val writer = ParquetWriterFns.createWriter(path, avroSchema)
+  private val writer = ParquetWriterFn.apply(path, avroSchema)
 
   def write(record: GenericRecord): Unit = {
     writer.write(record)

@@ -19,8 +19,8 @@ class HiveSinkWriter(sourceSchema: Schema,
                      val dialect: HiveDialect,
                      val dynamicPartitioning: Boolean,
                      includePartitionsInData: Boolean,
-                     bufferSize: Int,
-                     val fs: FileSystem,
+                     bufferSize: Int)
+                    (implicit fs: FileSystem,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
 
   val ops = new HiveOps(client)
@@ -125,7 +125,7 @@ class HiveSinkWriter(sourceSchema: Schema,
         sys.error("Partition $partPath does not exist and dynamicPartitioning = false")
       }
 
-      dialect.writer(fileSchema, filePath, fs)
+      dialect.writer(fileSchema, filePath)
     })
   }
 }

@@ -30,7 +30,7 @@ class HiveSinkTest extends WordSpec with Matchers with Inspectors {
       ops.createTable("sam", tableName, schema, format = HiveFormat.Parquet, partitionKeys = List("b"))
 
       val frame = Frame(schema, List.fill(100)(List("HOLLY", "QUEEG")))
-      frame.to(HiveSink("sam", tableName, fs, client))
+      frame.to(HiveSink("sam", tableName))
 
       val table = client.getTable("sam", tableName)
       val paths = HiveFilesFn(table, List("b")).map(_._1.getPath)

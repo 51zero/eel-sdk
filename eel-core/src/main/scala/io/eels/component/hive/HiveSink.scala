@@ -1,24 +1,18 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema.Schema
-import io.eels.Sink
-import io.eels.SinkWriter
-import org.apache.hadoop.conf.Configuration
+import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 case class HiveSink(dbName: String,
                     tableName: String,
-                    fs: FileSystem = FileSystem.get(new Configuration()),
-                    client: IMetaStoreClient = new HiveMetaStoreClient(new HiveConf()),
                     ioThreads: Int = 4,
                     dynamicPartitioning: Option[Boolean] = None,
-                    schemaEvolution: Option[Boolean] = None) extends Sink with Logging {
+                    schemaEvolution: Option[Boolean] = None)
+                   (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   val config: Config = ConfigFactory.load()
   val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
@@ -53,17 +47,15 @@ case class HiveSink(dbName: String,
     val metastoreSchema = ops.schema(dbName, tableName)
 
     new HiveSinkWriter(
-        schema,
-        metastoreSchema,
-        dbName,
-        tableName,
-        ioThreads,
-        dialect(),
+      schema,
+      metastoreSchema,
+      dbName,
+      tableName,
+      ioThreads,
+      dialect(),
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
-        includePartitionsInData,
-        bufferSize,
-        fs,
-        client
+      includePartitionsInData,
+      bufferSize
     )
   }
 }
