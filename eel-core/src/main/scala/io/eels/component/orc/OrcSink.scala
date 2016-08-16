@@ -9,7 +9,7 @@ import org.apache.hadoop.hive.ql.io.orc.{OrcFile, Writer}
 import org.apache.hadoop.hive.serde2.objectinspector.{ObjectInspectorFactory, StandardListObjectInspector}
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory
 
-class OrcSink(val path: Path) extends Sink with Logging {
+case class OrcSink(path: Path)(implicit conf: Configuration) extends Sink with Logging {
 
   override def writer(schema: Schema): SinkWriter = new OrcSinkWriter(schema, path)
 
@@ -20,12 +20,12 @@ class OrcSink(val path: Path) extends Sink with Logging {
       PrimitiveObjectInspectorFactory.javaStringObjectInspector
     )
 
-    val writer: Writer = OrcFile.createWriter(path, OrcFile.writerOptions(new Configuration()).inspector(inspector))
+    val writer: Writer = OrcFile.createWriter(path, OrcFile.writerOptions(conf).inspector(inspector))
     writer.addRow(schema.fieldNames().toArray)
 
     override def write(row: Row): Unit = {
       this.synchronized {
-        writer.addRow(row.values)
+        writer.addRow(row.values.toArray)
       }
     }
 

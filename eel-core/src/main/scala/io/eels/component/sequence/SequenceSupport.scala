@@ -14,7 +14,8 @@ import com.sksamuel.exts.io.Using
 
 object SequenceSupport extends Logging with Using {
 
-  def createReader(path: Path): SequenceFile.Reader = new SequenceFile.Reader(new Configuration(), SequenceFile.Reader.file(path))
+  def createReader(path: Path)(implicit conf: Configuration): SequenceFile.Reader =
+    new SequenceFile.Reader(conf, SequenceFile.Reader.file(path))
 
   def toValues(v: BytesWritable): Array[String] = toValues(new String(v.copyBytes(), Charset.forName("UTF8")))
 
@@ -25,7 +26,7 @@ object SequenceSupport extends Logging with Using {
     row
   }
 
-  def schema(path: Path): Schema = {
+  def schema(path: Path)(implicit conf: Configuration): Schema = {
     logger.debug(s"Fetching sequence schema for $path")
     using(createReader(path)) { it =>
       val k = new IntWritable()

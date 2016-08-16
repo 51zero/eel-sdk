@@ -1,15 +1,16 @@
 package io.eels.component.sequence
 
-import io.kotlintest.matchers.Matchers
-import io.kotlintest.specs.WordSpec
+import io.eels.Frame
+import io.eels.schema.Schema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
+import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSinkTest extends WordSpec with Matchers {
 
   val frame = Frame(
-    List("a", "b", "c", "d"),
+    Schema("a", "b", "c", "d"),
     List("1", "2", "3", "4"),
     List("5", "6", "7", "8")
   )
@@ -17,7 +18,8 @@ class SequenceSinkTest extends WordSpec with Matchers {
   "SequenceSink" should {
     "write sequence files" in {
 
-      implicit val fs = FileSystem.get(new Configuration)
+      implicit val conf = new Configuration
+      implicit val fs = FileSystem.get(conf)
 
       val path = new Path("seqsink.seq")
       if (fs.exists(path))

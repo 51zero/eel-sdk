@@ -1,7 +1,6 @@
 package io.eels.component.orc
 
 import com.sksamuel.exts.io.Using
-import com.sun.xml.bind.v2.schemagen.xmlschema.Any
 import io.eels.schema.Schema
 import io.eels.{Part, Row, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -10,7 +9,7 @@ import org.apache.hadoop.io.Text
 import rx.lang.scala.Observable
 import scala.collection.JavaConverters._
 
-class OrcSource(val path: Path, val fs: FileSystem) extends Source with Using {
+case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
 
   override def parts(): List[Part] = List(new OrcPart(path, fs))
 
@@ -32,7 +31,8 @@ class OrcSource(val path: Path, val fs: FileSystem) extends Source with Using {
           it.onStart()
 
           while (!it.isUnsubscribed && reader.hasNext()) {
-            val values = reader.next(null).asInstanceOf[java.util.List[Any]].asScala
+            val next = reader.next(null)
+            val values = next.asInstanceOf[java.util.List[Any]].asScala
             val normalizedValues = values.map {
               case it: Text => it.toString()
               case it => it

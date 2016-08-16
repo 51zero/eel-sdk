@@ -4,12 +4,13 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.{Part, Row, Source}
 import io.eels.schema.Schema
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.BytesWritable
 import org.apache.hadoop.io.IntWritable
 import rx.lang.scala.Observable
 
-class SequenceSource(val path: Path) extends Source with Using with Logging {
+case class SequenceSource(path: Path)(implicit conf: Configuration) extends Source with Using with Logging {
     logger.debug("Creating sequence source from $path")
 
   override def schema(): Schema = SequenceSupport.schema(path)

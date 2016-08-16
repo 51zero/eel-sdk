@@ -4,14 +4,15 @@ import io.eels.Frame
 import io.eels.Row
 import io.eels.schema.Field
 import io.eels.schema.Schema
-import io.kotlintest.specs.WordSpec
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
+import org.scalatest.{Matchers, WordSpec}
 
-class OrcComponentTest extends WordSpec {
+class OrcComponentTest extends WordSpec with Matchers {
 
-  val fs = FileSystem.get(new Configuration())
+  implicit val conf = new Configuration()
+  implicit val fs = FileSystem.get(conf)
 
   "OrcComponent" should {
     "read and write orc files" in {
@@ -26,12 +27,12 @@ class OrcComponentTest extends WordSpec {
       val path = new Path("test.orc")
       frame.to(OrcSink(path))
 
-      val rows = OrcSource(path, fs).toFrame(1).toSet()
+      val rows = OrcSource(path).toFrame(1).toSet()
       fs.delete(path, false)
 
-      rows.first().schema shouldBe frame.schema()
+      rows.head.schema shouldBe frame.schema()
 
-      rows shouldBe setOf(
+      rows shouldBe Set(
         Row(frame.schema(), Vector("clint eastwood", "actor", "carmel")),
         Row(frame.schema(), Vector("david bowie", "musician", "surrey"))
       )

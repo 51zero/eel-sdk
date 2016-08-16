@@ -15,12 +15,13 @@ import org.apache.hadoop.io.SequenceFile
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
-class SequenceSink(val path: Path) extends Sink {
+case class SequenceSink(path: Path)(implicit conf: Configuration) extends Sink {
+
   override def writer(schema: Schema): SinkWriter = new SequenceSinkWriter(schema, path)
 
   class SequenceSinkWriter(schema: Schema, path: Path) extends SinkWriter {
 
-    val writer = SequenceFile.createWriter(new Configuration(),
+    val writer = SequenceFile.createWriter(conf,
         SequenceFile.Writer.file(path),
       SequenceFile.Writer.keyClass(classOf[IntWritable]),
       SequenceFile.Writer.valueClass(classOf[BytesWritable])
@@ -44,7 +45,10 @@ class SequenceSink(val path: Path) extends Sink {
     private def valuesToCsv(values: Seq[Any]): String = {
       val swriter = new StringWriter()
       val csv = new CsvWriter(swriter, new CsvWriterSettings())
-      csv.writeRow(values)
+      csv.writeRow(values.map {
+        case null => null
+        case other => other.toString
+      }: _*)
       csv.close()
       swriter.toString().trim()
     }
