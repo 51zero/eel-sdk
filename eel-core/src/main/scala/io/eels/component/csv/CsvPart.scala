@@ -23,16 +23,22 @@ class CsvPart(val createParser: () => CsvParser,
     val parser = createParser()
     parser.beginParsing(path.toFile())
 
-    val iterator = Iterator.continually(parser.parseNext()).takeWhile(_ != null).drop(rowsToSkip)
+    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip)
 
     Observable.apply { sub =>
-      sub.onStart()
-      iterator.foreach { record =>
-        val row = Row(schema, record.toVector)
-        sub.onNext(row)
+      try {
+        sub.onStart()
+        iterator.foreach { record =>
+          val row = Row(schema, record.toVector)
+          sub.onNext(row)
+        }
+      } catch {
+        case e: Throwable =>
+          sub.onError(e)
+      } finally {
+        if (!sub.isUnsubscribed)
+          sub.onCompleted()
       }
-      if (!sub.isUnsubscribed)
-        sub.onCompleted()
     }
   }
 }

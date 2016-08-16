@@ -7,7 +7,7 @@ import io.eels.{Row, Sink, SinkWriter}
 import io.eels.schema.Schema
 
 case class CsvSink(path: Path,
-                   headers: Header = Header.None,
+                   headers: Header = Header.FirstRow,
                    format: CsvFormat = CsvFormat(),
                    ignoreLeadingWhitespaces: Boolean = false,
                    ignoreTrailingWhitespaces: Boolean = false) extends Sink {
@@ -58,10 +58,10 @@ case class CsvSink(path: Path,
       lock.synchronized {
         // nulls should be written as empty strings
         val array = row.values.map {
-          case null => null
+          case null => ""
           case other => other.toString
-        }.toArray
-        writer.writeRow(array)
+        }
+        writer.writeRow(array: _*)
       }
     }
   }
