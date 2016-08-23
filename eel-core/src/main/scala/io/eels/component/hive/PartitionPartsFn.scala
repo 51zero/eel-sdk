@@ -9,7 +9,10 @@ object PartitionPartsFn extends Logging {
    * For a given row, will return the list of PartitionPart's that match the given list of part names.
    */
   def rowPartitionParts(row: Row, partNames: List[String]): List[PartitionPart] = {
-    require(partNames.forall { name => row.schema.fieldNames().contains(name) }, s"Schema must contain all partitions $partNames")
+    require(
+      partNames.forall { name => row.schema.fieldNames().contains(name) },
+      s"The schema must include data for all partitions; otherwise the writer wouldn't be able to create the correct partition path; schema fields=${row.schema.fieldNames()}; expected partitions=$partNames"
+    )
 
     partNames.map { it =>
       val index = row.schema.indexOf(it)
