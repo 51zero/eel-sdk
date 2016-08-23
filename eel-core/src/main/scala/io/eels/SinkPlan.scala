@@ -14,6 +14,8 @@ object SinkPlan extends Logging {
     val schema = frame.schema()
     val writer = sink.writer(schema)
     val count = new AtomicLong(0L)
+
+    // the latch is just to make this execute method blocking
     val latch = new CountDownLatch(1)
 
     frame.rows().subscribe(new Subscriber[Row]() {
@@ -31,14 +33,13 @@ object SinkPlan extends Logging {
       }
 
       override def onCompleted() {
+        writer.close()
         latch.countDown()
         observer.onCompleted()
       }
     })
 
     latch.await(1, TimeUnit.DAYS)
-    writer.close()
-
     count.get()
   }
 }

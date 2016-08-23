@@ -17,7 +17,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     Field("job", FieldType.String, nullable = false),
     Field("location", FieldType.String, nullable = false)
   )
-  val frame = Frame(
+  val frame = Frame.fromValues(
     schema,
     Vector("clint eastwood", "actor", "carmel"),
     Vector("elton john", "musician", "pinner")

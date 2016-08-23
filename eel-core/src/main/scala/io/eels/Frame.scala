@@ -312,10 +312,14 @@ trait Frame {
 
 object Frame {
 
-  def apply(schema: Schema, first: Seq[Any], rest: Seq[Any]*): Frame =
-    apply(schema, (first +: rest).map(values => Row(schema, values)))
+  def fromValues(schema: Schema, _rows: Seq[Seq[Any]]): Frame = {
+    apply(schema, _rows.map(values => Row(schema, values)))
+  }
+
+  def fromValues(schema: Schema, first: Seq[Any], rest: Seq[Any]*): Frame = fromValues(schema, first +: rest)
 
   def apply(_schema: Schema, first: Row, rest: Row*): Frame = apply(_schema, first +: rest)
+
   def apply(_schema: Schema, _rows: Seq[Row]): Frame = new Frame {
     override def schema(): Schema = _schema
     override def rows(): Observable[Row] = Observable.from(_rows)

@@ -11,7 +11,7 @@ class ToSetPlanTest extends WordSpec with Matchers {
         Field("name"),
         Field("location")
       )
-      val frame = Frame(
+      val frame = Frame.fromValues(
         schema,
         List("sam", "aylesbury"),
         List("sam", "aylesbury"),

@@ -13,6 +13,9 @@ import scala.util.Random
 
 object HiveTestApp extends App with Timed {
 
+  val Database = "sam"
+  val Table = "foo1"
+
   val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
@@ -27,24 +30,24 @@ object HiveTestApp extends App with Timed {
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
   val data = Array(
-    Seq("elton", "yellow brick road ", "1972"),
-    Seq("elton", "tumbleweed connection", "1974"),
-    Seq("elton", "empty sky", "1969"),
-    Seq("beatles", "white album", "1969"),
-    Seq("beatles", "tumbleweed connection", "1966"),
-    Seq("pinkfloyd", "the wall", "1979"),
-    Seq("pinkfloyd", "dark side of the moon", "1974"),
-    Seq("pinkfloyd", "emily", "1966")
+    Vector("elton", "yellow brick road ", "1972"),
+    Vector("elton", "tumbleweed connection", "1974"),
+    Vector("elton", "empty sky", "1969"),
+    Vector("beatles", "white album", "1969"),
+    Vector("beatles", "tumbleweed connection", "1966"),
+    Vector("pinkfloyd", "the wall", "1979"),
+    Vector("pinkfloyd", "dark side of the moon", "1974"),
+    Vector("pinkfloyd", "emily", "1966")
   )
 
-  val rows = List.fill(100000)(data(Random.nextInt(data.length)) ++ List(Random.nextBoolean().toString, Random.nextBoolean.toString, Random.nextBoolean.toString))
-  val frame = Frame(Schema("artist", "album", "year", "j", "k", "l"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
+  val rows = List.fill(10000)(data(Random.nextInt(data.length)))
+  val frame = Frame.fromValues(Schema("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
   println(frame.schema.show())
 
   timed("creating table") {
     new HiveOps(client).createTable(
-      "sam",
-      "albums",
+      Database,
+      Table,
       frame.schema,
       List("artist"),
       format = HiveFormat.Parquet,
@@ -52,15 +55,15 @@ object HiveTestApp extends App with Timed {
     )
   }
 
-  val table = new HiveOps(client).tablePath("sam", "albums")
+  val table = new HiveOps(client).tablePath(Database, Table)
 
-  val sink = HiveSink("sam", "albums").withIOThreads(4)
+  val sink = HiveSink(Database, Table).withIOThreads(4)
   timed("writing data") {
     frame.to(sink)
     logger.info("Write complete")
   }
 
-  val footers = ParquetSource("hdfs:/user/hive/warehouse/sam.db/albums/*").footers
+  val footers = ParquetSource(s"hdfs:/user/hive/warehouse/$Database.db/$Table/*").footers
 
   import scala.collection.JavaConverters._
 

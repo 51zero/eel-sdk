@@ -11,7 +11,7 @@ case class Wibble(name: String, location: String, postcode: String)
 class FrameTest extends WordSpec with Matchers with Eventually {
 
   val schema = Schema("a", "b")
-  val frame = Frame(schema, Vector("1", "2"), Vector("3", "4"))
+  val frame = Frame.fromValues(schema, Vector("1", "2"), Vector("3", "4"))
 
   "Frame.addFieldIfNotExists" should {
     "not add column if already exists" in {
@@ -46,7 +46,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   "Frame.stripFromFieldNames" should {
     "remove offending characters" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "#location", "!postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
@@ -58,7 +58,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   "Frame.removeField" should {
     "remove column" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location", "postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
@@ -68,7 +68,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       f.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
     "not remove column if case is different" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location", "postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
@@ -78,7 +78,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       f.toSet shouldBe Set(Row(f.schema, "sam", "aylesbury", "hp22"), Row(f.schema, "ham", "buckingham", "mk10"))
     }
     "remove column with ignore case" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location", "postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
@@ -123,8 +123,8 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   "Frame.join" should {
     "cat two frames" in {
-      val frame1 = Frame(Schema("a", "b"), List("sam", "bam"))
-      val frame2 = Frame(Schema("c", "d"), List("ham", "jam"))
+      val frame1 = Frame.fromValues(Schema("a", "b"), List("sam", "bam"))
+      val frame2 = Frame.fromValues(Schema("c", "d"), List("ham", "jam"))
       frame1.join(frame2).schema shouldBe Schema("a", "b", "c", "d")
       frame1.join(frame2).head.values shouldBe Vector("sam", "bam", "ham", "jam")
     }
@@ -156,7 +156,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       frame.drop(100).size shouldBe 9900
     }
     "support column projection" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -167,7 +167,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       f.schema shouldBe Schema("location")
     }
     "support column projection expressions" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -178,7 +178,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       f.schema shouldBe Schema("location", "name")
     }
     "support column projection re-ordering" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -228,7 +228,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     //      )
     //    }
     "support take while with row predicate" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -240,7 +240,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
     }
     "support take while with column predicate" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -252,7 +252,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
     }
     "support drop while" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -261,7 +261,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       frame.dropWhile(_.get(1) == "aylesbury").toList shouldBe List(Row(frame.schema, "ham", "buckingham"))
     }
     "support drop while with column predicate" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -272,7 +272,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
     }
     "support explode" in {
-      val f = Frame(
+      val f = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
@@ -290,7 +290,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "support fill" in {
-      val f = Frame(
+      val f = Frame.fromValues(
         Schema("name", "location"),
         List("sam", null),
         List("jam", "aylesbury"),
@@ -305,7 +305,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "throw an error if the column is not present while filtering" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
@@ -315,7 +315,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "support replace" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
@@ -328,7 +328,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "support replace by column" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
@@ -341,7 +341,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "support replace by column with function" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
@@ -355,7 +355,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "support dropNullRows" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", null),
         List("ham", "buckingham")
@@ -367,7 +367,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       }
     }
     "support column update" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
@@ -375,7 +375,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       frame.updateField(Field("name", FieldType.Int, true)).schema shouldBe Schema(Field("name", FieldType.Int, true), Field("location"))
     }
     "support column rename" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")

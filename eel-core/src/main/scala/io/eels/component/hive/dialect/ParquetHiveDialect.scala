@@ -37,6 +37,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
     val serializer = new AvroRecordSerializer(avroSchema)
 
     override def write(row: Row) {
+      require(row.values.nonEmpty, "Attempting to write an empty row")
       val record = serializer.toRecord(row)
       writer.write(record)
     }

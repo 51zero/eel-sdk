@@ -98,7 +98,7 @@ object HiveBenchmarkApp extends App with Logging {
   logger.info("Table created")
 
   val sink = HiveSink("sam", "people").withDynamicPartitioning(true).withIOThreads(4)
-  Frame(schema, rows).to(sink)
+  Frame.fromValues(schema, rows).to(sink)
 
   logger.info("Write complete")
 

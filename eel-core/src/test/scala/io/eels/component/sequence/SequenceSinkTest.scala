@@ -9,7 +9,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSinkTest extends WordSpec with Matchers {
 
-  val frame = Frame(
+  val frame = Frame.fromValues(
     Schema("a", "b", "c", "d"),
     List("1", "2", "3", "4"),
     List("5", "6", "7", "8")

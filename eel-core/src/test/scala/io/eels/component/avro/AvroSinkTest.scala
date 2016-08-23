@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
 
-  val frame = Frame(
+  val frame = Frame.fromValues(
     Schema("name", "job", "location"),
     List("clint eastwood", "actor", "carmel"),
     List("elton john", "musician", "pinner"),

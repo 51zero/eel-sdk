@@ -12,7 +12,7 @@ class JsonSinkTest extends WordSpec with Matchers {
     "write multiple json docs to a file" in {
 
       val schema = Schema(Field("name"), Field("location"))
-      val frame = Frame(
+      val frame = Frame.fromValues(
         schema,
         Vector("sam", "aylesbury"),
         Vector("jam", "aylesbury"),

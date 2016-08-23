@@ -7,7 +7,7 @@ class FoldPlanTest extends WordSpec with Matchers {
 
   "FoldPlan" should {
     "fold!" in {
-      val frame = Frame(
+      val frame = Frame.fromValues(
         Schema("a", "b"),
         Seq("sam", "1"),
         Seq("sam", "2"),

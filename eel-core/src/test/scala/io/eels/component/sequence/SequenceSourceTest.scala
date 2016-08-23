@@ -13,7 +13,7 @@ class SequenceSourceTest extends WordSpec with Matchers {
   implicit val conf = new Configuration()
 
   val schema = Schema(Field("name"), Field("location"))
-  val frame = io.eels.Frame(
+  val frame = io.eels.Frame.fromValues(
     schema,
     Vector("name", "location"),
     Vector("sam", "aylesbury"),
