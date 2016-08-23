@@ -7,6 +7,10 @@ import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
+object HiveSink {
+  val CaseErrorMsg = "Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive"
+}
+
 case class HiveSink(dbName: String,
                     tableName: String,
                     ioThreads: Int = 4,
@@ -19,6 +23,7 @@ case class HiveSink(dbName: String,
   val bufferSize = config.getInt("eel.hive.bufferSize")
   val schemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
   val dynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
+  val errorOnUpperCase = config.getBoolean("eel.hive.sink.errorOnUpperCase")
 
   val ops = new HiveOps(client)
 
@@ -36,7 +41,10 @@ case class HiveSink(dbName: String,
 
   override def writer(schema: Schema): SinkWriter = {
     if (containsUpperCase(schema)) {
-      logger.warn("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive")
+      if (errorOnUpperCase)
+        sys.error(HiveSink.CaseErrorMsg)
+      else
+        logger.warn(HiveSink.CaseErrorMsg)
     }
 
     if (schemaEvolution.contains(true) || schemaEvolutionDefault) {

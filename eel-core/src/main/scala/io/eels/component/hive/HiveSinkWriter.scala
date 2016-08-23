@@ -15,11 +15,11 @@ import scala.util.control.NonFatal
 
 class HiveSinkWriter(sourceSchema: Schema,
                      metastoreSchema: Schema,
-                     val dbName: String,
-                     val tableName: String,
+                     dbName: String,
+                     tableName: String,
                      ioThreads: Int,
-                     val dialect: HiveDialect,
-                     val dynamicPartitioning: Boolean,
+                     dialect: HiveDialect,
+                     dynamicPartitioning: Boolean,
                      includePartitionsInData: Boolean,
                      bufferSize: Int)
                     (implicit fs: FileSystem,
