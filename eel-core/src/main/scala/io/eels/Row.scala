@@ -9,6 +9,7 @@ object Row {
 }
 
 case class Row(schema: Schema, values: Vector[Any]) {
+
   require(values.nonEmpty, "Cannot create an empty row")
   require(
     schema.size() == values.size,
@@ -20,6 +21,8 @@ case class Row(schema: Schema, values: Vector[Any]) {
       s"$name = ${if (value == null) " NULL" else value}"
     }.mkString("[", ",", "]")
   }
+
+  def replaceSchema(newSchema: Schema): Row = Row(newSchema, values)
 
   def apply(k: Int): Any = get(k)
   def get(k: Int): Any = values(k)

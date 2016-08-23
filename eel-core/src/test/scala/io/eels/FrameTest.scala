@@ -13,6 +13,15 @@ class FrameTest extends WordSpec with Matchers with Eventually {
   val schema = Schema("a", "b")
   val frame = Frame.fromValues(schema, Vector("1", "2"), Vector("3", "4"))
 
+  "Frame.withLowerCaseSchema" should {
+    "return same values but with lower case schema" in {
+      val schema = Schema("A", "B", "c")
+      val f = Frame.fromValues(schema, Vector("x", "Y", null)).withLowerCaseSchema()
+      f.schema() shouldBe Schema("a", "b", "c")
+      f.toList() shouldBe List(Row(f.schema(), Vector("x", "Y", null)))
+    }
+  }
+
   "Frame.addFieldIfNotExists" should {
     "not add column if already exists" in {
       val f = frame.addFieldIfNotExists("a", "bibble")

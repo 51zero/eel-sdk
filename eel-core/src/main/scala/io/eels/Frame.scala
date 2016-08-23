@@ -252,6 +252,16 @@ trait Frame {
     }
   }
 
+  /**
+    * Returns a new Frame where the schema has been lowercased.
+    * This does not affect values.
+    */
+  def withLowerCaseSchema(): Frame = new Frame {
+    private lazy val lowerSchema = outer.schema().toLowerCase()
+    override def schema(): Schema = lowerSchema
+    override def rows(): Observable[Row] = outer.rows().map(_.replaceSchema(lowerSchema))
+  }
+
   def drop(k: Int): Frame = new Frame {
     override def schema(): Schema = outer.schema()
     override def rows(): Observable[Row] = outer.rows().drop(k)
