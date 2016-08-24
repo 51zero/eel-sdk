@@ -10,35 +10,35 @@ object HiveDDL {
               tableType: TableType = TableType.MANAGED_TABLE,
               partitions: Seq[String] = Nil,
               location: Option[String] = None,
+              serde: String = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
               inputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
               outputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
               props: Map[String, String] = Map.empty,
               tableComment: Option[String] = None,
               ifNotExists: Boolean = true): String = {
 
-    val create = s"CREATE ${if (tableType == TableType.EXTERNAL_TABLE) "EXTERNAL " else ""}TABLE ${if (ifNotExists) "IF NOT EXISTS" else ""} $tableName"
+    val create = s"CREATE ${if (tableType == TableType.EXTERNAL_TABLE) "EXTERNAL " else ""}TABLE ${if (ifNotExists) "IF NOT EXISTS" else ""} `$tableName` ("
 
     val fls = fields.map { field =>
       val hiveType = HiveSchemaFns.toHiveType(field)
-      val comment = field.comment.getOrElse("")
-      s"${field.name.toLowerCase} $hiveType $comment"
-    }.mkString("(", ", ", ")")
+      val comment = field.comment.map(x => " " + x).getOrElse("")
+      s"`${field.name.toLowerCase}` $hiveType$comment"
+    }.mkString("   ", ",\n   ", ")")
 
+    val formats = s"ROW FORMAT SERDE\n   '$serde'\nSTORED AS INPUTFORMAT\n   '$inputFormat'\nOUTPUTFORMAT\n   '$outputFormat'"
     val loc = location.map(x => s"LOCATION '$x'")
-    val i = Some(s"INPUTFORMAT '$inputFormat'")
-    val o = Some(s"OUTPUTFORMAT '$outputFormat'")
 
     val parts = if (partitions.isEmpty)
       None
     else
-      Some(partitions.mkString("PARTITIONED BY (", " string, ", " string)"))
+      Some(partitions.map(x => s"`$x` string").mkString("PARTITIONED BY (\n   ", ",\n   ", ")"))
 
     val tblprops = if (props.isEmpty)
       None
     else
       Some(props.map { case (key, value) => s"'$key'='$value'" }.mkString("TBLPROPERTIES (", ",", ")"))
 
-    (Seq(create, fls) ++ Seq(parts, loc, i, o, tblprops).flatten).mkString("\n")
+    (Seq(create, fls) ++ Seq(parts, loc, Some(formats), tblprops).flatten).mkString("\n")
   }
 
   implicit class HiveDDLOps(schema: Schema) {
@@ -46,6 +46,7 @@ object HiveDDL {
                 tableType: TableType = TableType.MANAGED_TABLE,
                 partitions: Seq[String] = Nil,
                 location: Option[String] = None,
+                serde: String = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
                 inputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
                 outputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
                 props: Map[String, String] = Map.empty,
@@ -56,6 +57,7 @@ object HiveDDL {
         tableType,
         partitions,
         location,
+        serde,
         inputFormat,
         outputFormat,
         props,
