@@ -37,7 +37,7 @@ case class HiveSink(dbName: String,
     io.eels.component.hive.HiveDialect(format)
   }
 
-  private def containsUpperCase(schema: Schema): Boolean = schema.fieldNames.forall { it => it == it.toLowerCase() }
+  def containsUpperCase(schema: Schema): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
   override def writer(schema: Schema): SinkWriter = {
     if (containsUpperCase(schema)) {

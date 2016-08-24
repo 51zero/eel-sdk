@@ -20,6 +20,18 @@ class HiveSinkTest extends WordSpec with Matchers with Inspectors {
   implicit val ops = new HiveOps(client)
   implicit val fs = FileSystem.get(conf)
 
+  "HiveSink.containsUpperCase" should {
+    "return false if all lowercase" in {
+      HiveSink("", "").containsUpperCase(Schema("a", "b", "c")) shouldBe false
+    }
+    "return true if all uppercase" in {
+      HiveSink("", "").containsUpperCase(Schema("A", "B", "C")) shouldBe true
+    }
+    "return true if any uppercase" in {
+      HiveSink("", "").containsUpperCase(Schema("a", "B", "c")) shouldBe true
+    }
+  }
+
 
   "HiveSink" should {
     "not write partition data to the data file" ignore {
