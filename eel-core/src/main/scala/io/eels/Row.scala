@@ -3,7 +3,7 @@ package io.eels
 import io.eels.schema.{Field, Schema}
 
 object Row {
-  val PoisonPill = Row(Schema(Field("a")), Vector[Any](null))
+  val Sentinel = Row(Schema(Field("a")), Vector[Any](null))
   def apply(schema: Schema, first: Any, rest: Any*): Row = apply(schema, (first +: rest).toVector)
   def apply(schema: Schema, values: Seq[Any]): Row = apply(schema, values.toVector)
 }

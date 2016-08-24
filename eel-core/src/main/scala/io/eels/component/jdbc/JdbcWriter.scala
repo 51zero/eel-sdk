@@ -42,7 +42,7 @@ class JdbcWriter(schema: Schema,
       logger.debug("Starting JdbcWriter Coordinator")
       // once we receive the pill its all over for the writer
       Iterator.continually(buffer.take)
-        .takeWhile(_ != Row.PoisonPill)
+        .takeWhile(_ != Row.Sentinel)
         .grouped(batchSize).withPartial(true)
         .foreach { batch =>
           inserter.insertBatch(batch)
@@ -58,7 +58,7 @@ class JdbcWriter(schema: Schema,
   coordinatorPool.shutdown()
 
   override def close(): Unit = {
-    buffer.put(Row.PoisonPill)
+    buffer.put(Row.Sentinel)
     logger.info("Closing JDBC Writer... waiting on writes to finish")
     coordinatorPool.awaitTermination(1, TimeUnit.DAYS)
   }

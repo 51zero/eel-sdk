@@ -81,7 +81,7 @@ class FrameSource(ioThreads: Int,
       latch.await(1, TimeUnit.DAYS)
       logger.info("All source parts completed; latch released")
       try {
-        queue.put(Row.PoisonPill)
+        queue.put(Row.Sentinel)
         logger.debug("PoisonPill added to source queue to close source rows")
       } catch {
         case t: Throwable =>
@@ -96,7 +96,7 @@ class FrameSource(ioThreads: Int,
       while (running) {
         val next = queue.take()
         next match {
-          case Row.PoisonPill =>
+          case Row.Sentinel =>
             logger.debug("Poison pill detected by rows, notifying subscriber of end of data")
             subscriber.onCompleted()
             running = false

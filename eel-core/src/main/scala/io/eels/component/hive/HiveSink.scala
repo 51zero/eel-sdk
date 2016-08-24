@@ -33,7 +33,7 @@ case class HiveSink(dbName: String,
 
   private def dialect(): HiveDialect = {
     val format = ops.tableFormat(dbName, tableName)
-    logger.debug(s"Table format is $format")
+    logger.debug(s"Table format is $format; detecting dialect...")
     io.eels.component.hive.HiveDialect(format)
   }
 

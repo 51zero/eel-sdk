@@ -9,6 +9,7 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import java.util.concurrent.{LinkedBlockingQueue, _}
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -70,28 +71,28 @@ class HiveSinkWriter(sourceSchema: Schema,
 
   import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
-  writerPool.submit {
-    // this won't work for multiple threads, as the first thread will read the pill
-    // todo make this multithreaded
-    try {
-      Iterator.continually(buffer.take).takeWhile(_ != Row.PoisonPill).foreach { row =>
-        // todo make this multithreaded by using some unique id
-        val writer = getOrCreateHiveWriter(row, 1L)
-        // need to strip out any partition information from the written data
-        // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
-        val rowToWrite = if (indexesToSkip.isEmpty) {
-          row
-        } else {
-          val values = for (k <- indexesToWrite) yield {
-            row.get(k)
+  logger.debug(s"Creating $ioThreads hive writers")
+  for (k <- 0 until ioThreads) {
+    writerPool.submit {
+      try {
+        BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
+          val writer = getOrCreateHiveWriter(row, k)
+          // need to strip out any partition information from the written data
+          // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
+          val rowToWrite = if (indexesToSkip.isEmpty) {
+            row
+          } else {
+            val values = for (k <- indexesToWrite) yield {
+              row.get(k)
+            }
+            Row(fileSchema, values.toVector)
           }
-          Row(fileSchema, values.toVector)
+          writer.write(rowToWrite)
         }
-        writer.write(rowToWrite)
+      } catch {
+        case NonFatal(e) =>
+          logger.error("Could not perform write", e)
       }
-    } catch {
-      case NonFatal(e) =>
-        logger.error("Could not perform write", e)
     }
   }
   writerPool.shutdown()
@@ -100,13 +101,13 @@ class HiveSinkWriter(sourceSchema: Schema,
 
   override def close(): Unit = {
     logger.debug("Request to close hive sink writer")
-    buffer.put(Row.PoisonPill)
+    buffer.put(Row.Sentinel)
     writerPool.awaitTermination(1, TimeUnit.DAYS)
     logger.debug("All writers have finished writing rows; closing writers to ensure flush")
     writers.values.foreach(_.close)
   }
 
-  def getOrCreateHiveWriter(row: Row, writerId: Long): HiveWriter = {
+  def getOrCreateHiveWriter(row: Row, writerId: Int): HiveWriter = {
 
     // we need a hive writer per thread (to different files of course), and a writer
     // per partition (as each partition is written to a different directory)
