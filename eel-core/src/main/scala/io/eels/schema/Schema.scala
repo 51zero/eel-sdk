@@ -120,6 +120,9 @@ case class Schema(fields: List[Field]) {
 }
 
 object Schema {
+
+  def fromFieldNames(names: Seq[String]): Schema = apply(names.map(Field.apply(_)))
+
   def apply(fields: Seq[Field]): Schema = apply(fields.toList)
   def apply(first: Field, rest: Field*): Schema = apply((first +: rest).toList)
   def apply(first: String, rest: String*): Schema = apply((first +: rest).map(name => Field(name)).toList)

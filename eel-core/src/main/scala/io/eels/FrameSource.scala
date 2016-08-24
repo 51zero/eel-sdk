@@ -9,6 +9,8 @@ import com.typesafe.config.ConfigFactory
 import io.eels.schema.Schema
 import rx.lang.scala.{Observable, Observer, Subscriber}
 
+import scala.util.control.NonFatal
+
 class FrameSource(ioThreads: Int,
                   source: Source,
                   observer: Observer[Row] = NoopObserver) extends Frame with Logging with Using {
@@ -84,8 +86,8 @@ class FrameSource(ioThreads: Int,
         queue.put(Row.Sentinel)
         logger.debug("PoisonPill added to source queue to close source rows")
       } catch {
-        case t: Throwable =>
-          logger.error("Error adding PoisonPill", t)
+        case NonFatal(e) =>
+          logger.error("Error adding PoisonPill", e)
       }
     }
     executor.shutdown()

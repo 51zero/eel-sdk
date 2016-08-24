@@ -25,9 +25,11 @@ class OrcComponentTest extends WordSpec with Matchers {
       )
 
       val path = new Path("test.orc")
+      fs.delete(path, false)
       frame.to(OrcSink(path))
 
       val rows = OrcSource(path).toFrame(1).toSet()
+      rows.size shouldBe 2
       fs.delete(path, false)
 
       rows.head.schema shouldBe frame.schema()

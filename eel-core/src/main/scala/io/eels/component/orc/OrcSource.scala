@@ -3,51 +3,28 @@ package io.eels.component.orc
 import com.sksamuel.exts.io.Using
 import io.eels.schema.Schema
 import io.eels.{Part, Row, Source}
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.ql.io.orc.OrcFile
-import org.apache.hadoop.io.Text
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.Path
+import org.apache.orc.OrcFile.ReaderOptions
+import org.apache.orc.{ColumnStatistics, OrcFile, StripeInformation, StripeStatistics}
 import rx.lang.scala.Observable
+
 import scala.collection.JavaConverters._
 
-case class OrcSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
+case class OrcSource(path: Path)(implicit conf: Configuration) extends Source with Using {
 
-  override def parts(): List[Part] = List(new OrcPart(path, fs))
+  override def parts(): List[Part] = List(new OrcPart(path))
 
-  override def schema(): Schema = {
-    val reader = OrcFns.createOrcReader(path, fs)
-    val schema = OrcFns.orcSchemaFromReader(reader)
-    reader.close()
-    schema
-  }
+  override def schema(): Schema = OrcFns.readSchema(path)
 
-  class OrcPart(path: Path, fs: FileSystem) extends Part {
-    override def data(): Observable[Row] = {
-      Observable { it =>
+  private def reader() = OrcFile.createReader(path, new ReaderOptions(conf))
 
-        try {
-          val reader = OrcFile.createReader(fs, path).rows()
-          val schema = OrcFns.orcSchemaFromReader(reader)
+  def count(): Long = reader().getNumberOfRows
+  def statistics(): Seq[ColumnStatistics] = reader().getStatistics.toVector
+  def stripes(): Seq[StripeInformation] = reader().getStripes.asScala
+  def stripeStatistics(): Seq[StripeStatistics] = reader().getStripeStatistics.asScala
 
-          it.onStart()
-
-          while (!it.isUnsubscribed && reader.hasNext()) {
-            val next = reader.next(null)
-            val values = next.asInstanceOf[java.util.List[Any]].asScala
-            val normalizedValues = values.map {
-              case it: Text => it.toString()
-              case it => it
-            }.toVector
-            val row = Row(schema, normalizedValues)
-            it.onNext(row)
-          }
-
-          it.onCompleted()
-          reader.close()
-        } catch {
-          case t: Throwable =>
-          it.onError(t)
-        }
-      }
-    }
+  class OrcPart(path: Path) extends Part {
+    override def data(): Observable[Row] = new OrcReader(path).rows()
   }
 }

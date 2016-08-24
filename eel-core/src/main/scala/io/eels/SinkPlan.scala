@@ -1,11 +1,10 @@
 package io.eels
 
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicLong
 
 import com.sksamuel.exts.Logging
-import rx.lang.scala.{Observer, Subscriber}
+import rx.lang.scala.Observer
 
 object SinkPlan extends Logging {
 
@@ -18,7 +17,8 @@ object SinkPlan extends Logging {
     // the latch is just to make this execute method blocking
     val latch = new CountDownLatch(1)
 
-    frame.rows().subscribe(new Subscriber[Row]() {
+    frame.rows().subscribe(new Observer[Row]() {
+
       override def onError(e: Throwable) {
         logger.error("Error writing row", e)
         observer.onError(e)
