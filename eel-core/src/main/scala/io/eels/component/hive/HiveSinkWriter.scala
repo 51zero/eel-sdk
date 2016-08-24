@@ -1,7 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.Row
-import io.eels.SinkWriter
+import io.eels.{HdfsOps, Row, SinkWriter}
 import io.eels.schema.Schema
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
@@ -10,6 +9,7 @@ import java.util.concurrent.{LinkedBlockingQueue, _}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
+import com.typesafe.config.ConfigFactory
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -26,12 +26,15 @@ class HiveSinkWriter(sourceSchema: Schema,
                     (implicit fs: FileSystem,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
 
-  val ops = new HiveOps(client)
-  val tablePath = ops.tablePath(dbName, tableName)
+  val config = ConfigFactory.load()
+  val writeToTempFiles = config.getBoolean("eel.hive.sink.writeToTempFiles")
+
+  val hiveOps = new HiveOps(client)
+  val tablePath = hiveOps.tablePath(dbName, tableName)
   val lock = new AnyRef()
 
   // these will be in lower case
-  val partitionKeyNames = ops.partitionKeyNames(dbName, tableName)
+  val partitionKeyNames = hiveOps.partitionKeyNames(dbName, tableName)
 
   // the file schema is the metastore schema with the partition columns removed. This is because the
   // partition columns are not written to the file (they are taken from the partition itself)
@@ -53,7 +56,7 @@ class HiveSinkWriter(sourceSchema: Schema,
   // We also can't share a writer amongst threads for obvious reasons otherwise we'd just have a single
   // writer being used for all data. So the solution is a hive writer per thread per partition, each
   // writing to their own files.
-  val writers = new TrieMap[String, HiveWriter]
+  val writers = new TrieMap[String, (Path, HiveWriter)]
 
   // this contains all the partitions we've checked.
   // No need for multiple threads to keep hitting the meta store to check on the same partition paths
@@ -62,12 +65,11 @@ class HiveSinkWriter(sourceSchema: Schema,
   // we buffer incoming data into this queue, so that slow writing doesn't unncessarily
   // block threads feeding this sink
   val buffer = new LinkedBlockingQueue[Row](bufferSize)
-  val latch = new CountDownLatch(1)
 
+  // the io threads will run in their own threads inside this executor
   val writerPool = Executors.newFixedThreadPool(ioThreads)
 
-  val base = System.nanoTime()
-  logger.debug(s"HiveSinkWriter created; timestamp=$base; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads; includePartitionsInData=$includePartitionsInData")
+  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads; includePartitionsInData=$includePartitionsInData")
 
   import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
@@ -76,7 +78,7 @@ class HiveSinkWriter(sourceSchema: Schema,
     writerPool.submit {
       try {
         BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
-          val writer = getOrCreateHiveWriter(row, k)
+          val writer = getOrCreateHiveWriter(row, k)._2
           // need to strip out any partition information from the written data
           // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
           val rowToWrite = if (indexesToSkip.isEmpty) {
@@ -102,20 +104,26 @@ class HiveSinkWriter(sourceSchema: Schema,
   override def close(): Unit = {
     logger.debug("Request to close hive sink writer")
     buffer.put(Row.Sentinel)
+
+    logger.debug("Hive writer is waiting for writing threads to complete")
     writerPool.awaitTermination(1, TimeUnit.DAYS)
-    logger.debug("All writers have finished writing rows; closing writers to ensure flush")
-    writers.values.foreach(_.close)
+    writers.values.foreach(_._2.close)
+    logger.debug(s"All hive writer threads have completed; making temp files visible=$writeToTempFiles")
+
+    if (writeToTempFiles)
+    writers.values.foreach { case (path, _) => HdfsOps.makePathVisible(path) }
   }
 
-  def getOrCreateHiveWriter(row: Row, writerId: Int): HiveWriter = {
+  def getOrCreateHiveWriter(row: Row, writerId: Int): (Path, HiveWriter) = {
 
     // we need a hive writer per thread (to different files of course), and a writer
     // per partition (as each partition is written to a different directory)
     val parts = PartitionPartsFn.rowPartitionParts(row, partitionKeyNames)
-    val partPath = ops.partitionPathString(parts, tablePath)
+    val partPath = hiveOps.partitionPathString(parts, tablePath)
     writers.getOrElseUpdate(partPath + writerId, {
 
-      val filePath = new Path(partPath, "part_" + System.nanoTime() + "_" + writerId)
+      val filename = "eel_" + System.nanoTime() + "_" + writerId
+      val filePath = if (writeToTempFiles) new Path(partPath, "." + filename) else new Path(partPath, filename)
       logger.debug(s"Creating hive writer for $filePath")
 
       // if dynamic partition is enabled then we will try to createReader the hive partition automatically
@@ -126,16 +134,16 @@ class HiveSinkWriter(sourceSchema: Schema,
           // the data is in any way sorted
           if (!createdPartitions.contains(partPath.toString())) {
             lock.synchronized {
-              ops.createPartitionIfNotExists(dbName, tableName, parts)
+              hiveOps.createPartitionIfNotExists(dbName, tableName, parts)
               createdPartitions.add(partPath.toString())
             }
           }
         }
-      } else if (!ops.partitionExists(dbName, tableName, parts)) {
+      } else if (!hiveOps.partitionExists(dbName, tableName, parts)) {
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
 
-      dialect.writer(fileSchema, filePath)
+      filePath -> dialect.writer(fileSchema, filePath)
     })
   }
 }

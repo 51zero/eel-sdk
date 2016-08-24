@@ -42,9 +42,6 @@ object ParquetHiveDialect extends HiveDialect with Logging {
       writer.write(record)
     }
 
-    override def close() {
-      logger.debug("Closing dialect writer")
-      writer.close()
-    }
+    override def close() = writer.close()
   }
 }

@@ -33,9 +33,11 @@ object SinkPlan extends Logging {
       }
 
       override def onCompleted() {
+        logger.info("All data has been read from frame; sink will close writer(s) now")
         writer.close()
         latch.countDown()
         observer.onCompleted()
+        logger.info("Sink plan completed")
       }
     })
 

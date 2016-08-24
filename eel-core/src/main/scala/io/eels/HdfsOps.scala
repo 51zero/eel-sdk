@@ -1,10 +1,17 @@
 package io.eels
 
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.LocatedFileStatus
-import org.apache.hadoop.fs.Path
+import com.sksamuel.exts.Logging
+import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 
-object HdfsOps {
+object HdfsOps extends Logging {
+
+  def makePathVisible(path: Path)(implicit fs: FileSystem): Unit = {
+    if (path.getName.startsWith(".")) {
+      logger.info(s"Making $path visible by stripping leading .")
+      val dest = new Path(path.getParent, path.getName.drop(1))
+      fs.rename(path, dest)
+    }
+  }
 
   def findFiles(path: Path, recursive: Boolean, fs: FileSystem): Iterator[LocatedFileStatus] = {
     HdfsIterator(fs.listFiles(path, recursive))

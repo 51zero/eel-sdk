@@ -1,27 +1,37 @@
 package io.eels.component.avro
 
+import com.sksamuel.exts.Logging
 import org.apache.avro.Schema
+
+import scala.collection.JavaConverters._
 
 /**
   * Avro requires that the types of values passed to its JavaAPI match the types in the schema.
-  * So if you have an Avro Boolean field, you can't pass "true" but it must be true. So it's less
+  * So if you have an Avro Boolean field, you can't pass a String "true" but it must be true. So it's less
   * "forgiving" than JDBC for example.
   *
-  * An AvroConverter will convert a JVM type into a suitable Avro type. The avro type being specified by
-  * the instances type parameter.
+  * An AvroConverter will convert a JVM type into a suitable Avro type. The avro type being specified
+  * by the type parameter.
   */
 trait AvroConverter[T] {
   def convert(value: Any): T
 }
 
-object AvroConverter {
-  def apply(`type`: Schema.Type): AvroConverter[_] = `type` match {
-    case Schema.Type.LONG => LongConverter
-    case Schema.Type.INT => IntConverter
+object AvroConverter extends Logging {
+  def apply(schema: Schema): AvroConverter[_] = schema.getType match {
     case Schema.Type.BOOLEAN => BooleanConverter
-    case Schema.Type.STRING => StringConverter
     case Schema.Type.DOUBLE => DoubleConverter
+    case Schema.Type.ENUM => StringConverter
     case Schema.Type.FLOAT => FloatConverter
+    case Schema.Type.INT => IntConverter
+    case Schema.Type.LONG => LongConverter
+    case Schema.Type.STRING => StringConverter
+    case Schema.Type.UNION =>
+      val nonNullType = schema.getTypes.asScala.find(_.getType != Schema.Type.NULL).getOrElse(sys.error("Bug"))
+      new NullableConverter(AvroConverter(nonNullType))
+    case _ =>
+      logger.warn(s"No converter exists for schema=$schema; defaulting to StringConverter")
+      StringConverter
   }
 }
 
