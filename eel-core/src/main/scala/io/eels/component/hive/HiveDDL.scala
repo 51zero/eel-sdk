@@ -42,13 +42,12 @@ object HiveDDL {
   }
 
   implicit class HiveDDLOps(schema: Schema) {
+
     def showDDL(tableName: String,
                 tableType: TableType = TableType.MANAGED_TABLE,
                 partitions: Seq[String] = Nil,
                 location: Option[String] = None,
-                serde: String = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
-                inputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
-                outputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+                format: HiveFormat,
                 props: Map[String, String] = Map.empty,
                 tableComment: Option[String] = None,
                 ifNotExists: Boolean = true) = {
@@ -57,9 +56,9 @@ object HiveDDL {
         tableType,
         partitions,
         location,
-        serde,
-        inputFormat,
-        outputFormat,
+        format.serde,
+        format.inputFormat,
+        format.outputFormat,
         props,
         tableComment,
         ifNotExists)

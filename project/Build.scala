@@ -38,6 +38,7 @@ object Build extends Build {
       "com.univocity" % "univocity-parsers" % "2.0.0",
       "com.h2database" % "h2" % "1.4.192",
       "org.apache.orc" % "orc-core" % "1.1.2",
+      "org.apache.orc" % "orc-mapreduce" % "1.1.2",
       "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.7.5",
       "org.apache.hadoop" % "hadoop-common" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion,

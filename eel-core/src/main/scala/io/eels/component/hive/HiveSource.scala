@@ -23,6 +23,7 @@ case class HiveSource(dbName: String,
                       client: IMetaStoreClient) extends Source with Logging with Using {
     ParquetLogMute()
 
+  implicit val conf = fs.getConf
   val ops = new HiveOps(client)
 
   def select(first: String, rest: String*): HiveSource = withProjection(first +: rest)

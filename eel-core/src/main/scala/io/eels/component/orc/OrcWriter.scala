@@ -12,9 +12,9 @@ import org.apache.orc.{OrcFile, TypeDescription}
 import scala.collection.mutable.ArrayBuffer
 
 class OrcWriter(path: Path, schema: Schema)(implicit conf: Configuration) extends Logging {
-  logger.debug(s"Creating orc writer $schema")
 
-  private val buffer = new ArrayBuffer[Row]
+  private val orcSchema: TypeDescription = OrcFns.writeSchema(schema)
+  logger.debug(s"Creating orc writer $orcSchema")
 
   private val config = ConfigFactory.load()
   private val batchSize = {
@@ -23,8 +23,11 @@ class OrcWriter(path: Path, schema: Schema)(implicit conf: Configuration) extend
   }
   logger.info(s"Orc writer will use batchsize=$batchSize")
 
-  private val orcSchema: TypeDescription = OrcFns.writeSchema(schema)
-  logger.debug(s"orcSchema=$orcSchema")
+  private val batch = orcSchema.createRowBatch(batchSize)
+  // todo support other column types
+  private val cols = batch.cols.map(_.asInstanceOf[BytesColumnVector])
+  private val colRange = cols.indices
+  private val buffer = new ArrayBuffer[Row](batchSize)
 
   private lazy val writer = OrcFile.createWriter(path, OrcFile.writerOptions(conf).setSchema(orcSchema))
 
@@ -35,11 +38,13 @@ class OrcWriter(path: Path, schema: Schema)(implicit conf: Configuration) extend
   }
 
   def flush(): Unit = {
-    logger.debug(s"Flushing orc batch (${buffer.size} rows)")
-    val batch = orcSchema.createRowBatch(buffer.size)
-    val cols = batch.cols.map(_.asInstanceOf[BytesColumnVector])
-    for ((row, k) <- buffer.zipWithIndex) {
-      for ((value, col) <- row.values.zip(cols)) {
+    // todo extract this into some orc serializer so its easier to read
+    // don't use foreach here, using old school for loops for perf
+    for (k <- buffer.indices) {
+      val row = buffer(k)
+      for (j <- colRange) {
+        val value = row.values(j)
+        val col = cols(j)
         val bytes = if (value == null) Array.emptyByteArray else value.toString.getBytes("UTF8")
         col.setRef(k, bytes, 0, bytes.length)
       }
@@ -47,6 +52,7 @@ class OrcWriter(path: Path, schema: Schema)(implicit conf: Configuration) extend
     batch.size = buffer.size
     writer.addRowBatch(batch)
     buffer.clear()
+    batch.reset()
   }
 
   def close(): Long = {

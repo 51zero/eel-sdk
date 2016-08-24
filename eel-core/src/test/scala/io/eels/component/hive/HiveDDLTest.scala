@@ -100,9 +100,7 @@ class HiveDDLTest extends FunSuite with Matchers {
   test("should allow implict from schema") {
     val schema = Schema(fields)
     import HiveDDL._
-
-    HiveDDLOps(schema).showDDL("table")
-    schema.showDDL("mytab") shouldBe
+    schema.showDDL("mytab", format = HiveFormat.Parquet) shouldBe
       "CREATE TABLE IF NOT EXISTS `mytab` (\n   `str` string,\n   `i` bigint,\n   `b` boolean)\nROW FORMAT SERDE\n   'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'\nSTORED AS INPUTFORMAT\n   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'\nOUTPUTFORMAT\n   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'"
   }
 }

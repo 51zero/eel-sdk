@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import io.eels._
 import io.eels.schema.Schema
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
 import rx.lang.scala.Observable
 
@@ -23,7 +24,7 @@ class HiveFilePart(val dialect: HiveDialect,
                    val projectionSchema: Schema,
                    val predicate: Option[Predicate],
                    val partitions: List[PartitionPart])
-                  (implicit fs: FileSystem) extends Part {
+                  (implicit fs: FileSystem, conf: Configuration) extends Part {
 
   override def data(): Observable[Row] = {
     require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")

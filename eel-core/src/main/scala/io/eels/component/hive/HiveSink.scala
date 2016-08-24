@@ -18,6 +18,8 @@ case class HiveSink(dbName: String,
                     schemaEvolution: Option[Boolean] = None)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
+  implicit val conf = fs.getConf
+
   val config: Config = ConfigFactory.load()
   val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
   val bufferSize = config.getInt("eel.hive.bufferSize")

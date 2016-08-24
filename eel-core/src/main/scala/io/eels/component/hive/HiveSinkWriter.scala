@@ -10,6 +10,7 @@ import java.util.concurrent.{LinkedBlockingQueue, _}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
+import org.apache.hadoop.conf.Configuration
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -24,6 +25,7 @@ class HiveSinkWriter(sourceSchema: Schema,
                      includePartitionsInData: Boolean,
                      bufferSize: Int)
                     (implicit fs: FileSystem,
+                     conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
 
   val config = ConfigFactory.load()

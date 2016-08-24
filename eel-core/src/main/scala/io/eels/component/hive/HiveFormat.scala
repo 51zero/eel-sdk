@@ -1,36 +1,39 @@
 package io.eels.component.hive
 
-trait HiveFormat {
+import org.apache.hadoop.hive.ql.io.orc.{OrcInputFormat, OrcOutputFormat, OrcSerde}
+import org.apache.hadoop.hive.ql.io.parquet.{MapredParquetInputFormat, MapredParquetOutputFormat}
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
 
-  def serdeClass(): String
-  def inputFormatClass(): String
-  def outputFormatClass(): String
+trait HiveFormat {
+  def serde: String
+  def inputFormat: String
+  def outputFormat: String
 }
 
 object HiveFormat {
 
   object Text extends HiveFormat {
-    override def serdeClass(): String = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
-    override def inputFormatClass(): String = "org.apache.hadoop.mapred.TextInputFormat"
-    override def outputFormatClass(): String = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
+    override def serde: String = "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"
+    override def inputFormat: String = "org.apache.hadoop.mapred.TextInputFormat"
+    override def outputFormat: String = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"
   }
 
   object Parquet extends HiveFormat {
-    override def serdeClass(): String = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
-    override def inputFormatClass(): String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"
-    override def outputFormatClass(): String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"
+    override val serde: String = classOf[ParquetHiveSerDe].getCanonicalName
+    override val inputFormat: String = classOf[MapredParquetInputFormat].getCanonicalName
+    override val outputFormat: String = classOf[MapredParquetOutputFormat].getCanonicalName
   }
 
   object Avro extends HiveFormat {
-    override def serdeClass(): String = "org.apache.hadoop.hive.serde2.avro.AvroSerDe"
-    override def inputFormatClass(): String = "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat"
-    override def outputFormatClass(): String = "org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat"
+    override def serde: String = "org.apache.hadoop.hive.serde2.avro.AvroSerDe"
+    override def inputFormat: String = "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat"
+    override def outputFormat: String = "org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat"
   }
 
   object Orc extends HiveFormat {
-    override def serdeClass(): String = "org.apache.hadoop.hive.ql.io.orc.OrcSerde"
-    override def inputFormatClass(): String = "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat"
-    override def outputFormatClass(): String = "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat"
+    override val serde: String = classOf[OrcSerde].getCanonicalName
+    override val inputFormat: String = classOf[OrcInputFormat].getCanonicalName
+    override val outputFormat: String = classOf[OrcOutputFormat].getCanonicalName
   }
 
   def apply(format: String): HiveFormat = format match {

@@ -14,6 +14,11 @@ import scala.util.Random
   * 1m rows, 4200ms, single thread
   * 1m rows, 1275ms, 4 threads
   * 10m rows, 10499ms, 4 threads
+  *
+  * ORC:
+  * 1m rows, 1263, 4 threads
+  * 8m rows, 4500ms, 4 threads
+  * 8m rows, 4167ms, 4 threads
   */
 object HiveSpeedTest extends App with Timed {
 
@@ -41,7 +46,7 @@ object HiveSpeedTest extends App with Timed {
     Vector("pinkfloyd", "emily", "1966")
   )
 
-  val rows = List.fill(10000000)(data(Random.nextInt(data.length)))
+  val rows = List.fill(1000000)(data(Random.nextInt(data.length)))
   val frame = Frame.fromValues(Schema("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
   println(frame.schema.show())
 
@@ -52,7 +57,7 @@ object HiveSpeedTest extends App with Timed {
       Table,
       frame.schema,
       List("artist"),
-      format = HiveFormat.Parquet,
+      format = HiveFormat.Orc,
       overwrite = true
     )
 
@@ -62,6 +67,6 @@ object HiveSpeedTest extends App with Timed {
       logger.info("Write complete")
     }
 
-    Thread.sleep(3000)
+    Thread.sleep(5000)
   }
 }

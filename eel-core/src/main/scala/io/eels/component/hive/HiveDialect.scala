@@ -1,11 +1,11 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.{Predicate, Row}
+import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
 import io.eels.schema.Schema
-import io.eels.component.hive.dialect.ParquetHiveDialect
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import io.eels.{Predicate, Row}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table
 import rx.lang.scala.Observable
 
@@ -38,20 +38,21 @@ trait HiveDialect extends Logging {
            metastoreSchema: Schema,
            projectionSchema: Schema,
            predicate: Option[Predicate])
-          (implicit fs: FileSystem): Observable[Row]
+          (implicit fs: FileSystem, conf: Configuration): Observable[Row]
 
   def writer(schema: Schema, path: Path)
-            (implicit fs: FileSystem): HiveWriter
+            (implicit fs: FileSystem, conf: Configuration): HiveWriter
 }
 
 object HiveDialect extends Logging {
 
   def apply(format: String): HiveDialect = format match {
     case "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat" => ParquetHiveDialect
+    case "org.apache.orc.mapreduce.OrcInputFormat" => OrcHiveDialect
+    case "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" => OrcHiveDialect
     //      "org.apache.hadoop.mapred.TextInputFormat" -> TextHiveDialect
     //      "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" -> AvroHiveDialect
-    //      "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" -> OrcHiveDialect
-    case _ => throw new UnsupportedOperationException("Unknown hive input format $format")
+    case _ => throw new UnsupportedOperationException(s"Unknown hive input format $format")
   }
 
   def apply(table: Table): HiveDialect = {

@@ -233,11 +233,11 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
       sd.setCols(lowerColumns.filterNot { it => lowerPartitionKeys.contains(it.name) }.map(HiveSchemaFns.toHiveField).asJava)
       sd.setSerdeInfo(new SerDeInfo(
         null,
-        format.serdeClass(),
+        format.serde,
         Map("serialization.format" -> "1").asJava
       ))
-      sd.setInputFormat(format.inputFormatClass)
-      sd.setOutputFormat(format.outputFormatClass)
+      sd.setInputFormat(format.inputFormat)
+      sd.setOutputFormat(format.outputFormat)
       sd.setLocation(location)
 
       val table = new Table()
