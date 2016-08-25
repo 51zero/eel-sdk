@@ -1,16 +1,15 @@
 package io.eels.component.hive
 
-import io.eels.{HdfsOps, Row, SinkWriter}
-import io.eels.schema.Schema
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import java.util.concurrent.{LinkedBlockingQueue, _}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
+import io.eels.schema.Schema
+import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -29,7 +28,7 @@ class HiveSinkWriter(sourceSchema: Schema,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
 
   val config = ConfigFactory.load()
-  val writeToTempFiles = config.getBoolean("eel.hive.sink.writeToTempFiles")
+  val writeToTempDirectory = config.getBoolean("eel.hive.sink.writeToTempFiles")
 
   val hiveOps = new HiveOps(client)
   val tablePath = hiveOps.tablePath(dbName, tableName)
@@ -110,10 +109,17 @@ class HiveSinkWriter(sourceSchema: Schema,
     logger.debug("Hive writer is waiting for writing threads to complete")
     writerPool.awaitTermination(1, TimeUnit.DAYS)
     writers.values.foreach(_._2.close)
-    logger.debug(s"All hive writer threads have completed; making temp files visible=$writeToTempFiles")
+    logger.debug(s"All hive writer threads have completed; usedTempDir=$writeToTempDirectory")
 
-    if (writeToTempFiles)
-    writers.values.foreach { case (path, _) => HdfsOps.makePathVisible(path) }
+    if (writeToTempDirectory) {
+      logger.debug("Moving files from temp dir to public")
+      // move table/.temp/file to table/file
+      writers.values.foreach { case (path, _) => fs.rename(path, new Path(path.getParent.getParent, path.getName)) }
+      logger.debug("Deleting temp dirs")
+      writers.values.foreach { case (path, _) =>
+        fs.delete(path.getParent, true)
+      }
+    }
   }
 
   def getOrCreateHiveWriter(row: Row, writerId: Int): (Path, HiveWriter) = {
@@ -125,7 +131,12 @@ class HiveSinkWriter(sourceSchema: Schema,
     writers.getOrElseUpdate(partPath + writerId, {
 
       val filename = "eel_" + System.nanoTime() + "_" + writerId
-      val filePath = if (writeToTempFiles) new Path(partPath, "." + filename) else new Path(partPath, filename)
+      val filePath = if (writeToTempDirectory) {
+        val temp = new Path(partPath, ".eeltemp")
+        new Path(temp, filename)
+      } else {
+        new Path(partPath, filename)
+      }
       logger.debug(s"Creating hive writer for $filePath")
 
       // if dynamic partition is enabled then we will try to createReader the hive partition automatically
