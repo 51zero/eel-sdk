@@ -127,32 +127,22 @@ class SchemaTest extends WordSpec with Matchers {
       //     schema.show() shouldBe "- a [Boolean null scale=22 precision=0 signed]\n- b [String not null scale=0 precision=14 unsigned]"
     }
   }
-  //      "be inferred from the inner Person case class" in {
-  //        Schema.from[Person] shouldBe {
-  //          Schema(List(
-  //              Column("name", ColumnType.String, true, Precision(0), Scale(0), true, None),
-  //              Column("age", ColumnType.Int, true, Precision(0), Scale(0), true, None),
-  //              Column("salary", ColumnType.Double, true, Precision(0), Scale(0), true, None),
-  //              Column("isPartTime", ColumnType.Boolean, true, Precision(0), Scale(0), true, None),
-  //              Column("value1", ColumnType.Decimal, true, Precision(0), Scale(0), true, None),
-  //              Column("value2", ColumnType.Float, true, Precision(0), Scale(0), true, None),
-  //              Column("value3", ColumnType.Long, true, Precision(0), Scale(0), true, None)
-  //          ))
-  //        }
-  //      }
-  //      "be inferred from the outer Person case class" in {
-  //        Schema.from[Person] shouldBe {
-  //          Schema(List(
-  //              Column("name", ColumnType.String, true, Precision(0), Scale(0), true, None),
-  //              Column("age", ColumnType.Int, true, Precision(0), Scale(0), true, None),
-  //              Column("salary", ColumnType.Double, true, Precision(0), Scale(0), true, None),
-  //              Column("isPartTime", ColumnType.Boolean, true, Precision(0), Scale(0), true, None),
-  //              Column("value1", ColumnType.Decimal, true, Precision(0), Scale(0), true, None),
-  //              Column("value2", ColumnType.Float, true, Precision(0), Scale(0), true, None),
-  //              Column("value3", ColumnType.Long, true, Precision(0), Scale(0), true, None)
-  //          ))
-  //        }
-  //      }
+
+  "Schema.from[T]" should {
+    "be inferred from the type" in {
+      Schema.from[Person] shouldBe {
+        Schema(List(
+          Field("name", FieldType.String, true, Precision(0), Scale(0), false, None),
+          Field("age", FieldType.Int, true, Precision(0), Scale(0), false, None),
+          Field("salary", FieldType.Double, true, Precision(0), Scale(0), false, None),
+          Field("isPartTime", FieldType.Boolean, true, Precision(0), Scale(0), false, None),
+          Field("value1", FieldType.Decimal, true, Precision(0), Scale(0), false, None),
+          Field("value2", FieldType.Float, true, Precision(0), Scale(0), false, None),
+          Field("value3", FieldType.Long, true, Precision(0), Scale(0), false, None)
+        ))
+      }
+    }
+  }
 
   "Schema.updateFieldType " should {
     " set new schema type and leave other fields untouched" in {
@@ -168,6 +158,4 @@ class SchemaTest extends WordSpec with Matchers {
   }
 }
 
-// data class Person(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long)
-
-//data class PersonOuter(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long)
+case class Person(name: String, age: Int, salary: Double, isPartTime: Boolean, value1: BigDecimal, value2: Float, value3: Long)

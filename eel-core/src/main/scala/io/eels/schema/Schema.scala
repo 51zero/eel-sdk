@@ -1,5 +1,7 @@
 package io.eels.schema
 
+import scala.reflect.ClassTag
+
 /**
   * An eel schema contains:
   *
@@ -127,41 +129,41 @@ object Schema {
   def apply(first: Field, rest: Field*): Schema = apply((first +: rest).toList)
   def apply(first: String, rest: String*): Schema = apply((first +: rest).map(name => Field(name)).toList)
 
-  //    def from[T <: Product : TypeTag : ClassTag]: Schema =
-  //    {
-  //      val columns = typeOf[T].declarations.collect {
-  //        case m: MethodSymbol if m.isCaseAccessor =>
-  //        val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
-  //        val ColumnType = SchemaFn.toColumnType(javaClass)
-  //        Column(m.name.toString, ColumnType, true)
-  //      }
-  //      Schema(columns.toList)
-  //    }
+  import scala.reflect.runtime.universe._
+
+  def from[T <: Product : TypeTag : ClassTag]: Schema = {
+    val fields = typeOf[T].decls.collect {
+      case m: MethodSymbol if m.isCaseAccessor =>
+        val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
+        val fieldType = SchemaFn.toFieldType(javaClass)
+        Field(m.name.toString, fieldType, true)
+    }
+    Schema(fields.toList)
+  }
 }
 
-//object SchemaFn {
-//  def toColumnType(clz: Class[_]): ColumnType =
-//  {
-//    val intClass = classOf[Int]
-//    val floatClass = classOf[Float]
-//    val stringClass = classOf<String>
-//    val charClass = classOf[Char]
-//    val bigIntClass = classOf[BigInt]
-//    val booleanClass = classOf[Boolean]
-//    val doubleClass = classOf[Double]
-//    val bigdecimalClass = classOf[BigDecimal]
-//    val longClass = classOf[Long]
-//    clz match {
-//      case `intClass` => ColumnType.Int
-//          case `floatClass` => ColumnType.Float
-//          case `stringClass` => ColumnType.String
-//          case `charClass` => ColumnType.String
-//          case `bigIntClass` => ColumnType.BigInt
-//          case `booleanClass` => ColumnType.Boolean
-//          case `doubleClass` => ColumnType.Double
-//          case `longClass` => ColumnType.Long
-//          case `bigdecimalClass` => ColumnType.Decimal
-//          case _ => sys.error("Can not map $clz to ColumnType value.")
-//    }
-//  }
-//}
+object SchemaFn {
+  def toFieldType(clz: Class[_]): FieldType = {
+    val intClass = classOf[Int]
+    val floatClass = classOf[Float]
+    val stringClass = classOf[String]
+    val charClass = classOf[Char]
+    val bigIntClass = classOf[BigInt]
+    val booleanClass = classOf[Boolean]
+    val doubleClass = classOf[Double]
+    val bigdecimalClass = classOf[BigDecimal]
+    val longClass = classOf[Long]
+    clz match {
+      case `intClass` => FieldType.Int
+      case `floatClass` => FieldType.Float
+      case `stringClass` => FieldType.String
+      case `charClass` => FieldType.String
+      case `bigIntClass` => FieldType.BigInt
+      case `booleanClass` => FieldType.Boolean
+      case `doubleClass` => FieldType.Double
+      case `longClass` => FieldType.Long
+      case `bigdecimalClass` => FieldType.Decimal
+      case _ => sys.error(s"Can not map $clz to FieldType")
+    }
+  }
+}
