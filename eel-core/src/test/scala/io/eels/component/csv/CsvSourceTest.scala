@@ -83,7 +83,7 @@ class CsvSourceTest extends WordSpec with Matchers {
         Field("", FieldType.String, true)
       )
     }
-    "support verifying rows" in {
+    "support skipping corrupt rows" ignore {
       val file = getClass.getResource("/corrupt.csv").toURI()
       val path = Paths.get(file)
       CsvSource(path).withHeader(Header.FirstRow).toFrame(1).toList().map(_.values) shouldBe
