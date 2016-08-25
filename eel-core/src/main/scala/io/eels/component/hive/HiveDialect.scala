@@ -57,9 +57,9 @@ object HiveDialect extends Logging {
 
   def apply(table: Table): HiveDialect = {
     val format = table.getSd.getInputFormat
-    logger.debug("Table format is $format")
+    logger.debug(s"Table format is $format")
     val dialect = HiveDialect(format)
-    logger.debug("HiveDialect is $dialect")
+    logger.debug(s"HiveDialect is $dialect")
     dialect
   }
 }

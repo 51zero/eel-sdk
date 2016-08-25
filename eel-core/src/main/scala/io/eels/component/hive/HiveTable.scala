@@ -20,11 +20,9 @@ case class HiveTable(dbName: String,
 
   def partitionKeys(): List[PartitionKey] = {
     val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
-    val parts = client.listPartitions(dbName, tableName, Short.MaxValue).asScala
-    assert(keys.size == parts.size, s"Differing amount of partitionKeys (${keys.size}) to parts (${parts.size})")
-    keys.zip(parts).map { case (schema, partition) =>
+    keys.map { schema =>
       val field = HiveSchemaFns.fromHiveField(schema, false).withPartition(true)
-      PartitionKey(field, partition.getCreateTime * 1000L, partition.getParameters.asScala.toMap)
+      PartitionKey(field)
     }.toList
   }
 

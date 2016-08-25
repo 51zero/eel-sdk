@@ -34,9 +34,7 @@ object PartitionSpec {
   }
 }
 
-case class PartitionKey(field: Field,
-                        createTime: Long,
-                        parameters: Map[String, String])
+case class PartitionKey(field: Field)
 
 // Represents a partition, which is the full set of partition key/values pairs for a particular record
 // eg key1=value1/key2=value2/key3=value3 is a partition

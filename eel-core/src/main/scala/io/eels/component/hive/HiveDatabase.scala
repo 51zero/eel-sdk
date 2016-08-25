@@ -13,7 +13,7 @@ case class HiveDatabase(dbName: String)(implicit fs: FileSystem, client: IMetaSt
   def table(tableName: String): HiveTable = {
     val exists = client.tableExists(dbName, tableName)
     if (!exists)
-      throw new IllegalArgumentException("$dbName.$tableName does not exist")
+      throw new IllegalArgumentException(s"$dbName.$tableName does not exist")
     HiveTable(dbName, tableName)
   }
 }

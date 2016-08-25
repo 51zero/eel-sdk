@@ -41,7 +41,7 @@ object HiveFormat {
     case "orc" => HiveFormat.Orc
     case "parquet" => HiveFormat.Parquet
     case "text" => HiveFormat.Text
-    case _ => throw new UnsupportedOperationException("Unknown hive input format $format")
+    case _ => throw new UnsupportedOperationException(s"Unknown hive input format $format")
   }
 
   def fromInputFormat(inputFormat: String): HiveFormat = inputFormat match {
@@ -49,6 +49,6 @@ object HiveFormat {
     case "org.apache.hadoop.mapred.TextInputFormat" => Text
     case "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" => Avro
     case "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" => Orc
-    case _ => throw new UnsupportedOperationException("Input format not known $inputFormat")
+    case _ => throw new UnsupportedOperationException(s"Input format not known $inputFormat")
   }
 }
