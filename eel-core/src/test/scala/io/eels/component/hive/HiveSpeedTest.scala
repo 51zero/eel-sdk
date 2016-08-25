@@ -46,7 +46,7 @@ object HiveSpeedTest extends App with Timed {
     Vector("pinkfloyd", "emily", "1966")
   )
 
-  val rows = List.fill(1000000)(data(Random.nextInt(data.length)))
+  val rows = List.fill(3000000)(data(Random.nextInt(data.length)))
   val frame = Frame.fromValues(Schema("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
   println(frame.schema.show())
 
@@ -57,14 +57,20 @@ object HiveSpeedTest extends App with Timed {
       Table,
       frame.schema,
       List("artist"),
-      format = HiveFormat.Orc,
+      format = HiveFormat.Parquet,
       overwrite = true
     )
 
-    val sink = HiveSink(Database, Table).withIOThreads(4)
     timed("writing data") {
+      val sink = HiveSink(Database, Table).withIOThreads(4)
       frame.to(sink)
       logger.info("Write complete")
+    }
+
+    timed("reading data") {
+      val source = HiveSource(Database, Table)
+      source.toFrame(6).size()
+      logger.info("Read complete")
     }
 
     Thread.sleep(5000)

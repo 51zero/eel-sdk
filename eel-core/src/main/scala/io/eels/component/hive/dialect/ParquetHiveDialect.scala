@@ -1,18 +1,16 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.{Predicate, Row}
 import io.eels.component.avro.{AvroRecordSerializer, AvroSchemaFns}
-import io.eels.component.hive.HiveDialect
-import io.eels.component.hive.HiveWriter
+import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet.{ParquetLogMute, ParquetReaderFn, ParquetRowIterator, ParquetRowWriter}
 import io.eels.schema.Schema
+import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.ql.io.parquet.{MapredParquetInputFormat, MapredParquetOutputFormat}
-import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+import org.apache.hadoop.fs.{FileSystem, Path}
 import rx.lang.scala.Observable
+
+import scala.util.control.NonFatal
 
 object ParquetHiveDialect extends HiveDialect with Logging {
 
@@ -23,10 +21,15 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                    (implicit fs: FileSystem, conf: Configuration): Observable[Row] = {
 
     val reader = ParquetReaderFn.apply(path, predicate, Option(projectionSchema))
-    Observable.apply { subscriber =>
-      subscriber.onStart()
-      ParquetRowIterator(reader).foreach(subscriber.onNext)
-      subscriber.onCompleted()
+    Observable.apply { it =>
+      try {
+        it.onStart()
+        ParquetRowIterator(reader).takeWhile(_ => !it.isUnsubscribed).foreach(it.onNext)
+        it.onCompleted()
+      } catch {
+        case NonFatal(e) =>
+          it.onError(e)
+      }
     }
   }
 

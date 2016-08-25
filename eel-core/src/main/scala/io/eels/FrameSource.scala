@@ -4,6 +4,8 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
+import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import com.sksamuel.exts.io.Using
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.Schema
@@ -46,31 +48,41 @@ class FrameSource(ioThreads: Int,
     val queue = new LinkedBlockingQueue[Row](bufferSize)
     val count = new AtomicLong(0)
     val latch = new CountDownLatch(parts.size)
+    var error: Throwable = null
 
     for (part <- parts) {
-      import com.sksamuel.exts.concurrent.ExecutorImplicits._
+      // we create a task per part, and each task just reads from that part putting the data
+      // into the shared buffer. The more threads we allocate to this the more parts we can
+      // process concurrently.
       executor.submit {
 
         val id = count.incrementAndGet()
 
         part.data().subscribe(new Subscriber[Row]() {
           override def onStart() {
-            logger.info(s"Starting part #$id")
+            logger.info(s"Starting part reader #$id")
           }
 
           override def onNext(row: Row) {
             queue.put(row)
             observer.onNext(row)
+            if (error != null) {
+              this.unsubscribe()
+              latch.countDown()
+              logger.warn(s"Error detected, shutting down part reader #$id")
+            }
           }
 
           override def onError(e: Throwable) {
-            logger.error(s"Error while loading from part #$id; the remaining data in this part will be skipped", e)
+            logger.error(s"Error while loading from part reader #$id; further records will be skipped", e)
+            error = e
+            this.unsubscribe()
             latch.countDown()
             observer.onError(e)
           }
 
           override def onCompleted() {
-            logger.info(s"Completed part #$id")
+            logger.info(s"Completed part reader #$id")
             latch.countDown()
             observer.onCompleted()
           }
@@ -78,34 +90,28 @@ class FrameSource(ioThreads: Int,
       }
     }
 
-    import com.sksamuel.exts.concurrent.ExecutorImplicits._
     executor.submit {
+      // we use a latch so that we can wait for all the parts to be completed
       latch.await(1, TimeUnit.DAYS)
       logger.info("All source parts completed; latch released")
       try {
         queue.put(Row.Sentinel)
-        logger.debug("PoisonPill added to source queue to close source rows")
       } catch {
         case NonFatal(e) =>
-          logger.error("Error adding PoisonPill", e)
+          logger.error("Error adding Sentinel", e)
+          if (error == null)
+            error = e
       }
     }
     executor.shutdown()
 
-    Observable { subscriber =>
-      subscriber.onStart()
-      var running = true
-      while (running) {
-        val next = queue.take()
-        next match {
-          case Row.Sentinel =>
-            logger.debug("Poison pill detected by rows, notifying subscriber of end of data")
-            subscriber.onCompleted()
-            running = false
-          case _ =>
-            subscriber.onNext(next)
-        }
-      }
+    Observable { it =>
+      it.onStart()
+      BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => !it.isUnsubscribed).foreach(it.onNext)
+      if (error == null)
+        it.onCompleted()
+      else
+        it.onError(error)
     }
   }
 }
