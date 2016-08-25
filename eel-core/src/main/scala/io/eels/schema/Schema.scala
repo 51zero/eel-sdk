@@ -131,7 +131,7 @@ object Schema {
 
   import scala.reflect.runtime.universe._
 
-  def from[T <: Product : TypeTag : ClassTag]: Schema = {
+  def from[T <: Product : TypeTag]: Schema = {
     val fields = typeOf[T].decls.collect {
       case m: MethodSymbol if m.isCaseAccessor =>
         val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)

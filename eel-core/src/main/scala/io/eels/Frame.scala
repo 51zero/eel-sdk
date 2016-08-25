@@ -322,6 +322,14 @@ trait Frame {
 
 object Frame {
 
+  import scala.reflect.runtime.universe._
+
+  def apply[T <: Product : TypeTag](ts: Seq[T]): Frame = {
+    val schema = Schema.from[T]
+    val rows = ts.map { t => Row(schema, t.productIterator.toVector) }
+    Frame(schema, rows)
+  }
+
   def fromValues(schema: Schema, _rows: Seq[Seq[Any]]): Frame = {
     apply(schema, _rows.map(values => Row(schema, values)))
   }
