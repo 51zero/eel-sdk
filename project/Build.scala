@@ -16,6 +16,13 @@ object Build extends Build {
   val HadoopVersion = "2.6.1"
   val HiveVersion = "1.1.0"
 
+  val hiveSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.hadoop" % "hadoop-yarn" % HadoopVersion,
+      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica")
+    )
+  )
+
   val rootSettings = Seq(
     organization := org,
     scalaVersion := ScalaVersion,
@@ -45,8 +52,6 @@ object Build extends Build {
       "org.apache.hadoop" % "hadoop-mapreduce" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
-      "org.apache.hadoop" % "hadoop-yarn" % HadoopVersion,
-      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica"),
       "org.apache.parquet" % "parquet-avro" % "1.8.1",
       "org.slf4j" % "slf4j-api" % "1.7.21",
       "io.reactivex" % "rxjava" % "1.1.5",
@@ -89,9 +94,14 @@ object Build extends Build {
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(name := "eel")
-    .aggregate(core)
+    .aggregate(core, hive)
    
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
     .settings(name := "eel-core")
+
+  lazy val hive = Project("eel-hive", file("eel-hive"))
+    .settings(rootSettings: _*)
+    .settings(hiveSettings: _*)
+    .settings(name := "eel-hive")
 }
