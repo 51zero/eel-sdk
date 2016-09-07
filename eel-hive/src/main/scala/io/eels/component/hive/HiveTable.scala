@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.{Partition, PartitionKey, PartitionPart}
+import io.eels.PartitionPart
 import io.eels.component.parquet.ParquetLogMute
 import io.eels.schema.Schema
 import org.apache.hadoop.fs.FileSystem

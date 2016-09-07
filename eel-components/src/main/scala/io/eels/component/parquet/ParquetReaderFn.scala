@@ -2,7 +2,6 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.Predicate
 import io.eels.component.avro.AvroSchemaFns
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.conf.Configuration

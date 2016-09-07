@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.component
 
 import com.sksamuel.exts.io.IO
 import io.eels.component.csv.CsvSource

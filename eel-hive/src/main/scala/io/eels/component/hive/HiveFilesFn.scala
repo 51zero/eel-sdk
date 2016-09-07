@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import io.eels.{PartitionPart, PartitionSpec}
+import io.eels.PartitionPart
 import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus

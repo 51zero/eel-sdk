@@ -1,8 +1,9 @@
-package io.eels
+package io.eels.component
 
 import java.util.UUID
 
 import com.typesafe.config.ConfigFactory
+import io.eels.Frame
 import io.eels.component.jdbc.{JdbcSink, JdbcSource}
 
 class SqlContext {

@@ -23,6 +23,20 @@ object Build extends Build {
     )
   )
 
+  val componentsSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.orc" % "orc-core" % "1.1.2",
+      "org.apache.orc" % "orc-mapreduce" % "1.1.2",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.7.5",
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce-client" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
+      "org.apache.parquet" % "parquet-avro" % "1.8.1",
+      "com.h2database" % "h2" % "1.4.192"
+    )
+  )
+
   val rootSettings = Seq(
     organization := org,
     scalaVersion := ScalaVersion,
@@ -40,21 +54,12 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "io.reactivex" %% "rxscala" % "0.26.2",
+      "io.reactivex" % "rxjava" % "1.1.10",
       "com.typesafe" % "config" % "1.3.0",
       "com.sksamuel.exts" %% "exts" % "1.31.1",
       "com.univocity" % "univocity-parsers" % "2.0.0",
-      "com.h2database" % "h2" % "1.4.192",
-      "org.apache.orc" % "orc-core" % "1.1.2",
-      "org.apache.orc" % "orc-mapreduce" % "1.1.2",
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.7.5",
       "org.apache.hadoop" % "hadoop-common" % HadoopVersion,
-      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion,
-      "org.apache.hadoop" % "hadoop-mapreduce" % HadoopVersion,
-      "org.apache.hadoop" % "hadoop-mapreduce-client" % HadoopVersion,
-      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
-      "org.apache.parquet" % "parquet-avro" % "1.8.1",
       "org.slf4j" % "slf4j-api" % "1.7.21",
-      "io.reactivex" % "rxjava" % "1.1.5",
       "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
       "io.dropwizard.metrics" % "metrics-jvm" % "3.1.2",
       "mysql" % "mysql-connector-java" % "5.1.39" % "test",
@@ -100,8 +105,16 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-core")
 
+  lazy val components = Project("eel-components", file("eel-components"))
+    .settings(rootSettings: _*)
+    .settings(componentsSettings: _*)
+    .settings(name := "eel-components")
+    .dependsOn(core)
+
   lazy val hive = Project("eel-hive", file("eel-hive"))
     .settings(rootSettings: _*)
+    .settings(componentsSettings: _*)
     .settings(hiveSettings: _*)
     .settings(name := "eel-hive")
+    .dependsOn(core, components)
 }

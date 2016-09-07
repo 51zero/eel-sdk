@@ -3,7 +3,7 @@ package io.eels.component.hive
 import java.util
 
 import com.sksamuel.exts.Logging
-import io.eels.{Constants, PartitionPart, PartitionSpec}
+import io.eels.Constants
 import io.eels.schema.Field
 import io.eels.schema.Schema
 import org.apache.hadoop.fs.Path

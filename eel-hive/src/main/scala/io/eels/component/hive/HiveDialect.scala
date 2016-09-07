@@ -3,7 +3,8 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
 import io.eels.schema.Schema
-import io.eels.{Predicate, Row}
+import io.eels.Row
+import io.eels.component.parquet.Predicate
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table

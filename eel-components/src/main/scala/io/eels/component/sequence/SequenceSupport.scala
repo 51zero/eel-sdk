@@ -20,6 +20,7 @@ object SequenceSupport extends Logging with Using {
   def toValues(v: BytesWritable): Array[String] = toValues(new String(v.copyBytes(), Charset.forName("UTF8")))
 
   def toValues(str: String): Array[String] = {
+    // todo use univocity csv
     val csv = new CSVReader(new StringReader(str))
     val row = csv.readNext()
     csv.close()

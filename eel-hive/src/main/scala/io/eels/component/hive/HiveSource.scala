@@ -3,8 +3,8 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
-import io.eels.{Part, Predicate, Source}
-import io.eels.component.parquet.ParquetLogMute
+import io.eels.{Part, Source}
+import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 

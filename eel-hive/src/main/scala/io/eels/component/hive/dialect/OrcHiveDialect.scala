@@ -4,7 +4,8 @@ import com.sksamuel.exts.Logging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcReader, OrcWriter}
 import io.eels.schema.Schema
-import io.eels.{Predicate, Row}
+import io.eels.Row
+import io.eels.component.parquet.Predicate
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcInputFormat, OrcOutputFormat, OrcSerde}

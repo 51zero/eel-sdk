@@ -2,8 +2,9 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
+import io.eels.component.parquet.Predicate
 import io.eels.schema.Schema
-import io.eels.{Part, Predicate, Row}
+import io.eels.{Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import rx.lang.scala.Observable

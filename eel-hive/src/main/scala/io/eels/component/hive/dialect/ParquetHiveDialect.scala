@@ -3,9 +3,9 @@ package io.eels.component.hive.dialect
 import com.sksamuel.exts.Logging
 import io.eels.component.avro.{AvroRecordSerializer, AvroSchemaFns}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
-import io.eels.component.parquet.{ParquetLogMute, ParquetReaderFn, ParquetRowIterator, ParquetRowWriter}
+import io.eels.component.parquet._
 import io.eels.schema.Schema
-import io.eels.{Predicate, Row}
+import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import rx.lang.scala.Observable

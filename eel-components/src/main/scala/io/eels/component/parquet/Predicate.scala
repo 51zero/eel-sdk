@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.component.parquet
 
 import org.apache.parquet.filter2.predicate.{FilterApi, FilterPredicate}
 import org.apache.parquet.io.api.Binary
