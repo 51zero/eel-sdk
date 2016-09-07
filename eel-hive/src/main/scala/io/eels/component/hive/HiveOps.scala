@@ -4,8 +4,7 @@ import java.util
 
 import com.sksamuel.exts.Logging
 import io.eels.Constants
-import io.eels.schema.Field
-import io.eels.schema.Schema
+import io.eels.schema.{Field, PartitionPart, PartitionSpec, Schema}
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType

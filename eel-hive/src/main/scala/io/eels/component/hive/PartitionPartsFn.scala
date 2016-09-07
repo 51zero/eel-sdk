@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import io.eels.Row
+import io.eels.schema.PartitionPart
 
 object PartitionPartsFn extends Logging {
 

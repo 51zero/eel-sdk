@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import io.eels._
 import io.eels.component.parquet.Predicate
-import io.eels.schema.Schema
+import io.eels.schema.{PartitionPart, Schema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
 import rx.lang.scala.Observable

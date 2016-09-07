@@ -3,14 +3,14 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import io.eels.PartitionPart
-import io.eels.schema.PartitionConstraint
+import io.eels.schema.{PartitionConstraint, PartitionPart, PartitionSpec}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.LocatedFileStatus
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.api.Table
 import org.apache.hadoop.hive.metastore.api.{Partition => HivePartition}
+
 import scala.collection.JavaConverters._
 
 /**

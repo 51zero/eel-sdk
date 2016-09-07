@@ -1,10 +1,10 @@
 package io.eels.component.hive
 
-import io.eels.PartitionPart
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.schema.Schema
+import io.eels.schema.{PartitionPart, Schema}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
+
 import scala.collection.JavaConverters._
 
 case class HiveTable(dbName: String,
