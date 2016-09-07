@@ -1,6 +1,5 @@
 package io.eels.component.sequence
 
-import au.com.bytecode.opencsv.CSVReader
 import io.eels.schema.Field
 import io.eels.schema.Schema
 import org.apache.hadoop.conf.Configuration
@@ -11,6 +10,7 @@ import java.nio.charset.Charset
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
+import io.eels.component.csv.{CsvFormat, CsvSupport}
 
 object SequenceSupport extends Logging with Using {
 
@@ -20,11 +20,11 @@ object SequenceSupport extends Logging with Using {
   def toValues(v: BytesWritable): Array[String] = toValues(new String(v.copyBytes(), Charset.forName("UTF8")))
 
   def toValues(str: String): Array[String] = {
-    // todo use univocity csv
-    val csv = new CSVReader(new StringReader(str))
-    val row = csv.readNext()
-    csv.close()
-    row
+    val parser = CsvSupport.createParser(CsvFormat(), false, false, false, null, null)
+    parser.beginParsing(new StringReader(str))
+    val record = parser.parseNext()
+    parser.stopParsing()
+    record
   }
 
   def schema(path: Path)(implicit conf: Configuration): Schema = {

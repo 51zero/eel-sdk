@@ -2,8 +2,6 @@ package io.eels.component.csv
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import com.univocity.parsers.csv.CsvParser
-import com.univocity.parsers.csv.CsvParserSettings
 import io.eels.schema.Schema
 import io.eels.{Part, SchemaInferrer, Source, StringInferrer}
 import java.nio.file.Path
@@ -24,23 +22,6 @@ case class CsvSource(path: Path,
 
   val config: Config = ConfigFactory.load()
   val defaultVerifyRows = verifyRows.getOrElse(config.getBoolean("eel.csv.verifyRows"))
-
-  private def createParser(): CsvParser = {
-    val settings = new CsvParserSettings()
-    settings.getFormat.setDelimiter(format.delimiter)
-    settings.getFormat.setQuote(format.quoteChar)
-    settings.getFormat.setQuoteEscape(format.quoteEscape)
-    settings.setLineSeparatorDetectionEnabled(true)
-    // this is always true as we will fetch the headers ourselves by reading first row
-    settings.setHeaderExtractionEnabled(false)
-    settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces)
-    settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
-    settings.setSkipEmptyLines(skipEmptyLines)
-    settings.setCommentCollectionEnabled(true)
-    settings.setEmptyValue(emptyCellValue)
-    settings.setNullValue(nullValue)
-    new com.univocity.parsers.csv.CsvParser(settings)
-  }
 
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
 
@@ -63,6 +44,9 @@ case class CsvSource(path: Path,
   def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
   def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
   def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
+
+  private def createParser() =
+    CsvSupport.createParser(format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces, skipEmptyLines, emptyCellValue, nullValue)
 
   override def schema(): Schema = overrideSchema.getOrElse {
     val parser = createParser()
