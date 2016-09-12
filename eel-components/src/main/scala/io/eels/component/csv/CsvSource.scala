@@ -17,11 +17,9 @@ case class CsvSource(path: Path,
                      skipEmptyLines: Boolean = true,
                      emptyCellValue: String = null,
                      nullValue: String = null,
-                     verifyRows: Option[Boolean] = None,
                      header: Header = Header.FirstRow) extends Source with Using {
 
   val config: Config = ConfigFactory.load()
-  val defaultVerifyRows = verifyRows.getOrElse(config.getBoolean("eel.csv.verifyRows"))
 
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
 
@@ -33,7 +31,6 @@ case class CsvSource(path: Path,
   def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
   def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
   def withFormat(format: CsvFormat): CsvSource = copy(format = format)
-  def withVerifyRows(verifyRows: Boolean): CsvSource = copy(verifyRows = Some(verifyRows))
 
   // use this value when the cell/record is empty quotes in the source data
   def withEmptyCellValue(emptyCellValue: String): CsvSource = copy(emptyCellValue = emptyCellValue)
@@ -69,11 +66,7 @@ case class CsvSource(path: Path,
   }
 
   override def parts(): List[Part] = {
-    val verify = header match {
-      case Header.None => false
-      case _ => verifyRows.getOrElse(defaultVerifyRows)
-    }
-    val part = new CsvPart(createParser, path, header, verify, schema())
+    val part = new CsvPart(createParser, path, header, schema())
     List(part)
   }
 }

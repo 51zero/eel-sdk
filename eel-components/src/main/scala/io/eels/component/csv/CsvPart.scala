@@ -10,7 +10,6 @@ import rx.lang.scala.Observable
 class CsvPart(val createParser: () => CsvParser,
               val path: Path,
               val header: Header,
-              val verifyRows: Boolean,
               val schema: Schema) extends Part {
 
   val rowsToSkip: Int = header match {
