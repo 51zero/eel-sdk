@@ -6,7 +6,8 @@ import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
 import io.eels.{Part, Source}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
+import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
+import scala.collection.JavaConverters._
 
 /**
  * @param constraints optional constraits on the partition data to narrow which partitions are read
@@ -31,6 +32,32 @@ case class HiveSource(dbName: String,
   def withProjection(columns: Seq[String]): HiveSource = {
     require(columns.nonEmpty)
     copy(projection = columns.toList)
+  }
+
+  /**
+    * Returns a TableSpec which contains details of the underlying table.
+    * Similar to the Table class in the Hive API but using scala friendly types.
+    */
+  def spec(): TableSpec = {
+    val table = client.getTable(dbName, tableName)
+    val tableType = TableType.values().find(_.name.toLowerCase == table.getTableType.toLowerCase)
+      .getOrElse(sys.error("Hive table type is not supported by this version of hive"))
+    val params = table.getParameters.asScala.toMap
+    TableSpec(
+      tableName,
+      tableType,
+      table.getSd.getLocation,
+      table.getSd.getNumBuckets,
+      table.getSd.getBucketCols.asScala.toList,
+      params,
+      table.getSd.getInputFormat,
+      table.getSd.getOutputFormat,
+      table.getSd.getSerdeInfo.getName,
+      table.getRetention,
+      table.getCreateTime,
+      table.getLastAccessTime,
+      table.getOwner
+    )
   }
 
   def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))

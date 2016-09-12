@@ -1,3 +1,7 @@
+package io.eels.component.hive
+
+import org.apache.hadoop.hive.metastore.TableType
+
 //package io.eels.component.hive
 //
 //import java.nio.file.Path
@@ -53,9 +57,21 @@
 //    HiveSpec(dbName, tableSpecs.toList)
 //  }
 //}
-//
-//case class HiveSpec(dbName: String, tables: List[HiveTableSpec])
-//
+
+case class TableSpec(tableName: String,
+                     tableType: TableType,
+                     location: String,
+                     numBuckets: Int,
+                     bucketNames: List[String],
+                     params: Map[String, String],
+                     inputFormat: String,
+                     outputFormat: String,
+                     serde: String,
+                     retention: Int,
+                     createTime: Long,
+                     lastAccessTime: Long,
+                     owner: String)
+
 //object HiveSpec {
 //
 //  private val mapper = new ObjectMapper with ScalaObjectMapper
@@ -69,23 +85,6 @@
 //  def writeAsJson(spec: HiveSpec): String = writer.writeValueAsString(spec)
 //}
 //
-//case class HiveTableSpec(tableName: String,
-//                         location: String,
-//                         fields: List[HiveFieldSpec],
-//                         tableType: String,
-//                         partitionKeys: List[String],
-//                         partitions: List[PartitionSpec],
-//                         params: Map[String, String],
-//                         inputFormat: String,
-//                         outputFormat: String,
-//                         serde: String,
-//                         retention: Int,
-//                         createTime: Long,
-//                         createTimeFormatted: String,
-//                         owner: String)
-//
+
 //case class PartitionSpec(values: List[String], location: String, params: Map[String, String])
 //
-//case class HiveFieldSpec(name: String,
-//                         `type`: String,
-//                         comment: Option[String] = None)
