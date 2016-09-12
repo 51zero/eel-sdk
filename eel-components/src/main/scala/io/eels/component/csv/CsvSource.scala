@@ -17,9 +17,11 @@ case class CsvSource(path: Path,
                      skipEmptyLines: Boolean = true,
                      emptyCellValue: String = null,
                      nullValue: String = null,
+                     skipBadRows: Option[Boolean] = None,
                      header: Header = Header.FirstRow) extends Source with Using {
 
   val config: Config = ConfigFactory.load()
+  val defaultSkipBadRows = config.getBoolean("eel.csv.skipBadRows")
 
   def withSchemaInferrer(inferrer: SchemaInferrer): CsvSource = copy(inferrer = inferrer)
 
@@ -66,7 +68,7 @@ case class CsvSource(path: Path,
   }
 
   override def parts(): List[Part] = {
-    val part = new CsvPart(createParser, path, header, schema())
+    val part = new CsvPart(createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
     List(part)
   }
 }

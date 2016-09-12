@@ -5,12 +5,16 @@ import io.eels.{Part, Row}
 import io.eels.schema.Schema
 import java.nio.file.Path
 
+import com.sksamuel.exts.Logging
 import rx.lang.scala.Observable
+
+import scala.util.control.NonFatal
 
 class CsvPart(val createParser: () => CsvParser,
               val path: Path,
               val header: Header,
-              val schema: Schema) extends Part {
+              val skipBadRows: Boolean,
+              val schema: Schema) extends Part with Logging {
 
   val rowsToSkip: Int = header match {
     case Header.FirstRow => 1
@@ -28,8 +32,13 @@ class CsvPart(val createParser: () => CsvParser,
       try {
         sub.onStart()
         iterator.foreach { record =>
-          val row = Row(schema, record.toVector)
-          sub.onNext(row)
+          try {
+            val row = Row(schema, record.toVector)
+            sub.onNext(row)
+          } catch {
+            case NonFatal(e) if skipBadRows =>
+              logger.warn(s"Parse error, record=$record")
+          }
         }
       } catch {
         case e: Throwable =>
