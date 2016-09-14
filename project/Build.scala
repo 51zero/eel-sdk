@@ -99,7 +99,7 @@ object Build extends Build {
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(name := "eel")
-    .aggregate(core, hive)
+    .aggregate(core, components, hive)
    
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
