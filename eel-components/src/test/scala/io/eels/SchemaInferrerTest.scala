@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SchemaInferrerTest extends WordSpec with Matchers {
 
-  val file = getClass.getResource("/csvtest.csv").toURI()
+  val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
   val path = Paths.get(file)
 
   "SchemaInferrer" should {

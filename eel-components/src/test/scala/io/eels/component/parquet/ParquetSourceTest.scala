@@ -19,7 +19,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
 
   implicit val fs = FileSystem.get(new Configuration())
 
-  val personFile = Paths.get(getClass.getResource("/parquetfiles/person.pq").getFile)
+  val personFile = Paths.get(getClass.getResource("/parquet/person.pq").getFile)
   val resourcesDir = personFile.getParent
 
   "ParquetSource" should {
