@@ -35,6 +35,16 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
   }
 
+  "Frame.replaceFieldType" should {
+    "replace matching types in schema" in {
+      val schema = Schema(Field("a", FieldType.String), Field("b", FieldType.Long))
+      val frame = Frame.fromValues(schema, Vector("a", 1), Vector("b", 2))
+      val frame2 = frame.replaceFieldType(FieldType.String, FieldType.Boolean)
+      frame2.schema() shouldBe Schema(Field("a", FieldType.Boolean), Field("b", FieldType.Long))
+      frame2.toList().map(_.values) shouldBe Seq(Vector("a", 1), Vector("b", 2))
+    }
+  }
+
   "Frame.addField" should {
     "support adding columns" in {
       val f = frame.addField("testy", "bibble")

@@ -1,7 +1,5 @@
 package io.eels.schema
 
-import scala.reflect.ClassTag
-
 /**
   * An eel schema contains:
   *
@@ -35,6 +33,13 @@ case class Schema(fields: List[Field]) {
       field(name)
     }.toList
   )
+
+  def replaceFieldType(from: FieldType, to: FieldType): Schema = {
+    Schema(fields.map {
+      case field if field.`type` == from => field.copy(`type` = to)
+      case field => field
+    })
+  }
 
   def field(name: String): Option[Field] = fields.find(_.name == name)
 

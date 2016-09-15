@@ -19,7 +19,6 @@ case class Field(name: String,
   def withPartition(partition: Boolean) = copy(partition = partition)
 }
 
-
 object Field {
   def createStruct(name: String, first: Field, rest: Field*): Field = createStruct(name, first +: rest)
   def createStruct(name: String, fields: Seq[Field]): Field = Field(name, `type` = FieldType.Struct, fields = fields)

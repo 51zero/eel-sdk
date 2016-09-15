@@ -146,6 +146,14 @@ trait Frame {
     }
   }
 
+  def replaceFieldType(from: FieldType, toType: FieldType): Frame = new Frame {
+    override def schema(): Schema = outer.schema().replaceFieldType(from, toType)
+    override def rows(): Observable[Row] = {
+      val newSchema = schema()
+      outer.rows().map(row => Row(newSchema, row.values))
+    }
+  }
+
   def addFieldIfNotExists(name: String, defaultValue: Any): Frame = addFieldIfNotExists(Field(name), defaultValue)
 
   def addFieldIfNotExists(field: Field, defaultValue: Any): Frame = {
