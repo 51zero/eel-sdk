@@ -1,11 +1,12 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
-import io.eels.schema.Schema
 import io.eels.Row
+import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
 import io.eels.component.parquet.Predicate
+import io.eels.schema.Schema
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table
 import rx.lang.scala.Observable
@@ -41,7 +42,9 @@ trait HiveDialect extends Logging {
            predicate: Option[Predicate])
           (implicit fs: FileSystem, conf: Configuration): Observable[Row]
 
-  def writer(schema: Schema, path: Path)
+  def writer(schema: Schema,
+             path: Path,
+             permission: Option[FsPermission])
             (implicit fs: FileSystem, conf: Configuration): HiveWriter
 }
 

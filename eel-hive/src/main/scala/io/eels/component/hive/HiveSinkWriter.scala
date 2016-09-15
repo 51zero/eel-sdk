@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigFactory
 import io.eels.schema.Schema
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
@@ -22,7 +23,8 @@ class HiveSinkWriter(sourceSchema: Schema,
                      dialect: HiveDialect,
                      dynamicPartitioning: Boolean,
                      includePartitionsInData: Boolean,
-                     bufferSize: Int)
+                     bufferSize: Int,
+                     permission: Option[FsPermission])
                     (implicit fs: FileSystem,
                      conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
@@ -156,7 +158,7 @@ class HiveSinkWriter(sourceSchema: Schema,
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
 
-      filePath -> dialect.writer(fileSchema, filePath)
+      filePath -> dialect.writer(fileSchema, filePath, permission)
     })
   }
 }

@@ -3,6 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
 import io.eels.schema.Schema
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -62,7 +63,7 @@ object HiveSpeedTest extends App with Timed {
     )
 
     timed("writing data") {
-      val sink = HiveSink(Database, Table).withIOThreads(4)
+      val sink = HiveSink(Database, Table).withIOThreads(4).withPermission(new FsPermission("700"))
       frame.to(sink)
       logger.info("Write complete")
     }

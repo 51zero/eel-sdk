@@ -7,6 +7,7 @@ import io.eels.component.parquet._
 import io.eels.schema.Schema
 import io.eels.Row
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import rx.lang.scala.Observable
 
@@ -34,7 +35,8 @@ object ParquetHiveDialect extends HiveDialect with Logging {
   }
 
   override def writer(schema: Schema,
-                      path: Path)
+                      path: Path,
+                      permission: Option[FsPermission])
                      (implicit fs: FileSystem, conf: Configuration): HiveWriter = new HiveWriter {
       ParquetLogMute()
 
@@ -49,6 +51,9 @@ object ParquetHiveDialect extends HiveDialect with Logging {
       writer.write(record)
     }
 
-    override def close() = writer.close()
+    override def close() = {
+      writer.close()
+      permission.foreach(fs.setPermission(path, _))
+    }
   }
 }

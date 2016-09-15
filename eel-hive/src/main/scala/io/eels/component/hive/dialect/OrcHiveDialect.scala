@@ -7,6 +7,7 @@ import io.eels.schema.Schema
 import io.eels.Row
 import io.eels.component.parquet.Predicate
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.ql.io.orc.{OrcInputFormat, OrcOutputFormat, OrcSerde}
 import rx.lang.scala.Observable
@@ -20,7 +21,8 @@ object OrcHiveDialect extends HiveDialect with Logging {
                    (implicit fs: FileSystem, conf: Configuration): Observable[Row] = new OrcReader(path).rows()
 
   override def writer(schema: Schema,
-                      path: Path)
+                      path: Path,
+                      permission: Option[FsPermission])
                      (implicit fs: FileSystem, conf: Configuration): HiveWriter = new HiveWriter {
 
     val writer = new OrcWriter(path, schema)
@@ -30,6 +32,9 @@ object OrcHiveDialect extends HiveDialect with Logging {
       writer.write(row)
     }
 
-    override def close() = writer.close()
+    override def close() = {
+      writer.close()
+      permission.foreach(fs.setPermission(path, _))
+    }
   }
 }

@@ -6,6 +6,7 @@ import com.sksamuel.exts.Logging
 import io.eels.Constants
 import io.eels.schema.{Field, PartitionPart, PartitionSpec, Schema}
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
 import org.apache.hadoop.hive.metastore.api.Database

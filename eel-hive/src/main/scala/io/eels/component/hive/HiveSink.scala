@@ -5,6 +5,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema.Schema
 import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 object HiveSink {
@@ -15,7 +16,8 @@ case class HiveSink(dbName: String,
                     tableName: String,
                     ioThreads: Int = 4,
                     dynamicPartitioning: Option[Boolean] = None,
-                    schemaEvolution: Option[Boolean] = None)
+                    schemaEvolution: Option[Boolean] = None,
+                    permission: Option[FsPermission] = None)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   implicit val conf = fs.getConf
@@ -32,6 +34,7 @@ case class HiveSink(dbName: String,
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
+  def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
 
   private def dialect(): HiveDialect = {
     val format = ops.tableFormat(dbName, tableName)
@@ -65,7 +68,8 @@ case class HiveSink(dbName: String,
       dialect(),
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
       includePartitionsInData,
-      bufferSize
+      bufferSize,
+      permission
     )
   }
 }
