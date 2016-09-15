@@ -15,15 +15,14 @@ object FilePattern {
 }
 
 case class FilePattern(pattern: String,
-                       filter: org.apache.hadoop.fs.Path => Boolean = { _ => true })
-                      (implicit fs: FileSystem) extends Logging {
+                       filter: org.apache.hadoop.fs.Path => Boolean = { _ => true }) extends Logging {
 
   val FileExpansionRegex = "(file:|hdfs:)?(?://)?(.*?)/\\*"
 
   def isDirectory(): Boolean = pattern.endsWith("/*") || pattern.endsWith("/")
   def isWildcard(): Boolean = pattern.endsWith("*")
 
-  def toPaths(): List[Path] =
+  def toPaths()(implicit fs: FileSystem): List[Path] =
     if (isDirectory()) {
       val path = new Path(pattern.stripSuffix("/*"))
       logger.debug("File expansion will check path: " + path)
