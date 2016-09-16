@@ -1,0 +1,12 @@
+[
+  {
+    "name": "sam",
+    "type": "user",
+    "action": "rwx"
+  },
+  {
+    "name": "hive",
+    "type": "user",
+    "action": "r--"
+  }
+]
