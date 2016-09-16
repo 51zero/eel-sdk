@@ -24,6 +24,7 @@ class HiveSinkWriter(sourceSchema: Schema,
                      dynamicPartitioning: Boolean,
                      includePartitionsInData: Boolean,
                      bufferSize: Int,
+                     inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission])
                     (implicit fs: FileSystem,
                      conf: Configuration,
@@ -31,6 +32,7 @@ class HiveSinkWriter(sourceSchema: Schema,
 
   val config = ConfigFactory.load()
   val writeToTempDirectory = config.getBoolean("eel.hive.sink.writeToTempFiles")
+  val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
   val hiveOps = new HiveOps(client)
   val tablePath = hiveOps.tablePath(dbName, tableName)
@@ -132,16 +134,8 @@ class HiveSinkWriter(sourceSchema: Schema,
     val partPath = hiveOps.partitionPathString(parts, tablePath)
     writers.getOrElseUpdate(partPath + writerId, {
 
-      val filename = "eel_" + System.nanoTime() + "_" + writerId
-      val filePath = if (writeToTempDirectory) {
-        val temp = new Path(partPath, ".eeltemp")
-        new Path(temp, filename)
-      } else {
-        new Path(partPath, filename)
-      }
-      logger.debug(s"Creating hive writer for $filePath")
-
-      // if dynamic partition is enabled then we will try to createReader the hive partition automatically
+      // if dynamic partition is enabled then we will try to update
+      // the hive metastore with the new partition information
       if (dynamicPartitioning) {
         if (parts.nonEmpty) {
           // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
@@ -157,6 +151,27 @@ class HiveSinkWriter(sourceSchema: Schema,
       } else if (!hiveOps.partitionExists(dbName, tableName, parts)) {
         sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
       }
+
+      // ensure the part path is created, with permissions from parent
+      if (inheritPermissions.getOrElse(inheritPermissionsDefault)) {
+        val parent = Iterator.iterate(new Path(partPath))(_.getParent).dropWhile(false == fs.exists(_)).take(1).toList.head
+        val permission = fs.getFileStatus(parent).getPermission
+        Iterator.iterate(new Path(partPath))(_.getParent).takeWhile(false == fs.exists(_)).foreach { path =>
+          fs.create(path, false)
+          fs.setPermission(path, permission)
+        }
+      }
+
+      val filename = "eel_" + System.nanoTime() + "_" + writerId
+      val filePath = if (writeToTempDirectory) {
+        val temp = new Path(partPath, ".eeltemp")
+        new Path(temp, filename)
+      } else {
+        new Path(partPath, filename)
+      }
+      logger.debug(s"Creating hive writer for $filePath")
+
+
 
       filePath -> dialect.writer(fileSchema, filePath, permission)
     })

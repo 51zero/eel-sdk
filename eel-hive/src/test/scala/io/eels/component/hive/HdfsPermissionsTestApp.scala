@@ -33,7 +33,9 @@ object HdfsPermissionsTestApp extends App with Logging {
     Vector("beatles", "tumbleweed connection", "1966"),
     Vector("pinkfloyd", "the wall", "1979"),
     Vector("pinkfloyd", "dark side of the moon", "1974"),
-    Vector("pinkfloyd", "emily", "1966")
+    Vector("pinkfloyd", "emily", "1966"),
+    Vector("jackbruce", "harmony row", "1970"),
+    Vector("jethrotull", "aqualung", "1974")
   )
 
   val rows = List.fill(100)(data(Random.nextInt(data.length)))
@@ -45,10 +47,10 @@ object HdfsPermissionsTestApp extends App with Logging {
     frame.schema,
     List("artist"),
     format = HiveFormat.Parquet,
-    overwrite = true
+    overwrite = false
   )
 
-  val sink = HiveSink(Database, Table).withIOThreads(4)
+  val sink = HiveSink(Database, Table).withIOThreads(4).withInheritPermission(true)
   frame.to(sink)
   logger.info("Write complete")
 

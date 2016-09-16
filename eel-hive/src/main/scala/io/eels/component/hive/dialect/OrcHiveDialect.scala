@@ -9,7 +9,6 @@ import io.eels.component.parquet.Predicate
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.ql.io.orc.{OrcInputFormat, OrcOutputFormat, OrcSerde}
 import rx.lang.scala.Observable
 
 object OrcHiveDialect extends HiveDialect with Logging {

@@ -17,7 +17,8 @@ case class HiveSink(dbName: String,
                     ioThreads: Int = 4,
                     dynamicPartitioning: Option[Boolean] = None,
                     schemaEvolution: Option[Boolean] = None,
-                    permission: Option[FsPermission] = None)
+                    permission: Option[FsPermission] = None,
+                    inheritPermissions: Option[Boolean] = None)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   implicit val conf = fs.getConf
@@ -35,6 +36,7 @@ case class HiveSink(dbName: String,
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
+  def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
 
   private def dialect(): HiveDialect = {
     val format = ops.tableFormat(dbName, tableName)
@@ -69,6 +71,7 @@ case class HiveSink(dbName: String,
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
       includePartitionsInData,
       bufferSize,
+      inheritPermissions,
       permission
     )
   }
