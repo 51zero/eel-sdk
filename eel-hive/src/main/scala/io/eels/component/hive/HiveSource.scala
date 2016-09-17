@@ -2,11 +2,14 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
+import io.eels.component.hdfs.HdfsSource
 import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
 import io.eels.{Part, Source}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
-import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
+
 import scala.collection.JavaConverters._
 
 /**
@@ -32,6 +35,12 @@ case class HiveSource(dbName: String,
   def withProjection(columns: Seq[String]): HiveSource = {
     require(columns.nonEmpty)
     copy(projection = columns.toList)
+  }
+
+  // returns the permission of the table location path
+  def tablePermission(): FsPermission = {
+    val location = ops.location(dbName, tableName)
+    fs.getFileStatus(new Path(location)).getPermission
   }
 
   /**
