@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
-import io.eels.component.hdfs.HdfsSource
+import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
 import io.eels.{Part, Source}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
@@ -35,6 +35,24 @@ case class HiveSource(dbName: String,
   def withProjection(columns: Seq[String]): HiveSource = {
     require(columns.nonEmpty)
     copy(projection = columns.toList)
+  }
+
+  /**
+    * Sets the acl for all files of this hive source.
+    * Even if the files are not located inside the table directory, this function will find them
+    * and correctly update the spec.
+    *
+    * @param acl the acl values to set
+    */
+  def setAcl(acl: AclSpec): Unit = {
+    ops.partitions(dbName, tableName).foreach { partition =>
+      val location = partition.getSd.getLocation
+      // update the partition as well as nested files
+      HdfsSource(location).setAcl(acl)
+      HdfsSource(s"$location/*").setAcl(acl)
+    }
+    val location = spec().location
+    HdfsSource(location).setAcl(acl)
   }
 
   // returns the permission of the table location path
