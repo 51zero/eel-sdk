@@ -18,7 +18,7 @@ case class HdfsSource(pattern: FilePattern)(implicit fs: FileSystem) {
           case "group" => AclEntryType.GROUP
           case "other" => AclEntryType.OTHER
         }
-        new HdfsAclEntry(`type`, entry.name, FsAction.getFsAction(entry.action), AclEntryScope.ACCESS)
+        new HdfsAclEntry.Builder().setName(entry.name).setPermission(FsAction.getFsAction(entry.action)).setType(`type`).setScope(AclEntryScope.ACCESS).build()
       }
       fs.setAcl(path, hadoopAclEntries.asJava)
     }
