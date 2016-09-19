@@ -10,6 +10,10 @@ case class HdfsSource(pattern: FilePattern)(implicit fs: FileSystem) {
   def permissions(): Vector[(Path, FsPermission)] = pattern.toPaths().map(fs.getFileStatus)
     .map(status => (status.getPath, status.getPermission)).toVector
 
+  def setPermissions(permission: FsPermission): Unit = {
+    pattern.toPaths().foreach(fs.setPermission(_, permission))
+  }
+
   def setAcl(spec: AclSpec): Unit = {
     pattern.toPaths().foreach { path =>
       val hadoopAclEntries = spec.entries.map { entry =>

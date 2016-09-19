@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
-import io.eels.{Part, Source}
+import io.eels.{FilePattern, Part, Source}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.fs.permission.FsPermission
@@ -38,21 +38,49 @@ case class HiveSource(dbName: String,
   }
 
   /**
+    * Returns a list of all files used by this hive source.
+    *
+    * @param includePartitionDirs if true then the partition directories will be included
+    * @param includeTableDir      if true then the main table directory will be included
+    * @return paths of all files and directories
+    */
+  def paths(includePartitionDirs: Boolean = false, includeTableDir: Boolean = false): List[Path] = {
+    val files = ops.partitions(dbName, tableName).flatMap { partition =>
+      val location = partition.getSd.getLocation
+      val files = FilePattern(s"$location/*").toPaths()
+      if (includePartitionDirs) {
+        files :+ new Path(location)
+      } else {
+        files
+      }
+    }
+    if (includeTableDir) {
+      val location = spec().location
+      files :+ new Path(location)
+    } else {
+      files
+    }
+  }
+
+  def setPermissions(permission: FsPermission,
+                     includePartitionDirs: Boolean = false,
+                     includeTableDir: Boolean = false): Unit = {
+    paths(includePartitionDirs, includeTableDir).foreach(fs.setPermission(_, permission))
+  }
+
+  /**
     * Sets the acl for all files of this hive source.
     * Even if the files are not located inside the table directory, this function will find them
     * and correctly update the spec.
     *
     * @param acl the acl values to set
     */
-  def setAcl(acl: AclSpec): Unit = {
-    ops.partitions(dbName, tableName).foreach { partition =>
-      val location = partition.getSd.getLocation
-      // update the partition as well as nested files
-      HdfsSource(location).setAcl(acl)
-      HdfsSource(s"$location/*").setAcl(acl)
+  def setAcl(acl: AclSpec,
+             includePartitionDirs: Boolean = false,
+             includeTableDir: Boolean = false): Unit = {
+    paths(includePartitionDirs, includeTableDir).foreach { path =>
+      HdfsSource(path).setAcl(acl)
     }
-    val location = spec().location
-    HdfsSource(location).setAcl(acl)
   }
 
   // returns the permission of the table location path
