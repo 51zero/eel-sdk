@@ -1,14 +1,16 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
+import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
 import io.eels.{FilePattern, Part, Source}
-import io.eels.component.parquet.{ParquetLogMute, Predicate}
-import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.fs.permission.FsPermission
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
+import org.apache.hadoop.security.UserGroupInformation
 
 import scala.collection.JavaConverters._
 
@@ -22,7 +24,9 @@ case class HiveSource(dbName: String,
                       tableName: String,
                       constraints: List[PartitionConstraint] = Nil,
                       projection: List[String] = Nil,
-                      predicate: Option[Predicate] = None)
+                      predicate: Option[Predicate] = None,
+                      principal: Option[String] = None,
+                      keytabPath: Option[java.nio.file.Path] = None)
                      (implicit fs: FileSystem,
                       client: IMetaStoreClient) extends Source with Logging with Using {
     ParquetLogMute()
@@ -37,6 +41,25 @@ case class HiveSource(dbName: String,
     copy(projection = columns.toList)
   }
 
+  def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))
+
+  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(PartitionEquals(name, value))
+
+  def withPartitionConstraint(expr: PartitionConstraint): HiveSource = {
+    copy(constraints = constraints :+ expr)
+  }
+
+  def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSource = {
+    login()
+    copy(principal = principal.some, keytabPath = keytabPath.some)
+  }
+
+  private def login(): Unit = {
+    for (user <- principal; path <- keytabPath) {
+      UserGroupInformation.loginUserFromKeytab(user, path.toString)
+    }
+  }
+
   /**
     * Returns a list of all files used by this hive source.
     *
@@ -45,6 +68,8 @@ case class HiveSource(dbName: String,
     * @return paths of all files and directories
     */
   def paths(includePartitionDirs: Boolean = false, includeTableDir: Boolean = false): List[Path] = {
+    login()
+
     val files = ops.partitions(dbName, tableName).flatMap { partition =>
       val location = partition.getSd.getLocation
       val files = FilePattern(s"$location/*").toPaths()
@@ -65,6 +90,7 @@ case class HiveSource(dbName: String,
   def setPermissions(permission: FsPermission,
                      includePartitionDirs: Boolean = false,
                      includeTableDir: Boolean = false): Unit = {
+    login()
     paths(includePartitionDirs, includeTableDir).foreach(fs.setPermission(_, permission))
   }
 
@@ -78,6 +104,7 @@ case class HiveSource(dbName: String,
   def setAcl(acl: AclSpec,
              includePartitionDirs: Boolean = false,
              includeTableDir: Boolean = false): Unit = {
+    login()
     paths(includePartitionDirs, includeTableDir).foreach { path =>
       HdfsSource(path).setAcl(acl)
     }
@@ -85,6 +112,7 @@ case class HiveSource(dbName: String,
 
   // returns the permission of the table location path
   def tablePermission(): FsPermission = {
+    login()
     val location = ops.location(dbName, tableName)
     fs.getFileStatus(new Path(location)).getPermission
   }
@@ -94,6 +122,7 @@ case class HiveSource(dbName: String,
     * Similar to the Table class in the Hive API but using scala friendly types.
     */
   def spec(): TableSpec = {
+    login()
     val table = client.getTable(dbName, tableName)
     val tableType = TableType.values().find(_.name.toLowerCase == table.getTableType.toLowerCase)
       .getOrElse(sys.error("Hive table type is not supported by this version of hive"))
@@ -115,13 +144,7 @@ case class HiveSource(dbName: String,
     )
   }
 
-  def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))
 
-  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(PartitionEquals(name, value))
-
-  def withPartitionConstraint(expr: PartitionConstraint): HiveSource = {
-    copy(constraints = constraints :+ expr)
-  }
 
   /**
    * The returned schema should take into account:
@@ -132,7 +155,7 @@ case class HiveSource(dbName: String,
    * 2) Any partitions set. These should be included in the schema columns.
    */
   override def schema(): Schema = {
-
+    login()
     // if no field names were specified, then we will return the schema as is from the hive database,
     // otherwise we will keep only the requested fields
     val schema = if (projection.isEmpty) metastoreSchema
@@ -151,7 +174,10 @@ case class HiveSource(dbName: String,
   }
 
   // returns the full underlying schema from the metastore including partition partitionKeys
-  val metastoreSchema: Schema = ops.schema(dbName, tableName)
+  val metastoreSchema: Schema = {
+    login()
+    ops.schema(dbName, tableName)
+  }
 
   //def  spec(): HiveSpec = HiveSpecFn.toHiveSpec(dbName, tableName)
 
@@ -161,6 +187,7 @@ case class HiveSource(dbName: String,
   }
 
   override def parts(): List[Part] = {
+    login()
 
     val table = client.getTable(dbName, tableName)
     val dialect = io.eels.component.hive.HiveDialect(table)
