@@ -144,8 +144,6 @@ case class HiveSource(dbName: String,
     )
   }
 
-
-
   /**
    * The returned schema should take into account:
    *

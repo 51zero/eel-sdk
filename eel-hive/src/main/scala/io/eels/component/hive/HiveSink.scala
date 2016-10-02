@@ -7,6 +7,8 @@ import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
+import org.apache.hadoop.security.UserGroupInformation
+import com.sksamuel.exts.OptionImplicits._
 
 object HiveSink {
   val CaseErrorMsg = "Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive"
@@ -25,7 +27,9 @@ case class HiveSink(dbName: String,
                     dynamicPartitioning: Option[Boolean] = None,
                     schemaEvolution: Option[Boolean] = None,
                     permission: Option[FsPermission] = None,
-                    inheritPermissions: Option[Boolean] = None)
+                    inheritPermissions: Option[Boolean] = None,
+                    principal: Option[String] = None,
+                    keytabPath: Option[java.nio.file.Path] = None)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   import HiveSink._
@@ -39,15 +43,29 @@ case class HiveSink(dbName: String,
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
 
+  def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
+    login()
+    copy(principal = principal.some, keytabPath = keytabPath.some)
+  }
+
   private def dialect(): HiveDialect = {
+    login()
     val format = ops.tableFormat(dbName, tableName)
     logger.debug(s"Table format is $format; detecting dialect...")
     io.eels.component.hive.HiveDialect(format)
   }
 
+  private def login(): Unit = {
+    for (user <- principal; path <- keytabPath) {
+      UserGroupInformation.loginUserFromKeytab(user, path.toString)
+    }
+  }
+
   def containsUpperCase(schema: Schema): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
   override def writer(schema: Schema): SinkWriter = {
+    login()
+
     if (containsUpperCase(schema)) {
       if (errorOnUpperCase)
         sys.error(HiveSink.CaseErrorMsg)
