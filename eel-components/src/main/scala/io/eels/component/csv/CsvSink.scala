@@ -1,16 +1,17 @@
 package io.eels.component.csv
 
-import java.nio.file.Path
-
-import com.univocity.parsers.csv.{CsvWriter, CsvWriterSettings}
-import io.eels.{Row, Sink, SinkWriter}
+import com.univocity.parsers.csv.CsvWriter
 import io.eels.schema.Schema
+import io.eels.{Row, Sink, SinkWriter}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class CsvSink(path: Path,
                    headers: Header = Header.FirstRow,
                    format: CsvFormat = CsvFormat(),
                    ignoreLeadingWhitespaces: Boolean = false,
-                   ignoreTrailingWhitespaces: Boolean = false) extends Sink {
+                   ignoreTrailingWhitespaces: Boolean = false)
+                  (implicit fs: FileSystem) extends Sink {
 
   override def writer(schema: Schema): SinkWriter = new CsvSinkWriter(schema, path, headers, format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces)
 
@@ -28,22 +29,11 @@ case class CsvSink(path: Path,
 
     private val lock = new AnyRef {}
 
-    private def createWriter(): CsvWriter = {
-      val settings = new CsvWriterSettings()
-      settings.getFormat.setDelimiter(format.delimiter)
-      settings.getFormat.setQuote(format.quoteChar)
-      settings.getFormat.setQuoteEscape(format.quoteEscape)
-      // we will handle header writing ourselves
-      settings.setHeaderWritingEnabled(false)
-      settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces)
-      settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
-      new CsvWriter(path.toFile(), settings)
-    }
-
     import scala.collection.JavaConverters._
 
     private lazy val writer: CsvWriter = {
-      val writer = createWriter()
+      val output = fs.create(path)
+      val writer = CsvSupport.createWriter(output, format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces)
       headers match {
         case Header.FirstComment => writer.commentRow(schema.fieldNames().mkString(format.delimiter.toString()))
         case Header.FirstRow => writer.writeHeaders(schema.fieldNames().asJava)
@@ -65,4 +55,8 @@ case class CsvSink(path: Path,
       }
     }
   }
+}
+
+object CsvSink {
+  def apply(path: java.nio.file.Path): CsvSink = CsvSink(new Path(path.toString))(FileSystem.getLocal(new Configuration))
 }

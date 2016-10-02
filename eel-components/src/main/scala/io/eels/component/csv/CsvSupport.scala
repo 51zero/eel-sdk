@@ -1,8 +1,11 @@
 package io.eels.component.csv
 
-import com.univocity.parsers.csv.{CsvParser, CsvParserSettings}
+import java.io.{OutputStream, Writer}
+
+import com.univocity.parsers.csv.{CsvParser, CsvParserSettings, CsvWriter, CsvWriterSettings}
 
 object CsvSupport {
+
   def createParser(format: CsvFormat,
                    ignoreLeadingWhitespaces: Boolean = true,
                    ignoreTrailingWhitespaces: Boolean = true,
@@ -23,5 +26,33 @@ object CsvSupport {
     settings.setEmptyValue(emptyCellValue)
     settings.setNullValue(nullValue)
     new com.univocity.parsers.csv.CsvParser(settings)
+  }
+
+  def writerSettings(format: CsvFormat,
+                     ignoreLeadingWhitespaces: Boolean,
+                     ignoreTrailingWhitespaces: Boolean): CsvWriterSettings = {
+    val settings = new CsvWriterSettings()
+    settings.getFormat.setDelimiter(format.delimiter)
+    settings.getFormat.setQuote(format.quoteChar)
+    settings.getFormat.setQuoteEscape(format.quoteEscape)
+    // we will handle header writing ourselves
+    settings.setHeaderWritingEnabled(false)
+    settings.setIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces)
+    settings.setIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces)
+    settings
+  }
+
+  def createWriter(writer: Writer,
+                   format: CsvFormat,
+                   ignoreLeadingWhitespaces: Boolean,
+                   ignoreTrailingWhitespaces: Boolean): CsvWriter = {
+    new CsvWriter(writer, writerSettings(format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces))
+  }
+
+  def createWriter(output: OutputStream,
+                   format: CsvFormat,
+                   ignoreLeadingWhitespaces: Boolean,
+                   ignoreTrailingWhitespaces: Boolean): CsvWriter = {
+    new CsvWriter(output, writerSettings(format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces))
   }
 }

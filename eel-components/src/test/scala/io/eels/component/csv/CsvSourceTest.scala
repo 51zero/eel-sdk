@@ -3,9 +3,13 @@ package io.eels.component.csv
 import java.nio.file.Paths
 
 import io.eels.schema.{Field, FieldType, Schema}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.FileSystem
 import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceTest extends WordSpec with Matchers {
+
+  implicit val fs = FileSystem.getLocal(new Configuration())
 
   "CsvSource" should {
     "read schema" in {

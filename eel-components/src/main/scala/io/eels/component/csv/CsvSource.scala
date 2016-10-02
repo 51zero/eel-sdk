@@ -4,9 +4,9 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.Schema
 import io.eels.{Part, SchemaInferrer, Source, StringInferrer}
-import java.nio.file.Path
-
 import com.sksamuel.exts.io.Using
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class CsvSource(path: Path,
                      overrideSchema: Option[Schema] = None,
@@ -18,7 +18,8 @@ case class CsvSource(path: Path,
                      emptyCellValue: String = null,
                      nullValue: String = null,
                      skipBadRows: Option[Boolean] = None,
-                     header: Header = Header.FirstRow) extends Source with Using {
+                     header: Header = Header.FirstRow)
+                    (implicit fs: FileSystem) extends Source with Using {
 
   val config: Config = ConfigFactory.load()
   val defaultSkipBadRows = config.getBoolean("eel.csv.skipBadRows")
@@ -49,7 +50,8 @@ case class CsvSource(path: Path,
 
   override def schema(): Schema = overrideSchema.getOrElse {
     val parser = createParser()
-    parser.beginParsing(path.toFile())
+    val input = fs.open(path)
+    parser.beginParsing(input)
     val headers = header match {
       case Header.None =>
         // read the first row just to get the count of columns, then we'll call them column 1,2,3,4 etc
@@ -71,4 +73,8 @@ case class CsvSource(path: Path,
     val part = new CsvPart(createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
     List(part)
   }
+}
+
+object CsvSource {
+  def apply(path: java.nio.file.Path): CsvSource = CsvSource(new Path(path.toString))(FileSystem.getLocal(new Configuration))
 }

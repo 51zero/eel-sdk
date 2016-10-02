@@ -3,9 +3,8 @@ package io.eels.component.csv
 import com.univocity.parsers.csv.CsvParser
 import io.eels.{Part, Row}
 import io.eels.schema.Schema
-import java.nio.file.Path
-
 import com.sksamuel.exts.Logging
+import org.apache.hadoop.fs.{FileSystem, Path}
 import rx.lang.scala.Observable
 
 import scala.util.control.NonFatal
@@ -14,7 +13,8 @@ class CsvPart(val createParser: () => CsvParser,
               val path: Path,
               val header: Header,
               val skipBadRows: Boolean,
-              val schema: Schema) extends Part with Logging {
+              val schema: Schema)
+             (implicit fs: FileSystem) extends Part with Logging {
 
   val rowsToSkip: Int = header match {
     case Header.FirstRow => 1
@@ -24,7 +24,8 @@ class CsvPart(val createParser: () => CsvParser,
   override def data(): Observable[Row] = {
 
     val parser = createParser()
-    parser.beginParsing(path.toFile())
+    val input = fs.open(path)
+    parser.beginParsing(input)
 
     val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip)
 
