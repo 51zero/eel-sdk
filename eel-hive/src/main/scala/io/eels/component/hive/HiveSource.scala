@@ -6,7 +6,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
-import io.eels.{FilePattern, Part, Source}
+import io.eels.{FilePattern, HdfsIterator, Part, Source}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -39,6 +39,18 @@ case class HiveSource(dbName: String,
   def withProjection(columns: Seq[String]): HiveSource = {
     require(columns.nonEmpty)
     copy(projection = columns.toList)
+  }
+
+  /**
+    * Returns all the files used by this table. The result is a mapping of partition path to the files contained
+    * in that partition.
+    */
+  def files(): Map[Path, Seq[Path]] = {
+    ops.partitions(dbName, tableName).map { p =>
+      val location = new Path(p.getSd.getLocation)
+      val paths = HdfsIterator(fs.listFiles(location, false)).map(_.getPath).toList
+      location -> paths
+    }.toMap
   }
 
   def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))
