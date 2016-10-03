@@ -25,7 +25,8 @@ class HiveSinkWriter(sourceSchema: Schema,
                      includePartitionsInData: Boolean,
                      bufferSize: Int,
                      inheritPermissions: Option[Boolean],
-                     permission: Option[FsPermission])
+                     permission: Option[FsPermission],
+                     fileListener: FileListener)
                     (implicit fs: FileSystem,
                      conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
@@ -170,9 +171,7 @@ class HiveSinkWriter(sourceSchema: Schema,
         new Path(partPath, filename)
       }
       logger.debug(s"Creating hive writer for $filePath")
-
-
-
+      fileListener.onFileCreated(filePath)
       filePath -> dialect.writer(fileSchema, filePath, permission)
     })
   }

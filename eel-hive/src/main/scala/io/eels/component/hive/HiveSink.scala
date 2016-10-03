@@ -29,7 +29,8 @@ case class HiveSink(dbName: String,
                     permission: Option[FsPermission] = None,
                     inheritPermissions: Option[Boolean] = None,
                     principal: Option[String] = None,
-                    keytabPath: Option[java.nio.file.Path] = None)
+                    keytabPath: Option[java.nio.file.Path] = None,
+                    fileListener: FileListener = FileListener.noop)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   import HiveSink._
@@ -42,6 +43,7 @@ case class HiveSink(dbName: String,
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
+  def withFileListener(listener: FileListener): HiveSink = copy(fileListener = listener)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
     login()
@@ -91,7 +93,8 @@ case class HiveSink(dbName: String,
       includePartitionsInData,
       bufferSize,
       inheritPermissions,
-      permission
+      permission,
+      fileListener
     )
   }
 }
