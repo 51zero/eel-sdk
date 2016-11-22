@@ -16,17 +16,19 @@ object AvroSchemaFns extends Logging {
     def toAvroField(field: Field, caseSensitive: Boolean = true): org.apache.avro.Schema.Field = {
 
       val avroSchema = field.`type` match {
-        case FieldType.String => SchemaBuilder.builder().stringType()
-        case FieldType.Int => SchemaBuilder.builder().intType()
-        case FieldType.Short => SchemaBuilder.builder().intType()
+        case FieldType.BigInt => SchemaBuilder.builder().longType()
         case FieldType.Boolean => SchemaBuilder.builder().booleanType()
+        case FieldType.Date => SchemaBuilder.builder().longType()
+        case FieldType.Decimal => SchemaBuilder.builder().doubleType()
         case FieldType.Double => SchemaBuilder.builder().doubleType()
         case FieldType.Float => SchemaBuilder.builder().floatType()
+        case FieldType.Int => SchemaBuilder.builder().intType()
         case FieldType.Long => SchemaBuilder.builder().longType()
-        case FieldType.BigInt => SchemaBuilder.builder().longType()
+        case FieldType.Short => SchemaBuilder.builder().intType()
+        case FieldType.String => SchemaBuilder.builder().stringType()
+        case FieldType.Timestamp => SchemaBuilder.builder().longType()
         case _ =>
-          logger.warn(s"Unknown field type ${field.name}=${field.`type`}; defaulting to string")
-          org.apache.avro.Schema.create(org.apache.avro.Schema.Type.STRING)
+          sys.error(s"Unsupported field type ${field.name}=${field.`type`}")
       }
 
       val fieldName = if (caseSensitive) field.name else field.name.toLowerCase()
