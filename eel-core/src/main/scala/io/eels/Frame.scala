@@ -77,6 +77,11 @@ trait Frame {
     }
   }
 
+  def take(n: Int) = new Frame {
+    override def schema(): Schema = outer.schema()
+    override def rows(): Observable[Row] = outer.rows().take(n)
+  }
+
   def takeWhile(pred: (Row) => Boolean): Frame = new Frame {
     override def schema(): Schema = outer.schema()
     override def rows(): Observable[Row] = outer.rows().takeWhile(pred)

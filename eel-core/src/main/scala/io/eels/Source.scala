@@ -18,6 +18,14 @@ import rx.lang.scala.Observer
  * a partition in a partitioned source.
  */
 trait Source extends Logging {
+
+  /**
+    * Builds a frame from this source. The frame will be lazily loaded when an action is performed.
+    *
+    * @param ioThreads the number of threads to use in the source reader
+    * @param observer  a listener for row items
+    * @return a new frame
+    */
   def toFrame(ioThreads: Int, observer: Observer[Row] = NoopObserver): Frame =
     new FrameSource(ioThreads, this, observer)
   def schema(): Schema
