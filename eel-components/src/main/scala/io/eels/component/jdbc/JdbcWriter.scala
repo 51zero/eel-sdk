@@ -1,5 +1,6 @@
 package io.eels.component.jdbc
 
+import java.sql.Connection
 import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
@@ -7,7 +8,7 @@ import io.eels.schema.Schema
 import io.eels.{Row, SinkWriter}
 
 class JdbcWriter(schema: Schema,
-                 url: String,
+                 connFn: () => Connection,
                  table: String,
                  createTable: Boolean,
                  dialect: JdbcDialect,
@@ -27,7 +28,7 @@ class JdbcWriter(schema: Schema,
   private val coordinatorPool = Executors.newSingleThreadExecutor()
 
   private lazy val inserter = {
-    val inserter = new JdbcInserter(url, table, schema, autoCommit, dialect)
+    val inserter = new JdbcInserter(connFn, table, schema, autoCommit, dialect)
     if (createTable) {
       inserter.ensureTableCreated()
     }

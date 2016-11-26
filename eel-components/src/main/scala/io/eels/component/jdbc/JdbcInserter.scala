@@ -1,23 +1,22 @@
 package io.eels.component.jdbc
 
-import java.sql.{Connection, DriverManager}
+import java.sql.Connection
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.jdbc.ResultSetIterator
 import io.eels.Row
 import io.eels.schema.Schema
 
-class JdbcInserter(val url: String,
+class JdbcInserter(val connFn: () => Connection,
                    val table: String,
                    val schema: Schema,
                    val autoCommit: Boolean,
                    val dialect: JdbcDialect) extends Logging {
 
-  val conn: Connection = DriverManager.getConnection(url)
-
-  logger.debug(s"Connecting to jdbc $url...")
+  logger.debug("Connecting to JDBC to insert.. ..")
+  val conn = connFn()
   conn.setAutoCommit(autoCommit)
-  logger.debug(s"Connected to $url")
+  logger.debug(s"Connected successfully; autoCommit=$autoCommit")
 
   def insertBatch(batch: Seq[Row]): Unit = {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))

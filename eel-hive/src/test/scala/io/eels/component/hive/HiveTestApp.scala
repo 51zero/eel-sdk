@@ -63,25 +63,29 @@ object HiveTestApp extends App with Timed {
     logger.info("Write complete")
   }
 
-  val footers = ParquetSource(s"hdfs:/user/hive/warehouse/$Database.db/$Table/*").footers
+  //  val footers = ParquetSource(s"hdfs:/user/hive/warehouse/$Database.db/$Table/*").footers
+  //
+  //  import scala.collection.JavaConverters._
+  //
+  //  val sum = footers.flatMap(_.getParquetMetadata.getBlocks.asScala.map(_.getRowCount)).sum
+  //  println(sum)
 
-  import scala.collection.JavaConverters._
 
-  val sum = footers.flatMap(_.getParquetMetadata.getBlocks.asScala.map(_.getRowCount)).sum
-  println(sum)
-
-//  timed("hive read") {
-//    val source = HiveSource("sam", "albums").toFrame(4).filter("year", _.toString == "1979")
-//    println(source.size)
-//  }
-//
-//  timed("hive read with predicate") {
-//    val source = HiveSource("sam", "albums").withPredicate(PredicateEquals("year", "1979")).toFrame(4)
-//    println(source.size)
-//  }
+  //  timed("hive read") {
+  //    val source = HiveSource("sam", "albums").toFrame(4).filter("year", _.toString == "1979")
+  //    println(source.size)
+  //  }
+  //
+  //  timed("hive read with predicate") {
+  //    val source = HiveSource("sam", "albums").withPredicate(PredicateEquals("year", "1979")).toFrame(4)
+  //    println(source.size)
+  //  }
 
   val size = HiveSource("sam", "albums").toFrame(4).size()
   println(size)
+
+  val k = HiveSource("sam", "albums").select("name").toFrame(4).take(10).toList()
+  println(k)
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
   //  println(partitionNames.asScala.toList)
