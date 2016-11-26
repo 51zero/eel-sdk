@@ -6,6 +6,9 @@
         </Console>
     </Appenders>
     <Loggers>
+        <Logger name="io.eels" level="debug">
+
+        </Logger>
         <Root level="warn">
             <AppenderRef ref="Console" />
         </Root>

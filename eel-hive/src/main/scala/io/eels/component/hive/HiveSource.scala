@@ -205,16 +205,12 @@ case class HiveSource(dbName: String,
     val dialect = io.eels.component.hive.HiveDialect(table)
     val partitionKeys = HiveTable(dbName, tableName).partitionKeys()
 
-    // all field names from the underlying hive schema
-    val fieldNames = metastoreSchema.fields.map(_.name)
-
-    // if we requested only partition columns, then we can get this information by scanning the file system
-    // to see which partitions have been created. Then the presence of files in a partition location means that
-    // that partition must have data.
+    // if we requested only partition columns, then we can get this information by scanning the metatstore
+    // to see which partitions have been created.
     if (isPartitionOnlyProjection()) {
       logger.info("Requested projection contains only partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
-      List(new HivePartitionPart(dbName, tableName, fieldNames, Nil, metastoreSchema, predicate, dialect))
+      List(new HivePartitionPart(dbName, tableName, schema(), partitionKeys, predicate, dialect))
     } else {
       val files = HiveFilesFn(table, partitionKeys.map(_.field.name), constraints)
       logger.debug(s"Found ${files.size} visible hive files from all locations for $dbName:$tableName")

@@ -9,17 +9,20 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import rx.lang.scala.Observable
 
+import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
+
 /**
  * A Hive Part that can read values from the metastore, rather than reading values from files.
- * This can be used only when the requested fields are all partition partitionKeys.
+  * This can be used only when the requested fields are all partition keys.
  */
 class HivePartitionPart(dbName: String,
                         tableName: String,
-                        fieldNames: List[String],
-                        partitionKeys: List[String],
-                        metastoreSchema: Schema,
-                        predicate: Option[Predicate],
-                        dialect: HiveDialect)
+                        projectionSchema: Schema,
+                        partitionKeys: List[PartitionKey], // partition keys for this table, used to map the partition values back to a map
+                        predicate: Option[Predicate], // used to filter rows
+                        dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true
+                       )
                        (implicit fs: FileSystem,
                         client: IMetaStoreClient) extends Part with Logging {
 
@@ -28,33 +31,33 @@ class HivePartitionPart(dbName: String,
   // if this is true, then we will still check that some files exist for each partition, to avoid
   // a situation where the partitions have been created in the hive metastore, but no actual
   // data has been written using those yet.
-  private val partitionPartFileCheck: Boolean =
-  config.getBoolean("eel.hive.source.checkDataForPartitionOnlySources")
+  private val partitionPartFileCheck = config.getBoolean("eel.hive.source.checkDataForPartitionOnlySources")
   logger.info(s"eel.hive.source.checkDataForPartitionOnlySources=$partitionPartFileCheck")
 
+  private def partitionIsPhysical(part: org.apache.hadoop.hive.metastore.api.Partition): Boolean = {
+    val location = new Path(part.getSd.getLocation)
+    logger.debug(s"Checking that partition $location has been created on disk")
+    try {
+      fs.exists(location)
+    } catch {
+      case NonFatal(e) =>
+        logger.warn(s"Error reading $location", e)
+        false
+    }
+  }
+
   override def data(): Observable[Row] = {
-    // the schema we use for the parquet reader must have at least one field specified, so we can
-    // just use the full metastore schema
-    import scala.collection.JavaConverters._
-    val values = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { it =>
-      !partitionPartFileCheck || HiveFileScanner(new Path(it.getSd.getLocation)).exists { it =>
-        try {
-          // val reader = dialect.reader(it.path, metastoreSchema, metastoreSchema, predicate, fs)
-          // todo fix this
-          true
-        } catch {
-          case t: Throwable =>
-          logger.warn(s"Error reading ${it.getPath} to check for data")
-          false
-        }
-      }
+    // each row will contain just the values from the metastore
+    val rows = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { part =>
+      !partitionPartFileCheck || partitionIsPhysical(part)
+    }.map { part =>
+      // the partition values are assumed to be the same order as the supplied partition keys
+      // first we build a map of the keys to values, then use that map to return a Row with
+      // values in the order set by the fieldNames parameter
+      val map = partitionKeys.map(_.field.name).zip(part.getValues.asScala).toMap
+      Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
     }
 
-//        .map {
-//      val map = partitionKeys.zip(it.getValues.asScala).toMap
-//      fieldNames.map(map(_)).toVector
-//    }
-
-    throw new UnsupportedOperationException()
+    Observable.from(rows)
   }
 }

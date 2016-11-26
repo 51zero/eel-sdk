@@ -45,7 +45,7 @@ object ParquetReaderFn extends Logging {
     }
 
     // a filter is set when we have a predicate for the read
-    def filter(): FilterCompat.Filter = predicate.map { pred => FilterCompat.get(pred()) }.getOrElse(FilterCompat.NOOP)
+    def filter(): FilterCompat.Filter = predicate.map(_.parquet).map(FilterCompat.get).getOrElse(FilterCompat.NOOP)
 
     AvroParquetReader.builder[GenericRecord](path)
       .withConf(configuration())

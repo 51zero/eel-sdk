@@ -29,11 +29,14 @@ object Build extends Build {
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.hadoop"   % "hadoop-yarn"                           % HadoopVersion,
-      "org.apache.hive"     % "hive-exec"                             % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica"),
+      "org.apache.hive"     % "hive-exec"                             % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
       "org.datanucleus"     % "datanucleus-core"                      % "4.1.15",
       "org.datanucleus"     % "datanucleus-api-jdo"                   % "4.1.4",
       "org.datanucleus"     % "datanucleus-accessplatform-jdo-rdbms"  % "4.1.15",
-      "com.jolbox"          % "bonecp"                                % "0.8.0.RELEASE"
+      "com.jolbox"          % "bonecp"                                % "0.8.0.RELEASE",
+      "org.apache.logging.log4j" % "log4j-api"            % "2.7"             % "test",
+      "org.apache.logging.log4j" % "log4j-core"           % "2.7"             % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % "2.7"             % "test",
     )
   )
 
@@ -74,16 +77,17 @@ object Build extends Build {
       "com.sksamuel.exts"     %% "exts"                   % ExtsVersion,
       "com.univocity"         % "univocity-parsers"       % UnivocityVersion,
       "org.apache.avro" % "avro" % "1.8.1",
-      "org.apache.hadoop"     % "hadoop-common"           % HadoopVersion,
+      "org.apache.hadoop"     % "hadoop-common"           % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
       "io.dropwizard.metrics" % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics" % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"             % "slf4j-api"               % "1.7.21",
-      "org.apache.logging.log4j" % "log4j-api" % "2.7" % "test",
+      "org.apache.logging.log4j" % "log4j-api"            % "2.7"             % "test",
       "org.apache.logging.log4j" % "log4j-core"           % "2.7"             % "test",
       "org.apache.logging.log4j" % "log4j-slf4j-impl"     % "2.7"             % "test",
       "mysql"                 % "mysql-connector-java"    % "5.1.39"          % "test",
       "org.scalatest"         %% "scalatest"              % ScalatestVersion  % "test"
     ),
+    excludeDependencies += "org.slf4j" % "slf4j-log4j12",
     publishTo <<= version {
       (v: String) =>
         val nexus = "https://oss.sonatype.org/"

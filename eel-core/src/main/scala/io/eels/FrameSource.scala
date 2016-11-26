@@ -59,8 +59,9 @@ class FrameSource(ioThreads: Int,
         val id = count.incrementAndGet()
 
         part.data().subscribe(new Subscriber[Row]() {
+
           override def onStart() {
-            logger.info(s"Starting part reader #$id")
+            logger.info(s"Starting part #$id")
           }
 
           override def onNext(row: Row) {
@@ -69,12 +70,12 @@ class FrameSource(ioThreads: Int,
             if (error != null) {
               this.unsubscribe()
               latch.countDown()
-              logger.warn(s"Error detected, shutting down part reader #$id")
+              logger.warn(s"Error detected, shutting down part #$id")
             }
           }
 
           override def onError(e: Throwable) {
-            logger.error(s"Error while loading from part reader #$id; further records will be skipped", e)
+            logger.error(s"Error while reading part #$id; further records will be skipped", e)
             error = e
             this.unsubscribe()
             latch.countDown()
@@ -82,7 +83,7 @@ class FrameSource(ioThreads: Int,
           }
 
           override def onCompleted() {
-            logger.info(s"Completed part reader #$id")
+            logger.info(s"Completed part #$id")
             latch.countDown()
             observer.onCompleted()
           }
@@ -95,6 +96,9 @@ class FrameSource(ioThreads: Int,
       latch.await(1, TimeUnit.DAYS)
       logger.info("All source parts completed; latch released")
       try {
+        // we add a sentinel so that our BlockingQueueConcurrentIterator knows when the queue has finished.
+        // since it is blocking, without a sentinel or an interupt it would block forever
+        logger.debug("Sending sentinel to source row queue")
         queue.put(Row.Sentinel)
       } catch {
         case NonFatal(e) =>
@@ -105,13 +109,17 @@ class FrameSource(ioThreads: Int,
     }
     executor.shutdown()
 
-    Observable { it =>
-      it.onStart()
-      BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => !it.isUnsubscribed).foreach(it.onNext)
+    Observable { sub =>
+      sub.onStart()
+      BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => !sub.isUnsubscribed).foreach { row =>
+        logger.debug(row.toString)
+        sub.onNext(row)
+      }
+      logger.debug("Blocking queue has emptied")
       if (error == null)
-        it.onCompleted()
+        sub.onCompleted()
       else
-        it.onError(error)
+        sub.onError(error)
     }
   }
 }
