@@ -34,6 +34,7 @@ case class HiveSource(dbName: String,
   implicit val conf = fs.getConf
   val ops = new HiveOps(client)
 
+  @deprecated("use withProjection()", "1.1.0")
   def select(first: String, rest: String*): HiveSource = withProjection(first +: rest)
   def withProjection(first: String, rest: String*): HiveSource = withProjection(first +: rest)
   def withProjection(columns: Seq[String]): HiveSource = {
@@ -174,8 +175,9 @@ case class HiveSource(dbName: String,
       // hive fields we need to use lower case everything. And we need to return the schema
       // in the same order as the requested projection
       val columns = projection.map { fieldName =>
-        val field = metastoreSchema.fields.find { it => it.name.equals(fieldName, true) }
-        field.getOrElse(sys.error(s"Requested field $fieldName does not exist in the hive schema"))
+        metastoreSchema.fields
+          .find(_.name == fieldName.toLowerCase)
+          .getOrElse(sys.error(s"Requested field $fieldName does not exist in the hive schema"))
       }
       Schema(columns)
     }

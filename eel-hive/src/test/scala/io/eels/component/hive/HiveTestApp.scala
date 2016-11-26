@@ -83,7 +83,7 @@ object HiveTestApp extends App with Timed {
   val size = HiveSource(Database, Table).toFrame(4).size()
   println(size)
 
-  val k = HiveSource(Database, Table).select("artist").toFrame(4).take(10).size()
+  val k = HiveSource(Database, Table).withProjection("album").toFrame(4).take(10).toList()
   println(k)
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
