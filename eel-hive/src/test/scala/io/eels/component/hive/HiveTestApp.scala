@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
+import io.eels.component.parquet.Predicate
 import io.eels.schema.Schema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -28,39 +29,39 @@ object HiveTestApp extends App with Timed {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val data = Array(
-    Vector("elton", "yellow brick road ", "1972"),
-    Vector("elton", "tumbleweed connection", "1974"),
-    Vector("elton", "empty sky", "1969"),
-    Vector("beatles", "white album", "1969"),
-    Vector("beatles", "tumbleweed connection", "1966"),
-    Vector("pinkfloyd", "the wall", "1979"),
-    Vector("pinkfloyd", "dark side of the moon", "1974"),
-    Vector("pinkfloyd", "emily", "1966")
-  )
-
-  val rows = List.fill(10000)(data(Random.nextInt(data.length)))
-  val frame = Frame.fromValues(Schema("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
-  println(frame.schema.show())
-
-  timed("creating table") {
-    new HiveOps(client).createTable(
-      Database,
-      Table,
-      frame.schema,
-      List("artist"),
-      format = HiveFormat.Parquet,
-      overwrite = true
-    )
-  }
-
-  val table = new HiveOps(client).tablePath(Database, Table)
-
-  val sink = HiveSink(Database, Table).withIOThreads(4)
-  timed("writing data") {
-    frame.to(sink)
-    logger.info("Write complete")
-  }
+//  val data = Array(
+//    Vector("elton", "yellow brick road ", "1972"),
+//    Vector("elton", "tumbleweed connection", "1974"),
+//    Vector("elton", "empty sky", "1969"),
+//    Vector("beatles", "white album", "1969"),
+//    Vector("beatles", "tumbleweed connection", "1966"),
+//    Vector("pinkfloyd", "the wall", "1979"),
+//    Vector("pinkfloyd", "dark side of the moon", "1974"),
+//    Vector("pinkfloyd", "emily", "1966")
+//  )
+//
+//  val rows = List.fill(10000)(data(Random.nextInt(data.length)))
+//  val frame = Frame.fromValues(Schema("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
+//  println(frame.schema.show())
+//
+//  timed("creating table") {
+//    new HiveOps(client).createTable(
+//      Database,
+//      Table,
+//      frame.schema,
+//      List("artist"),
+//      format = HiveFormat.Parquet,
+//      overwrite = true
+//    )
+//  }
+//
+//  val table = new HiveOps(client).tablePath(Database, Table)
+//
+//  val sink = HiveSink(Database, Table).withIOThreads(4)
+//  timed("writing data") {
+//    frame.to(sink)
+//    logger.info("Write complete")
+//  }
 
   //  val footers = ParquetSource(s"hdfs:/user/hive/warehouse/$Database.db/$Table/*").footers
   //
@@ -83,11 +84,14 @@ object HiveTestApp extends App with Timed {
 //  val size = HiveSource(Database, Table).toFrame(4).size()
  // println(size)
 
- // val k = HiveSource(Database, Table).withProjection("album").toFrame(4).take(3).toList()
- // println(k)
+//  val k = HiveSource(Database, Table).withProjection("album").toFrame(4).take(3).toList()
+  //  println(k)
+  //
+  //  val m = HiveSource(Database, Table).withProjection("artist").toFrame(4).take(3).toList()
+  //  println(m)
 
-  val m = HiveSource(Database, Table).withProjection("artist").toFrame(4).take(3).toList()
-  println(m)
+  val x = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("artist", "elton")).toFrame(4).take(10).toList()
+  println(x)
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
   //  println(partitionNames.asScala.toList)

@@ -56,6 +56,8 @@ class HivePartitionPart(dbName: String,
       // values in the order set by the fieldNames parameter
       val map = partitionKeys.map(_.field.name).zip(part.getValues.asScala).toMap
       Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
+    }.filter { row =>
+      predicate.fold(true)(_.scala().apply(row))
     }
 
     Observable.from(rows)
