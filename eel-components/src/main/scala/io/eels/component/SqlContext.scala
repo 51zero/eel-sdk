@@ -21,7 +21,7 @@ class SqlContext {
   }
 
   def registerFrame(name: String, frame: Frame): Unit = {
-    frame.to(JdbcSink(uri, name, createTable = true))
+    frame.to(JdbcSink(uri, name).withCreateTable(true))
   }
 
   def sql(query: String): Frame = JdbcSource(uri, query).toFrame(1)

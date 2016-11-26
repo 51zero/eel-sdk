@@ -26,7 +26,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
       rs.close()
     }
     "create table if createTable is true" in {
-      frame.to(JdbcSink(url, "qwerty", createTable = true))
+      frame.to(JdbcSink(url, "qwerty").withCreateTable(true))
       val rs = conn.createStatement().executeQuery("select count(*) from qwerty")
       rs.next()
       rs.getLong(1) shouldBe 2L
@@ -35,7 +35,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
     "support multiple writers" in {
       val rows = List.fill(10000)(Row(schema, Vector("1", "2", "3")))
       val mframe = Frame(schema, rows)
-      val sink = JdbcSink(url, "multithreads", createTable = true, threads = 4)
+      val sink = JdbcSink(url, "multithreads").withCreateTable(true).withThreads(4)
       mframe.to(sink)
       val rs = conn.createStatement().executeQuery("select count(*) from multithreads")
       rs.next()

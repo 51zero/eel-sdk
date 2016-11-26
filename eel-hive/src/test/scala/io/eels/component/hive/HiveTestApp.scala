@@ -2,7 +2,6 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
-import io.eels.component.parquet.ParquetSource
 import io.eels.schema.Schema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -24,7 +23,7 @@ object HiveTestApp extends App with Timed {
   implicit val fs = FileSystem.get(conf)
 
   implicit val hiveConf = new HiveConf()
-  hiveConf.addResource(new Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
+  hiveConf.addResource(new Path("/home/sam/development/hive-2.1.0-bin/conf/hive-site.xml"))
   hiveConf.reloadConfiguration()
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
@@ -81,10 +80,10 @@ object HiveTestApp extends App with Timed {
   //    println(source.size)
   //  }
 
-  val size = HiveSource("sam", "albums").toFrame(4).size()
+  val size = HiveSource(Database, Table).toFrame(4).size()
   println(size)
 
-  val k = HiveSource("sam", "albums").select("name").toFrame(4).take(10).toList()
+  val k = HiveSource(Database, Table).select("artist").toFrame(4).take(10).size()
   println(k)
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)

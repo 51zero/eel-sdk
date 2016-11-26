@@ -30,7 +30,8 @@ case class HiveSink(dbName: String,
                     inheritPermissions: Option[Boolean] = None,
                     principal: Option[String] = None,
                     keytabPath: Option[java.nio.file.Path] = None,
-                    fileListener: FileListener = FileListener.noop)
+                    fileListener: FileListener = FileListener.noop,
+                    createTable: Boolean = false)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   import HiveSink._
@@ -39,6 +40,7 @@ case class HiveSink(dbName: String,
   val ops = new HiveOps(client)
 
   def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
+  def withCreateTable(createTable: Boolean): HiveSink = copy(createTable = createTable)
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))

@@ -33,6 +33,10 @@ case class JdbcSink(connFn: () => Connection,
   private val bufferSize = config.getInt("eel.jdbc.sink.bufferSize")
   private val autoCommit = config.getBoolean("eel.jdbc.sink.autoCommit")
 
+  def withCreateTable(createTable: Boolean) = copy(createTable = createTable)
+  def withBatchSize(batchSize: Int) = copy(batchSize = batchSize)
+  def withThreads(threads: Int) = copy(threads = threads)
+
   override def writer(schema: Schema) =
     new JdbcWriter(schema, connFn, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize)
 }

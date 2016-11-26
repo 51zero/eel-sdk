@@ -9,21 +9,31 @@ object Build extends Build {
 
   val org = "io.eels"
 
+  val ExtsVersion = "1.37.0"
   val HadoopVersion = "2.7.3"
   val HiveVersion = "2.1.0"
   val JacksonVersion = "2.8.4"
   val Log4jVersion = "1.2.17"
   val OrcVersion = "1.2.1"
   val RxScalaVersion = "0.26.4"
-  val ScalaVersion = "2.12.0"
+  val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
   val Slf4jVersion = "1.7.12"
-  val ParquetVersion = "1.9.0"
+  val ParquetVersion = "1.8.1"
+  val UnivocityVersion = "2.2.3"
+  val RxJavaVersion = "1.2.2"
+  val ConfigVersion = "1.3.0"
+  val H2Version = "1.4.192"
+  val MetricsVersion = "3.1.2"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.hadoop"   % "hadoop-yarn"       % HadoopVersion,
-      "org.apache.hive"     % "hive-exec"         % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica")
+      "org.apache.hadoop"   % "hadoop-yarn"                           % HadoopVersion,
+      "org.apache.hive"     % "hive-exec"                             % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica"),
+      "org.datanucleus"     % "datanucleus-core"                      % "4.1.15",
+      "org.datanucleus"     % "datanucleus-api-jdo"                   % "4.1.4",
+      "org.datanucleus"     % "datanucleus-accessplatform-jdo-rdbms"  % "4.1.15",
+      "com.jolbox"          % "bonecp"                                % "0.8.0.RELEASE"
     )
   )
 
@@ -37,7 +47,8 @@ object Build extends Build {
       "org.apache.hadoop"                       % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hadoop"                       % "hadoop-mapreduce-client-core" % HadoopVersion,
       "org.apache.parquet"                      % "parquet-avro"            % ParquetVersion,
-      "com.h2database"                          % "h2"                      % "1.4.192"
+      "org.apache.derby"                        % "derby"                   % "10.13.1.1",
+      "com.h2database"                          % "h2"                      % H2Version
     )
   )
 
@@ -56,18 +67,22 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
-      "org.scala-lang"        % "scala-reflect"          % scalaVersion.value,
-      "io.reactivex"          %% "rxscala"               % RxScalaVersion,
-      "io.reactivex"          % "rxjava"                 % "1.2.2",
-      "com.typesafe"          % "config"                 % "1.3.0",
-      "com.sksamuel.exts"     %% "exts"                  % "1.37.0",
-      "com.univocity"         % "univocity-parsers"      % "2.2.3",
-      "org.apache.hadoop"     % "hadoop-common"          % HadoopVersion,
-      "org.slf4j"             % "slf4j-api"              % "1.7.21",
-      "io.dropwizard.metrics" % "metrics-core"           % "3.1.2",
-      "io.dropwizard.metrics" % "metrics-jvm"            % "3.1.2",
-      "mysql"                 % "mysql-connector-java"   % "5.1.39" % "test",
-      "org.scalatest"         %% "scalatest"             % ScalatestVersion % "test"
+      "org.scala-lang"        % "scala-reflect"           % scalaVersion.value,
+      "io.reactivex"          %% "rxscala"                % RxScalaVersion,
+      "io.reactivex"          % "rxjava"                  % RxJavaVersion,
+      "com.typesafe"          % "config"                  % ConfigVersion,
+      "com.sksamuel.exts"     %% "exts"                   % ExtsVersion,
+      "com.univocity"         % "univocity-parsers"       % UnivocityVersion,
+      "org.apache.avro" % "avro" % "1.8.1",
+      "org.apache.hadoop"     % "hadoop-common"           % HadoopVersion,
+      "io.dropwizard.metrics" % "metrics-core"            % MetricsVersion,
+      "io.dropwizard.metrics" % "metrics-jvm"             % MetricsVersion,
+      "org.slf4j"             % "slf4j-api"               % "1.7.21",
+      "org.apache.logging.log4j" % "log4j-api" % "2.7" % "test",
+      "org.apache.logging.log4j" % "log4j-core"           % "2.7"             % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % "2.7"             % "test",
+      "mysql"                 % "mysql-connector-java"    % "5.1.39"          % "test",
+      "org.scalatest"         %% "scalatest"              % ScalatestVersion  % "test"
     ),
     publishTo <<= version {
       (v: String) =>

@@ -29,8 +29,8 @@ class HivePartitionPart(dbName: String,
   // a situation where the partitions have been created in the hive metastore, but no actual
   // data has been written using those yet.
   private val partitionPartFileCheck: Boolean =
-  config.getBoolean("eel.hive.source.partitionPartFileCheck")
-  logger.info(s"eel.hive.source.partitionPartFileCheck=$partitionPartFileCheck")
+  config.getBoolean("eel.hive.source.checkDataForPartitionOnlySources")
+  logger.info(s"eel.hive.source.checkDataForPartitionOnlySources=$partitionPartFileCheck")
 
   override def data(): Observable[Row] = {
     // the schema we use for the parquet reader must have at least one field specified, so we can
