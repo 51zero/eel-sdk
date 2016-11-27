@@ -8,7 +8,7 @@ import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import com.sksamuel.exts.io.Using
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import rx.lang.scala.{Observable, Observer, Subscriber}
 
 import scala.util.control.NonFatal
@@ -21,7 +21,7 @@ class FrameSource(ioThreads: Int,
   private val bufferSize = config.getInt("eel.source.defaultBufferSize")
   logger.info(s"FrameSource is configured with bufferSize=$bufferSize")
 
-  override def schema(): Schema = source.schema()
+  override def schema(): StructType = source.schema()
 
   // this method may be invoked multiple times, each time generating a new "load action" and a new
   // resultant rows from it.
@@ -119,7 +119,6 @@ class FrameSource(ioThreads: Int,
     Observable { sub =>
       sub.onStart()
       BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => !sub.isUnsubscribed).foreach { row =>
-        logger.debug(row.toString)
         sub.onNext(row)
       }
       logger.debug("Blocking queue has emptied")

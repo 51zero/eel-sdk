@@ -2,14 +2,14 @@ package io.eels.component.csv
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Part, SchemaInferrer, Source, StringInferrer}
 import com.sksamuel.exts.io.Using
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class CsvSource(path: Path,
-                     overrideSchema: Option[Schema] = None,
+                     overrideSchema: Option[StructType] = None,
                      format: CsvFormat = CsvFormat(),
                      inferrer: SchemaInferrer = StringInferrer,
                      ignoreLeadingWhitespaces: Boolean = true,
@@ -29,7 +29,7 @@ case class CsvSource(path: Path,
   // sets whether this source has a header and if so where to read from
   def withHeader(header: Header): CsvSource = copy(header = header)
 
-  def withSchema(schema: Schema): CsvSource = copy(overrideSchema = Some(schema))
+  def withSchema(schema: StructType): CsvSource = copy(overrideSchema = Some(schema))
   def withDelimiter(c: Char): CsvSource = copy(format = format.copy(delimiter = c))
   def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
   def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
@@ -48,7 +48,7 @@ case class CsvSource(path: Path,
   private def createParser() =
     CsvSupport.createParser(format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces, skipEmptyLines, emptyCellValue, nullValue)
 
-  override def schema(): Schema = overrideSchema.getOrElse {
+  override def schema(): StructType = overrideSchema.getOrElse {
     val parser = createParser()
     val input = fs.open(path)
     parser.beginParsing(input)

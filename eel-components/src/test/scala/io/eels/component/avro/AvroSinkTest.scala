@@ -3,13 +3,13 @@ package io.eels.component.avro
 import java.io.ByteArrayOutputStream
 
 import io.eels.Frame
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
 
   val frame = Frame.fromValues(
-    Schema("name", "job", "location"),
+    StructType("name", "job", "location"),
     List("clint eastwood", "actor", "carmel"),
     List("elton john", "musician", "pinner"),
     List("issac newton", "scientist", "heaven")

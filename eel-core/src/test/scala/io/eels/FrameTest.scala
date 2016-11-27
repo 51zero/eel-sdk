@@ -2,7 +2,7 @@ package io.eels
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import io.eels.schema.{Field, FieldType, Schema}
+import io.eels.schema._
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{Matchers, WordSpec}
 
@@ -10,14 +10,14 @@ case class Wibble(name: String, location: String, postcode: String)
 
 class FrameTest extends WordSpec with Matchers with Eventually {
 
-  val schema = Schema("a", "b")
+  val schema = StructType("a", "b")
   val frame = Frame.fromValues(schema, Vector("1", "2"), Vector("3", "4"))
 
   "Frame.withLowerCaseSchema" should {
     "return same values but with lower case schema" in {
-      val schema = Schema("A", "B", "c")
+      val schema = StructType("A", "B", "c")
       val f = Frame.fromValues(schema, Vector("x", "Y", null)).withLowerCaseSchema()
-      f.schema() shouldBe Schema("a", "b", "c")
+      f.schema() shouldBe StructType("a", "b", "c")
       f.toList() shouldBe List(Row(f.schema(), Vector("x", "Y", null)))
     }
   }
@@ -30,17 +30,17 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "add column if it does not exist" in {
       val f = frame.addFieldIfNotExists("testy", "bibble")
-      f.schema shouldBe Schema("a", "b", "testy")
+      f.schema shouldBe StructType("a", "b", "testy")
       f.toList() shouldBe List(Row(schema.addFieldIfNotExists("testy"), Vector("1", "2", "bibble")), Row(schema.addFieldIfNotExists("testy"), Vector("3", "4", "bibble")))
     }
   }
 
   "Frame.replaceFieldType" should {
     "replace matching types in schema" in {
-      val schema = Schema(Field("a", FieldType.String), Field("b", FieldType.Long))
+      val schema = StructType(Field("a", StringType), Field("b", LongType(true)))
       val frame = Frame.fromValues(schema, Vector("a", 1), Vector("b", 2))
-      val frame2 = frame.replaceFieldType(FieldType.String, FieldType.Boolean)
-      frame2.schema() shouldBe Schema(Field("a", FieldType.Boolean), Field("b", FieldType.Long))
+      val frame2 = frame.replaceFieldType(StringType, BooleanType)
+      frame2.schema() shouldBe StructType(Field("a", BooleanType), Field("b", LongType(true)))
       frame2.toList().map(_.values) shouldBe Seq(Vector("a", 1), Vector("b", 2))
     }
   }
@@ -48,7 +48,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
   "Frame.addField" should {
     "support adding columns" in {
       val f = frame.addField("testy", "bibble")
-      f.schema shouldBe Schema("a", "b", "testy")
+      f.schema shouldBe StructType("a", "b", "testy")
       f.head.values shouldBe Vector("1", "2", "bibble")
     }
   }
@@ -66,44 +66,44 @@ class FrameTest extends WordSpec with Matchers with Eventually {
   "Frame.stripFromFieldNames" should {
     "remove offending characters" in {
       val frame = Frame.fromValues(
-        Schema("name", "#location", "!postcode"),
+        StructType("name", "#location", "!postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
       frame.stripCharsFromFieldNames(Seq('#', '!', 'p')).schema shouldBe
-        Schema("name", "location", "ostcode")
+        StructType("name", "location", "ostcode")
     }
   }
 
   "Frame.removeField" should {
     "remove column" in {
       val frame = Frame.fromValues(
-        Schema("name", "location", "postcode"),
+        StructType("name", "location", "postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
       val f = frame.removeField("location")
-      f.schema shouldBe Schema("name", "postcode")
+      f.schema shouldBe StructType("name", "postcode")
       f.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
     "not remove column if case is different" in {
       val frame = Frame.fromValues(
-        Schema("name", "location", "postcode"),
+        StructType("name", "location", "postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
       val f = frame.removeField("POSTcode")
-      f.schema shouldBe Schema("name", "location", "postcode")
+      f.schema shouldBe StructType("name", "location", "postcode")
       f.toSet shouldBe Set(Row(f.schema, "sam", "aylesbury", "hp22"), Row(f.schema, "ham", "buckingham", "mk10"))
     }
     "remove column with ignore case" in {
       val frame = Frame.fromValues(
-        Schema("name", "location", "postcode"),
+        StructType("name", "location", "postcode"),
         List("sam", "aylesbury", "hp22"),
         List("ham", "buckingham", "mk10")
       )
       val f = frame.removeField("locATION", false)
-      f.schema shouldBe Schema("name", "postcode")
+      f.schema shouldBe StructType("name", "postcode")
       f.toSet shouldBe Set(Row(f.schema, "sam", "hp22"), Row(f.schema, "ham", "mk10"))
     }
   }
@@ -142,9 +142,9 @@ class FrameTest extends WordSpec with Matchers with Eventually {
 
   "Frame.join" should {
     "cat two frames" in {
-      val frame1 = Frame.fromValues(Schema("a", "b"), List("sam", "bam"))
-      val frame2 = Frame.fromValues(Schema("c", "d"), List("ham", "jam"))
-      frame1.join(frame2).schema shouldBe Schema("a", "b", "c", "d")
+      val frame1 = Frame.fromValues(StructType("a", "b"), List("sam", "bam"))
+      val frame2 = Frame.fromValues(StructType("c", "d"), List("ham", "jam"))
+      frame1.join(frame2).schema shouldBe StructType("a", "b", "c", "d")
       frame1.join(frame2).head.values shouldBe Vector("sam", "bam", "ham", "jam")
     }
   }
@@ -169,42 +169,42 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       frame.drop(2).size shouldBe 0
     }
     "be thread safe when using drop" in {
-      val schema = Schema("k")
+      val schema = StructType("k")
       val rows = Iterator.tabulate(10000)(k => Row(schema, Vector("1"))).toList
       val frame = Frame(schema, rows)
       frame.drop(100).size shouldBe 9900
     }
     "support column projection" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
       val f = frame.projection("location")
       f.head.values shouldBe Seq("aylesbury")
-      f.schema shouldBe Schema("location")
+      f.schema shouldBe StructType("location")
     }
     "support column projection expressions" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
       val f = frame.projectionExpression("location,name")
       f.head.values shouldBe Vector("aylesbury", "sam")
-      f.schema shouldBe Schema("location", "name")
+      f.schema shouldBe StructType("location", "name")
     }
     "support column projection re-ordering" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
       )
       val f = frame.projection("location", "name")
-      f.schema shouldBe Schema("location", "name")
+      f.schema shouldBe StructType("location", "name")
       f.head.values shouldBe Vector("aylesbury", "sam")
     }
     "support union" in {
@@ -248,7 +248,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     //    }
     "support take while with row predicate" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
@@ -260,7 +260,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support take while with column predicate" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
@@ -272,7 +272,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support drop while" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
@@ -281,7 +281,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support drop while with column predicate" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
@@ -292,7 +292,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support explode" in {
       val f = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("jam", "aylesbury"),
         List("ham", "buckingham")
@@ -310,7 +310,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support fill" in {
       val f = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", null),
         List("jam", "aylesbury"),
         List(null, "buckingham")
@@ -325,7 +325,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "throw an error if the column is not present while filtering" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
@@ -335,7 +335,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support replace" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
@@ -348,7 +348,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support replace by column" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
@@ -361,7 +361,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support replace by column with function" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
@@ -375,7 +375,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support dropNullRows" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", null),
         List("ham", "buckingham")
       )
@@ -387,19 +387,20 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     }
     "support column update" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.updateField(Field("name", FieldType.Int, true)).schema shouldBe Schema(Field("name", FieldType.Int, true), Field("location"))
+      frame.updateField(Field("name", BooleanType, true)).schema shouldBe
+        StructType(Field("name", BooleanType, true), Field("location", StringType))
     }
     "support column rename" in {
       val frame = Frame.fromValues(
-        Schema("name", "location"),
+        StructType("name", "location"),
         List("sam", "aylesbury"),
         List("ham", "buckingham")
       )
-      frame.renameField("name", "blame").schema shouldBe Schema("blame", "location")
+      frame.renameField("name", "blame").schema shouldBe StructType("blame", "location")
     }
     "convert from a Seq[T<:Product]" ignore {
 

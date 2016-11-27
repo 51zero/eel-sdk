@@ -1,11 +1,9 @@
 package io.eels.component.jdbc
 
-import io.eels.schema.Schema
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.ResultSet
+import java.sql.{Connection, DriverManager, ResultSet}
 
 import com.sksamuel.exts.Logging
+import io.eels.schema.StructType
 
 trait JdbcPrimitives extends Logging {
 
@@ -16,7 +14,7 @@ trait JdbcPrimitives extends Logging {
     conn
   }
 
-  def schemaFor(dialect: JdbcDialect, rs: ResultSet): Schema = {
+  def schemaFor(dialect: JdbcDialect, rs: ResultSet): StructType = {
     val schema = JdbcSchemaFns.fromJdbcResultset(rs, dialect)
     logger.debug("Fetched schema:\n" + schema.show())
     schema

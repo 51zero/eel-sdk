@@ -4,7 +4,7 @@ import java.io.{File, OutputStream}
 import java.nio.file.{Files, Path}
 
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Row, Sink, SinkWriter}
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic
@@ -12,10 +12,10 @@ import org.apache.avro.generic.GenericRecord
 
 case class AvroSink(out: OutputStream) extends Sink {
   private val config = ConfigFactory.load()
-  override def writer(schema: Schema): SinkWriter = new AvroSinkWriter(schema, out, config)
+  override def writer(schema: StructType): SinkWriter = new AvroSinkWriter(schema, out, config)
 }
 
-class AvroSinkWriter(schema: Schema, out: OutputStream, config: Config) extends SinkWriter {
+class AvroSinkWriter(schema: StructType, out: OutputStream, config: Config) extends SinkWriter {
 
   private val caseSensitive = config.getBoolean("eel.avro.caseSensitive")
 

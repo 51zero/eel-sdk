@@ -1,8 +1,6 @@
 package io.eels.component.parquet
 
-import io.eels.schema.Field
-import io.eels.schema.FieldType
-import io.eels.schema.Schema
+import io.eels.schema._
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.GenericData
 import org.apache.avro.generic.GenericRecord
@@ -25,10 +23,10 @@ class ParquetSourceTest extends WordSpec with Matchers {
   "ParquetSource" should {
     "read schema" in {
       val people = ParquetSource(personFile)
-      people.schema() shouldBe Schema(
-        Field("name", FieldType.String, nullable = false),
-        Field("job", FieldType.String, nullable = false),
-        Field("location", FieldType.String, nullable = false)
+      people.schema() shouldBe StructType(
+        Field("name", StringType, nullable = false),
+        Field("job", StringType, nullable = false),
+        Field("location", StringType, nullable = false)
       )
     }
     "read parquet files" in {
@@ -82,10 +80,10 @@ class ParquetSourceTest extends WordSpec with Matchers {
       writer2.close()
 
       ParquetSource(new Path("merge*")).schema() shouldBe
-        Schema(
-          Field("a", FieldType.String, nullable = false),
-          Field("b", FieldType.Double, nullable = false),
-          Field("c", FieldType.Boolean, nullable = false)
+        StructType(
+          Field("a", StringType, nullable = false),
+          Field("b", DoubleType, nullable = false),
+          Field("c", BooleanType, nullable = false)
         )
 
       fs.delete(new Path(".merge1.pq.crc"), false)

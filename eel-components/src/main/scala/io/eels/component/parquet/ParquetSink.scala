@@ -2,9 +2,9 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
+import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
+import io.eels.schema.StructType
 import io.eels.{Row, Sink, SinkWriter}
-import io.eels.component.avro.{AvroRecordSerializer, AvroSchemaFns, RecordSerializer}
-import io.eels.schema.Schema
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object ParquetSink {
@@ -13,7 +13,7 @@ object ParquetSink {
 
 case class ParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with Logging {
 
-  override def writer(schema: Schema): SinkWriter = new SinkWriter {
+  override def writer(schema: StructType): SinkWriter = new SinkWriter {
 
     private val config = ConfigFactory.load()
     private val caseSensitive = config.getBoolean("eel.parquet.caseSensitive")

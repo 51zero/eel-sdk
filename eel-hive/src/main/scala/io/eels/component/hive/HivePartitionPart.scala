@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.parquet.Predicate
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -18,7 +18,7 @@ import scala.util.control.NonFatal
  */
 class HivePartitionPart(dbName: String,
                         tableName: String,
-                        projectionSchema: Schema,
+                        projectionSchema: StructType,
                         partitionKeys: List[PartitionKey], // partition keys for this table, used to map the partition values back to a map
                         predicate: Option[Predicate], // used to filter rows
                         dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true

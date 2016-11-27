@@ -1,14 +1,14 @@
 package io.eels
 
-import io.eels.schema.{Field, FieldType, Schema}
+import io.eels.schema._
 
 trait SchemaInferrer {
-  def schemaOf(headers: List[String]): Schema
+  def schemaOf(headers: List[String]): StructType
 }
 
 object SchemaInferrer {
-  def apply(default: FieldType, first: SchemaRule, rest: SchemaRule*): SchemaInferrer = new SchemaInferrer {
-    override def schemaOf(headers: List[String]): Schema = {
+  def apply(default: DataType, first: DataTypeRule, rest: DataTypeRule*): SchemaInferrer = new SchemaInferrer {
+    override def schemaOf(headers: List[String]): StructType = {
 
       val fields = headers.map { header =>
         (first +: rest).foldLeft(None: Option[Field]) { case (field, rule) =>
@@ -16,19 +16,19 @@ object SchemaInferrer {
         }.getOrElse(Field(header, default))
       }
 
-      Schema(fields)
+      StructType(fields)
     }
   }
 }
 
 object StringInferrer extends SchemaInferrer {
-  override def schemaOf(headers: List[String]): Schema = Schema(headers.map { header =>
-    Field(header, FieldType.String, true)
+  override def schemaOf(headers: List[String]): StructType = StructType(headers.map { header =>
+    Field(header, StringType, true)
   })
 }
 
-case class SchemaRule(pattern: String, fieldType: FieldType, nullable: Boolean = true) {
+case class DataTypeRule(pattern: String, dataType: DataType, nullable: Boolean = true) {
   def apply(header: String): Option[Field] = {
-    if (header.matches(pattern)) Some(Field(header, fieldType, nullable)) else None
+    if (header.matches(pattern)) Some(Field(header, dataType, nullable)) else None
   }
 }

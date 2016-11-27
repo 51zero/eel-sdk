@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.schema.{Field, FieldType, Precision, Schema}
+import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 
 class ResultsetPartTest extends WordSpec with Matchers {
@@ -16,10 +16,10 @@ class ResultsetPartTest extends WordSpec with Matchers {
   "ResultsetPart" should {
     "publish fields in schema order" in {
 
-      val schema = Schema(
-        Field("c", FieldType.Int, true, Precision(10), signed = true),
-        Field("b", FieldType.Boolean, true, Precision(1), signed = true),
-        Field("a", FieldType.Long, true, Precision(19), signed = true)
+      val schema = StructType(
+        Field("c", IntType(true)),
+        Field("b", BooleanType),
+        Field("a", LongType(true))
       )
 
       val stmt = conn.createStatement()

@@ -3,7 +3,7 @@ package io.eels.component.csv
 import java.nio.file.Paths
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Frame, Row}
 
 import scala.util.Random
@@ -13,7 +13,7 @@ import scala.util.Random
   */
 object CsvSpeedTest extends App with Timed {
 
-  val schema = Schema("a", "b", "c", "d", "e")
+  val schema = StructType("a", "b", "c", "d", "e")
   val rows = List.fill(1000000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
   val frame = Frame(schema, rows)
 

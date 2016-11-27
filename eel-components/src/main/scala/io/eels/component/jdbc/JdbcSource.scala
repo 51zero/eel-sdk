@@ -5,7 +5,7 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Part, Source}
 
 object JdbcSource {
@@ -16,16 +16,16 @@ case class JdbcSource(connFn: () => Connection,
                       query: String,
                       bind: (PreparedStatement) => Unit = stmt => (),
                       fetchSize: Int = 100,
-                      providedSchema: Option[Schema] = None,
+                      providedSchema: Option[StructType] = None,
                       providedDialect: Option[JdbcDialect] = None,
                       bucketing: Option[Bucketing] = None)
   extends Source with JdbcPrimitives with Logging with Using with Timed {
 
-  override def schema(): Schema = providedSchema.getOrElse(fetchSchema())
+  override def schema(): StructType = providedSchema.getOrElse(fetchSchema())
 
   def withBind(bind: (PreparedStatement) => Unit) = copy(bind = bind)
   def withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
-  def withProvidedSchema(schema: Schema): JdbcSource = copy(providedSchema = Option(schema))
+  def withProvidedSchema(schema: StructType): JdbcSource = copy(providedSchema = Option(schema))
   def withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = Option(dialect))
 
   private def dialect(): JdbcDialect = providedDialect.getOrElse(new GenericJdbcDialect())
@@ -45,7 +45,7 @@ case class JdbcSource(connFn: () => Connection,
     List(part)
   }
 
-  def fetchSchema(): Schema = {
+  def fetchSchema(): StructType = {
     using(connFn()) { conn =>
       val schemaQuery = s"SELECT * FROM ($query) tmp WHERE 1=0"
       using(conn.prepareStatement(schemaQuery)) { stmt =>

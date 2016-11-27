@@ -1,21 +1,18 @@
 package io.eels.component.parquet
 
 import io.eels.Frame
-import io.eels.schema.Field
-import io.eels.schema.FieldType
-import io.eels.schema.Schema
+import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSinkTest extends WordSpec with Matchers {
   ParquetLogMute()
 
-  val schema = Schema(
-    Field("name", FieldType.String, nullable = false),
-    Field("job", FieldType.String, nullable = false),
-    Field("location", FieldType.String, nullable = false)
+  val schema = StructType(
+    Field("name", StringType, nullable = false),
+    Field("job", StringType, nullable = false),
+    Field("location", StringType, nullable = false)
   )
   val frame = Frame.fromValues(
     schema,
@@ -32,10 +29,10 @@ class ParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(ParquetSink(path))
       val people = ParquetSource(path)
-      people.schema() shouldBe Schema(
-        Field("name", FieldType.String, false),
-        Field("job", FieldType.String, false),
-        Field("location", FieldType.String, false)
+      people.schema() shouldBe StructType(
+        Field("name", StringType, false),
+        Field("job", StringType, false),
+        Field("location", StringType, false)
       )
       fs.delete(path, false)
     }

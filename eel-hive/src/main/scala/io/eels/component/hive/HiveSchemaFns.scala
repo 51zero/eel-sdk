@@ -1,11 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.Field
-import io.eels.schema.FieldType
-import io.eels.schema.Precision
-import io.eels.schema.Scale
-import io.eels.schema.Schema
+import io.eels.schema._
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 // createReader FrameSchema from hive FieldSchemas
@@ -20,7 +16,7 @@ object HiveSchemaFns extends Logging {
   def toHiveField(field: Field): FieldSchema = new FieldSchema(field.name.toLowerCase(), toHiveType(field), field.comment.orNull)
 
   // converts an eel Schema into a list of hive FieldSchema's
-  def toHiveFields(schema: Schema): List[FieldSchema] = toHiveFields(schema.fields)
+  def toHiveFields(schema: StructType): List[FieldSchema] = toHiveFields(schema.fields)
 
   // converts a list of eel fields into a list of hive FieldSchema's
   def toHiveFields(fields: List[Field]): List[FieldSchema] = fields.map(toHiveField)
@@ -32,33 +28,33 @@ object HiveSchemaFns extends Logging {
   def fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Field =
     fromHive(fieldSchema.getName, fieldSchema.getType, nullable, fieldSchema.getComment)
 
-  def fromHive(name: String, `type`: String, nullable: Boolean, comment: String): Field = {
-    val field = `type` match {
-      case "tinyint" => Field(name, FieldType.Short, nullable, Precision(0), Scale(0))
-      case "smallint" => Field(name, FieldType.Short, nullable, Precision(0), Scale(0))
-      case "int" => Field(name, FieldType.Int, nullable, Precision(0), Scale(0))
-      case "boolean" => Field(name, FieldType.Boolean, nullable, Precision(0), Scale(0))
-      case "bigint" => Field(name, FieldType.BigInt, nullable, Precision(0), Scale(0))
-      case "float" => Field(name, FieldType.Float, nullable, Precision(0), Scale(0))
-      case "double" => Field(name, FieldType.Double, nullable, Precision(0), Scale(0))
-      case "string" => Field(name, FieldType.String, nullable, Precision(0), Scale(0))
-      case "binary" => Field(name, FieldType.Binary, nullable, Precision(0), Scale(0))
-      case "char" => Field(name, FieldType.String, nullable, Precision(0), Scale(0))
-      case "date" => Field(name, FieldType.Date, nullable, Precision(0), Scale(0))
-      case "timestamp" => Field(name, FieldType.Timestamp, nullable, Precision(0), Scale(0))
+  def fromHive(name: String, datatype: String, nullable: Boolean, comment: String): Field = {
+    val field = datatype match {
+      case "bigint" => Field(name, BigIntType, nullable)
+      case "binary" => Field(name, BinaryType, nullable)
+      case "boolean" => Field(name, BooleanType, nullable)
+      case "double" => Field(name, DoubleType, nullable)
+      case "float" => Field(name, FloatType, nullable)
+      case "int" => Field(name, IntType(true), nullable)
+      case "smallint" => Field(name, ShortType, nullable)
+      case "tinyint" => Field(name, ShortType, nullable)
+      case "char" => Field(name, StringType, nullable)
+      case "string" => Field(name, StringType, nullable)
+      case "date" => Field(name, DateType, nullable)
+      case "timestamp" => Field(name, TimestampType, nullable)
       case DecimalRegex(scale, precision) =>
-        Field(name, FieldType.Decimal, nullable, Precision(precision.toInt), Scale(scale.toInt))
+        Field(name, DecimalType(Scale(scale.toInt), Precision(precision.toInt)), nullable)
       case VarcharRegex(precision) =>
-        Field(name, FieldType.String, nullable, Precision(precision.toInt))
+        Field(name, VarcharType(precision.toInt), nullable)
       case StructRegex(structType) =>
         val fields = structType.split(",").map { it =>
           val parts = it.split(":")
           fromHive(parts(0), parts(1), nullable, null)
         }
-        Field.createStruct(name, fields).withNullable(nullable)
+        Field.createStructField(name, fields).withNullable(nullable)
       case _ =>
-        logger.warn("Unknown hive type $type; defaulting to string")
-        Field(name, FieldType.String, nullable, Precision(0), Scale(0))
+        logger.warn(s"Unknown hive type $datatype; defaulting to string")
+        Field(name, StringType, nullable)
     }
     field.withComment(comment)
   }
@@ -66,27 +62,26 @@ object HiveSchemaFns extends Logging {
   /**
     * Returns the hive type for the given field
     */
-  def toHiveType(field: Field): String = field.`type` match {
-    case FieldType.BigInt => "bigint"
-    case FieldType.Boolean => "boolean"
-    case FieldType.Decimal => s"decimal(${field.scale.value},${field.precision.value})"
-    case FieldType.Double => "double"
-    case FieldType.Float => "float"
-    case FieldType.Int => "int"
-    case FieldType.Long => "bigint"
-    case FieldType.Short => "smallint"
-    case FieldType.String => "string"
-    case FieldType.Timestamp => "timestamp"
-    case FieldType.Date => "date"
-    case FieldType.Struct => toStructDDL(field)
+  def toHiveType(field: Field): String = field.dataType match {
+    case BigIntType => "bigint"
+    case BooleanType => "boolean"
+    case DecimalType(precision, scale) => s"decimal(${scale.value},${precision.value})"
+    case DoubleType => "double"
+    case FloatType => "float"
+    case IntType(true) => "int"
+    case LongType(true) => "bigint"
+    case ShortType => "smallint"
+    case StringType => "string"
+    case TimestampType => "timestamp"
+    case DateType => "date"
+    case StructType(fields) => toStructDDL(fields)
     case _ =>
-      logger.warn(s"No conversion from field type ${field.`type`} to hive type; defaulting to string")
+      logger.warn(s"No conversion from eel type [${field.dataType}] to hive type; defaulting to string")
       "string"
   }
 
-  def toStructDDL(field: Field): String = {
-    require(field.`type` == FieldType.Struct, "Invoked struct method on non struct type")
-    val types = field.fields.map { it => it.name + ":" + toHiveType(it) }.mkString(",")
+  def toStructDDL(fields: List[Field]): String = {
+    val types = fields.map { it => it.name + ":" + toHiveType(it) }.mkString(",")
     s"struct<$types>"
   }
 }

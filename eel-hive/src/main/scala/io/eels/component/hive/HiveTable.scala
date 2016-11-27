@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import io.eels.component.parquet.ParquetLogMute
-import io.eels.schema.{PartitionPart, Schema}
+import io.eels.schema.{PartitionPart, StructType}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
@@ -16,7 +16,7 @@ case class HiveTable(dbName: String,
   private val ops = new HiveOps(client)
 
   // returns the full underlying schema from the metastore including partitions
-  def schema(): Schema = ops.schema(dbName, tableName)
+  def schema(): StructType = ops.schema(dbName, tableName)
 
   def partitionKeys(): List[PartitionKey] = {
     val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala

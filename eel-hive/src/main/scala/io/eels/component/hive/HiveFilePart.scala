@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import io.eels._
 import io.eels.component.parquet.Predicate
-import io.eels.schema.{PartitionPart, Schema}
+import io.eels.schema.{PartitionPart, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
 import rx.lang.scala.Observable
@@ -22,8 +22,8 @@ import rx.lang.scala.Observable
  */
 class HiveFilePart(val dialect: HiveDialect,
                    val file: LocatedFileStatus,
-                   val metastoreSchema: Schema,
-                   val projectionSchema: Schema,
+                   val metastoreSchema: StructType,
+                   val projectionSchema: StructType,
                    val predicate: Option[Predicate],
                    val partitions: List[PartitionPart])
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
@@ -42,9 +42,9 @@ class HiveFilePart(val dialect: HiveDialect,
     // away once the results come back)
     val projectionWithoutPartitions = {
       if (projectionFields.isEmpty)
-        Schema(metastoreSchema.fields.head)
+        StructType(metastoreSchema.fields.head)
       else
-        Schema(projectionFields)
+        StructType(projectionFields)
     }
 
     val reader = dialect.read(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)

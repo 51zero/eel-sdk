@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{FilePattern, Part, Row, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
@@ -11,6 +11,9 @@ import rx.lang.scala.Observable
 import scala.collection.JavaConverters._
 
 object ParquetSource {
+
+  def apply(uri: java.net.URI)(implicit fs: FileSystem): ParquetSource =
+    apply(FilePattern(new Path(uri.toString)))
 
   def apply(path: java.nio.file.Path)(implicit fs: FileSystem): ParquetSource =
     apply(FilePattern(path))
@@ -23,7 +26,7 @@ case class ParquetSource(pattern: FilePattern)(implicit fs: FileSystem) extends 
 
   // the schema returned by the parquet source should be a merged version of the
   // schemas contained in all the files.
-  override def schema(): Schema = {
+  override def schema(): StructType = {
     val paths = pattern.toPaths()
     val schemas = paths.map { path =>
       using(ParquetReaderFn.apply(path, None, None)) { reader =>

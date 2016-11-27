@@ -3,7 +3,7 @@ package io.eels.component.jdbc
 import java.sql.{Connection, ResultSet, Statement}
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Part, Row}
 import rx.lang.scala.Observable
 
@@ -13,7 +13,7 @@ import rx.lang.scala.Observable
 class ResultsetPart(val rs: ResultSet,
                     val stmt: Statement,
                     val conn: Connection,
-                    val schema: Schema) extends Part with Logging {
+                    val schema: StructType) extends Part with Logging {
 
   override def data(): Observable[Row] = {
     Observable.apply { subscriber =>

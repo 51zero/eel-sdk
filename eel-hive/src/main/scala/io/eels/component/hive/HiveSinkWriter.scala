@@ -5,7 +5,7 @@ import java.util.concurrent.{LinkedBlockingQueue, _}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -15,8 +15,8 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
-class HiveSinkWriter(sourceSchema: Schema,
-                     metastoreSchema: Schema,
+class HiveSinkWriter(sourceSchema: StructType,
+                     metastoreSchema: StructType,
                      dbName: String,
                      tableName: String,
                      ioThreads: Int,

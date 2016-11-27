@@ -1,40 +1,38 @@
 package io.eels.component.avro
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.{Field, FieldType, Schema}
-import org.apache.avro.SchemaBuilder
+import io.eels.schema._
+import org.apache.avro.{Schema, SchemaBuilder}
 import org.codehaus.jackson.node.NullNode
+
 import scala.collection.JavaConverters._
 
 object AvroSchemaFns extends Logging {
 
-  def schemaFromFieldType(fieldType: FieldType, arrayType: FieldType): org.apache.avro.Schema = {
-    fieldType match {
-      case FieldType.Array => SchemaBuilder.array().items(schemaFromFieldType(arrayType, null))
-      case FieldType.BigInt => SchemaBuilder.builder().longType()
-      case FieldType.Boolean => SchemaBuilder.builder().booleanType()
-      case FieldType.Date => SchemaBuilder.builder().longType()
-      case FieldType.Decimal => SchemaBuilder.builder().doubleType()
-      case FieldType.Double => SchemaBuilder.builder().doubleType()
-      case FieldType.Float => SchemaBuilder.builder().floatType()
-      case FieldType.Int => SchemaBuilder.builder().intType()
-      case FieldType.Long => SchemaBuilder.builder().longType()
-      case FieldType.Short => SchemaBuilder.builder().intType()
-      case FieldType.String => SchemaBuilder.builder().stringType()
-      case FieldType.Timestamp => SchemaBuilder.builder().longType()
-      case _ =>
-        sys.error(s"Unsupported field type $fieldType")
-    }
-  }
-
-  def toAvroSchema(schema: Schema,
+  def toAvroSchema(structType: StructType,
                    caseSensitive: Boolean = true,
                    name: String = "row",
                    namespace: String = "namespace"): org.apache.avro.Schema = {
 
+    def toAvroSchema(dataType: DataType): org.apache.avro.Schema = dataType match {
+      case ArrayType(elementType) => SchemaBuilder.array().items(toAvroSchema(elementType))
+      case BigIntType => SchemaBuilder.builder().longType()
+      case BooleanType => SchemaBuilder.builder().booleanType()
+      case DateType => SchemaBuilder.builder().longType()
+      case DecimalType(precision, scale) => SchemaBuilder.builder().doubleType()
+      case DoubleType => SchemaBuilder.builder().doubleType()
+      case FloatType => SchemaBuilder.builder().floatType()
+      case IntType(_) => SchemaBuilder.builder().intType()
+      case LongType(_) => SchemaBuilder.builder().longType()
+      case ShortType => SchemaBuilder.builder().intType()
+      case StringType => SchemaBuilder.builder().stringType()
+      case struct: StructType => toAvroSchema(struct)
+      case TimestampType => SchemaBuilder.builder().longType()
+    }
+
     def toAvroField(field: Field, caseSensitive: Boolean = true): org.apache.avro.Schema.Field = {
 
-      val avroSchema = schemaFromFieldType(field.`type`, field.arrayType.orNull)
+      val avroSchema = toAvroSchema(field.dataType)
       val fieldName = if (caseSensitive) field.name else field.name.toLowerCase()
 
       if (field.nullable) {
@@ -45,45 +43,38 @@ object AvroSchemaFns extends Logging {
       }
     }
 
-    val avroFields = schema.fields.map { field => toAvroField(field, caseSensitive) }
-    val avroSchema = org.apache.avro.Schema.createRecord(name, null, namespace, false)
-    avroSchema.setFields(avroFields.asJava)
-    avroSchema
+    val fields = structType.fields.map { field => toAvroField(field, caseSensitive) }
+    val schema = org.apache.avro.Schema.createRecord(name, null, namespace, false)
+    schema.setFields(fields.asJava)
+    schema
   }
 
-  def fromAvroSchema(avro: org.apache.avro.Schema): io.eels.schema.Schema = {
+  def fromAvroSchema(schema: Schema, forceNullables: Boolean = false): StructType = {
+    require(schema.getType == Schema.Type.RECORD)
 
     def fromAvroField(field: org.apache.avro.Schema.Field): Field = {
-
-      def toFieldType(schema: org.apache.avro.Schema): FieldType = schema.getType match {
-        case org.apache.avro.Schema.Type.BOOLEAN => FieldType.Boolean
-        case org.apache.avro.Schema.Type.DOUBLE => FieldType.Double
-        case org.apache.avro.Schema.Type.ENUM => FieldType.String
-        case org.apache.avro.Schema.Type.FIXED => FieldType.String
-        case org.apache.avro.Schema.Type.FLOAT => FieldType.Float
-        case org.apache.avro.Schema.Type.INT => FieldType.Int
-        case org.apache.avro.Schema.Type.LONG => FieldType.Long
-        case org.apache.avro.Schema.Type.STRING => FieldType.String
-        // we shouldn't have unions in here, they should be handled outside
-        case org.apache.avro.Schema.Type.UNION => sys.error("Bug")
-        case _ =>
-          logger.warn(s"Unrecognized avro type ${schema.getType}; defaulting to FieldType.String")
-          FieldType.String
-      }
-
-      field.schema().getType match {
-        case org.apache.avro.Schema.Type.UNION =>
-          val schema = field.schema().getTypes.asScala.find(_.getType != org.apache.avro.Schema.Type.NULL).get
-          val fieldType = toFieldType(schema)
-          Field(field.name(), fieldType, true)
-        case _ =>
-          val schemaType = toFieldType(field.schema())
-          Field(field.name(), schemaType, false)
-      }
+      val nullable = forceNullables ||
+        field.schema.getType == Schema.Type.UNION &&
+          field.schema.getTypes.asScala.map(_.getType).contains(Schema.Type.NULL)
+      Field(field.name, toDataType(field.schema), nullable)
     }
 
-    require(avro.getType == org.apache.avro.Schema.Type.RECORD, "Can only convert avro records to eel schemas")
-    val cols = avro.getFields.asScala.map(fromAvroField)
-    io.eels.schema.Schema(cols.toList)
+    def toDataType(schema: Schema): DataType = schema.getType match {
+      case org.apache.avro.Schema.Type.ARRAY => ArrayType(toDataType(schema.getElementType))
+      case org.apache.avro.Schema.Type.BOOLEAN => BooleanType
+      case org.apache.avro.Schema.Type.BYTES => BinaryType
+      case org.apache.avro.Schema.Type.DOUBLE => DoubleType
+      case org.apache.avro.Schema.Type.ENUM => StringType
+      case org.apache.avro.Schema.Type.FIXED => StringType
+      case org.apache.avro.Schema.Type.FLOAT => FloatType
+      case org.apache.avro.Schema.Type.INT => IntType(true)
+      case org.apache.avro.Schema.Type.LONG => LongType(true)
+      case org.apache.avro.Schema.Type.RECORD => StructType(schema.getFields.asScala.map(fromAvroField).toList)
+      case org.apache.avro.Schema.Type.STRING => StringType
+      case org.apache.avro.Schema.Type.UNION =>
+        toDataType(schema.getTypes.asScala.filterNot(_.getType == Schema.Type.NULL).head)
+    }
+
+    toDataType(schema).asInstanceOf[StructType]
   }
 }

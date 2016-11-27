@@ -1,21 +1,19 @@
 package io.eels.component.jdbc
 
-import io.eels.schema.Field
-import io.eels.schema.FieldType
+import io.eels.schema.{DataType, Field, StructType}
 import io.eels.Row
-import io.eels.schema.Schema
 
 trait JdbcDialect {
 
-  def create(schema: Schema, table: String): String
+  def create(schema: StructType, table: String): String
   def insert(row: Row, table: String): String
   def toJdbcType(field: Field): String
-  def fromJdbcType(i: Int): FieldType
+  def fromJdbcType(i: Int): DataType
 
   /**
     * Returns a parameterized insert query
     */
-  def insertQuery(schema: Schema, table: String): String
+  def insertQuery(schema: StructType, table: String): String
 }
 
 object JdbcDialect {

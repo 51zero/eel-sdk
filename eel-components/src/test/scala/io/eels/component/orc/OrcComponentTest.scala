@@ -3,7 +3,7 @@ package io.eels.component.orc
 import io.eels.Frame
 import io.eels.Row
 import io.eels.schema.Field
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
@@ -17,7 +17,7 @@ class OrcComponentTest extends WordSpec with Matchers {
   "OrcComponent" should {
     "read and write orc files" in {
 
-      val schema = Schema(Field("name"), Field("job"), Field("location"))
+      val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = Frame(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),

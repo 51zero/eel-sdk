@@ -2,7 +2,7 @@ package io.eels.component.csv
 
 import java.nio.file.Paths
 
-import io.eels.schema.{Field, FieldType, Schema}
+import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.scalatest.{Matchers, WordSpec}
@@ -15,10 +15,10 @@ class CsvSourceTest extends WordSpec with Matchers {
     "read schema" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).schema() shouldBe Schema(
-        Field("a", FieldType.String, true),
-        Field("b", FieldType.String, true),
-        Field("c", FieldType.String, true)
+      CsvSource(path).schema() shouldBe StructType(
+        Field("a", StringType, true),
+        Field("b", StringType, true),
+        Field("c", StringType, true)
       )
     }
     "support null cell value option as null" in {
@@ -42,10 +42,10 @@ class CsvSourceTest extends WordSpec with Matchers {
     "allow specifying manual schema" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
-      val schema = Schema(
-        Field("test1", FieldType.String, true),
-        Field("test2", FieldType.String, true),
-        Field("test3", FieldType.String, true)
+      val schema = StructType(
+        Field("test1", StringType, true),
+        Field("test2", StringType, true),
+        Field("test3", StringType, true)
       )
       CsvSource(path).withSchema(schema).toFrame(1).schema() shouldBe schema
     }
@@ -72,10 +72,10 @@ class CsvSourceTest extends WordSpec with Matchers {
     "support comments for headers" in {
       val file = getClass.getResource("/io/eels/component/csv/comments.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withHeader(Header.FirstComment).schema() shouldBe Schema(
-        Field("a", FieldType.String, true),
-        Field("b", FieldType.String, true),
-        Field("c", FieldType.String, true)
+      CsvSource(path).withHeader(Header.FirstComment).schema() shouldBe StructType(
+        Field("a", StringType, true),
+        Field("b", StringType, true),
+        Field("c", StringType, true)
       )
       CsvSource(path).withHeader(Header.FirstComment).toFrame(1).toSet().map(_.values) shouldBe
         Set(Vector("1", "2", "3"), Vector("e", "f", "g"), Vector("4", "5", "6"))
@@ -83,8 +83,8 @@ class CsvSourceTest extends WordSpec with Matchers {
     "terminate if asking for first comment but no comments" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withHeader(Header.FirstComment).schema() shouldBe Schema(
-        Field("", FieldType.String, true)
+      CsvSource(path).withHeader(Header.FirstComment).schema() shouldBe StructType(
+        Field("", StringType, true)
       )
     }
     "support skipping corrupt rows" ignore {

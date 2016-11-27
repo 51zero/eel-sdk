@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.{Field, FieldType, Precision, Scale}
+import io.eels.schema._
 import org.apache.hadoop.hive.metastore.api.FieldSchema
 import org.scalatest.{Matchers, WordSpec}
 
@@ -8,30 +8,30 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
 
   "HiveSchemaFns" should {
     "StructDDL should be valid" in {
-      val field = Field.createStruct("bibble", Field("a", FieldType.String), Field("b", FieldType.Double))
-      val ddl = HiveSchemaFns.toStructDDL(field)
+      val fields = List(Field("a", StringType), Field("b", DoubleType))
+      val ddl = HiveSchemaFns.toStructDDL(fields)
       ddl shouldBe "struct<a:string,b:double>"
     }
 
     "toHiveField(field) should return correct hive type" in {
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Boolean)) shouldBe new FieldSchema("a", "boolean", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Binary)) shouldBe new FieldSchema("a", "string", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Decimal, scale = Scale(2), precision = Precision(3))) shouldBe new FieldSchema("a", "decimal(2,3)", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Date)) shouldBe new FieldSchema("a", "date", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Double)) shouldBe new FieldSchema("a", "double", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Float)) shouldBe new FieldSchema("a", "float", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Int)) shouldBe new FieldSchema("a", "int", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Long)) shouldBe new FieldSchema("a", "bigint", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.Timestamp)) shouldBe new FieldSchema("a", "timestamp", null)
-      HiveSchemaFns.toHiveField(Field("a", `type` = FieldType.String, precision = Precision(5))) shouldBe new FieldSchema("a", "string", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = BooleanType)) shouldBe new FieldSchema("a", "boolean", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = BinaryType)) shouldBe new FieldSchema("a", "string", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = DecimalType(Scale(2), Precision(3)))) shouldBe new FieldSchema("a", "decimal(2,3)", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = DateType)) shouldBe new FieldSchema("a", "date", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = DoubleType)) shouldBe new FieldSchema("a", "double", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = FloatType)) shouldBe new FieldSchema("a", "float", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = IntType(true))) shouldBe new FieldSchema("a", "int", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = LongType(true))) shouldBe new FieldSchema("a", "bigint", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = TimestampType)) shouldBe new FieldSchema("a", "timestamp", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = StringType)) shouldBe new FieldSchema("a", "string", null)
     }
 
     "fromHiveField should support decimals" in {
-      HiveSchemaFns.fromHiveField(new FieldSchema("a", "decimal(10,5)", null), true) shouldBe Field("a", `type` = FieldType.Decimal, scale = Scale(10), precision = Precision(5))
+      HiveSchemaFns.fromHiveField(new FieldSchema("a", "decimal(10,5)", null), true) shouldBe Field("a", dataType = DecimalType(Scale(10), Precision(5)))
     }
 
     "fromHiveField should support varchar" in {
-      HiveSchemaFns.fromHiveField(new FieldSchema("a", "varchar(200)", null), true) shouldBe Field("a", `type` = FieldType.String, precision = Precision(200))
+      HiveSchemaFns.fromHiveField(new FieldSchema("a", "varchar(200)", null), true) shouldBe Field("a", dataType = VarcharType(200))
     }
 
     "fromHiveField should support structs" in {
@@ -39,16 +39,11 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
       HiveSchemaFns.fromHiveField(fs, true) shouldBe
         Field(
           name = "structy_mcstructface",
-          `type` = FieldType.Struct,
-          nullable = true,
-          precision = Precision(0),
-          scale = Scale(0),
-          signed = false,
-          arrayType = None,
-          fields = List(
-            Field(name = "a", `type` = FieldType.String, nullable = true, precision = Precision(value = 0), scale = Scale(value = 0)),
-            Field(name = "b", `type` = FieldType.Double, nullable = true, precision = Precision(value = 0), scale = Scale(value = 0))
+          dataType = StructType(
+            Field(name = "a", dataType = StringType, nullable = true),
+            Field(name = "b", dataType = DoubleType, nullable = true)
           ),
+          nullable = true,
           comment = Option("commy")
         )
     }

@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -11,7 +11,10 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import scala.util.Random
 
 /**
-  * 1m rows, 4267ms, single thread (prior to multi thread code)
+  * Version 1.0:
+  *
+  * 1m rows, 4267ms, single thread (prior to adding the multi threaded code)
+  *
   * 1m rows, 4200ms, single thread
   * 1m rows, 1275ms, 4 threads
   * 10m rows, 10499ms, 4 threads
@@ -20,6 +23,8 @@ import scala.util.Random
   * 1m rows, 1263, 4 threads
   * 8m rows, 4500ms, 4 threads
   * 8m rows, 4167ms, 4 threads
+  *
+  *
   */
 object HiveSpeedTest extends App with Timed {
 
@@ -48,7 +53,7 @@ object HiveSpeedTest extends App with Timed {
   )
 
   val rows = List.fill(3000000)(data(Random.nextInt(data.length)))
-  val frame = Frame.fromValues(Schema("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
+  val frame = Frame.fromValues(StructType("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
   println(frame.schema.show())
 
   while (true) {

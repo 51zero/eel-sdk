@@ -1,6 +1,6 @@
 package io.eels
 
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.scalatest.{Matchers, WordSpec}
 
 class FoldPlanTest extends WordSpec with Matchers {
@@ -8,7 +8,7 @@ class FoldPlanTest extends WordSpec with Matchers {
   "FoldPlan" should {
     "fold!" in {
       val frame = Frame.fromValues(
-        Schema("a", "b"),
+        StructType("a", "b"),
         Seq("sam", "1"),
         Seq("sam", "2"),
         Seq("sam", "3")

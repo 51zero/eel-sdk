@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import rx.lang.scala.Observer
 
 /**
@@ -29,6 +29,6 @@ trait Source extends Logging {
   def toFrame(ioThreads: Int, observer: Observer[Row] = NoopObserver): Frame =
     new FrameSource(ioThreads, this, observer)
 
-  def schema(): Schema
+  def schema(): StructType
   def parts(): List[Part]
 }

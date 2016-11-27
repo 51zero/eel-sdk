@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType}
 import org.apache.hadoop.hive.metastore.TableType
 
 object HiveDDL {
@@ -41,7 +41,7 @@ object HiveDDL {
     (Seq(create, fls) ++ Seq(parts, loc, Some(formats), tblprops).flatten).mkString("\n")
   }
 
-  implicit class HiveDDLOps(schema: Schema) {
+  implicit class HiveDDLOps(schema: StructType) {
 
     def showDDL(tableName: String,
                 tableType: TableType = TableType.MANAGED_TABLE,

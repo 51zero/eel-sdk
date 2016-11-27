@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.DriverManager
 
-import io.eels.schema.{Field, FieldType, Precision, Schema}
+import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 
 class JdbcSourceTest extends WordSpec with Matchers {
@@ -16,10 +16,10 @@ class JdbcSourceTest extends WordSpec with Matchers {
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
       JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema() shouldBe
-        Schema(
-          Field("A", FieldType.Int, true, Precision(10), signed = true),
-          Field("B", FieldType.Boolean, true, Precision(1), signed = true),
-          Field("C", FieldType.Long, true, Precision(19), signed = true)
+        StructType(
+          Field("A", IntType(true), true),
+          Field("B", BooleanType, true),
+          Field("C", BigIntType, true)
         )
     }
     "use supplied query" in {

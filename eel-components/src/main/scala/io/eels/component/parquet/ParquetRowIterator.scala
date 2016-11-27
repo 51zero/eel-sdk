@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
 import io.eels.Row
-import io.eels.component.avro.AvroRecordDeserializer
+import io.eels.component.avro.AvroDeserializer
 import org.apache.avro.generic.GenericRecord
 import org.apache.parquet.hadoop.ParquetReader
 
@@ -14,7 +14,7 @@ import org.apache.parquet.hadoop.ParquetReader
   */
 object ParquetRowIterator {
   def apply(reader: ParquetReader[GenericRecord]): Iterator[Row] = {
-    val deserializer = new AvroRecordDeserializer()
+    val deserializer = new AvroDeserializer()
     Iterator.continually(reader.read).takeWhile(_ != null).map { it => deserializer.toRow(it) }
   }
 }

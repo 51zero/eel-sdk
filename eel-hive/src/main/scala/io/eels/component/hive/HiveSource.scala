@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
-import io.eels.schema.{PartitionConstraint, Schema}
+import io.eels.schema.{PartitionConstraint, StructType}
 import io.eels.{FilePattern, HdfsIterator, Part, Source}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -160,7 +160,7 @@ case class HiveSource(dbName: String,
    *
    * 2) Any partitions set. These should be included in the schema columns.
    */
-  override def schema(): Schema = {
+  override def schema(): StructType = {
     login()
     // if no field names were specified, then we will return the schema as is from the hive database,
     // otherwise we will keep only the requested fields
@@ -174,14 +174,14 @@ case class HiveSource(dbName: String,
           .find(_.name == fieldName.toLowerCase)
           .getOrElse(sys.error(s"Requested field $fieldName does not exist in the hive schema"))
       }
-      Schema(columns)
+      StructType(columns)
     }
 
     schema
   }
 
   // returns the full underlying schema from the metastore including partition partitionKeys
-  val metastoreSchema: Schema = {
+  val metastoreSchema: StructType = {
     login()
     ops.schema(dbName, tableName)
   }

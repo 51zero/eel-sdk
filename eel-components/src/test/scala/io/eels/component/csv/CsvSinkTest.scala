@@ -1,6 +1,6 @@
 package io.eels.component.csv
 
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType}
 import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -15,7 +15,7 @@ class CsvSinkTest extends WordSpec with Matchers {
   "CsvSink" should {
     "write csv data" in {
 
-      val schema = Schema(Field("name"), Field("job"), Field("location"))
+      val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = Frame(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),
@@ -29,7 +29,7 @@ class CsvSinkTest extends WordSpec with Matchers {
     }
     "support setting delimiter" in {
 
-      val schema = Schema(Field("name"), Field("job"), Field("location"))
+      val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = Frame(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),
@@ -42,7 +42,7 @@ class CsvSinkTest extends WordSpec with Matchers {
       result shouldBe "name>job>location\nclint eastwood>actor>carmel\nelton john>musician>pinner\n"
     }
     "write headers when specified" in {
-      val schema = Schema(Field("name"), Field("job"), Field("location"))
+      val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = Frame(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),
@@ -54,7 +54,7 @@ class CsvSinkTest extends WordSpec with Matchers {
       result shouldBe "name,job,location\nclint eastwood,actor,carmel\nelton john,musician,pinner\n"
     }
     "write null values as empty strings" in {
-      val schema = Schema(Field("name"), Field("job"), Field("location"))
+      val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = Frame(
         schema,
         Row(schema, Vector("clint eastwood", null, "carmel")),

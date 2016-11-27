@@ -1,7 +1,7 @@
 package io.eels.component.json
 
 import com.sksamuel.exts.io.Using
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType}
 import io.eels.{Part, Row, Source}
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.codehaus.jackson.JsonNode
@@ -17,12 +17,12 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
 
   private def createInputStream(path: Path): FSDataInputStream = fs.open(path)
 
-  override def schema(): Schema = using(createInputStream(path)) { in =>
+  override def schema(): StructType = using(createInputStream(path)) { in =>
     val roots = reader.readValues[JsonNode](in)
     assert(roots.hasNext, "Cannot read schema, no data in file")
     val node = roots.next()
     val fields = node.getFieldNames.asScala.map(name => Field(name)).toList
-    Schema(fields)
+    StructType(fields)
   }
 
   override def parts(): List[Part] = List(new JsonPart(path))

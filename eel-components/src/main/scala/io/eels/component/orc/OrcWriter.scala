@@ -3,7 +3,7 @@ package io.eels.component.orc
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.Row
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector
@@ -11,7 +11,7 @@ import org.apache.orc.{OrcFile, TypeDescription}
 
 import scala.collection.mutable.ArrayBuffer
 
-class OrcWriter(path: Path, schema: Schema)(implicit conf: Configuration) extends Logging {
+class OrcWriter(path: Path, schema: StructType)(implicit conf: Configuration) extends Logging {
 
   private val orcSchema: TypeDescription = OrcFns.writeSchema(schema)
   logger.debug(s"Creating orc writer $orcSchema")

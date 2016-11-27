@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.nio.file.Paths
 
 import com.typesafe.config.ConfigFactory
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType}
 import org.apache.avro.util.Utf8
 import org.scalatest.{Matchers, WordSpec}
 
@@ -12,7 +12,7 @@ class AvroSourceTest extends WordSpec with Matchers {
   "AvroSource" should {
     "read schema" in {
       val people = AvroSource(Paths.get(getClass.getResource("/test.avro").getFile).toAbsolutePath)
-      people.schema() shouldBe Schema(Field("name", nullable = false), Field("job", nullable = false), Field("location", nullable = false))
+      people.schema() shouldBe StructType(Field("name", nullable = false), Field("job", nullable = false), Field("location", nullable = false))
     }
     "read strings as java.lang.String when eel.avro.java.string is true" in {
       System.setProperty("eel.avro.java.string", "true")

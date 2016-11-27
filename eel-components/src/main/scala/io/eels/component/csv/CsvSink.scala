@@ -1,7 +1,7 @@
 package io.eels.component.csv
 
 import com.univocity.parsers.csv.CsvWriter
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -13,14 +13,14 @@ case class CsvSink(path: Path,
                    ignoreTrailingWhitespaces: Boolean = false)
                   (implicit fs: FileSystem) extends Sink {
 
-  override def writer(schema: Schema): SinkWriter = new CsvSinkWriter(schema, path, headers, format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces)
+  override def writer(schema: StructType): SinkWriter = new CsvSinkWriter(schema, path, headers, format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces)
 
   def withHeaders(headers: Header): CsvSink = copy(headers = headers)
   def withIgnoreLeadingWhitespaces(ignoreLeadingWhitespaces: Boolean): CsvSink = copy(ignoreLeadingWhitespaces = ignoreLeadingWhitespaces)
   def withIgnoreTrailingWhitespaces(ignoreTrailingWhitespaces: Boolean): CsvSink = copy(ignoreTrailingWhitespaces = ignoreTrailingWhitespaces)
   def withFormat(format: CsvFormat): CsvSink = copy(format = format)
 
-  class CsvSinkWriter(val schema: Schema,
+  class CsvSinkWriter(val schema: StructType,
                       val path: Path,
                       val headers: Header,
                       val format: CsvFormat,

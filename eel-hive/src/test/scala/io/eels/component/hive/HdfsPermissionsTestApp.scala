@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import io.eels.Frame
 import io.eels.component.hdfs.HdfsSource
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
@@ -39,7 +39,7 @@ object HdfsPermissionsTestApp extends App with Logging {
   )
 
   val rows = List.fill(100)(data(Random.nextInt(data.length)))
-  val frame = Frame.fromValues(Schema("artist", "album", "year"), rows)
+  val frame = Frame.fromValues(StructType("artist", "album", "year"), rows)
 
   new HiveOps(client).createTable(
     Database,

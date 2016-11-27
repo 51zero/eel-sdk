@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.sksamuel.exts.Logging
 import io.eels.Frame
-import io.eels.schema.{PartitionConstraint, Schema}
+import io.eels.schema.{PartitionConstraint, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -79,7 +79,7 @@ object HiveBenchmarkApp extends App with Logging {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
-  val schema = Schema("id", "state")
+  val schema = StructType("id", "state")
   val rows = List.fill(10000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
 
   logger.info(s"Generated ${rows.size} rows")

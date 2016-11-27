@@ -1,10 +1,9 @@
 package io.eels
-
 import java.nio.file.Paths
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels.component.csv.{CsvSink, CsvSource}
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.scalatest.{Matchers, WordSpec}
 import rx.lang.scala.Observer
 
@@ -12,7 +11,7 @@ import scala.util.Random
 
 class ObserverTest extends WordSpec with Matchers {
 
-  val schema = Schema("a", "b", "c", "d", "e")
+  val schema = StructType("a", "b", "c", "d", "e")
   val rows = List.fill(1000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
   val frame = Frame(schema, rows)
 

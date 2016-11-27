@@ -1,7 +1,7 @@
 package io.eels.component.sequence
 
 import io.eels.Frame
-import io.eels.schema.Schema
+import io.eels.schema.{StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
@@ -10,7 +10,7 @@ import org.scalatest.{Matchers, WordSpec}
 class SequenceSinkTest extends WordSpec with Matchers {
 
   val frame = Frame.fromValues(
-    Schema("a", "b", "c", "d"),
+    StructType("a", "b", "c", "d"),
     List("1", "2", "3", "4"),
     List("5", "6", "7", "8")
   )

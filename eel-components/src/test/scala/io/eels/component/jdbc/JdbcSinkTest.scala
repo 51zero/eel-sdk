@@ -3,7 +3,7 @@ package io.eels.component.jdbc
 import java.sql.DriverManager
 import java.util.UUID
 
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType}
 import io.eels.{Frame, Row}
 import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 
@@ -14,7 +14,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
   val conn = DriverManager.getConnection(url)
   conn.createStatement().executeUpdate("create table mytab (a integer, b integer, c integer)")
 
-  val schema = Schema(Field("a"), Field("b"), Field("c"))
+  val schema = StructType(Field("a"), Field("b"), Field("c"))
   val frame = io.eels.Frame(schema, Row(schema, Vector("1", "2", "3")), Row(schema, Vector("4", "5", "6")))
 
   "JdbcSink" should {

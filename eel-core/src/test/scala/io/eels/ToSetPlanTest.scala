@@ -7,7 +7,7 @@ class ToSetPlanTest extends WordSpec with Matchers {
 
   "ToSetPlan" should {
     "createReader set from frame" in {
-      val schema = Schema(
+      val schema = StructType(
         Field("name"),
         Field("location")
       )

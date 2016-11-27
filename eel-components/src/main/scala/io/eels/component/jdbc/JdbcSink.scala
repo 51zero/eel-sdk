@@ -5,7 +5,7 @@ import java.sql.{Connection, DriverManager}
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.Sink
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 
 object JdbcSink extends Logging {
 
@@ -37,6 +37,6 @@ case class JdbcSink(connFn: () => Connection,
   def withBatchSize(batchSize: Int) = copy(batchSize = batchSize)
   def withThreads(threads: Int) = copy(threads = threads)
 
-  override def writer(schema: Schema) =
+  override def writer(schema: StructType) =
     new JdbcWriter(schema, connFn, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize)
 }

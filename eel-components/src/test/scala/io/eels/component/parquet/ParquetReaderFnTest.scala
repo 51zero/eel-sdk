@@ -2,15 +2,11 @@ package io.eels.component.parquet
 
 import java.util.UUID
 
-import io.eels.schema.Field
-import io.eels.schema.FieldType
-import io.eels.schema.Schema
+import io.eels.schema.{DoubleType, Field, LongType, StructType}
 import org.apache.avro.SchemaBuilder
-import org.apache.avro.generic.GenericData
-import org.apache.avro.generic.GenericRecord
+import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
@@ -37,7 +33,7 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
   writer.write(record)
   writer.close()
 
-  val schema = Schema(Field("str"), Field("looong", FieldType.Long, true), Field("dooble", FieldType.Double, true))
+  val schema = StructType(Field("str"), Field("looong", LongType(true), true), Field("dooble", DoubleType, true))
 
   "ParquetReaderSupport" should {
     "support projections on doubles" in {

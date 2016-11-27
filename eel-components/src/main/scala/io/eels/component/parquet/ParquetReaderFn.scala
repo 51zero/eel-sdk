@@ -30,7 +30,7 @@ object ParquetReaderFn extends Logging {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[io.eels.schema.Schema]): ParquetReader[GenericRecord] = {
+            projectionSchema: Option[io.eels.schema.StructType]): ParquetReader[GenericRecord] = {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {

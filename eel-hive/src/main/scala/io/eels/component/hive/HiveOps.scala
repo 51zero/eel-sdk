@@ -4,9 +4,8 @@ import java.util
 
 import com.sksamuel.exts.Logging
 import io.eels.Constants
-import io.eels.schema.{Field, PartitionPart, PartitionSpec, Schema}
+import io.eels.schema._
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.TableType
 import org.apache.hadoop.hive.metastore.api.Database
@@ -117,7 +116,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     tablePath.toString() + "/" + parts.map(_.unquoted).mkString("/")
 
   // Returns the eel schema for the hive dbName:tableName
-  def schema(dbName: String, tableName: String): Schema = {
+  def schema(dbName: String, tableName: String): StructType = {
     val table = client.getTable(dbName, tableName)
 
     // hive columns are always nullable, and hive partitions are never nullable so we can set
@@ -128,7 +127,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     }.map(_.withPartition(true))
 
     val columns = cols ++ partitions
-    Schema(columns.toList)
+    StructType(columns.toList)
   }
 
   /**
@@ -197,7 +196,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
 
   def createTable(databaseName: String,
                   tableName: String,
-                  schema: Schema,
+                  schema: StructType,
                   partitionKeys: List[String],
                   format: HiveFormat = HiveFormat.Text,
                   props: Map[String, String] = Map.empty,

@@ -1,7 +1,7 @@
 package io.eels.component.json
 
 import io.eels.Frame
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType}
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -11,7 +11,7 @@ class JsonSinkTest extends WordSpec with Matchers {
   "JsonSink" should {
     "write multiple json docs to a file" in {
 
-      val schema = Schema(Field("name"), Field("location"))
+      val schema = StructType(Field("name"), Field("location"))
       val frame = Frame.fromValues(
         schema,
         Vector("sam", "aylesbury"),

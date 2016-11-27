@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
 import io.eels.component.parquet.Predicate
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -37,12 +37,12 @@ trait HiveDialect extends Logging {
    * it may be a subset if a projection pushdown is being used.
    */
   def read(path: Path,
-           metastoreSchema: Schema,
-           projectionSchema: Schema,
+           metastoreSchema: StructType,
+           projectionSchema: StructType,
            predicate: Option[Predicate])
           (implicit fs: FileSystem, conf: Configuration): Observable[Row]
 
-  def writer(schema: Schema,
+  def writer(schema: StructType,
              path: Path,
              permission: Option[FsPermission])
             (implicit fs: FileSystem, conf: Configuration): HiveWriter

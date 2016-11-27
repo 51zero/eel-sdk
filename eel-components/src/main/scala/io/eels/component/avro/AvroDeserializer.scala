@@ -10,13 +10,13 @@ import scala.collection.JavaConverters._
  * Returns an row from the given avro record using the schema present in the record.
  * The row values will be created in the order that the record schema fields are declared.
  */
-class AvroRecordDeserializer {
+class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean("eel.avro.java.string")) {
 
-  private val config = ConfigFactory.load()
-  private val useJavaString = config.getBoolean("eel.avro.java.string")
+  val config = ConfigFactory.load()
+  val deserializeAsNullable = config.getBoolean("eel.avro.deserializeAsNullable")
 
   def toRow(record: GenericRecord): Row = {
-    val schema = AvroSchemaFns.fromAvroSchema(record.getSchema)
+    val struct = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
     val values = record.getSchema.getFields.asScala.map { field =>
       val value = record.get(field.name())
       if (useJavaString && value.isInstanceOf[Utf8]) {
@@ -25,7 +25,7 @@ class AvroRecordDeserializer {
         value
       }
     }.toVector
-    Row(schema, values)
+    Row(struct, values)
   }
 }
 

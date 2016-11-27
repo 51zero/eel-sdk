@@ -5,11 +5,11 @@ import java.sql.Connection
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.jdbc.ResultSetIterator
 import io.eels.Row
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 
 class JdbcInserter(val connFn: () => Connection,
                    val table: String,
-                   val schema: Schema,
+                   val schema: StructType,
                    val autoCommit: Boolean,
                    val dialect: JdbcDialect) extends Logging {
 

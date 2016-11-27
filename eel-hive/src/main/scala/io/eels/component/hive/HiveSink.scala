@@ -2,13 +2,13 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.schema.Schema
 import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.security.UserGroupInformation
 import com.sksamuel.exts.OptionImplicits._
+import io.eels.schema.StructType
 
 object HiveSink {
   val CaseErrorMsg = "Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive"
@@ -65,9 +65,9 @@ case class HiveSink(dbName: String,
     }
   }
 
-  def containsUpperCase(schema: Schema): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
+  def containsUpperCase(schema: StructType): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
-  override def writer(schema: Schema): SinkWriter = {
+  override def writer(schema: StructType): SinkWriter = {
     login()
 
     if (containsUpperCase(schema)) {

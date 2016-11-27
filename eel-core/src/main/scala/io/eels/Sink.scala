@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.io.Using
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 
 trait Sink extends Using {
 
@@ -12,7 +12,7 @@ trait Sink extends Using {
     }
   }
 
-  def writer(schema: Schema): SinkWriter
+  def writer(schema: StructType): SinkWriter
 }
 
 trait SinkWriter {

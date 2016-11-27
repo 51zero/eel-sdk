@@ -1,9 +1,7 @@
 package io.eels.component.sequence
 
 import io.eels.Row
-import io.eels.schema.Field
-import io.eels.schema.FieldType
-import io.eels.schema.Schema
+import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
@@ -12,7 +10,7 @@ class SequenceSourceTest extends WordSpec with Matchers {
 
   implicit val conf = new Configuration()
 
-  val schema = Schema(Field("name"), Field("location"))
+  val schema = StructType(Field("name"), Field("location"))
   val frame = io.eels.Frame.fromValues(
     schema,
     Vector("name", "location"),
@@ -23,11 +21,11 @@ class SequenceSourceTest extends WordSpec with Matchers {
 
   "SequenceSource" should {
     "read sequence files" in {
-      val schema = Schema(
-        Field("a", FieldType.String),
-        Field("b", FieldType.String),
-        Field("c", FieldType.String),
-        Field("d", FieldType.String)
+      val schema = StructType(
+        Field("a", StringType),
+        Field("b", StringType),
+        Field("c", StringType),
+        Field("d", StringType)
       )
       val path = new Path(getClass.getResource("/test.seq").getFile)
       val rows = SequenceSource(path).toFrame(1).toSet
@@ -38,11 +36,11 @@ class SequenceSourceTest extends WordSpec with Matchers {
     }
     "read header as schema" in {
       val path = new Path(getClass.getResource("/test.seq").getFile)
-      SequenceSource(path).schema() shouldBe Schema(
-        Field("a", FieldType.String),
-        Field("b", FieldType.String),
-        Field("c", FieldType.String),
-        Field("d", FieldType.String)
+      SequenceSource(path).schema() shouldBe StructType(
+        Field("a", StringType),
+        Field("b", StringType),
+        Field("c", StringType),
+        Field("d", StringType)
       )
     }
   }

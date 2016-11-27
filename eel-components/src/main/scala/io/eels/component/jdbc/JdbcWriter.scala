@@ -4,10 +4,10 @@ import java.sql.Connection
 import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Row, SinkWriter}
 
-class JdbcWriter(schema: Schema,
+class JdbcWriter(schema: StructType,
                  connFn: () => Connection,
                  table: String,
                  createTable: Boolean,

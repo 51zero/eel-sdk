@@ -1,74 +1,73 @@
 package io.eels.component.jdbc
 
 import io.eels.Row
-import io.eels.schema.Field
-import io.eels.schema.FieldType
-import io.eels.schema.Schema
+import io.eels.schema._
 import java.sql.Types
 
 import com.sksamuel.exts.Logging
 
 class GenericJdbcDialect extends JdbcDialect with Logging {
 
-  override def toJdbcType(field: Field): String = field.`type` match {
-    case FieldType.Long => "int"
-    case FieldType.BigInt => "int"
-    case FieldType.Int => "int"
-    case FieldType.Short => "smallint"
-    case FieldType.Boolean => "BOOLEAN"
-    case FieldType.String =>
-      if (field.precision.value > 0) s"varchar(${field.precision.value})"
+  override def toJdbcType(field: Field): String = field.dataType match {
+    case LongType(_) => "int"
+    case BigIntType => "int"
+    case IntType(_) => "int"
+    case ShortType => "smallint"
+    case BooleanType => "BOOLEAN"
+    case StringType => "text"
+    case VarcharType(size) =>
+      if (size > 0) s"varchar($size)"
       else "varchar(255)"
     case _ =>
-      logger.warn(s"Unknown schema type ${field.`type`}")
+      logger.warn(s"Unknown data type ${field.dataType}")
       "varchar(255)"
     }
 
-  override def fromJdbcType(i: Int): FieldType = i match {
-    case Types.BIGINT => FieldType.Long
-    case Types.BINARY => FieldType.Binary
-    case Types.BIT => FieldType.Boolean
-    case Types.BLOB => FieldType.Binary
-    case Types.BOOLEAN => FieldType.Boolean
-    case Types.CHAR => FieldType.String
-    case Types.CLOB => FieldType.String
+  override def fromJdbcType(i: Int): DataType = i match {
+    case Types.BIGINT => BigIntType
+    case Types.BINARY => BinaryType
+    case Types.BIT => BooleanType
+    case Types.BLOB => BinaryType
+    case Types.BOOLEAN => BooleanType
+    case Types.CHAR => CharType(255)
+    case Types.CLOB => StringType
     case Types.DATALINK => throw new UnsupportedOperationException()
-    case Types.DATE => FieldType.Date
-    case Types.DECIMAL => FieldType.Decimal
+    case Types.DATE => DateType
+    case Types.DECIMAL => DecimalType()
     case Types.DISTINCT => throw new UnsupportedOperationException()
-    case Types.DOUBLE => FieldType.Double
-    case Types.FLOAT => FieldType.Float
-    case Types.INTEGER => FieldType.Int
-    case Types.JAVA_OBJECT => FieldType.String
-    case Types.LONGNVARCHAR => FieldType.String
-    case Types.LONGVARBINARY => FieldType.Binary
-    case Types.LONGVARCHAR => FieldType.String
-    case Types.NCHAR => FieldType.String
-    case Types.NCLOB => FieldType.String
-    case Types.NULL => FieldType.String
-    case Types.NUMERIC => FieldType.Decimal
-    case Types.NVARCHAR => FieldType.String
-    case Types.OTHER => FieldType.String
-    case Types.REAL => FieldType.Double
-    case Types.REF => FieldType.String
-    case Types.ROWID => FieldType.Long
-    case Types.SMALLINT => FieldType.Int
-    case Types.SQLXML => FieldType.String
-    case Types.STRUCT => FieldType.String
-    case Types.TIME => FieldType.Timestamp
-    case Types.TIMESTAMP => FieldType.Timestamp
-    case Types.TINYINT => FieldType.Int
-    case Types.VARBINARY => FieldType.Binary
-    case Types.VARCHAR => FieldType.String
-    case _ => FieldType.String
+    case Types.DOUBLE => DoubleType
+    case Types.FLOAT => FloatType
+    case Types.INTEGER => IntType(true)
+    case Types.JAVA_OBJECT => BinaryType
+    case Types.LONGNVARCHAR => StringType
+    case Types.LONGVARBINARY => BinaryType
+    case Types.LONGVARCHAR => StringType
+    case Types.NCHAR => StringType
+    case Types.NCLOB => StringType
+    case Types.NULL => StringType
+    case Types.NUMERIC => DecimalType()
+    case Types.NVARCHAR => StringType
+    case Types.OTHER => StringType
+    case Types.REAL => DoubleType
+    case Types.REF => StringType
+    case Types.ROWID => LongType(true)
+    case Types.SMALLINT => ShortType
+    case Types.SQLXML => StringType
+    case Types.STRUCT => StringType
+    case Types.TIME => TimestampType
+    case Types.TIMESTAMP => TimestampType
+    case Types.TINYINT => ShortType
+    case Types.VARBINARY => BinaryType
+    case Types.VARCHAR => StringType
+    case _ => StringType
   }
 
-  override def create(schema: Schema, table: String): String = {
+  override def create(schema: StructType, table: String): String = {
     val columns = schema.fields.map { it => s"${it.name} ${toJdbcType(it)}" }.mkString("(", ",", ")")
     s"CREATE TABLE $table $columns"
   }
 
-  override def insertQuery(schema: Schema, table: String): String = {
+  override def insertQuery(schema: StructType, table: String): String = {
     val columns = schema.fieldNames().mkString(",")
     val parameters = List.fill(schema.fields.size)("?").mkString(",")
     s"INSERT INTO $table ($columns) VALUES ($parameters)"

@@ -3,13 +3,13 @@ package io.eels.component.avro
 import java.nio.file.Path
 
 import com.sksamuel.exts.io.Using
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Part, Row, Source}
 import rx.lang.scala._
 
 case class AvroSource(path: Path) extends Source with Using {
 
-  override def schema(): Schema = {
+  override def schema(): StructType = {
     using(AvroReaderFns.createAvroReader(path)) { reader =>
       val record = reader.next()
       AvroSchemaFns.fromAvroSchema(record.getSchema)
@@ -19,11 +19,11 @@ case class AvroSource(path: Path) extends Source with Using {
   override def parts(): List[Part] = List(new AvroSourcePart(path, schema()))
 }
 
-class AvroSourcePart(val path: Path, val schema: Schema) extends Part {
+class AvroSourcePart(val path: Path, val schema: StructType) extends Part {
 
   override def data(): Observable[Row] = Observable.apply { subscriber =>
 
-    val deserializer = new AvroRecordDeserializer()
+    val deserializer = new AvroDeserializer()
     val reader = AvroReaderFns.createAvroReader(path)
     subscriber.onStart()
 

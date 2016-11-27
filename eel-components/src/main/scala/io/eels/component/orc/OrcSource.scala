@@ -1,7 +1,7 @@
 package io.eels.component.orc
 
 import com.sksamuel.exts.io.Using
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import io.eels.{Part, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -15,7 +15,7 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
 
   override def parts(): List[Part] = List(new OrcPart(path))
 
-  override def schema(): Schema = OrcFns.readSchema(path)
+  override def schema(): StructType = OrcFns.readSchema(path)
 
   private def reader() = OrcFile.createReader(path, new ReaderOptions(conf))
 

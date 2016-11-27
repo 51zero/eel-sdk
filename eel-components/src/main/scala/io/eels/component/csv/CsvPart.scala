@@ -2,7 +2,7 @@ package io.eels.component.csv
 
 import com.univocity.parsers.csv.CsvParser
 import io.eels.{Part, Row}
-import io.eels.schema.Schema
+import io.eels.schema.StructType
 import com.sksamuel.exts.Logging
 import org.apache.hadoop.fs.{FileSystem, Path}
 import rx.lang.scala.Observable
@@ -13,7 +13,7 @@ class CsvPart(val createParser: () => CsvParser,
               val path: Path,
               val header: Header,
               val skipBadRows: Boolean,
-              val schema: Schema)
+              val schema: StructType)
              (implicit fs: FileSystem) extends Part with Logging {
 
   val rowsToSkip: Int = header match {

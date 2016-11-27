@@ -1,25 +1,19 @@
 package io.eels.component.sequence
 
-import com.univocity.parsers.csv.CsvWriter
-import com.univocity.parsers.csv.CsvWriterSettings
-import io.eels.Row
-import io.eels.schema.Schema
-import io.eels.Sink
-import io.eels.SinkWriter
 import java.io.StringWriter
 
-import org.apache.hadoop.io.BytesWritable
-import org.apache.hadoop.io.IntWritable
-import org.apache.hadoop.io.SequenceFile
-
+import com.univocity.parsers.csv.{CsvWriter, CsvWriterSettings}
+import io.eels.{Row, Sink, SinkWriter}
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
 
 case class SequenceSink(path: Path)(implicit conf: Configuration) extends Sink {
 
-  override def writer(schema: Schema): SinkWriter = new SequenceSinkWriter(schema, path)
+  override def writer(schema: StructType): SinkWriter = new SequenceSinkWriter(schema, path)
 
-  class SequenceSinkWriter(schema: Schema, path: Path) extends SinkWriter {
+  class SequenceSinkWriter(schema: StructType, path: Path) extends SinkWriter {
 
     val writer = SequenceFile.createWriter(conf,
         SequenceFile.Writer.file(path),

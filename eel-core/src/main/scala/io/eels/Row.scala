@@ -1,14 +1,14 @@
 package io.eels
 
-import io.eels.schema.{Field, Schema}
+import io.eels.schema.{Field, StructType, StringType}
 
 object Row {
-  val Sentinel = Row(Schema(Field("a")), Vector[Any](null))
-  def apply(schema: Schema, first: Any, rest: Any*): Row = apply(schema, (first +: rest).toVector)
-  def apply(schema: Schema, values: Seq[Any]): Row = apply(schema, values.toVector)
+  val Sentinel = Row(StructType(Field("a", StringType)), Vector[Any](null))
+  def apply(schema: StructType, first: Any, rest: Any*): Row = apply(schema, (first +: rest).toVector)
+  def apply(schema: StructType, values: Seq[Any]): Row = apply(schema, values.toVector)
 }
 
-case class Row(schema: Schema, values: Vector[Any]) {
+case class Row(schema: StructType, values: Vector[Any]) {
 
   require(values.nonEmpty, "Cannot create an empty row")
   require(
@@ -22,7 +22,7 @@ case class Row(schema: Schema, values: Vector[Any]) {
     }.mkString("[", ",", "]")
   }
 
-  def replaceSchema(newSchema: Schema): Row = Row(newSchema, values)
+  def replaceSchema(newSchema: StructType): Row = Row(newSchema, values)
 
   def apply(k: Int): Any = get(k)
   def get(k: Int): Any = values(k)

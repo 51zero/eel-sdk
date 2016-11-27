@@ -55,26 +55,41 @@ object AvroSerializer extends Logging {
   */
 class RecordSerializer(schema: Schema) extends AvroSerializer {
 
-  private val avroFields: Seq[Schema.Field] = schema.getFields.asScala
-  private val serializers = avroFields.map { it => AvroSerializer(it.schema) }
+  private val fields: Seq[Schema.Field] = schema.getFields.asScala
+  private val serializers = fields.map { it => AvroSerializer(it.schema) }
 
   private def explode(value: Any): Seq[Any] = value match {
     // row must be first as it IS a product also
     case row: Row =>
-      require(row.size() == schema.getFields.size, s"row must match the target schema $schema")
       row.values
     // must force a non stream
     case product: Product => product.productIterator.toList
-    case iter: Iterator[_] => iter.toList
+    case iter: Iterable[_] => iter.toList
   }
 
-  override def serialize(value: Any): GenericRecord = {
+  private def writeValues(values: Seq[Any]): GenericRecord = {
     val record = new GenericData.Record(schema)
-    explode(value).zip(serializers).zip(avroFields).foreach { case ((x, serializer), field) =>
+    explode(values).zip(serializers).zip(fields).foreach { case ((x, serializer), field) =>
       val converted = if (x == null) null else serializer.serialize(x)
       record.put(field.name(), converted)
     }
     record
+  }
+
+  // only rows can support out of order writing
+  private def writeRow(row: Row): GenericRecord = {
+    require(row.size() == schema.getFields.size, s"row size $row must match the target schema $schema")
+    // order the values by the write schema
+    val values = fields.map(_.name).map(row.get(_, false))
+    writeValues(values)
+  }
+
+  override def serialize(value: Any): GenericRecord = {
+    value match {
+      case row: Row => writeRow(row)
+      case product: Product => writeValues(product.productIterator.toList)
+      case iter: Iterator[_] => writeValues(iter.toList)
+    }
   }
 }
 
@@ -106,6 +121,7 @@ class ArraySerializer(serializer: AvroSerializer) extends AvroSerializer {
     case seq: Iterable[_] => seq.map(serializer.serialize).toArray[Any]
     case list: List[_] => list.map(serializer.serialize).toArray[Any]
     case col: java.lang.Iterable[_] => serialize(col.asScala)
+    case array: Array[_] => array.map(serializer.serialize)
   }
 }
 

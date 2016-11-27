@@ -1,16 +1,15 @@
 package io.eels.component.sequence
 
-import io.eels.schema.Field
-import io.eels.schema.Schema
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
 import java.io.StringReader
 import java.nio.charset.Charset
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.component.csv.{CsvFormat, CsvSupport}
+import io.eels.schema.{Field, StructType}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
 
 object SequenceSupport extends Logging with Using {
 
@@ -27,7 +26,7 @@ object SequenceSupport extends Logging with Using {
     record
   }
 
-  def schema(path: Path)(implicit conf: Configuration): Schema = {
+  def schema(path: Path)(implicit conf: Configuration): StructType = {
     logger.debug(s"Fetching sequence schema for $path")
     using(createReader(path)) { it =>
       val k = new IntWritable()
@@ -36,7 +35,7 @@ object SequenceSupport extends Logging with Using {
         it.next(k, v)
         toValues(v).map { it => new Field(it) }
       }
-      Schema(fields.toList)
+      StructType(fields.toList)
     }
   }
 }
