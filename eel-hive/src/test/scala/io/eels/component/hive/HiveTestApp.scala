@@ -1,15 +1,12 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.Frame
 import io.eels.component.parquet.Predicate
-import io.eels.schema.Schema
+import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-
-import scala.util.Random
 
 object HiveTestApp extends App with Timed {
 
@@ -90,8 +87,21 @@ object HiveTestApp extends App with Timed {
   //  val m = HiveSource(Database, Table).withProjection("artist").toFrame(4).take(3).toList()
   //  println(m)
 
-  val x = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("artist", "elton")).toFrame(4).take(10).toList()
+  val y = HiveSource(Database, Table).withProjection("artist").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame(4).take(10).toList()
+  println(y)
+
+  val x = HiveSource(Database, Table).withProjection("album").withPredicate(Predicate.equals("album", "white album")).toFrame(4).take(10).toList()
   println(x)
+
+  val t = HiveSource(Database, Table).withProjection("album").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame(4).take(10).toList()
+  println(t)
+
+  val w = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "elton")).toFrame(4).take(10).toList()
+  println(w)
+
+  val m = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "the wall")).toFrame(4).take(10).toList()
+  println(m)
+
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
   //  println(partitionNames.asScala.toList)

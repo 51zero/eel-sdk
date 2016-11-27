@@ -1,15 +1,11 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema.{PartitionConstraint, PartitionPart, PartitionSpec}
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.LocatedFileStatus
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
-import org.apache.hadoop.hive.metastore.api.Table
-import org.apache.hadoop.hive.metastore.api.{Partition => HivePartition}
+import org.apache.hadoop.hive.metastore.api.{Table, Partition => HivePartition}
 
 import scala.collection.JavaConverters._
 
@@ -26,8 +22,8 @@ object HiveFilesFn extends Logging {
 
   // for a given table returns hadoop paths that match the partition constraints
   def apply(table: Table,
-            partitionKeys: List[String] = Nil,
-            partitionConstraints: List[PartitionConstraint] = Nil)
+            partitionKeys: List[String],
+            partitionConstraint: Option[PartitionConstraint])
            (implicit fs: FileSystem, client: IMetaStoreClient): List[(LocatedFileStatus, PartitionSpec)] = {
 
     def rootScan(): List[Pair[LocatedFileStatus, PartitionSpec]] = {
@@ -51,9 +47,7 @@ object HiveFilesFn extends Logging {
           PartitionPart(key, value)
         }
         val spec = PartitionSpec(parts.toArray)
-        partitionConstraints.forall { it =>
-          it.eval(spec)
-        }
+        partitionConstraint.fold(true)(_.eval(spec))
       }
 
       logger.debug(s"Filtered partitions to scan for files $filteredPartitions")

@@ -25,7 +25,6 @@ class FrameSource(ioThreads: Int,
 
   // this method may be invoked multiple times, each time generating a new "load action" and a new
   // resultant rows from it.
-  // todo is this is the behaviour I want?
   override def rows(): Observable[Row] = {
 
     // the number of ioThreads here will determine how we parallelize the loading of data
@@ -39,7 +38,7 @@ class FrameSource(ioThreads: Int,
     logger.info(s"Source will read using a FixedThreadPool [ioThreads=$ioThreads]")
 
     val parts = source.parts()
-    logger.info(s"Source has ${parts.size} parts")
+    logger.info(s"Source has ${parts.size} part(s)")
 
     // faster to use a LinkedBlockingQueue than an array one
     // because a LinkedBlockingQueue has a lock for both head and tail so
@@ -52,42 +51,50 @@ class FrameSource(ioThreads: Int,
 
     for (part <- parts) {
       // we create a task per part, and each task just reads from that part putting the data
-      // into the shared buffer. The more threads we allocate to this the more parts we can
-      // process concurrently.
+      // into the shared buffer. The more threads we allocate to this the more tasks (parts)
+      // we can process concurrently.
       executor.submit {
-
         val id = count.incrementAndGet()
+        try {
 
-        part.data().subscribe(new Subscriber[Row]() {
+          part.data().subscribe(new Subscriber[Row]() {
 
-          override def onStart() {
-            logger.info(s"Starting part #$id")
-          }
+            override def onStart() {
+              logger.info(s"Starting part #$id")
+            }
 
-          override def onNext(row: Row) {
-            queue.put(row)
-            observer.onNext(row)
-            if (error != null) {
+            override def onNext(row: Row) {
+              queue.put(row)
+              observer.onNext(row)
+              if (error != null) {
+                this.unsubscribe()
+                latch.countDown()
+                logger.warn(s"Error detected, shutting down part #$id")
+              }
+            }
+
+            override def onError(e: Throwable) {
+              logger.error(s"Error while reading part #$id; the remaining rows will be skipped", e)
+              error = e
               this.unsubscribe()
               latch.countDown()
-              logger.warn(s"Error detected, shutting down part #$id")
+              observer.onError(e)
             }
-          }
 
-          override def onError(e: Throwable) {
-            logger.error(s"Error while reading part #$id; further records will be skipped", e)
+            override def onCompleted() {
+              logger.info(s"Completed part #$id")
+              latch.countDown()
+              observer.onCompleted()
+            }
+          })
+        } catch {
+          case NonFatal(e) =>
+            logger.error(s"Error while reading part #$id; the remaining rows will be skipped", e)
             error = e
-            this.unsubscribe()
-            latch.countDown()
             observer.onError(e)
-          }
-
-          override def onCompleted() {
-            logger.info(s"Completed part #$id")
-            latch.countDown()
-            observer.onCompleted()
-          }
-        })
+        } finally {
+          latch.countDown()
+        }
       }
     }
 

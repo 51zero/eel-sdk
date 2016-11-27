@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.sksamuel.exts.Logging
 import io.eels.Frame
-import io.eels.schema.{PartitionLte, Schema}
+import io.eels.schema.{PartitionConstraint, Schema}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -13,8 +13,6 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import scala.util.Random
 
 object HiveBenchmarkApp extends App with Logging {
-
-  import scala.concurrent.ExecutionContext.Implicits.global
 
   val states = List(
     "Alabama",
@@ -105,7 +103,7 @@ object HiveBenchmarkApp extends App with Logging {
   val start = System.currentTimeMillis()
 
   val result = HiveSource("sam", "people")
-    .withPartitionConstraint(PartitionLte("state", "Iowa"))
+    .withPartitionConstraint(PartitionConstraint.lte("state", "Iowa"))
     .withProjection("id", "foo", "woo").toFrame(4).toList
 
   val end = System.currentTimeMillis()

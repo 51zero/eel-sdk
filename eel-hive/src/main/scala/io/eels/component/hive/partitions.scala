@@ -3,9 +3,6 @@ package io.eels.component.hive
 import io.eels.schema.{Field, PartitionPart}
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor
 
-// Represents a partition, which is the full set of partition key/values pairs for a particular record
-// eg key1=value1/key2=value2/key3=value3 is a partition
-
 case class PartitionKey(field: Field)
 
 // Represents a partition, which is the full set of partition key/values pairs for a particular record

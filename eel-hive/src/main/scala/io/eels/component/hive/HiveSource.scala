@@ -1,16 +1,16 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
-import io.eels.schema.{PartitionConstraint, PartitionEquals, Schema}
+import io.eels.schema.{PartitionConstraint, Schema}
 import io.eels.{FilePattern, HdfsIterator, Part, Source}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
+import com.sksamuel.exts.OptionImplicits._
 
 import scala.collection.JavaConverters._
 
@@ -22,9 +22,9 @@ import scala.collection.JavaConverters._
  */
 case class HiveSource(dbName: String,
                       tableName: String,
-                      constraints: List[PartitionConstraint] = Nil,
                       projection: List[String] = Nil,
                       predicate: Option[Predicate] = None,
+                      partitionConstraint: Option[PartitionConstraint] = None,
                       principal: Option[String] = None,
                       keytabPath: Option[java.nio.file.Path] = None)
                      (implicit fs: FileSystem,
@@ -54,13 +54,8 @@ case class HiveSource(dbName: String,
     }.toMap
   }
 
-  def withPredicate(predicate: Predicate): HiveSource = copy(predicate = Some(predicate))
-
-  def withPartitionConstraint(name: String, value: String): HiveSource = withPartitionConstraint(PartitionEquals(name, value))
-
-  def withPartitionConstraint(expr: PartitionConstraint): HiveSource = {
-    copy(constraints = constraints :+ expr)
-  }
+  def withPredicate(predicate: Predicate): HiveSource = copy(predicate = predicate.some)
+  def withPartitionConstraint(constraint: PartitionConstraint): HiveSource = copy(partitionConstraint = constraint.some)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSource = {
     login()
@@ -204,15 +199,21 @@ case class HiveSource(dbName: String,
     val table = client.getTable(dbName, tableName)
     val dialect = io.eels.component.hive.HiveDialect(table)
     val partitionKeys = HiveTable(dbName, tableName).partitionKeys()
+    val partitionKeyNames = partitionKeys.map(_.field.name)
+
+    // a predicate cannot operate on partitions as it is pushed down into the files
+    if (predicate.map(_.fields).getOrElse(Nil).exists(partitionKeyNames.contains))
+      sys.error("A predicate cannot operate on partition fields; use a partition constraint")
 
     // if we requested only partition columns, then we can get this information by scanning the metatstore
     // to see which partitions have been created.
-    if (isPartitionOnlyProjection()) {
-      logger.info("Requested projection contains only partitions; reading directly from metastore")
+    // if we have a predicate we have to go down to the files
+    if (isPartitionOnlyProjection() && predicate.isEmpty) {
+      logger.info("Requested projection only uses partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       List(new HivePartitionPart(dbName, tableName, schema(), partitionKeys, predicate, dialect))
     } else {
-      val files = HiveFilesFn(table, partitionKeys.map(_.field.name), constraints)
+      val files = HiveFilesFn(table, partitionKeys.map(_.field.name), partitionConstraint)
       logger.debug(s"Found ${files.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema

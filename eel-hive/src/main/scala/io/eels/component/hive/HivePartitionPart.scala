@@ -34,11 +34,17 @@ class HivePartitionPart(dbName: String,
   private val partitionPartFileCheck = config.getBoolean("eel.hive.source.checkDataForPartitionOnlySources")
   logger.info(s"eel.hive.source.checkDataForPartitionOnlySources=$partitionPartFileCheck")
 
-  private def partitionIsPhysical(part: org.apache.hadoop.hive.metastore.api.Partition): Boolean = {
+  private def isPartitionPhysical(part: org.apache.hadoop.hive.metastore.api.Partition): Boolean = {
     val location = new Path(part.getSd.getLocation)
-    logger.debug(s"Checking that partition $location has been created on disk")
+    logger.debug(s"Checking that partition $location has been created on disk...")
     try {
-      fs.exists(location)
+      val x = fs.exists(location)
+      if (x) {
+        logger.debug("...exists")
+      } else {
+        logger.debug("...not found")
+      }
+      x
     } catch {
       case NonFatal(e) =>
         logger.warn(s"Error reading $location", e)
@@ -49,7 +55,7 @@ class HivePartitionPart(dbName: String,
   override def data(): Observable[Row] = {
     // each row will contain just the values from the metastore
     val rows = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { part =>
-      !partitionPartFileCheck || partitionIsPhysical(part)
+      !partitionPartFileCheck || isPartitionPhysical(part)
     }.map { part =>
       // the partition values are assumed to be the same order as the supplied partition keys
       // first we build a map of the keys to values, then use that map to return a Row with
@@ -59,7 +65,7 @@ class HivePartitionPart(dbName: String,
     }.filter { row =>
       predicate.fold(true)(_.scala().apply(row))
     }
-
-    Observable.from(rows)
+    logger.debug(s"After scanning partitions and files we have ${rows.size} rows")
+    if (rows.isEmpty) Observable.empty else Observable.from(rows)
   }
 }

@@ -28,6 +28,7 @@ trait Source extends Logging {
     */
   def toFrame(ioThreads: Int, observer: Observer[Row] = NoopObserver): Frame =
     new FrameSource(ioThreads, this, observer)
+
   def schema(): Schema
   def parts(): List[Part]
 }
