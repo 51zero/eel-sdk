@@ -8,6 +8,25 @@ import scala.collection.JavaConverters._
 
 object AvroSchemaFns extends Logging {
 
+  def schemaFromFieldType(fieldType: FieldType, arrayType: FieldType): org.apache.avro.Schema = {
+    fieldType match {
+      case FieldType.Array => SchemaBuilder.array().items(schemaFromFieldType(arrayType, null))
+      case FieldType.BigInt => SchemaBuilder.builder().longType()
+      case FieldType.Boolean => SchemaBuilder.builder().booleanType()
+      case FieldType.Date => SchemaBuilder.builder().longType()
+      case FieldType.Decimal => SchemaBuilder.builder().doubleType()
+      case FieldType.Double => SchemaBuilder.builder().doubleType()
+      case FieldType.Float => SchemaBuilder.builder().floatType()
+      case FieldType.Int => SchemaBuilder.builder().intType()
+      case FieldType.Long => SchemaBuilder.builder().longType()
+      case FieldType.Short => SchemaBuilder.builder().intType()
+      case FieldType.String => SchemaBuilder.builder().stringType()
+      case FieldType.Timestamp => SchemaBuilder.builder().longType()
+      case _ =>
+        sys.error(s"Unsupported field type $fieldType")
+    }
+  }
+
   def toAvroSchema(schema: Schema,
                    caseSensitive: Boolean = true,
                    name: String = "row",
@@ -15,32 +34,16 @@ object AvroSchemaFns extends Logging {
 
     def toAvroField(field: Field, caseSensitive: Boolean = true): org.apache.avro.Schema.Field = {
 
-      val avroSchema = field.`type` match {
-        case FieldType.BigInt => SchemaBuilder.builder().longType()
-        case FieldType.Boolean => SchemaBuilder.builder().booleanType()
-        case FieldType.Date => SchemaBuilder.builder().longType()
-        case FieldType.Decimal => SchemaBuilder.builder().doubleType()
-        case FieldType.Double => SchemaBuilder.builder().doubleType()
-        case FieldType.Float => SchemaBuilder.builder().floatType()
-        case FieldType.Int => SchemaBuilder.builder().intType()
-        case FieldType.Long => SchemaBuilder.builder().longType()
-        case FieldType.Short => SchemaBuilder.builder().intType()
-        case FieldType.String => SchemaBuilder.builder().stringType()
-        case FieldType.Timestamp => SchemaBuilder.builder().longType()
-        case _ =>
-          sys.error(s"Unsupported field type ${field.name}=${field.`type`}")
-      }
-
+      val avroSchema = schemaFromFieldType(field.`type`, field.arrayType.orNull)
       val fieldName = if (caseSensitive) field.name else field.name.toLowerCase()
 
       if (field.nullable) {
         val union = SchemaBuilder.unionOf().nullType().and().`type`(avroSchema).endUnion()
         new org.apache.avro.Schema.Field(fieldName, union, null, NullNode.getInstance())
       } else {
-        new org.apache.avro.Schema.Field(fieldName, avroSchema, null, null)
+        new org.apache.avro.Schema.Field(fieldName, avroSchema, null: String, null: Object)
       }
     }
-
 
     val avroFields = schema.fields.map { field => toAvroField(field, caseSensitive) }
     val avroSchema = org.apache.avro.Schema.createRecord(name, null, namespace, false)

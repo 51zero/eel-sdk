@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.component.avro.{AvroRecordSerializer, AvroSchemaFns}
+import io.eels.component.avro.{AvroRecordSerializer, AvroSchemaFns, RecordSerializer}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.schema.Schema
@@ -43,11 +43,11 @@ object ParquetHiveDialect extends HiveDialect with Logging {
     // hive is case insensitive so we must lower case the fields to keep it consistent
     val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = false)
     val writer = new ParquetRowWriter(path, avroSchema)
-    val serializer = new AvroRecordSerializer(avroSchema)
+    val serializer = new RecordSerializer(avroSchema)
 
     override def write(row: Row) {
       require(row.values.nonEmpty, "Attempting to write an empty row")
-      val record = serializer.toRecord(row)
+      val record = serializer.serialize(row)
       writer.write(record)
     }
 

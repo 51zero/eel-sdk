@@ -7,24 +7,24 @@ class ConverterTest extends WordSpec with Matchers {
 
   "Converter" should {
     "convert to long" in {
-      AvroConverter(SchemaBuilder.builder().longType()).convert("123") shouldBe 123l
-      AvroConverter(SchemaBuilder.builder().longType()).convert(14555) shouldBe 14555l
+      AvroSerializer(SchemaBuilder.builder().longType()).serialize("123") shouldBe 123l
+      AvroSerializer(SchemaBuilder.builder().longType()).serialize(14555) shouldBe 14555l
     }
     "convert to String" in {
-      AvroConverter(SchemaBuilder.builder().stringType()).convert(123l) shouldBe "123"
-      AvroConverter(SchemaBuilder.builder().stringType).convert(124) shouldBe "124"
-      AvroConverter(SchemaBuilder.builder().stringType).convert("Qweqwe") shouldBe "Qweqwe"
+      AvroSerializer(SchemaBuilder.builder().stringType()).serialize(123l) shouldBe "123"
+      AvroSerializer(SchemaBuilder.builder().stringType).serialize(124) shouldBe "124"
+      AvroSerializer(SchemaBuilder.builder().stringType).serialize("Qweqwe") shouldBe "Qweqwe"
     }
     "convert to boolean" in {
-      AvroConverter(SchemaBuilder.builder().booleanType).convert(true) shouldBe true
-      AvroConverter(SchemaBuilder.builder().booleanType).convert(false) shouldBe false
-      AvroConverter(SchemaBuilder.builder().booleanType).convert("true") shouldBe true
-      AvroConverter(SchemaBuilder.builder().booleanType()).convert("false") shouldBe false
+      AvroSerializer(SchemaBuilder.builder().booleanType).serialize(true) shouldBe true
+      AvroSerializer(SchemaBuilder.builder().booleanType).serialize(false) shouldBe false
+      AvroSerializer(SchemaBuilder.builder().booleanType).serialize("true") shouldBe true
+      AvroSerializer(SchemaBuilder.builder().booleanType()).serialize("false") shouldBe false
     }
     "convert to Double" in {
-      AvroConverter(SchemaBuilder.builder().doubleType).convert("213.4") shouldBe 213.4d
-      AvroConverter(SchemaBuilder.builder().doubleType).convert("345.11") shouldBe 345.11d
-      AvroConverter(SchemaBuilder.builder().doubleType()).convert(345) shouldBe 345.0
+      AvroSerializer(SchemaBuilder.builder().doubleType).serialize("213.4") shouldBe 213.4d
+      AvroSerializer(SchemaBuilder.builder().doubleType).serialize("345.11") shouldBe 345.11d
+      AvroSerializer(SchemaBuilder.builder().doubleType()).serialize(345) shouldBe 345.0
     }
   }
 }

@@ -36,7 +36,7 @@ object Build extends Build {
       "com.jolbox"          % "bonecp"                                % "0.8.0.RELEASE",
       "org.apache.logging.log4j" % "log4j-api"            % "2.7"             % "test",
       "org.apache.logging.log4j" % "log4j-core"           % "2.7"             % "test",
-      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % "2.7"             % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % "2.7"             % "test"
     )
   )
 

@@ -1,6 +1,7 @@
 package io.eels.schema;
 
 public enum FieldType {
+    Array,
     BigInt,
     Binary,
     Boolean,

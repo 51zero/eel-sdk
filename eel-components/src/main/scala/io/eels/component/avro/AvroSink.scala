@@ -24,10 +24,10 @@ class AvroSinkWriter(schema: Schema, out: OutputStream, config: Config) extends 
   val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
   dataFileWriter.create(avroSchema, out)
 
-  private val serializer = new AvroRecordSerializer(avroSchema)
+  private val serializer = new RecordSerializer(avroSchema)
 
   override def write(row: Row): Unit = {
-    val record = serializer.toRecord(row)
+    val record = serializer.serialize(row)
     dataFileWriter.append(record)
   }
 
