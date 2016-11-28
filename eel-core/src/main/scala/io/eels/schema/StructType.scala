@@ -26,7 +26,7 @@ case class StructType(fields: List[Field]) extends DataType {
 
   def replaceFieldType(from: DataType, to: DataType): StructType = {
     StructType(fields.map {
-      case field if field.dataType == from => field.copy(dataType = to)
+      case field if field.dataType.matches(from) => field.copy(dataType = to)
       case field => field
     })
   }

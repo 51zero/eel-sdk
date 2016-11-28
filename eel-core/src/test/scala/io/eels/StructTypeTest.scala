@@ -74,6 +74,27 @@ class StructTypeTest extends WordSpec with Matchers {
     }
   }
 
+  "StructType.replaceDataType" should {
+    "support decimal matches" in {
+      val decimal34 = DecimalType(Scale(3), Precision(4))
+      val decimal45 = DecimalType(Scale(4), Precision(5))
+      StructType(Field("a", dataType = decimal45), Field("b", dataType = decimal34))
+        .replaceFieldType(decimal34, StringType) shouldBe StructType(Field("a", dataType = decimal45), Field("b"))
+    }
+    "support decimal wildcards" in {
+      val decimal34 = DecimalType(Scale(3), Precision(4))
+      val decimal45 = DecimalType(Scale(4), Precision(5))
+      StructType(Field("a", dataType = decimal45), Field("b", dataType = decimal34))
+        .replaceFieldType(DecimalType.Wildcard, StringType) shouldBe StructType(Field("a"), Field("b"))
+    }
+    "support decimal part wildcards" in {
+      val decimal34 = DecimalType(Scale(3), Precision(4))
+      val decimal45 = DecimalType(Scale(4), Precision(5))
+      StructType(Field("a", dataType = decimal45), Field("b", dataType = decimal34))
+        .replaceFieldType(DecimalType(Scale(-1), Precision(5)), StringType) shouldBe StructType(Field("a"), Field("b", dataType = decimal34))
+    }
+  }
+
   "Schema.renameField " should {
     " update the field name" in {
       StructType(Field("a"), Field("b", dataType = DecimalType())).renameField("b", "d") shouldBe

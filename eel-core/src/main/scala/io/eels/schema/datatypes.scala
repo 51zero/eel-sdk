@@ -2,6 +2,7 @@ package io.eels.schema
 
 trait DataType {
   def canonicalName: String = getClass.getSimpleName.toLowerCase.stripSuffix("type")
+  def matches(from: DataType): Boolean = this == from
 }
 
 object StringType extends DataType
@@ -25,8 +26,15 @@ case class DecimalType(scale: Scale = Scale(0),
                        precision: Precision = Precision(0)
                       ) extends DataType {
   override def canonicalName: String = "decimal(" + precision.value + "," + scale.value + ")"
+  override def matches(from: DataType) = from match {
+    case DecimalType(s, p) => (s == scale || s.value == -1 || scale.value == -1) && (p == precision || p.value == -1 || precision.value == -1)
+    case other => false
+  }
 }
 
+object DecimalType {
+  val Wildcard = DecimalType(Scale(-1), Precision(-1))
+}
 
 case class ArrayType(elementType: DataType) extends DataType {
   override def canonicalName: String = "array<" + elementType.canonicalName + ">"
