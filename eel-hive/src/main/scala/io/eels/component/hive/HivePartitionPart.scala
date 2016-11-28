@@ -2,7 +2,6 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.component.parquet.Predicate
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -20,7 +19,6 @@ class HivePartitionPart(dbName: String,
                         tableName: String,
                         projectionSchema: StructType,
                         partitionKeys: List[PartitionKey], // partition keys for this table, used to map the partition values back to a map
-                        predicate: Option[Predicate], // used to filter rows
                         dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true
                        )
                        (implicit fs: FileSystem,
@@ -63,8 +61,6 @@ class HivePartitionPart(dbName: String,
       // values in the order set by the fieldNames parameter
       val map = partitionKeys.map(_.field.name).zip(part.getValues.asScala).toMap
       Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
-    }.filter { row =>
-      predicate.fold(true)(_.scala().apply(row))
     }
     logger.debug(s"After scanning partitions and files we have ${rows.size} rows")
     if (rows.isEmpty) Flux.empty() else Flux.fromIterable(rows.asJava)
