@@ -1,6 +1,8 @@
 package io.eels.schema
 
-trait DataType
+trait DataType {
+  def canonicalName: String = getClass.getSimpleName.toLowerCase.stripSuffix("type")
+}
 
 object StringType extends DataType
 object BooleanType extends DataType
@@ -21,10 +23,14 @@ case class VarcharType(size: Int) extends DataType
 
 case class DecimalType(scale: Scale = Scale(0),
                        precision: Precision = Precision(0)
-                      ) extends DataType
+                      ) extends DataType {
+  override def canonicalName: String = "decimal(" + precision.value + "," + scale.value + ")"
+}
 
 
-case class ArrayType(elementType: DataType) extends DataType
+case class ArrayType(elementType: DataType) extends DataType {
+  override def canonicalName: String = "array<" + elementType.canonicalName + ">"
+}
 
 case class Precision(value: Int) extends AnyVal
 case class Scale(value: Int) extends AnyVal
