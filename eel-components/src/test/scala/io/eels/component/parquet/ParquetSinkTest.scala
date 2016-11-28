@@ -40,7 +40,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, false)
       frame.to(ParquetSink(path))
-      ParquetSource(path).toFrame(1).toSet().map(_.values) shouldBe
+      ParquetSource(path).toFrame().toSet().map(_.values) shouldBe
         Set(
           Vector("clint eastwood", "actor", "carmel"),
           Vector("elton john", "musician", "pinner")

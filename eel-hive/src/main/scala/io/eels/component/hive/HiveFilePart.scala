@@ -3,9 +3,9 @@ package io.eels.component.hive
 import io.eels._
 import io.eels.component.parquet.Predicate
 import io.eels.schema.{PartitionPart, StructType}
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
-import rx.lang.scala.Observable
 
 /**
   * @param metastoreSchema  the schema as present in the metastore and used to match up with the raw data in dialects
@@ -28,7 +28,7 @@ class HiveFilePart(val dialect: HiveDialect,
                    val partitions: List[PartitionPart])
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
 
-  override def data(): Observable[Row] = {
+  override def data(): Flowable[Row] = {
     require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
     val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
@@ -51,13 +51,15 @@ class HiveFilePart(val dialect: HiveDialect,
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema
-    reader.map { row =>
-      if (projectionFields.isEmpty) {
-        val values = projectionSchema.fieldNames().map(partitionMap.apply)
-        Row(projectionSchema, values.toVector)
-      } else {
-        RowUtils.rowAlign(row, projectionSchema, partitionMap)
+    reader.map(new io.reactivex.functions.Function[Row,Row] {
+      override def apply(row: Row): Row = {
+        if (projectionFields.isEmpty) {
+          val values = projectionSchema.fieldNames().map(partitionMap.apply)
+          Row(projectionSchema, values.toVector)
+        } else {
+          RowUtils.rowAlign(row, projectionSchema, partitionMap)
+        }
       }
-    }
+    })
   }
 }

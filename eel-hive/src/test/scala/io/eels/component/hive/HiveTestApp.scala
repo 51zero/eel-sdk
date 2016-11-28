@@ -87,19 +87,19 @@ object HiveTestApp extends App with Timed {
   //  val m = HiveSource(Database, Table).withProjection("artist").toFrame(4).take(3).toList()
   //  println(m)
 
-  val y = HiveSource(Database, Table).withProjection("artist").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame(4).take(10).toList()
+  val y = HiveSource(Database, Table).withProjection("artist").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame().take(10).toList()
   println(y)
 
-  val x = HiveSource(Database, Table).withProjection("album").withPredicate(Predicate.equals("album", "white album")).toFrame(4).take(10).toList()
+  val x = HiveSource(Database, Table).withProjection("album").withPredicate(Predicate.equals("album", "white album")).toFrame().take(10).toList()
   println(x)
 
-  val t = HiveSource(Database, Table).withProjection("album").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame(4).take(10).toList()
+  val t = HiveSource(Database, Table).withProjection("album").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame().take(10).toList()
   println(t)
 
-  val w = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "elton")).toFrame(4).take(10).toList()
+  val w = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "elton")).toFrame().take(10).toList()
   println(w)
 
-  val m = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "the wall")).toFrame(4).take(10).toList()
+  val m = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "the wall")).toFrame().take(10).toList()
   println(m)
 
 

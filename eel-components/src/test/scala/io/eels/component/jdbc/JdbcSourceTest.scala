@@ -27,8 +27,8 @@ class JdbcSourceTest extends WordSpec with Matchers {
       conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
-      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test3"), "select * from mytable where a=4").toFrame(1).size() shouldBe 1
-      val a = JdbcSource("jdbc:h2:mem:test3", "select a,c from mytable where a=4").toFrame(1).toList()
+      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test3"), "select * from mytable where a=4").toFrame().size() shouldBe 1
+      val a = JdbcSource("jdbc:h2:mem:test3", "select a,c from mytable where a=4").toFrame().toList()
       a.head.values.head shouldBe 4
       a.head.values(1) shouldBe 6L
     }
@@ -37,7 +37,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
       conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
-      JdbcSource("jdbc:h2:mem:test4", "select * from mytable").toFrame(1).size() shouldBe 2
+      JdbcSource("jdbc:h2:mem:test4", "select * from mytable").toFrame().size() shouldBe 2
     }
     "support bind" in {
       val conn = DriverManager.getConnection("jdbc:h2:mem:test5")
@@ -46,7 +46,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
       JdbcSource("jdbc:h2:mem:test5", "select * from mytable where a=?").withBind { it =>
         it.setLong(1, 4)
-      }.toFrame(1).size() shouldBe 1
+      }.toFrame().size() shouldBe 1
     }
   }
 }

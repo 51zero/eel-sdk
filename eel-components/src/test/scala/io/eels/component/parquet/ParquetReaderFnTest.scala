@@ -2,6 +2,7 @@ package io.eels.component.parquet
 
 import java.util.UUID
 
+import io.eels.component.avro.AvroSchemaFns
 import io.eels.schema.{DoubleType, Field, LongType, StructType}
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.{GenericData, GenericRecord}
@@ -38,7 +39,7 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
   "ParquetReaderSupport" should {
     "support projections on doubles" in {
 
-      val reader = ParquetReaderFn.apply(path, None, Option(schema.removeField("looong")))
+      val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
       val record = reader.read()
       reader.close()
 
@@ -47,7 +48,7 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
     }
     "support projections on longs" in {
 
-      val reader = ParquetReaderFn.apply(path, None, Option(schema.removeField("str")))
+      val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("str"))))
       val record = reader.read()
       reader.close()
 
@@ -55,7 +56,7 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
     }
     "support full projections" in {
 
-      val reader = ParquetReaderFn.apply(path, None, Option(schema))
+      val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema)))
       val record = reader.read()
       reader.close()
 

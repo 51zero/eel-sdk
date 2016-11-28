@@ -3,11 +3,11 @@ package io.eels.component.orc
 import com.sksamuel.exts.io.Using
 import io.eels.schema.StructType
 import io.eels.{Part, Row, Source}
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.orc.OrcFile.ReaderOptions
 import org.apache.orc.{ColumnStatistics, OrcFile, StripeInformation, StripeStatistics}
-import rx.lang.scala.Observable
 
 import scala.collection.JavaConverters._
 
@@ -25,6 +25,6 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
   def stripeStatistics(): Seq[StripeStatistics] = reader().getStripeStatistics.asScala
 
   class OrcPart(path: Path) extends Part {
-    override def data(): Observable[Row] = new OrcReader(path).rows()
+    override def data(): Flowable[Row] = new OrcReader(path).rows()
   }
 }

@@ -75,7 +75,7 @@ object HiveSpeedTest extends App with Timed {
 
     timed("reading data") {
       val source = HiveSource(Database, Table)
-      source.toFrame(6).size()
+      source.toFrame().size()
       logger.info("Read complete")
     }
 

@@ -1,10 +1,11 @@
 package io.eels.component.parquet
 
 import java.util
+import java.util.concurrent.Executors
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.Row
 import io.eels.schema._
+import io.eels.{Listener, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -26,7 +27,7 @@ object ParquetReadTest extends App with Timed {
   )
 
   if (!fs.exists(new Path("./parquettest"))) {
-    for (k <- 1 to 100) {
+    for (k <- 1 to 150) {
       val rows = string.split(' ').distinct.map { word =>
         Row(schema, Vector(word, List.fill(25)(Random.nextDouble)))
       }.toSeq
@@ -41,8 +42,16 @@ object ParquetReadTest extends App with Timed {
   timed("reading multiple parquet files") {
     println(
       ParquetSource("./parquettest/*")
-        .toFrame(16)
-        .toList
+        .toFrame(Executors.newFixedThreadPool(8))
+        .listener(new Listener {
+          var count = 0
+          override def onNext(row: Row): Unit = {
+            count = count + 1
+            if (count % 1000 == 0)
+              println(count)
+          }
+        })
+        .toSeq
         .map(convertRow)
         .size
     )

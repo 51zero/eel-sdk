@@ -28,7 +28,7 @@ class OrcComponentTest extends WordSpec with Matchers {
       fs.delete(path, false)
       frame.to(OrcSink(path))
 
-      val rows = OrcSource(path).toFrame(1).toSet()
+      val rows = OrcSource(path).toFrame().toSet()
       rows.size shouldBe 2
       fs.delete(path, false)
 

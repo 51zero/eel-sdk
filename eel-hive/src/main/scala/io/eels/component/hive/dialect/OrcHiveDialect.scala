@@ -1,15 +1,15 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
+import io.eels.Row
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcReader, OrcWriter}
-import io.eels.schema.StructType
-import io.eels.Row
 import io.eels.component.parquet.Predicate
+import io.eels.schema.StructType
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
-import rx.lang.scala.Observable
 
 object OrcHiveDialect extends HiveDialect with Logging {
 
@@ -17,7 +17,7 @@ object OrcHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Observable[Row] = new OrcReader(path).rows()
+                   (implicit fs: FileSystem, conf: Configuration): Flowable[Row] = new OrcReader(path).rows()
 
   override def writer(schema: StructType,
                       path: Path,

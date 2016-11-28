@@ -1,6 +1,6 @@
 package io.eels
 
-import rx.lang.scala.Observable
+import io.reactivex.Flowable
 
 /**
  * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
@@ -17,5 +17,5 @@ trait Part {
    * Ie, it should be possible to invoke this method k times, and subscribe to those k observables concurrently,
    * and each rows should emit the same data.
    */
-  def data(): Observable[Row]
+  def data(): Flowable[Row]
 }

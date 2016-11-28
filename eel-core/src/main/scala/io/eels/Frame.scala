@@ -1,18 +1,32 @@
 package io.eels
 
 import io.eels.schema._
-import rx.lang.scala.{Observable, Observer}
+import io.reactivex.{Flowable, Observer}
+import io.reactivex.functions.{BiFunction, Function, Predicate}
+
+import scala.collection.JavaConverters._
+import scala.language.implicitConversions
 
 trait Frame {
   outer =>
 
+
+  implicit def fnToPredicate(fn: Row => Boolean): Predicate[Row] = new Predicate[Row] {
+    override def test(row: Row): Boolean = fn(row)
+  }
+
+  implicit def fnToMapper(fn: Row => Row): Function[Row, Row] = new Function[Row, Row] {
+    override def apply(row: Row): Row = fn(row)
+  }
+
+
   def schema(): StructType
 
   /**
-    * Returns an Observable which can be subscribed to in order to receieve all
+    * Returns an Flowable which can be subscribed to in order to receieve all
     * the rows held by this Frame.
     */
-  def rows(): Observable[Row]
+  def rows(): Flowable[Row]
 
   /**
     * Combines two frames together such that the fields from this frame are joined with the fields
@@ -21,11 +35,11 @@ trait Frame {
     */
   def join(other: Frame): Frame = new Frame {
     override def schema(): StructType = outer.schema().join(other.schema())
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val combinedSchema = schema()
-      outer.rows.zip(other.rows).map { case (a, b) =>
-        Row(combinedSchema, a.values ++ b.values)
-      }
+      outer.rows.zipWith(other.rows, new BiFunction[Row, Row, Row] {
+        override def apply(a: Row, b: Row): Row = Row(combinedSchema, a.values ++ b.values)
+      })
     }
   }
 
@@ -35,11 +49,15 @@ trait Frame {
     */
   def replace(from: String, target: Any): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().map { row =>
-      val values = row.values.map { value =>
-        if (value == from) target else value
-      }
-      Row(row.schema, values)
+    override def rows(): Flowable[Row] = {
+      outer.rows().map(new Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          val values = row.values.map { value =>
+            if (value == from) target else value
+          }
+          Row(row.schema, values)
+        }
+      })
     }
   }
 
@@ -49,16 +67,18 @@ trait Frame {
     */
   def replace(fieldName: String, from: String, target: Any): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val index = schema().indexOf(fieldName)
-      outer.rows().map { row =>
-        val existing = row.values(index)
-        if (existing == from) {
-          Row(row.schema, row.values.updated(index, target))
-        } else {
-          row
+      outer.rows().map(new Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          val existing = row.values(index)
+          if (existing == from) {
+            Row(row.schema, row.values.updated(index, target))
+          } else {
+            row
+          }
         }
-      }
+      })
     }
   }
 
@@ -68,50 +88,60 @@ trait Frame {
     */
   def replace(fieldName: String, fn: (Any) => Any): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val index = schema().indexOf(fieldName)
-      outer.rows().map { row =>
-        val newValues = row.values.updated(index, fn(row.values(index)))
-        Row(row.schema, newValues)
-      }
+      outer.rows().map(new Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          val newValues = row.values.updated(index, fn(row.values(index)))
+          Row(row.schema, newValues)
+        }
+      })
     }
   }
 
+  def listener(listener: Listener): Frame = foreach(listener.onNext)
+
   def take(n: Int) = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().take(n)
+    override def rows(): Flowable[Row] = outer.rows().take(n)
   }
 
   def takeWhile(pred: (Row) => Boolean): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().takeWhile(pred)
+    override def rows(): Flowable[Row] = outer.rows().takeWhile(new io.reactivex.functions.Predicate[Row] {
+      override def test(row: Row): Boolean = pred(row)
+    })
   }
 
   def takeWhile(fieldName: String, pred: (Any) => Boolean): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val index = outer.schema().indexOf(fieldName)
-      outer.rows().takeWhile { row =>
-        pred(row.values(index))
-      }
+      outer.rows().takeWhile(new io.reactivex.functions.Predicate[Row] {
+        override def test(row: Row): Boolean = pred(row.values(index))
+      })
     }
   }
 
   def updateFieldType(fieldName: String, fieldType: DataType): Frame = new Frame {
     override def schema(): StructType = outer.schema().updateFieldType(fieldName, fieldType)
-    override def rows(): Observable[Row] = outer.rows()
+    override def rows(): Flowable[Row] = outer.rows()
   }
 
   def dropWhile(pred: (Row) => Boolean): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().dropWhile(pred)
+    override def rows(): Flowable[Row] = outer.rows().skipWhile(new io.reactivex.functions.Predicate[Row] {
+      override def test(row: Row): Boolean = pred(row)
+    })
   }
 
   def dropWhile(fieldName: String, pred: (Any) => Boolean): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val index = outer.schema().indexOf(fieldName)
-      outer.rows().dropWhile { row => pred(row.values(index)) }
+      outer.rows().skipWhile(new io.reactivex.functions.Predicate[Row] {
+        override def test(row: Row): Boolean = pred(row.values(index))
+      })
     }
   }
 
@@ -124,7 +154,7 @@ trait Frame {
   def sample(k: Int): Frame = new Frame {
     override def schema(): StructType = outer.schema()
     // todo add impl
-    override def rows(): Observable[Row] = outer.rows()
+    override def rows(): Flowable[Row] = outer.rows()
   }
 
   /**
@@ -141,21 +171,23 @@ trait Frame {
     */
   def addField(field: Field, defaultValue: Any): Frame = new Frame {
     override def schema(): StructType = outer.schema().addField(field)
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val exists = outer.schema().fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema()
-      outer.rows().map { row =>
-        Row(newSchema, row.values :+ defaultValue)
-      }
+      outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(newSchema, row.values :+ defaultValue)
+      })
     }
   }
 
   def replaceFieldType(from: DataType, toType: DataType): Frame = new Frame {
     override def schema(): StructType = outer.schema().replaceFieldType(from, toType)
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val newSchema = schema()
-      outer.rows().map(row => Row(newSchema, row.values))
+      outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(newSchema, row.values)
+      })
     }
   }
 
@@ -168,26 +200,28 @@ trait Frame {
 
   def removeField(fieldName: String, caseSensitive: Boolean = true): Frame = new Frame {
     override def schema(): StructType = outer.schema().removeField(fieldName, caseSensitive)
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val index = outer.schema().indexOf(fieldName, caseSensitive)
       val newSchema = schema()
-      outer.rows().map { row =>
-        val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
-        Row(newSchema, newValues)
-      }
+      outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
+          Row(newSchema, newValues)
+        }
+      })
     }
   }
 
   def updateField(field: Field): Frame = new Frame {
     override def schema(): StructType = outer.schema().replaceField(field.name, field)
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       throw new UnsupportedOperationException()
     }
   }
 
   def renameField(nameFrom: String, nameTo: String): Frame = new Frame {
     override def schema(): StructType = outer.schema().renameField(nameFrom, nameTo)
-    override def rows(): Observable[Row] = outer.rows()
+    override def rows(): Flowable[Row] = outer.rows()
   }
 
   /**
@@ -196,27 +230,27 @@ trait Frame {
     */
   def stripCharsFromFieldNames(chars: Seq[Char]): Frame = new Frame {
     override def schema(): StructType = outer.schema().stripFromFieldNames(chars)
-    override def rows(): Observable[Row] = outer.rows()
+    override def rows(): Flowable[Row] = outer.rows()
   }
 
   def explode(fn: (Row) => Seq[Row]): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().flatMap { row =>
-      Observable.from(fn(row))
-    }
+    override def rows(): Flowable[Row] = outer.rows().flatMap(new io.reactivex.functions.Function[Row, Flowable[Row]] {
+      override def apply(row: Row): Flowable[Row] = Flowable.fromIterable(fn(row).asJava)
+    })
   }
 
   def replaceNullValues(defaultValue: String): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = {
-      outer.rows().map { row =>
+    override def rows() = outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+      override def apply(row: Row): Row = {
         val newValues = row.values.map {
           case null => defaultValue
           case otherwise => otherwise
         }
         Row(row.schema, newValues)
       }
-    }
+    })
   }
 
   /**
@@ -227,7 +261,7 @@ trait Frame {
   def union(other: Frame): Frame = new Frame {
     // todo check schemas are compatible
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows() ++ other.rows()
+    override def rows(): Flowable[Row] = outer.rows() concatWith other.rows()
   }
 
   def projectionExpression(expr: String): Frame = projection(expr.split(',').map(_.trim()))
@@ -240,33 +274,37 @@ trait Frame {
 
     override def schema(): StructType = outer.schema().projection(fields)
 
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
 
       val oldSchema = outer.schema()
       val newSchema = schema()
 
-      outer.rows().map { row =>
-        val values = newSchema.fieldNames().map { name =>
-          val k = oldSchema.indexOf(name)
-          row.values(k)
+      outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          val values = newSchema.fieldNames().map { name =>
+            val k = oldSchema.indexOf(name)
+            row.values(k)
+          }
+          Row(newSchema, values)
         }
-        Row(newSchema, values)
-      }
+      })
     }
   }
 
   /**
-    * Execute a side effecting function for every row in the frame, returning the same Frame.
+    * Execute a side effecting function for every row in the frame, returning the same row.
     *
     * @param fn the function to execute
     * @return this frame, to allow for builder style chaining
     */
   def foreach[U](fn: (Row) => U): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().map { row =>
-      fn(row)
-      row
-    }
+    override def rows(): Flowable[Row] = outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+      override def apply(row: Row): Row = {
+        fn(row)
+        row
+      }
+    })
   }
 
   /**
@@ -276,16 +314,18 @@ trait Frame {
   def withLowerCaseSchema(): Frame = new Frame {
     private lazy val lowerSchema = outer.schema().toLowerCase()
     override def schema(): StructType = lowerSchema
-    override def rows(): Observable[Row] = outer.rows().map(_.replaceSchema(lowerSchema))
+    override def rows(): Flowable[Row] = outer.rows().map(new io.reactivex.functions.Function[Row, Row] {
+      override def apply(row: Row): Row = row.replaceSchema(lowerSchema)
+    })
   }
 
   def drop(k: Int): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().drop(k)
+    override def rows(): Flowable[Row] = outer.rows().skip(k)
   }
 
   def map(f: (Row) => Row): Frame = new Frame {
-    override def rows(): Observable[Row] = outer.rows().map(f)
+    override def rows(): Flowable[Row] = outer.rows().map(f)
     override def schema(): StructType = outer.schema()
   }
 
@@ -293,7 +333,7 @@ trait Frame {
 
   def filter(p: (Row) => Boolean): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = outer.rows().filter(p)
+    override def rows(): Flowable[Row] = outer.rows().filter(p)
   }
 
   /**
@@ -301,39 +341,42 @@ trait Frame {
     */
   def filter(fieldName: String, p: (Any) => Boolean): Frame = new Frame {
     override def schema(): StructType = outer.schema()
-    override def rows(): Observable[Row] = {
+    override def rows(): Flowable[Row] = {
       val index = schema().indexOf(fieldName)
       if (index < 0)
         sys.error(s"Unknown field $fieldName")
-      outer.rows().filter { row =>
-        p(row.values(index))
-      }
+      outer.rows().filter(new Predicate[Row] {
+        override def test(row: Row): Boolean = p(row.values(index))
+      })
     }
   }
 
   def dropNullRows(): Frame = new Frame {
-    override def rows(): Observable[Row] = outer.rows().filter { row =>
-      !row.values.contains(null)
-    }
     override def schema(): StructType = outer.schema()
+    override def rows(): Flowable[Row] = outer.rows().filter(new Predicate[Row] {
+      override def test(row: Row): Boolean = row.values.contains(null)
+    })
   }
 
   // -- actions --
   def fold[A](initial: A)(fn: (A, Row) => A): A = {
-    rows().foldLeft(initial) { case (a, row) => fn(a, row) }.toBlocking.single
+    rows().reduce(initial, new io.reactivex.functions.BiFunction[A, Row, A] {
+      override def apply(a: A, row: Row): A = fn(a, row)
+    }).blockingGet()
   }
 
-  def forall(p: (Row) => Boolean): Boolean = rows().forall(p).toBlocking.single
-  def exists(p: (Row) => Boolean): Boolean = rows().exists(row => p(row)).toBlocking.single
-  def find(p: (Row) => Boolean): Row = rows().filter(p).first.toBlocking.single
+  def forall(p: (Row) => Boolean): Boolean = rows().all(p).blockingGet()
+  def exists(p: (Row) => Boolean): Boolean = rows().filter(p).blockingFirst(null) != null
+  def find(p: (Row) => Boolean): Option[Row] = Option(rows().filter(p).blockingFirst(null))
 
-  def head(): Row = rows().first.toBlocking.single
+  def head(): Row = rows().blockingFirst()
 
-  def to(sink: Sink, observer: Observer[Row] = NoopObserver): Long = SinkPlan.execute(sink, this, observer)
-  def size(): Long = rows().countLong.toBlocking.single
+  def to(sink: Sink, listener: Listener = NoopListener): Long = SinkPlan.execute(sink, this, listener)
+  def size(): Long = rows().count().blockingGet()
   //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
 
-  def toList(): List[Row] = rows().toList.toBlocking.single
+  def toSeq(): Seq[Row] = ListPlan(this)
+  def toList(): List[Row] = ListPlan(this)
   def toSet(): Set[Row] = toList().toSet
 }
 
@@ -357,6 +400,6 @@ object Frame {
 
   def apply(_schema: StructType, _rows: Seq[Row]): Frame = new Frame {
     override def schema(): StructType = _schema
-    override def rows(): Observable[Row] = Observable.from(_rows)
+    override def rows(): Flowable[Row] = Flowable.fromArray(_rows: _*)
   }
 }

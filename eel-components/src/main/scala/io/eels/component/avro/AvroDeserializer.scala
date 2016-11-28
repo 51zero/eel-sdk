@@ -2,8 +2,10 @@ package io.eels.component.avro
 
 import com.typesafe.config.ConfigFactory
 import io.eels.Row
+import io.eels.schema.StructType
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
+
 import scala.collection.JavaConverters._
 
 /**
@@ -14,9 +16,11 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
 
   val config = ConfigFactory.load()
   val deserializeAsNullable = config.getBoolean("eel.avro.deserializeAsNullable")
+  var struct: StructType = null
 
   def toRow(record: GenericRecord): Row = {
-    val struct = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
+    if (struct == null)
+      struct = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
     val values = record.getSchema.getFields.asScala.map { field =>
       val value = record.get(field.name())
       if (useJavaString && value.isInstanceOf[Utf8]) {

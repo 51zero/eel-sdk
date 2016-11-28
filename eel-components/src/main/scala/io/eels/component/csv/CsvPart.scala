@@ -1,11 +1,12 @@
 package io.eels.component.csv
 
-import com.univocity.parsers.csv.CsvParser
-import io.eels.{Part, Row}
-import io.eels.schema.StructType
 import com.sksamuel.exts.Logging
+import com.univocity.parsers.csv.CsvParser
+import io.eels.schema.StructType
+import io.eels.{Part, Row}
+import io.reactivex.functions.Consumer
+import io.reactivex.{Emitter, Flowable}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import rx.lang.scala.Observable
 
 import scala.util.control.NonFatal
 
@@ -21,7 +22,7 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def data(): Observable[Row] = {
+  override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
 
     val parser = createParser()
     val input = fs.open(path)
@@ -29,25 +30,21 @@ class CsvPart(val createParser: () => CsvParser,
 
     val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip)
 
-    Observable.apply { sub =>
+    override def accept(e: Emitter[Row]): Unit = {
       try {
-        sub.onStart()
-        iterator.foreach { record =>
-          try {
-            val row = Row(schema, record.toVector)
-            sub.onNext(row)
-          } catch {
-            case NonFatal(e) if skipBadRows =>
-              logger.warn(s"Parse error, record=$record")
-          }
+        if (iterator.hasNext) {
+          val record = iterator.next()
+          val row = Row(schema, record.toVector)
+          e.onNext(row)
+        } else {
+          e.onComplete()
         }
       } catch {
-        case e: Throwable =>
-          sub.onError(e)
+        case NonFatal(t) => e.onError(t)
       } finally {
-        if (!sub.isUnsubscribed)
-          sub.onCompleted()
+        parser.stopParsing()
+        input.close()
       }
     }
-  }
+  })
 }

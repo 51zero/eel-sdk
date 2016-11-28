@@ -3,12 +3,14 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.component.avro.AvroSchemaFns
+import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
+import org.apache.avro.reflect.AvroSchema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
 import org.apache.parquet.filter2.compat.FilterCompat
-import org.apache.parquet.hadoop.ParquetReader
+import org.apache.parquet.hadoop.{ParquetOutputFormat, ParquetReader}
 
 /**
   * Helper function to create a parquet reader, using the apache parquet library.
@@ -20,7 +22,7 @@ object ParquetReaderFn extends Logging {
   val config: Config = ConfigFactory.load()
 
   val parallelism = config.getInt("eel.parquet.parallelism").toString()
-  logger.debug(s"Parquet readers will use parallelism = $this")
+  logger.debug(s"Parquet readers will use parallelism = $parallelism")
 
   /**
     * Creates a new reader for the given path.
@@ -30,17 +32,17 @@ object ParquetReaderFn extends Logging {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[io.eels.schema.StructType]): ParquetReader[GenericRecord] = {
+            projectionSchema: Option[Schema]): ParquetReader[GenericRecord] = {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {
       val conf = new Configuration()
       projectionSchema.foreach { it =>
-        val projection = AvroSchemaFns.toAvroSchema(it, false)
-        AvroReadSupport.setAvroReadSchema(conf, projection)
-        AvroReadSupport.setRequestedProjection(conf, projection)
-        conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
+        AvroReadSupport.setAvroReadSchema(conf, it)
+        AvroReadSupport.setRequestedProjection(conf, it)
       }
+      conf.set(ParquetOutputFormat.ENABLE_JOB_SUMMARY, "false")
+      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
       conf
     }
 

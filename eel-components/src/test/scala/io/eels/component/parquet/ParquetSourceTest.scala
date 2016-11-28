@@ -30,7 +30,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.toAbsolutePath()).toFrame(1).toSet().map {
+      val people = ParquetSource(personFile.toAbsolutePath()).toFrame().toSet().map {
         _.values
       }
       people shouldBe Set(
@@ -39,7 +39,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir.resolve("*")).toFrame(1).toSet().map {
+      val people = ParquetSource(resourcesDir.resolve("*")).toFrame().toSet().map {
         _.values
       }
       people shouldBe Set(

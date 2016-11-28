@@ -15,13 +15,12 @@ object Build extends Build {
   val JacksonVersion = "2.8.4"
   val Log4jVersion = "1.2.17"
   val OrcVersion = "1.2.1"
-  val RxScalaVersion = "0.26.4"
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
   val Slf4jVersion = "1.7.12"
   val ParquetVersion = "1.8.1"
   val UnivocityVersion = "2.2.3"
-  val RxJavaVersion = "1.2.2"
+  val RxJavaVersion = "2.0.1"
   val ConfigVersion = "1.3.0"
   val H2Version = "1.4.192"
   val MetricsVersion = "3.1.2"
@@ -71,8 +70,7 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
       "org.scala-lang"        % "scala-reflect"           % scalaVersion.value,
-      "io.reactivex"          %% "rxscala"                % RxScalaVersion,
-      "io.reactivex"          % "rxjava"                  % RxJavaVersion,
+      "io.reactivex.rxjava2"  % "rxjava"                  % RxJavaVersion,
       "com.typesafe"          % "config"                  % ConfigVersion,
       "com.sksamuel.exts"     %% "exts"                   % ExtsVersion,
       "com.univocity"         % "univocity-parsers"       % UnivocityVersion,

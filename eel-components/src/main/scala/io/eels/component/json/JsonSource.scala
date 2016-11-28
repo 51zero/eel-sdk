@@ -3,12 +3,14 @@ package io.eels.component.json
 import com.sksamuel.exts.io.Using
 import io.eels.schema.{Field, StructType}
 import io.eels.{Part, Row, Source}
+import io.reactivex.functions.Consumer
+import io.reactivex.{Emitter, Flowable}
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
-import rx.lang.scala.Observable
 
 import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
 
 case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
   require(fs.exists(path), s"$path must exist")
@@ -36,19 +38,26 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       Row(_schema, values)
     }
 
-    override def data(): Observable[Row] = Observable.apply { sub =>
+    override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
+
       val input = createInputStream(path)
-      try {
-        sub.onStart()
-        reader.readValues[JsonNode](input).asScala.foreach { it =>
-          val row = nodeToRow(it)
-          sub.onNext(row)
+      val iter = reader.readValues[JsonNode](input).asScala
+
+      override def accept(e: Emitter[Row]): Unit = {
+        try {
+          if (iter.hasNext) {
+            val row = nodeToRow(iter.next)
+            e.onNext(row)
+          } else {
+            e.onComplete()
+          }
+        } catch {
+          case NonFatal(t) => e.onError(t)
+        } finally {
+          input.close()
         }
-      } catch {
-        case t: Throwable => sub.onError(t)
       }
-      sub.onCompleted()
-    }
+    })
   }
 }
 

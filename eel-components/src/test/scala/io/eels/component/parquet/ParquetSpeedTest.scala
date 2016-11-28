@@ -29,7 +29,7 @@ object ParquetSpeedTest extends App with Timed {
     }
 
     timed("Reading") {
-      val in = ParquetSource(path).toFrame(1).toList()
+      val in = ParquetSource(path).toFrame().toList()
       assert(in.size == rows.size, in.size)
     }
 

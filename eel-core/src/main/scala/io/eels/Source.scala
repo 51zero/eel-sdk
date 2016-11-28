@@ -1,8 +1,9 @@
 package io.eels
 
+import java.util.concurrent._
+
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import rx.lang.scala.Observer
 
 /**
   * A Source is a provider of data.
@@ -19,6 +20,17 @@ import rx.lang.scala.Observer
   */
 trait Source extends Logging {
 
+  def schema(): StructType
+  def parts(): List[Part]
+
+  def toFrame(): Frame = toFrame(NoopListener)
+
+  def toFrame(ioThreads: Int): Frame = toFrame(Executors.newFixedThreadPool(ioThreads))
+
+  def toFrame(executor: ExecutorService): Frame = toFrame(executor, NoopListener)
+
+  def toFrame(listener: Listener): Frame = toFrame(Executors.newSingleThreadExecutor, listener)
+
   /**
     * Builds a frame from this source. The frame will be lazily loaded when an action is performed.
     *
@@ -26,9 +38,7 @@ trait Source extends Logging {
     * @param observer  a listener for row items
     * @return a new frame
     */
-  def toFrame(ioThreads: Int, observer: Observer[Row] = NoopObserver): Frame =
-    new FrameSource(ioThreads, this, observer)
+  def toFrame(executor: ExecutorService, listener: Listener): Frame = new FrameSource(this).load(executor, listener)
 
-  def schema(): StructType
-  def parts(): List[Part]
+
 }
