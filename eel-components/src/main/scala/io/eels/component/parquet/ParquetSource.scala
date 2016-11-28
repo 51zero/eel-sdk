@@ -78,7 +78,7 @@ class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Lo
           sink.next(iter.next)
         }
         sink.complete()
-        logger.debug("Parquet reader completed on thread " + Thread.currentThread)
+        logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
       } catch {
         case NonFatal(error) =>
           logger.warn("Could not read file", error)

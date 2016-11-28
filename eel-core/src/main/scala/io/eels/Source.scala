@@ -47,8 +47,8 @@ trait Source extends Logging {
 
     // this method may be invoked multiple times, each time generating a new "load action"
     override def rows(): Flux[Row] = {
-      parts.map(_.data.subscribeOn(Schedulers.fromExecutorService(executor)))
-        .reduceLeft((a, b) => a.mergeWith(b))
+      val fluxes = parts.map(_.data.limitRate(100).subscribeOn(Schedulers.fromExecutorService(executor)))
+      Flux.merge(100, false, fluxes: _*)
     }
   }.listener(_listener)
 

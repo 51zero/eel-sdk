@@ -15,7 +15,7 @@ object ListPlan extends Plan {
     var error: Throwable = null
     val latch = new CountDownLatch(1)
 
-    frame.rows().publishOn(Schedulers.single(), requestSize).subscribe(new Consumer[Row] {
+    frame.rows().subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
       override def accept(row: Row): Unit = {
         builder.+=(row)
       }

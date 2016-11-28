@@ -49,7 +49,7 @@ object ParquetReadTest extends App with Timed {
           var count = 0
           override def onNext(row: Row): Unit = {
             count = count + 1
-            if (count % 10000 == 0)
+            if (count % 1000 == 0)
               println(count)
           }
         })
