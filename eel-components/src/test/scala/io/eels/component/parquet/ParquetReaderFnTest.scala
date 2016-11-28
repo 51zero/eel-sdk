@@ -36,7 +36,7 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
 
   val schema = StructType(Field("str"), Field("looong", LongType(true), true), Field("dooble", DoubleType, true))
 
-  "ParquetReaderSupport" should {
+  "ParquetReaderFn" should {
     "support projections on doubles" in {
 
       val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))

@@ -4,6 +4,8 @@ import java.util.concurrent._
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
+import reactor.core.publisher.Flux
+import reactor.core.scheduler.Schedulers
 
 /**
   * A Source is a provider of data.
@@ -19,6 +21,7 @@ import io.eels.schema.StructType
   * a partition in a partitioned source.
   */
 trait Source extends Logging {
+  outer =>
 
   def schema(): StructType
   def parts(): List[Part]
@@ -38,7 +41,15 @@ trait Source extends Logging {
     * @param observer  a listener for row items
     * @return a new frame
     */
-  def toFrame(executor: ExecutorService, listener: Listener): Frame = new FrameSource(this).load(executor, listener)
+  def toFrame(executor: ExecutorService, _listener: Listener): Frame = new Frame {
 
+    override def schema(): StructType = outer.schema()
+
+    // this method may be invoked multiple times, each time generating a new "load action"
+    override def rows(): Flux[Row] = {
+      parts.map(_.data.subscribeOn(Schedulers.fromExecutorService(executor)))
+        .reduceLeft((a, b) => a.mergeWith(b))
+    }
+  }.listener(_listener)
 
 }

@@ -1,12 +1,12 @@
 package io.eels.component.jdbc
 
 import java.sql.{Connection, ResultSet, Statement}
+import java.util.function.Consumer
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
-import io.reactivex.functions.Consumer
-import io.reactivex.{Emitter, Flowable}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.control.NonFatal
 
@@ -18,22 +18,22 @@ class ResultsetPart(val rs: ResultSet,
                     val conn: Connection,
                     val schema: StructType) extends Part with Logging {
 
-  override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
-
-    override def accept(e: Emitter[Row]): Unit = {
+  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
+    override def accept(sink: FluxSink[Row]): Unit = {
       try {
-        if (rs.next()) {
+        while (rs.next && !sink.isCancelled) {
           val values = schema.fieldNames().map(name => rs.getObject(name))
           val row = Row(schema, values)
-          e.onNext(row)
-        } else {
-          e.onComplete()
+          sink.next(row)
         }
+        sink.complete()
       } catch {
-        case NonFatal(t) => e.onError(t)
+        case NonFatal(error) =>
+          logger.warn("Could not read file", error)
+          sink.error(error)
       } finally {
         rs.close()
       }
     }
-  })
+  }, FluxSink.OverflowStrategy.BUFFER)
 }

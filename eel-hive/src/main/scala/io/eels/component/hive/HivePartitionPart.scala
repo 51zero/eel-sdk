@@ -5,9 +5,9 @@ import com.typesafe.config.ConfigFactory
 import io.eels.component.parquet.Predicate
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
-import io.reactivex.Flowable
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
+import reactor.core.publisher.Flux
 
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
@@ -52,7 +52,8 @@ class HivePartitionPart(dbName: String,
     }
   }
 
-  override def data(): Flowable[Row] = {
+  override def data(): Flux[Row] = {
+
     // each row will contain just the values from the metastore
     val rows = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { part =>
       !partitionPartFileCheck || isPartitionPhysical(part)
@@ -66,6 +67,6 @@ class HivePartitionPart(dbName: String,
       predicate.fold(true)(_.scala().apply(row))
     }
     logger.debug(s"After scanning partitions and files we have ${rows.size} rows")
-    if (rows.isEmpty) Flowable.empty() else Flowable.fromIterable(rows.asJava)
+    if (rows.isEmpty) Flux.empty() else Flux.fromIterable(rows.asJava)
   }
 }

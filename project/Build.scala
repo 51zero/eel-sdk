@@ -70,7 +70,7 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
       "org.scala-lang"        % "scala-reflect"           % scalaVersion.value,
-      "io.reactivex.rxjava2"  % "rxjava"                  % RxJavaVersion,
+      "io.projectreactor"     % "reactor-core"            % "3.0.3.RELEASE",
       "com.typesafe"          % "config"                  % ConfigVersion,
       "com.sksamuel.exts"     %% "exts"                   % ExtsVersion,
       "com.univocity"         % "univocity-parsers"       % UnivocityVersion,

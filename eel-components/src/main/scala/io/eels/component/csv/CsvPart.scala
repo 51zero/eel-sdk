@@ -1,12 +1,13 @@
 package io.eels.component.csv
 
+import java.util.function.Consumer
+
 import com.sksamuel.exts.Logging
 import com.univocity.parsers.csv.CsvParser
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
-import io.reactivex.functions.Consumer
-import io.reactivex.{Emitter, Flowable}
 import org.apache.hadoop.fs.{FileSystem, Path}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.control.NonFatal
 
@@ -22,29 +23,29 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
+  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
+    override def accept(sink: FluxSink[Row]): Unit = {
 
-    val parser = createParser()
-    val input = fs.open(path)
-    parser.beginParsing(input)
+      val parser = createParser()
+      val input = fs.open(path)
 
-    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip)
-
-    override def accept(e: Emitter[Row]): Unit = {
       try {
-        if (iterator.hasNext) {
+        parser.beginParsing(input)
+        val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip)
+        while (iterator.hasNext && !sink.isCancelled) {
           val record = iterator.next()
           val row = Row(schema, record.toVector)
-          e.onNext(row)
-        } else {
-          e.onComplete()
+          sink.next(row)
         }
+        sink.complete()
       } catch {
-        case NonFatal(t) => e.onError(t)
+        case NonFatal(error) =>
+          logger.warn("Could not read file", error)
+          sink.error(error)
       } finally {
         parser.stopParsing()
         input.close()
       }
     }
-  })
+  }, FluxSink.OverflowStrategy.BUFFER)
 }

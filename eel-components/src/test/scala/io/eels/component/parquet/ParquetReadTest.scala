@@ -29,7 +29,7 @@ object ParquetReadTest extends App with Timed {
   if (!fs.exists(new Path("./parquettest"))) {
     for (k <- 1 to 150) {
       val rows = string.split(' ').distinct.map { word =>
-        Row(schema, Vector(word, List.fill(25)(Random.nextDouble)))
+        Row(schema, Vector(word, List.fill(10)(Random.nextDouble)))
       }.toSeq
 
       val path = new Path(s"./parquettest/huck$k.parquet")
@@ -39,15 +39,17 @@ object ParquetReadTest extends App with Timed {
     }
   }
 
-  timed("reading multiple parquet files") {
+  val executor = Executors.newFixedThreadPool(2)
+
+  timed("multiple files") {
     println(
       ParquetSource("./parquettest/*")
-        .toFrame(Executors.newFixedThreadPool(8))
+        .toFrame(executor)
         .listener(new Listener {
           var count = 0
           override def onNext(row: Row): Unit = {
             count = count + 1
-            if (count % 1000 == 0)
+            if (count % 10000 == 0)
               println(count)
           }
         })
@@ -56,6 +58,8 @@ object ParquetReadTest extends App with Timed {
         .size
     )
   }
+
+  executor.shutdown()
 
   private def convertRow(row: Row): (String, Vector[Double]) = {
     val word = row.values(0).asInstanceOf[String]

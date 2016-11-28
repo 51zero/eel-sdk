@@ -22,5 +22,8 @@ object ParquetLogMute {
         logger.setUseParentHandlers(false)
       }
     }
+
+    val rootLogger = Logger.getLogger("")
+    rootLogger.getHandlers.foreach(rootLogger.removeHandler)
   }
 }

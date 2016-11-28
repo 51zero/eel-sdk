@@ -5,11 +5,11 @@ import io.eels.Row
 import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
 import io.eels.component.parquet.Predicate
 import io.eels.schema.StructType
-import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table
+import reactor.core.publisher.Flux
 
 trait HiveDialect extends Logging {
 
@@ -40,7 +40,7 @@ trait HiveDialect extends Logging {
            metastoreSchema: StructType,
            projectionSchema: StructType,
            predicate: Option[Predicate])
-          (implicit fs: FileSystem, conf: Configuration): Flowable[Row]
+          (implicit fs: FileSystem, conf: Configuration): Flux[Row]
 
   def writer(schema: StructType,
              path: Path,

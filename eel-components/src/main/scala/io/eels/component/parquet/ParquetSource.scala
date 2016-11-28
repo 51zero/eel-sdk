@@ -1,15 +1,16 @@
 package io.eels.component.parquet
 
+import java.util.function.Consumer
+
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
 import io.eels.schema.StructType
 import io.eels.{FilePattern, Part, Row, Source}
-import io.reactivex.functions.Cancellable
-import io.reactivex.{BackpressureStrategy, Flowable, FlowableEmitter, FlowableOnSubscribe}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
@@ -50,7 +51,7 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts(): List[Part] = {
     val paths = pattern.toPaths()
-    logger.debug(s"Parquet source will read from $paths")
+    logger.debug(s"Parquet source has ${paths.size} files: $paths")
     paths.map { it => new ParquetPart(it, predicate) }
   }
 
@@ -67,29 +68,24 @@ case class ParquetSource(pattern: FilePattern,
 
 class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Logging {
 
-  override def data(): Flowable[Row] = {
-
-    Flowable.create(new FlowableOnSubscribe[Row] {
-      override def subscribe(e: FlowableEmitter[Row]): Unit = {
-        val reader = ParquetReaderFn(path, predicate, None)
-        try {
-          val iter = ParquetRowIterator(reader)
-          while (!e.isCancelled && iter.hasNext) {
-            logger.debug("Reading from parquet in thread" + Thread.currentThread().getId)
-            e.onNext(iter.next)
-          }
-          e.onComplete()
-        } catch {
-          case NonFatal(error) =>
-            logger.warn("Could not read file", e)
-            e.onError(error)
-        } finally {
-          reader.close()
+  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
+    override def accept(sink: FluxSink[Row]): Unit = {
+      logger.debug("Starting parquet reader on thread " + Thread.currentThread)
+      val reader = ParquetReaderFn(path, predicate, None)
+      try {
+        val iter = ParquetRowIterator(reader)
+        while (!sink.isCancelled && iter.hasNext) {
+          sink.next(iter.next)
         }
-        e.setCancellable(new Cancellable {
-          override def cancel(): Unit = reader.close()
-        })
+        sink.complete()
+        logger.debug("Parquet reader completed on thread " + Thread.currentThread)
+      } catch {
+        case NonFatal(error) =>
+          logger.warn("Could not read file", error)
+          sink.error(error)
+      } finally {
+        reader.close()
       }
-    }, BackpressureStrategy.BUFFER)
-  }
+    }
+  }, FluxSink.OverflowStrategy.BUFFER)
 }

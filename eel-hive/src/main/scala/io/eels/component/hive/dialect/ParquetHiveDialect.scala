@@ -1,16 +1,17 @@
 package io.eels.component.hive.dialect
 
+import java.util.function.Consumer
+
 import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.schema.StructType
-import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.reactivestreams.{Publisher, Subscriber, Subscription}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.control.NonFatal
 
@@ -20,34 +21,29 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Flowable[Row] = {
+                   (implicit fs: FileSystem, conf: Configuration): Flux[Row] = {
 
     val schema = AvroSchemaFns.toAvroSchema(projectionSchema)
 
-    Flowable.fromPublisher(new Publisher[Row] {
-      override def subscribe(s: Subscriber[_ >: Row]): Unit = {
-        s.onSubscribe(new Subscription {
-
-          val reader = ParquetReaderFn.apply(path, predicate, Option(schema))
+    Flux.create(new Consumer[FluxSink[Row]] {
+      override def accept(sink: FluxSink[Row]): Unit = {
+        val reader = ParquetReaderFn(path, predicate, Option(schema))
+        try {
           val iter = ParquetRowIterator(reader)
-
-          override def cancel(): Unit = reader.close()
-          override def request(n: Long): Unit = {
-            try {
-              for (_ <- 1L to n)
-                if (iter.hasNext)
-                  s.onNext(iter.next)
-                else
-                  s.onComplete()
-            } catch {
-              case NonFatal(e) =>
-                s.onError(e)
-                reader.close()
-            }
+          while (!sink.isCancelled && iter.hasNext) {
+            logger.debug("Reading from parquet in thread" + Thread.currentThread().getId)
+            sink.next(iter.next)
           }
-        })
+          sink.complete()
+        } catch {
+          case NonFatal(error) =>
+            logger.warn("Could not read file", error)
+            sink.error(error)
+        } finally {
+          reader.close()
+        }
       }
-    })
+    }, FluxSink.OverflowStrategy.BUFFER)
   }
 
   override def writer(schema: StructType,

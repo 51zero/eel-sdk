@@ -1,42 +1,31 @@
 package io.eels
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.function.Consumer
 
-import org.reactivestreams.{Subscriber, Subscription}
+import com.sksamuel.exts.Logging
+import com.typesafe.config.ConfigFactory
+import reactor.core.scheduler.Schedulers
 
-object ListPlan {
-
-  val RequestSize = 1000
-
+object ListPlan extends Plan {
 
   def apply(frame: Frame): List[Row] = {
 
-    var error: Throwable = null
-    var count = 0
-    var subscription: Subscription = null
-    val latch = new CountDownLatch(1)
     val builder = List.newBuilder[Row]
+    var error: Throwable = null
+    val latch = new CountDownLatch(1)
 
-    frame.rows().subscribe(new Subscriber[Row] {
-
-      override def onSubscribe(s: Subscription): Unit = {
-        subscription = s
-        s.request(RequestSize)
+    frame.rows().publishOn(Schedulers.single(), requestSize).subscribe(new Consumer[Row] {
+      override def accept(row: Row): Unit = {
+        builder.+=(row)
       }
-
-      override def onError(t: Throwable): Unit = {
+    }, new Consumer[Throwable] {
+      override def accept(t: Throwable): Unit = {
         error = t
         latch.countDown()
       }
-
-      override def onComplete(): Unit = latch.countDown()
-
-      override def onNext(row: Row): Unit = {
-        builder.+=(row)
-        count = count + 1
-        if (count % RequestSize == RequestSize / 2)
-          subscription.request(RequestSize)
-      }
+    }, new Runnable {
+      override def run(): Unit = latch.countDown()
     })
 
     latch.await(100, TimeUnit.DAYS)
@@ -44,4 +33,9 @@ object ListPlan {
       throw error
     builder.result()
   }
+}
+
+trait Plan extends Logging {
+  val config = ConfigFactory.load()
+  val requestSize = config.getInt("eel.execution.requestSize")
 }

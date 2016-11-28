@@ -1,14 +1,15 @@
 package io.eels.component.sequence
 
+import java.util.function.Consumer
+
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.schema.StructType
 import io.eels.{Part, Row, Source}
-import io.reactivex.functions.Consumer
-import io.reactivex.{Emitter, Flowable}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.control.NonFatal
 
@@ -19,31 +20,32 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
   override def parts(): List[Part] = List(new SequencePart(path))
 }
 
-class SequencePart(val path: Path)(implicit conf: Configuration) extends Part {
+class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging {
 
-  override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
+  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
+    override def accept(sink: FluxSink[Row]): Unit = {
 
-    val reader = SequenceSupport.createReader(path)
-    val k = new IntWritable()
-    val v = new BytesWritable()
-    val schema = SequenceSupport.schema(path)
+      val reader = SequenceSupport.createReader(path)
+      val k = new IntWritable()
+      val v = new BytesWritable()
+      val schema = SequenceSupport.schema(path)
 
-    // throw away top row as that's header
-    reader.next(k, v)
+      // throw away top row as that's header
+      reader.next(k, v)
 
-    override def accept(e: Emitter[Row]): Unit = {
       try {
-        if (reader.next(k, v)) {
+        while (!sink.isCancelled && reader.next(k, v)) {
           val row = Row(schema, SequenceSupport.toValues(v).toVector)
-          e.onNext(row)
-        } else {
-          e.onComplete()
+          sink.next(row)
         }
+        sink.complete()
       } catch {
-        case NonFatal(t) => e.onError(t)
+        case NonFatal(error) =>
+          logger.warn("Could not read file", error)
+          sink.error(error)
       } finally {
         reader.close()
       }
     }
-  })
+  }, FluxSink.OverflowStrategy.BUFFER)
 }

@@ -1,13 +1,14 @@
 package io.eels.component.json
 
+import java.util.function.Consumer
+
 import com.sksamuel.exts.io.Using
 import io.eels.schema.{Field, StructType}
 import io.eels.{Part, Row, Source}
-import io.reactivex.functions.Consumer
-import io.reactivex.{Emitter, Flowable}
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
@@ -38,26 +39,27 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       Row(_schema, values)
     }
 
-    override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
+    override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
+      override def accept(sink: FluxSink[Row]): Unit = {
 
-      val input = createInputStream(path)
-      val iter = reader.readValues[JsonNode](input).asScala
+        val input = createInputStream(path)
+        val iter = reader.readValues[JsonNode](input).asScala
 
-      override def accept(e: Emitter[Row]): Unit = {
         try {
-          if (iter.hasNext) {
+          while (iter.hasNext) {
             val row = nodeToRow(iter.next)
-            e.onNext(row)
-          } else {
-            e.onComplete()
+            sink.next(row)
           }
+          sink.complete()
         } catch {
-          case NonFatal(t) => e.onError(t)
+          case NonFatal(error) =>
+            logger.warn("Could not read file", error)
+            sink.error(error)
         } finally {
           input.close()
         }
       }
-    })
+    }, FluxSink.OverflowStrategy.BUFFER)
   }
 }
 

@@ -33,7 +33,7 @@ class ListenerTest extends WordSpec with Matchers {
   }
 
   "Source.toFrame" should {
-    "support user's observers" in {
+    "support user's listeners" in {
 
       val path = Paths.get("csv_speed.csv")
       path.toFile.delete()

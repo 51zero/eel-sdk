@@ -133,7 +133,7 @@ class StructTypeTest extends WordSpec with Matchers {
           Field("age", IntType(true), true),
           Field("salary", DoubleType, true),
           Field("isPartTime", BooleanType, true),
-          Field("value1", DecimalType(), true),
+          Field("value1", DecimalType(Scale(18), Precision(18)), true),
           Field("value2", FloatType, true),
           Field("value3", LongType(true), true)
         ))

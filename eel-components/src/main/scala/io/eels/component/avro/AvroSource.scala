@@ -1,12 +1,13 @@
 package io.eels.component.avro
 
 import java.nio.file.Path
+import java.util.function.Consumer
 
+import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.schema.StructType
 import io.eels.{Part, Row, Source}
-import io.reactivex.functions.Consumer
-import io.reactivex.{Emitter, Flowable}
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.control.NonFatal
 
@@ -22,27 +23,28 @@ case class AvroSource(path: Path) extends Source with Using {
   override def parts(): List[Part] = List(new AvroSourcePart(path, schema()))
 }
 
-class AvroSourcePart(val path: Path, val schema: StructType) extends Part {
+class AvroSourcePart(val path: Path, val schema: StructType) extends Part with Logging {
 
-  override def data(): Flowable[Row] = Flowable.generate(new Consumer[Emitter[Row]] {
+  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
+    override def accept(sink: FluxSink[Row]): Unit = {
 
-    val deserializer = new AvroDeserializer()
-    val reader = AvroReaderFns.createAvroReader(path)
+      val deserializer = new AvroDeserializer()
+      val reader = AvroReaderFns.createAvroReader(path)
 
-    override def accept(e: Emitter[Row]): Unit = {
       try {
-        if (reader.hasNext) {
+        while (!sink.isCancelled && reader.hasNext) {
           val record = reader.next()
           val row = deserializer.toRow(record)
-          e.onNext(row)
-        } else {
-          e.onComplete()
+          sink.next(row)
         }
+        sink.complete()
       } catch {
-        case NonFatal(t) => e.onError(t)
+        case NonFatal(error) =>
+          logger.warn("Could not read file", error)
+          sink.error(error)
       } finally {
         reader.close()
+        }
       }
-    }
-  })
+  }, FluxSink.OverflowStrategy.BUFFER)
 }
