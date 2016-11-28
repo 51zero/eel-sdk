@@ -77,13 +77,6 @@ object Predicate {
     override def fields(): List[String] = List(name)
   }
 
-  def gt(name: String, value: Boolean): Predicate = new Predicate {
-    override def parquet(): FilterPredicate = {
-      FilterApi.gt(FilterApi.booleanColumn(name), java.lang.Boolean.valueOf(value))
-    }
-    override def fields(): List[String] = List(name)
-  }
-
   def gt(name: String, value: Double): Predicate = new Predicate {
     override def parquet(): FilterPredicate = {
       FilterApi.gt(FilterApi.doubleColumn(name), java.lang.Double.valueOf(value))
@@ -108,13 +101,6 @@ object Predicate {
   def lt(name: String, value: Float): Predicate = new Predicate {
     override def parquet(): FilterPredicate = {
       FilterApi.lt(FilterApi.floatColumn(name), java.lang.Float.valueOf(value))
-    }
-    override def fields(): List[String] = List(name)
-  }
-
-  def lt(name: String, value: Boolean): Predicate = new Predicate {
-    override def parquet(): FilterPredicate = {
-      FilterApi.lt(FilterApi.booleanColumn(name), java.lang.Boolean.valueOf(value))
     }
     override def fields(): List[String] = List(name)
   }
@@ -154,13 +140,6 @@ object Predicate {
     override def fields(): List[String] = List(name)
   }
 
-  def gte(name: String, value: Boolean): Predicate = new Predicate {
-    override def parquet(): FilterPredicate = {
-      FilterApi.gtEq(FilterApi.booleanColumn(name), java.lang.Boolean.valueOf(value))
-    }
-    override def fields(): List[String] = List(name)
-  }
-
   def gte(name: String, value: Float): Predicate = new Predicate {
     override def parquet(): FilterPredicate = {
       FilterApi.gtEq(FilterApi.floatColumn(name), java.lang.Float.valueOf(value))
@@ -192,13 +171,6 @@ object Predicate {
   def lte(name: String, value: Float): Predicate = new Predicate {
     override def parquet(): FilterPredicate = {
       FilterApi.ltEq(FilterApi.floatColumn(name), java.lang.Float.valueOf(value))
-    }
-    override def fields(): List[String] = List(name)
-  }
-
-  def lte(name: String, value: Boolean): Predicate = new Predicate {
-    override def parquet(): FilterPredicate = {
-      FilterApi.ltEq(FilterApi.booleanColumn(name), java.lang.Boolean.valueOf(value))
     }
     override def fields(): List[String] = List(name)
   }
