@@ -1,7 +1,6 @@
-package io.eels
+package io.eels.util
 
-import org.apache.hadoop.fs.LocatedFileStatus
-import org.apache.hadoop.fs.RemoteIterator
+import org.apache.hadoop.fs.{LocatedFileStatus, RemoteIterator}
 
 object HdfsIterator {
   def apply(iterator: RemoteIterator[LocatedFileStatus]): Iterator[LocatedFileStatus] = new Iterator[LocatedFileStatus] {

@@ -1,6 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
+import io.eels.util.{HdfsIterator, PathIterator}
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 
 object HdfsOps extends Logging {

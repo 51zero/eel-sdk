@@ -1,5 +1,6 @@
 package io.eels
 
+import io.eels.util.PathIterator
 import org.apache.hadoop.fs.Path
 import org.scalatest.{Matchers, WordSpec}
 

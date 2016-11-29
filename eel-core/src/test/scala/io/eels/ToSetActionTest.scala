@@ -3,7 +3,7 @@ package io.eels
 import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 
-class ToSetPlanTest extends WordSpec with Matchers {
+class ToSetActionTest extends WordSpec with Matchers {
 
   "ToSetPlan" should {
     "createReader set from frame" in {

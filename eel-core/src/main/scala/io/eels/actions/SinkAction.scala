@@ -1,15 +1,16 @@
-package io.eels
+package io.eels.actions
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.function.Consumer
 
+import io.eels._
 import reactor.core.scheduler.Schedulers
 
-object SinkPlan extends Plan {
+object SinkAction extends Action {
 
   def execute(sink: Sink, frame: Frame, listener: Listener): Long = {
 
-    val schema = frame.schema()
+    val schema = frame.schema
     val writer = sink.writer(schema)
 
     // the latch is just to make this execute method blocking

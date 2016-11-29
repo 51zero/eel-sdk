@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.HdfsIterator
+import io.eels.util.HdfsIterator
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 
 object HiveFileScanner extends Logging {

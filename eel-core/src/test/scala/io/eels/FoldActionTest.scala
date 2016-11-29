@@ -3,7 +3,7 @@ package io.eels
 import io.eels.schema.StructType
 import org.scalatest.{Matchers, WordSpec}
 
-class FoldPlanTest extends WordSpec with Matchers {
+class FoldActionTest extends WordSpec with Matchers {
 
   "FoldPlan" should {
     "fold!" in {

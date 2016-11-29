@@ -1,5 +1,5 @@
 package io.eels
 
 object Constants {
-    val Version = "0.95.0"
+    val Version = "1.1.0"
 }

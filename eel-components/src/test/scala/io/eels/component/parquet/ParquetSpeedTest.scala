@@ -10,6 +10,7 @@ import scala.util.Random
 
 /**
   * v0.90 1m rows insertion: 2500 reading: 4438
+  * v1.1 1m rows insertion 3400 reading: 2800
   */
 object ParquetSpeedTest extends App with Timed {
 

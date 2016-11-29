@@ -10,6 +10,7 @@ import scala.util.Random
 
 /**
   * v0.90 1m rows insertion: 1400 reading: 1324
+  * v1.10 1m rows insertion: 1250: reading: 680
   */
 object CsvSpeedTest extends App with Timed {
 

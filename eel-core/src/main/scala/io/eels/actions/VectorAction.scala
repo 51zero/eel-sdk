@@ -1,13 +1,12 @@
-package io.eels
+package io.eels.actions
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.function.Consumer
 
-import com.sksamuel.exts.Logging
-import com.typesafe.config.ConfigFactory
+import io.eels.{Frame, Row}
 import reactor.core.scheduler.Schedulers
 
-object VectorPlan extends Plan {
+object VectorAction extends Action {
 
   def apply(frame: Frame): Vector[Row] = {
 
@@ -35,7 +34,4 @@ object VectorPlan extends Plan {
   }
 }
 
-trait Plan extends Logging {
-  val config = ConfigFactory.load()
-  val requestSize = config.getInt("eel.execution.requestSize")
-}
+

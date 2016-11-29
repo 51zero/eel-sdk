@@ -3,6 +3,7 @@ package io.eels
 import java.io.File
 
 import com.sksamuel.exts.Logging
+import io.eels.util.HdfsIterator
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 import scala.language.implicitConversions

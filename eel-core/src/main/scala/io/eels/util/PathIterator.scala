@@ -1,4 +1,4 @@
-package io.eels
+package io.eels.util
 
 import org.apache.hadoop.fs.Path
 

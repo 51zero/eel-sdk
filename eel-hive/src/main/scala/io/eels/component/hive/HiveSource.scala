@@ -5,12 +5,13 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import io.eels.schema.{PartitionConstraint, StructType}
-import io.eels.{FilePattern, HdfsIterator, Part, Source}
+import io.eels.{FilePattern, Part, Source}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
 import com.sksamuel.exts.OptionImplicits._
+import io.eels.util.HdfsIterator
 
 import scala.collection.JavaConverters._
 

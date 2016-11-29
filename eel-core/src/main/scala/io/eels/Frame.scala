@@ -2,6 +2,7 @@ package io.eels
 
 import java.util.function.{BiFunction, Function, Predicate}
 
+import io.eels.actions.{SinkAction, VectorAction}
 import io.eels.schema._
 import reactor.core.publisher.Flux
 
@@ -383,14 +384,14 @@ trait Frame {
 
   def head(): Row = rows().blockFirst()
 
-  def to(sink: Sink, listener: Listener = NoopListener): Long = SinkPlan.execute(sink, this, listener)
+  def to(sink: Sink, listener: Listener = NoopListener): Long = SinkAction.execute(sink, this, listener)
   def size(): Long = rows().count().block()
   //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
 
-  def toSeq(): Seq[Row] = VectorPlan(this)
+  def toSeq(): Seq[Row] = VectorAction(this)
   @deprecated("now returns a vector")
-  def toList(): Vector[Row] = VectorPlan(this)
-  def toVector(): Vector[Row] = VectorPlan(this)
+  def toList(): Vector[Row] = VectorAction(this)
+  def toVector(): Vector[Row] = VectorAction(this)
   def toSet(): Set[Row] = toVector().toSet
 }
 
