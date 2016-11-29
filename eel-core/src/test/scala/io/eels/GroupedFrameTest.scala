@@ -49,5 +49,9 @@ class GroupedFrameTest extends WordSpec with Matchers {
       frame.groupBy("artist").avg("year").sum("sales").toFrame().toSet().map(_.values) shouldBe
         Set(Vector("Elton John", 1972.0, 21591.0), Vector("Kate Bush", 1980.6, 21514.0))
     }
+    "support aggregations on entire dataset" in {
+      frame.aggregated().avg("year").sum("sales").toFrame().toSet().map(_.values) shouldBe
+        Set(Vector(1976.3, 43105.0))
+    }
   }
 }

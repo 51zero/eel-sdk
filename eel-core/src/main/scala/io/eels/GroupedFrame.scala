@@ -7,6 +7,10 @@ import reactor.core.publisher.Flux
 
 import scala.collection.JavaConverters._
 
+object GroupedFrame {
+  val FullDatasetKeyFn: Row => Any = { row => 0 }
+}
+
 trait GroupedFrame {
   outer =>
 
@@ -20,9 +24,15 @@ trait GroupedFrame {
 
   def toFrame(): Frame = new Frame {
 
-    override val schema: StructType = StructType(
-      Field("key") +: aggregations.map(agg => Field(agg.name, agg.dataType))
-    )
+    override val schema: StructType = {
+      val fields = aggregations.map(agg => Field(agg.name, agg.dataType))
+      StructType(
+        if (keyFn == GroupedFrame.FullDatasetKeyFn)
+          fields
+        else
+          Field("key") +: fields
+      )
+    }
 
     override def rows(): Flux[Row] = {
 
@@ -38,7 +48,7 @@ trait GroupedFrame {
 
       val rows = keys.map { key =>
         val values = aggregations.map(_.value(key))
-        Row(schema, key +: values)
+        Row(schema, if (keyFn == GroupedFrame.FullDatasetKeyFn) values else key +: values)
       }
 
       Flux.fromIterable(rows.asJava)

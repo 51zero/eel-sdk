@@ -192,6 +192,13 @@ trait Frame {
     }
   }
 
+  // allows aggregations on the entire dataset
+  def aggregated(): GroupedFrame = new GroupedFrame {
+    override def source: Frame = outer
+    override def keyFn: Row => Any = GroupedFrame.FullDatasetKeyFn
+    override def aggregations: Vector[Aggregation] = Vector.empty
+  }
+
   // group by the values of the given columns
   def groupBy(first: String, rest: String*): GroupedFrame = groupBy(first +: rest)
   def groupBy(fields: Iterable[String]): GroupedFrame = groupBy(row => fields.map(row.get(_, false)).mkString("_"))
@@ -199,7 +206,7 @@ trait Frame {
   // group by an arbitary function on the row data
   def groupBy(fn: Row => Any): GroupedFrame = new GroupedFrame {
     override def source: Frame = outer
-    override def keyFn: Row => Any = fn
+    override def keyFn = fn
     override def aggregations: Vector[Aggregation] = Vector.empty
   }
 
