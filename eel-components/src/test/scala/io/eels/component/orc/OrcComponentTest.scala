@@ -32,11 +32,11 @@ class OrcComponentTest extends WordSpec with Matchers {
       rows.size shouldBe 2
       fs.delete(path, false)
 
-      rows.head.schema shouldBe frame.schema()
+      rows.head.schema shouldBe frame.schema
 
       rows shouldBe Set(
-        Row(frame.schema(), Vector("clint eastwood", "actor", "carmel")),
-        Row(frame.schema(), Vector("david bowie", "musician", "surrey"))
+        Row(frame.schema, Vector("clint eastwood", "actor", "carmel")),
+        Row(frame.schema, Vector("david bowie", "musician", "surrey"))
       )
     }
   }

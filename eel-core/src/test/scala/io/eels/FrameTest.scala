@@ -17,15 +17,15 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     "return same values but with lower case schema" in {
       val schema = StructType("A", "B", "c")
       val f = Frame.fromValues(schema, Vector("x", "Y", null)).withLowerCaseSchema()
-      f.schema() shouldBe StructType("a", "b", "c")
-      f.toList() shouldBe List(Row(f.schema(), Vector("x", "Y", null)))
+      f.schema shouldBe StructType("a", "b", "c")
+      f.toList() shouldBe List(Row(f.schema, Vector("x", "Y", null)))
     }
   }
 
   "Frame.addFieldIfNotExists" should {
     "not add column if already exists" in {
       val f = frame.addFieldIfNotExists("a", "bibble")
-      f.schema() shouldBe schema
+      f.schema shouldBe schema
       f.toList() shouldBe List(Row(schema, Vector("1", "2")), Row(schema, Vector("3", "4")))
     }
     "add column if it does not exist" in {
@@ -40,7 +40,7 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       val schema = StructType(Field("a", StringType), Field("b", LongType(true)))
       val frame = Frame.fromValues(schema, Vector("a", 1), Vector("b", 2))
       val frame2 = frame.replaceFieldType(StringType, BooleanType)
-      frame2.schema() shouldBe StructType(Field("a", BooleanType), Field("b", LongType(true)))
+      frame2.schema shouldBe StructType(Field("a", BooleanType), Field("b", LongType(true)))
       frame2.toList().map(_.values) shouldBe Seq(Vector("a", 1), Vector("b", 2))
     }
   }

@@ -47,7 +47,7 @@ class CsvSourceTest extends WordSpec with Matchers {
         Field("test2", StringType, true),
         Field("test3", StringType, true)
       )
-      CsvSource(path).withSchema(schema).toFrame().schema() shouldBe schema
+      CsvSource(path).withSchema(schema).toFrame().schema shouldBe schema
     }
     "support reading header" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()

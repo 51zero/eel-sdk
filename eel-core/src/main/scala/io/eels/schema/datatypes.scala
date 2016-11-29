@@ -16,8 +16,8 @@ object DateType extends DataType
 object BinaryType extends DataType
 object BigIntType extends DataType
 
-case class IntType(signed: Boolean = false) extends DataType
-case class LongType(signed: Boolean = false) extends DataType
+case class IntType(signed: Boolean = true) extends DataType
+case class LongType(signed: Boolean = true) extends DataType
 
 case class CharType(size: Int) extends DataType
 case class VarcharType(size: Int) extends DataType

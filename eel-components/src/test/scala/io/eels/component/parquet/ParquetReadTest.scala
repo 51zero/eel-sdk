@@ -27,9 +27,9 @@ object ParquetReadTest extends App with Timed {
   )
 
   if (!fs.exists(new Path("./parquettest"))) {
-    for (k <- 1 to 150) {
+    for (k <- 1 to 500) {
       val rows = string.split(' ').distinct.map { word =>
-        Row(schema, Vector(word, List.fill(10)(Random.nextDouble)))
+        Row(schema, Vector(word, List.fill(2)(Random.nextDouble)))
       }.toSeq
 
       val path = new Path(s"./parquettest/huck$k.parquet")
