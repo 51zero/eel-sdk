@@ -35,7 +35,7 @@ object HiveSchemaFns extends Logging {
       case "boolean" => Field(name, BooleanType, nullable)
       case "double" => Field(name, DoubleType, nullable)
       case "float" => Field(name, FloatType, nullable)
-      case "int" => Field(name, IntType(true), nullable)
+      case "int" => Field(name, IntType.Signed, nullable)
       case "smallint" => Field(name, ShortType, nullable)
       case "tinyint" => Field(name, ShortType, nullable)
       case "char" => Field(name, StringType, nullable)
@@ -68,8 +68,8 @@ object HiveSchemaFns extends Logging {
     case DecimalType(precision, scale) => s"decimal(${scale.value},${precision.value})"
     case DoubleType => "double"
     case FloatType => "float"
-    case IntType(true) => "int"
-    case LongType(true) => "bigint"
+    case i: IntType => "int"
+    case l: LongType => "bigint"
     case ShortType => "smallint"
     case StringType => "string"
     case TimestampType => "timestamp"

@@ -60,15 +60,15 @@ object AvroSchemaFns extends Logging {
     }
 
     def toDataType(schema: Schema): DataType = schema.getType match {
-      case org.apache.avro.Schema.Type.ARRAY => ArrayType(toDataType(schema.getElementType))
+      case org.apache.avro.Schema.Type.ARRAY => ArrayType.cached(toDataType(schema.getElementType))
       case org.apache.avro.Schema.Type.BOOLEAN => BooleanType
       case org.apache.avro.Schema.Type.BYTES => BinaryType
       case org.apache.avro.Schema.Type.DOUBLE => DoubleType
       case org.apache.avro.Schema.Type.ENUM => StringType
       case org.apache.avro.Schema.Type.FIXED => StringType
       case org.apache.avro.Schema.Type.FLOAT => FloatType
-      case org.apache.avro.Schema.Type.INT => IntType(true)
-      case org.apache.avro.Schema.Type.LONG => LongType(true)
+      case org.apache.avro.Schema.Type.INT => IntType.Signed
+      case org.apache.avro.Schema.Type.LONG => LongType.Signed
       case org.apache.avro.Schema.Type.RECORD => StructType(schema.getFields.asScala.map(fromAvroField).toList)
       case org.apache.avro.Schema.Type.STRING => StringType
       case org.apache.avro.Schema.Type.UNION =>

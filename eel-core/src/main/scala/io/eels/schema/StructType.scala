@@ -153,10 +153,10 @@ object SchemaFn {
       case `bigIntClass` => BigIntType
       case `booleanClass` => BooleanType
       case `doubleClass` => DoubleType
-      case `intClass` => IntType(true)
+      case `intClass` => IntType.Signed
       case `floatClass` => FloatType
       case `charClass` => CharType(1)
-      case `longClass` => LongType(true)
+      case `longClass` => LongType.Signed
       case `stringClass` => StringType
       case _ => sys.error(s"Can not map $clz to FieldType")
     }

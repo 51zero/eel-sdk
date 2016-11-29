@@ -387,9 +387,11 @@ trait Frame {
   def size(): Long = rows().count().block()
   //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
 
-  def toSeq(): Seq[Row] = ListPlan(this)
-  def toList(): List[Row] = ListPlan(this)
-  def toSet(): Set[Row] = toList().toSet
+  def toSeq(): Seq[Row] = VectorPlan(this)
+  @deprecated("now returns a vector")
+  def toList(): Vector[Row] = VectorPlan(this)
+  def toVector(): Vector[Row] = VectorPlan(this)
+  def toSet(): Set[Row] = toVector().toSet
 }
 
 object Frame {

@@ -7,11 +7,11 @@ import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import reactor.core.scheduler.Schedulers
 
-object ListPlan extends Plan {
+object VectorPlan extends Plan {
 
-  def apply(frame: Frame): List[Row] = {
+  def apply(frame: Frame): Vector[Row] = {
 
-    val builder = List.newBuilder[Row]
+    val builder = Vector.newBuilder[Row]
     var error: Throwable = null
     val latch = new CountDownLatch(1)
 

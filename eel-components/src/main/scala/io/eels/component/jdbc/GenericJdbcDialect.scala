@@ -37,7 +37,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.DISTINCT => throw new UnsupportedOperationException()
     case Types.DOUBLE => DoubleType
     case Types.FLOAT => FloatType
-    case Types.INTEGER => IntType(true)
+    case Types.INTEGER => IntType.Signed
     case Types.JAVA_OBJECT => BinaryType
     case Types.LONGNVARCHAR => StringType
     case Types.LONGVARBINARY => BinaryType
@@ -45,12 +45,12 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.NCHAR => StringType
     case Types.NCLOB => StringType
     case Types.NULL => StringType
-    case Types.NUMERIC => DecimalType()
+    case Types.NUMERIC => DecimalType.Default
     case Types.NVARCHAR => StringType
     case Types.OTHER => StringType
     case Types.REAL => DoubleType
     case Types.REF => StringType
-    case Types.ROWID => LongType(true)
+    case Types.ROWID => LongType.Signed
     case Types.SMALLINT => ShortType
     case Types.SQLXML => StringType
     case Types.STRUCT => StringType

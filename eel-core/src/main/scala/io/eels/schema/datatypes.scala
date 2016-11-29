@@ -17,7 +17,18 @@ object BinaryType extends DataType
 object BigIntType extends DataType
 
 case class IntType(signed: Boolean = true) extends DataType
+
+object IntType {
+  val Signed = IntType(true)
+  val Unsigned = IntType(false)
+}
+
 case class LongType(signed: Boolean = true) extends DataType
+
+object LongType {
+  val Signed = LongType(true)
+  val Unsigned = LongType(false)
+}
 
 case class CharType(size: Int) extends DataType
 case class VarcharType(size: Int) extends DataType
@@ -34,10 +45,29 @@ case class DecimalType(scale: Scale = Scale(0),
 
 object DecimalType {
   val Wildcard = DecimalType(Scale(-1), Precision(-1))
+  val Default = DecimalType(Scale(18), Precision(18))
 }
 
 case class ArrayType(elementType: DataType) extends DataType {
   override def canonicalName: String = "array<" + elementType.canonicalName + ">"
+}
+
+object ArrayType {
+
+  val Doubles = ArrayType(DoubleType)
+  val SignedInts = ArrayType(IntType.Signed)
+  val SignedLongs = ArrayType(LongType.Signed)
+  val Booleans = ArrayType(BooleanType)
+  val Strings = ArrayType(StringType)
+
+  def cached(elementType: DataType) : ArrayType = elementType match {
+    case DoubleType => ArrayType.Doubles
+    case IntType.Signed => ArrayType.SignedInts
+    case LongType.Signed => ArrayType.SignedLongs
+    case BooleanType => ArrayType.Booleans
+    case StringType => ArrayType.Strings
+    case _ => ArrayType(elementType)
+  }
 }
 
 case class Precision(value: Int) extends AnyVal
