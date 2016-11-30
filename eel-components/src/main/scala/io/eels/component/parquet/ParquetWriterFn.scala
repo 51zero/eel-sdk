@@ -6,7 +6,7 @@ import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
-import org.apache.parquet.hadoop.ParquetWriter
+import org.apache.parquet.hadoop.{ParquetFileWriter, ParquetWriter}
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 /**
@@ -45,6 +45,8 @@ object ParquetWriterFn extends Logging {
       .withCompressionCodec(compressionCodec)
       .withPageSize(pageSize)
       .withRowGroupSize(blockSize)
+      .withDictionaryEncoding(true)
+      .withWriteMode(ParquetFileWriter.Mode.CREATE)
       .build()
 }
 

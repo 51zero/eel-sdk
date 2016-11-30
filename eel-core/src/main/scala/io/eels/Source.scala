@@ -24,6 +24,7 @@ trait Source extends Logging {
   outer =>
 
   def schema(): StructType
+
   def parts(): List[Part]
 
   def toFrame(): Frame = toFrame(NoopListener)
@@ -43,12 +44,12 @@ trait Source extends Logging {
     */
   def toFrame(executor: ExecutorService, _listener: Listener): Frame = new Frame {
 
-    override def schema(): StructType = outer.schema()
+    override val schema: StructType = outer.schema()
 
     // this method may be invoked multiple times, each time generating a new "load action"
     override def rows(): Flux[Row] = {
-      val fluxes = parts.map(_.data.limitRate(100).subscribeOn(Schedulers.fromExecutorService(executor)))
-      Flux.merge(100, false, fluxes: _*)
+      val fluxes = parts.map(_.data.subscribeOn(Schedulers.fromExecutorService(executor)))
+      Flux.merge(fluxes: _*)
     }
   }.listener(_listener)
 

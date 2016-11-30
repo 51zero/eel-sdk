@@ -8,7 +8,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
 import org.apache.parquet.filter2.compat.FilterCompat
-import org.apache.parquet.hadoop.{ParquetOutputFormat, ParquetReader}
+import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
 
 /**
   * Helper function to create a parquet reader, using the apache parquet library.
@@ -17,9 +17,8 @@ import org.apache.parquet.hadoop.{ParquetOutputFormat, ParquetReader}
   */
 object ParquetReaderFn extends Logging {
 
-  val config: Config = ConfigFactory.load()
-
-  val parallelism = config.getInt("eel.parquet.parallelism").toString()
+  private val config: Config = ConfigFactory.load()
+  private val parallelism = config.getInt("eel.parquet.parallelism").toString()
   logger.debug(s"Parquet readers will use parallelism = $parallelism")
 
   /**
@@ -39,7 +38,7 @@ object ParquetReaderFn extends Logging {
         AvroReadSupport.setAvroReadSchema(conf, it)
         AvroReadSupport.setRequestedProjection(conf, it)
       }
-      conf.set(ParquetOutputFormat.ENABLE_JOB_SUMMARY, "false")
+      conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
       conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
       conf
     }
@@ -48,6 +47,7 @@ object ParquetReaderFn extends Logging {
     def filter(): FilterCompat.Filter = predicate.map(_.parquet).map(FilterCompat.get).getOrElse(FilterCompat.NOOP)
 
     AvroParquetReader.builder[GenericRecord](path)
+      .withCompatibility(false)
       .withConf(configuration())
       .withFilter(filter())
       .build()

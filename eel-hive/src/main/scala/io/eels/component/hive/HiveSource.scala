@@ -182,7 +182,7 @@ case class HiveSource(dbName: String,
   }
 
   // returns the full underlying schema from the metastore including partition partitionKeys
-  val metastoreSchema: StructType = {
+  lazy val metastoreSchema: StructType = {
     login()
     ops.schema(dbName, tableName)
   }
