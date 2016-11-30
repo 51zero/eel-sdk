@@ -35,7 +35,7 @@ object GroupedByParquetSpeedTest extends App with Timed {
     println(s"Written $path")
   }
 
-  val executor = Executors.newFixedThreadPool(2)
+  val executor = Executors.newFixedThreadPool(4)
 
   while (true) {
     timed("multiple files") {

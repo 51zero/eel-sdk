@@ -385,6 +385,8 @@ trait Frame {
     }).block()
   }
 
+  def iterator(bufferSize: Int = 100): Iterator[Row] = rows().toIterable(bufferSize).asScala.iterator
+
   def forall(p: (Row) => Boolean): Boolean = rows().all(p).block()
   def exists(p: (Row) => Boolean): Boolean = rows().filter(p).blockFirst() != null
   def find(p: (Row) => Boolean): Option[Row] = Option(rows().filter(p).blockFirst)

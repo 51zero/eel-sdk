@@ -70,7 +70,7 @@ class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Lo
 
   override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
     override def accept(sink: FluxSink[Row]): Unit = {
-      logger.debug("Starting parquet reader on thread " + Thread.currentThread)
+    //  logger.debug("Starting parquet reader on thread " + Thread.currentThread)
       val reader = ParquetReaderFn(path, predicate, None)
       try {
         val iter = ParquetRowIterator(reader)
@@ -78,7 +78,7 @@ class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Lo
           sink.next(iter.next)
         }
         sink.complete()
-        logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
+    //    logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
       } catch {
         case NonFatal(error) =>
           logger.warn("Could not read file", error)
