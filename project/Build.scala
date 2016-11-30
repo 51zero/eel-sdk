@@ -18,7 +18,7 @@ object Build extends Build {
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
   val Slf4jVersion = "1.7.12"
-  val ParquetVersion = "1.8.1"
+  val ParquetVersion = "1.9.0"
   val UnivocityVersion = "2.2.3"
   val RxJavaVersion = "2.0.1"
   val ConfigVersion = "1.3.0"
