@@ -23,17 +23,17 @@ object GroupedByParquetSpeedTest extends App with Timed {
     Field("word", StringType)
   )
 
-  fs.delete(new Path("./parquettest"), true)
-  for (k <- 1 to 100) {
-    val rows = string.split(' ').distinct.map { word =>
-      Row(schema, Vector(word.substring(0), word))
-    }.toSeq
-
-    val path = new Path(s"./parquettest/huck$k.parquet")
-    fs.delete(path, false)
-    ParquetSink(path).write(rows)
-    println(s"Written $path")
-  }
+//  fs.delete(new Path("./parquettest"), true)
+//  for (k <- 1 to 300) {
+//    val rows = string.split(' ').distinct.map { word =>
+//      Row(schema, Vector(word.substring(0), word))
+//    }.toSeq
+//
+//    val path = new Path(s"./parquettest/huck$k.parquet")
+//    fs.delete(path, false)
+//    ParquetSink(path).write(rows)
+//    println(s"Written $path")
+//  }
 
   val executor = Executors.newFixedThreadPool(4)
 
@@ -46,13 +46,11 @@ object GroupedByParquetSpeedTest extends App with Timed {
           var count = 0
           override def onNext(row: Row): Unit = {
             count = count + 1
-            if (count % 100000 == 0)
+            if (count % 250000 == 0)
               println(count)
           }
         })
-        .groupBy("letter")
-        .count("word")
-      println(f.collect())
+      println(f.collect().last)
     }
   }
 

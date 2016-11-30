@@ -119,7 +119,7 @@ object Aggregation {
     private val rows = scala.collection.mutable.Map.empty[Any, Double]
     override def value(key: Any): Any = rows(key)
     override def aggregate(key: Any, row: Row): Unit = {
-      val updated = rows.getOrElseUpdate(key, 0) + row.get(name).toString.toDouble
+      val updated = rows.getOrElseUpdate(key, 0D) + Option(row.get(name)).map(_.toString.toDouble).getOrElse(0D)
       rows.update(key, updated)
     }
   }
@@ -128,7 +128,10 @@ object Aggregation {
     private val rows = scala.collection.mutable.Map.empty[Any, Double]
     override def value(key: Any): Any = rows(key)
     override def aggregate(key: Any, row: Row): Unit = {
-      val updated = Math.min(rows.getOrElseUpdate(key, Double.MaxValue), row.get(name).toString.toDouble)
+      val updated = Math.min(
+        rows.getOrElseUpdate(key, Double.MaxValue),
+        Option(row.get(name)).map(_.toString.toDouble).getOrElse(Double.MaxValue)
+      )
       rows.update(key, updated)
     }
   }
@@ -137,7 +140,10 @@ object Aggregation {
     private val rows = scala.collection.mutable.Map.empty[Any, Double]
     override def value(key: Any): Any = rows(key)
     override def aggregate(key: Any, row: Row): Unit = {
-      val updated = Math.max(rows.getOrElseUpdate(key, Double.MinValue), row.get(name).toString.toDouble)
+      val updated = Math.max(
+        rows.getOrElseUpdate(key, Double.MinValue),
+        Option(row.get(name)).map(_.toString.toDouble).getOrElse(Double.MinValue)
+      )
       rows.update(key, updated)
     }
   }
