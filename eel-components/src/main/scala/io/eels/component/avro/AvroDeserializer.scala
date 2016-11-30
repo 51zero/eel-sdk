@@ -3,33 +3,47 @@ package io.eels.component.avro
 import com.typesafe.config.ConfigFactory
 import io.eels.Row
 import io.eels.schema.StructType
+import org.apache.avro.Schema.Field
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
+import org.apache.parquet.column.Dictionary
 
 import scala.collection.JavaConverters._
 
 /**
- * Returns an row from the given avro record using the schema present in the record.
- * The row values will be created in the order that the record schema fields are declared.
- */
+  * Returns an row from the given avro record using the schema present in the record.
+  * The row values will be created in the order that the record schema fields are declared.
+  */
 class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean("eel.avro.java.string")) {
 
   val config = ConfigFactory.load()
   val deserializeAsNullable = config.getBoolean("eel.avro.deserializeAsNullable")
-  var struct: StructType = null
+  var schema: StructType = null
+  var fields: Array[Field] = null
+  var range: Range = null
 
   def toRow(record: GenericRecord): Row = {
-    if (struct == null)
-      struct = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
-    val values = record.getSchema.getFields.asScala.map { field =>
-      val value = record.get(field.name())
+
+    // take the schema from the first record
+    if (schema == null) {
+      schema = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
+      fields = record.getSchema.getFields.asScala.toArray
+      range = fields.indices
+    }
+
+    val vector = Vector.newBuilder[Any]
+    for (k <- range) {
+      val value = record.get(k)
       if (useJavaString && value.isInstanceOf[Utf8]) {
-        new String(value.asInstanceOf[Utf8].getBytes)
+        // use the utf8's toString as it is optimized
+        val str = value.asInstanceOf[Utf8].toString
+        vector.+=(str)
       } else {
-        value
+        vector.+=(value)
       }
-    }.toVector
-    Row(struct, values)
+    }
+
+    Row(schema, vector.result)
   }
 }
 

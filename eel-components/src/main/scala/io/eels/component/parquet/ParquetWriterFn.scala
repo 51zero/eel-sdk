@@ -23,24 +23,21 @@ object ParquetWriterFn extends Logging {
     def getIntOrElse(key: String, default: Int): Int = if (config.hasPath(key)) config.getInt(key) else default
   }
 
-  val config: Config = ConfigFactory.load()
+  private val config: Config = ConfigFactory.load()
 
-  val blockSize: Int = config.getIntOrElse("eel.parquet.blockSize", ParquetWriter.DEFAULT_BLOCK_SIZE)
-  logger.debug(s"Parquet writer will use blockSize = $this")
+  private val blockSize: Int = config.getIntOrElse("eel.parquet.blockSize", ParquetWriter.DEFAULT_BLOCK_SIZE)
+  logger.debug(s"Parquet writer will use blockSize = $blockSize")
 
-  val pageSize: Int = config.getIntOrElse("eel.parquet.pageSize", ParquetWriter.DEFAULT_PAGE_SIZE)
-  logger.debug(s"Parquet writer will use pageSize = $this")
+  private val pageSize: Int = config.getIntOrElse("eel.parquet.pageSize", ParquetWriter.DEFAULT_PAGE_SIZE)
+  logger.debug(s"Parquet writer will use pageSize = $pageSize")
 
-  lazy val compressionCodec: CompressionCodecName = {
-    val codec = config.getString("eel.parquet.compressionCodec").toLowerCase() match {
-      case "gzip" => CompressionCodecName.GZIP
-      case "lzo" => CompressionCodecName.LZO
-      case "snappy" => CompressionCodecName.SNAPPY
-      case _ => CompressionCodecName.UNCOMPRESSED
-    }
-    logger.debug(s"Parquet writer will use compression codec = $codec")
-    codec
+  private lazy val compressionCodec = config.getString("eel.parquet.compressionCodec").toLowerCase() match {
+    case "gzip" => CompressionCodecName.GZIP
+    case "lzo" => CompressionCodecName.LZO
+    case "snappy" => CompressionCodecName.SNAPPY
+    case _ => CompressionCodecName.UNCOMPRESSED
   }
+  logger.debug(s"Parquet writer will use compressionCodec = $compressionCodec")
 
   def apply(path: Path, avroSchema: Schema): ParquetWriter[GenericRecord] =
     AvroParquetWriter.builder[GenericRecord](path)

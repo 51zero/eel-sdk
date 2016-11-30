@@ -2,10 +2,8 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.component.avro.AvroSchemaFns
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
-import org.apache.avro.reflect.AvroSchema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
@@ -14,8 +12,8 @@ import org.apache.parquet.hadoop.{ParquetOutputFormat, ParquetReader}
 
 /**
   * Helper function to create a parquet reader, using the apache parquet library.
-  * The reader supports optional predicate (for row level filtering) and a
-  * projection schema (for column level filtering).
+  * The reader supports optional predicate (for row filtering) and a
+  * projection schema (for column filtering).
   */
 object ParquetReaderFn extends Logging {
 
@@ -52,6 +50,7 @@ object ParquetReaderFn extends Logging {
     AvroParquetReader.builder[GenericRecord](path)
       .withConf(configuration())
       .withFilter(filter())
-      .build().asInstanceOf[ParquetReader[GenericRecord]]
+      .build()
+      .asInstanceOf[ParquetReader[GenericRecord]]
   }
 }

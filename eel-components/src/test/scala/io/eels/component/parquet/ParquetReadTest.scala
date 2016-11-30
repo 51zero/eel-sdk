@@ -1,6 +1,5 @@
 package io.eels.component.parquet
 
-import java.util
 import java.util.concurrent.Executors
 
 import com.sksamuel.exts.metrics.Timed
@@ -8,10 +7,11 @@ import io.eels.schema._
 import io.eels.{Listener, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.hadoop.ParquetFileReader
 
-import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.Random
+import scala.collection.JavaConverters._
 
 object ParquetReadTest extends App with Timed {
 
@@ -26,44 +26,49 @@ object ParquetReadTest extends App with Timed {
     Field("doubles", ArrayType(DoubleType))
   )
 
-  if (!fs.exists(new Path("./parquettest"))) {
-    for (k <- 1 to 50) {
-      val rows = string.split(' ').distinct.map { word =>
-        Row(schema, Vector(word, List.fill(2)(Random.nextDouble)))
-      }.toSeq
+  for (k <- 1 to 10) {
+    val rows = string.split(' ').distinct.map { word =>
+      Row(schema, Vector(Random.shuffle(List("sam", "ham", "gam")).head, List.fill(15)(Random.nextDouble)))
+    }.toSeq
 
-      val path = new Path(s"./parquettest/huck$k.parquet")
-      fs.delete(path, false)
-      ParquetSink(path).write(rows)
-      println(s"Written $path")
-    }
+    val path = new Path(s"./parquettest/huck$k.parquet")
+    fs.delete(path, false)
+    ParquetSink(path).write(rows)
+    println(s"Written $path")
+  }
+
+  val path = new Path(s"./parquettest/huck1.parquet")
+  val status = fs.getFileStatus(path)
+  println(status)
+  val x = ParquetFileReader.open(new Configuration(), path)
+
+  val cols = x.getFooter.getFileMetaData.getSchema.getColumns
+
+  x.getRowGroups.asScala.foreach { block =>
+    val dictreader = x.getDictionaryReader(block)
+    val dict = dictreader.readDictionaryPage(cols.asScala.head)
+    println(dict.getEncoding)
   }
 
   val executor = Executors.newFixedThreadPool(2)
 
-  timed("multiple files") {
-    println(
-      ParquetSource("./parquettest/*")
-        .toFrame(executor)
-        .listener(new Listener {
-          var count = 0
-          override def onNext(row: Row): Unit = {
-            count = count + 1
-            if (count % 1000 == 0)
-              println(count)
-          }
-        })
-        .toSeq
-        .map(convertRow)
-        .size
-    )
+  while (true) {
+    timed("multiple files") {
+      println(
+        ParquetSource("./parquettest/*")
+          .toFrame(executor)
+          .listener(new Listener {
+            var count = 0
+            override def onNext(row: Row): Unit = {
+              count = count + 1
+              if (count % 100000 == 0)
+                println(count)
+            }
+          })
+          .toSeq
+          .size
+      )
+    }
   }
-
   executor.shutdown()
-
-  private def convertRow(row: Row): (String, Vector[Double]) = {
-    val word = row.values(0).asInstanceOf[String]
-    val vector = row.values(1).asInstanceOf[util.ArrayList[Double]].asScala.toVector
-    (word, vector)
-  }
 }

@@ -13,6 +13,7 @@ import scala.util.Random
   * v1.1 1m rows insertion 3400 reading: 2800
   */
 object ParquetSpeedTest extends App with Timed {
+  ParquetLogMute()
 
   val schema = StructType("a", "b", "c", "d", "e")
   val rows = List.fill(1000000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))

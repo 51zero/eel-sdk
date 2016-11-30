@@ -14,9 +14,9 @@ import org.apache.hadoop.fs.Path
 class ParquetRowWriter(path: Path,
                        avroSchema: Schema)(implicit fs: FileSystem) extends Logging {
 
-  val config: Config = ConfigFactory.load()
-  val skipCrc = config.getBoolean("eel.parquet.skipCrc")
-  logger.info(s"Parquet writer will skipCrc = $this")
+  private val config: Config = ConfigFactory.load()
+  private val skipCrc = config.getBoolean("eel.parquet.skipCrc")
+  logger.info(s"Parquet writer will skipCrc = $skipCrc")
 
   private val writer = ParquetWriterFn.apply(path, avroSchema)
 
