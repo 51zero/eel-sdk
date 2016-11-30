@@ -393,7 +393,8 @@ trait Frame {
 
   def to(sink: Sink, listener: Listener = NoopListener): Long = SinkAction.execute(sink, this, listener)
   def size(): Long = rows().count().block()
-  //  def counts(): Map[String, Content.Counts] = CountsPlan.execute(this)
+
+  def collect(): Vector[Row] = VectorAction(this)
 
   def toSeq(): Seq[Row] = VectorAction(this)
   @deprecated("now returns a vector")

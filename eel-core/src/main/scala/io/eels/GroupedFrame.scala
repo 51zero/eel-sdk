@@ -1,7 +1,9 @@
 package io.eels
 
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.function.Consumer
 
+import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
 import reactor.core.publisher.Flux
 
@@ -22,21 +24,20 @@ trait GroupedFrame {
 
   def aggregations: Vector[Aggregation]
 
-  def toFrame(): Frame = new Frame {
+  def toFrame(): Frame = new Frame with Logging {
 
     override val schema: StructType = {
       val fields = aggregations.map(agg => Field(agg.name, agg.dataType))
       StructType(
-        if (keyFn == GroupedFrame.FullDatasetKeyFn)
-          fields
-        else
-          Field("key") +: fields
+        if (keyFn == GroupedFrame.FullDatasetKeyFn) fields
+        else Field("key") +: fields
       )
     }
 
     override def rows(): Flux[Row] = {
 
       val keys = scala.collection.mutable.Set.empty[Any]
+      val latch = new CountDownLatch(1)
 
       source.rows.subscribe(new Consumer[Row] {
         override def accept(row: Row): Unit = {
@@ -44,7 +45,19 @@ trait GroupedFrame {
           keys.add(key)
           aggregations.foreach(_.aggregate(key, row))
         }
+      }, new Consumer[Throwable] {
+        override def accept(t: Throwable): Unit = {
+          logger.error("Error when building grouped result", t)
+          latch.countDown()
+        }
+      }, new Runnable {
+        override def run(): Unit = {
+          logger.debug("Subscription on grouped data has completed")
+          latch.countDown()
+        }
       })
+
+      latch.await(100, TimeUnit.DAYS)
 
       val rows = keys.map { key =>
         val values = aggregations.map(_.value(key))
@@ -60,6 +73,10 @@ trait GroupedFrame {
     override def aggregations: Vector[Aggregation] = outer.aggregations :+ agg
     override def keyFn: (Row) => Any = outer.keyFn
   }
+
+  // actions
+  def size(): Long = toFrame().size()
+  def collect(): Vector[Row] = toFrame().collect()
 
   // convenience methods to add aggregations for the named fields
   def sum(field: String): GroupedFrame = aggregation(Aggregation.sum(field))
