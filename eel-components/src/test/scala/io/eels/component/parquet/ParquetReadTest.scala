@@ -158,6 +158,8 @@ object ParquetReadTest extends App with Timed {
       val counter = new AtomicLong(0)
       val latch = new CountDownLatch(obs.size)
 
+      val sched = io.reactivex.schedulers.Schedulers.io
+
       def observer[T] = new Observer[T] {
         override def onError(e: Throwable): Unit = latch.countDown()
         override def onSubscribe(d: Disposable): Unit = ()
@@ -166,12 +168,56 @@ object ParquetReadTest extends App with Timed {
       }
 
       obs.foreach { ob =>
-        ob.subscribeOn(io.reactivex.schedulers.Schedulers.io()).subscribe(observer[Row])
+        ob.subscribeOn(sched).subscribe(observer[Row])
       }
       latch.await()
       println(counter.get())
     }
 
+    timed("each part via an Observable merge") {
+
+      val obs = FilePattern(new Path("./parquettest/*")).toPaths().map { path =>
+        Observable.create(new ObservableOnSubscribe[Row] {
+          override def subscribe(e: ObservableEmitter[Row]): Unit = {
+            val reader = ParquetReaderFn(path, None, None)
+            try {
+              val iter = ParquetRowIterator(reader)
+              while (!e.isDisposed && iter.hasNext) {
+                e.onNext(iter.next)
+              }
+              e.onComplete()
+              //    logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
+            } catch {
+              case NonFatal(error) =>
+                logger.warn("Could not read file", error)
+                e.onError(error)
+            } finally {
+              reader.close()
+            }
+          }
+        })
+      }
+
+      val counter = new AtomicLong(0)
+      val latch = new CountDownLatch(obs.size)
+
+      def observer[T] = new Observer[T] {
+        override def onError(e: Throwable): Unit = latch.countDown()
+        override def onSubscribe(d: Disposable): Unit = ()
+        override def onComplete(): Unit = latch.countDown()
+        override def onNext(value: T): Unit = counter.incrementAndGet()
+      }
+
+      import scala.collection.JavaConverters._
+
+      val sched = io.reactivex.schedulers.Schedulers.io
+
+      Observable.merge(
+        obs.map(_.subscribeOn(sched)).asJava
+      ).subscribe(observer[Row])
+      latch.await()
+      println(counter.get())
+    }
 
     timed("multiple files via parquet source") {
       val executor = Executors.newFixedThreadPool(8)
