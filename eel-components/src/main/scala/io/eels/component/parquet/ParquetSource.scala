@@ -5,9 +5,9 @@ import java.util.function.Consumer
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
+import io.eels._
 import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
 import io.eels.schema.StructType
-import io.eels.{FilePattern, Part, Row, Source}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 import reactor.core.publisher.{Flux, FluxSink}
@@ -55,6 +55,12 @@ case class ParquetSource(pattern: FilePattern,
     paths.map { it => new ParquetPart(it, predicate) }
   }
 
+  def parts2(): List[Part2] = {
+    val paths = pattern.toPaths()
+    logger.debug(s"Parquet source has ${paths.size} files: $paths")
+    paths.map { it => new ParquetPart2(it, predicate) }
+  }
+
   def footers(): List[Footer] = {
     val paths = pattern.toPaths()
     logger.debug(s"Parquet source will read footers from $paths")
@@ -70,7 +76,7 @@ class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Lo
 
   override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
     override def accept(sink: FluxSink[Row]): Unit = {
-    //  logger.debug("Starting parquet reader on thread " + Thread.currentThread)
+      //  logger.debug("Starting parquet reader on thread " + Thread.currentThread)
       val reader = ParquetReaderFn(path, predicate, None)
       try {
         val iter = ParquetRowIterator(reader)
@@ -78,7 +84,7 @@ class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Lo
           sink.next(iter.next)
         }
         sink.complete()
-    //    logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
+        //    logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
       } catch {
         case NonFatal(error) =>
           logger.warn("Could not read file", error)
@@ -88,4 +94,23 @@ class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Lo
       }
     }
   }, FluxSink.OverflowStrategy.BUFFER)
+}
+
+class ParquetPart2(path: Path,
+                   predicate: Option[Predicate]) extends Part2 with Logging {
+
+  override def stream(): PartStream = new PartStream {
+
+    val reader = ParquetReaderFn(path, predicate, None)
+    val iter = ParquetRowIterator(reader).grouped(1000).withPartial(true)
+    var closed = false
+
+    override def next(): List[Row] = iter.next
+    override def hasNext(): Boolean = !closed && iter.hasNext
+
+    override def close(): Unit = {
+      closed = true
+      reader.close()
+    }
+  }
 }
