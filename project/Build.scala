@@ -11,7 +11,7 @@ object Build extends Build {
 
   val ExtsVersion = "1.37.0"
   val HadoopVersion = "2.7.3"
-  val HiveVersion = "2.1.0"
+  val HiveVersion = "1.2.0"
   val JacksonVersion = "2.8.4"
   val Log4jVersion = "1.2.17"
   val OrcVersion = "1.2.1"
