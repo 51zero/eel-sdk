@@ -110,9 +110,9 @@ object ParquetReadTest extends App with Timed {
       val par = Schedulers.newParallel("par", 8)
       val counter = new AtomicLong(0)
       val latch = new CountDownLatch(1)
-      Flux.merge(
+      Flux.merge(1000,
         ParquetSource("./parquettest/*").parts.map(_.data.subscribeOn(par)): _*
-      ).subscribe(new Consumer[Row] {
+      ).subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
         override def accept(t: Row): Unit = {
           counter.incrementAndGet()
         }
