@@ -71,10 +71,11 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "org.scala-lang"        % "scala-reflect"           % scalaVersion.value,
       "io.projectreactor"     % "reactor-core"            % "3.0.3.RELEASE",
+      "io.reactivex.rxjava2"  % "rxjava"                  % "2.0.1",
       "com.typesafe"          % "config"                  % ConfigVersion,
       "com.sksamuel.exts"     %% "exts"                   % ExtsVersion,
       "com.univocity"         % "univocity-parsers"       % UnivocityVersion,
-      "org.apache.avro" % "avro" % "1.8.1",
+      "org.apache.avro"       % "avro"                    % "1.8.1",
       "org.apache.hadoop"     % "hadoop-common"           % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
       "io.dropwizard.metrics" % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics" % "metrics-jvm"             % MetricsVersion,
