@@ -38,7 +38,7 @@ object HiveDDL {
     else
       Some(props.map { case (key, value) => s"'$key'='$value'" }.mkString("TBLPROPERTIES (", ",", ")"))
 
-    (Seq(create, fls) ++ Seq(parts, loc, Some(formats), tblprops).flatten).mkString("\n")
+    (Seq(create, fls) ++ Seq(parts, Some(formats), loc, tblprops).flatten).mkString("\n")
   }
 
   implicit class HiveDDLOps(schema: StructType) {
