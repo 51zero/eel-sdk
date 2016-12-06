@@ -14,7 +14,7 @@ class SourceFrame(source: Source, ioThreads: Int = 8) extends Frame with Logging
 
   val RowListSentinel = List(Row.Sentinel)
 
-  override val schema: StructType = source.schema()
+  override lazy val schema: StructType = source.schema()
 
   def rows2(): Iterator[List[Row]] = {
 

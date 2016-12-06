@@ -25,7 +25,7 @@ trait Source extends Logging {
 
   def schema(): StructType
 
-  def parts(): List[Part]
+  def parts(): List[Part] = Nil
 
   def parts2(): List[Part2] = Nil
 

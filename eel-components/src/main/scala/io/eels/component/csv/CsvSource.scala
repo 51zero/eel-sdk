@@ -3,7 +3,7 @@ package io.eels.component.csv
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
-import io.eels.{Part, SchemaInferrer, Source, StringInferrer}
+import io.eels._
 import com.sksamuel.exts.io.Using
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -69,8 +69,8 @@ case class CsvSource(path: Path,
     inferrer.schemaOf(headers)
   }
 
-  override def parts(): List[Part] = {
-    val part = new CsvPart(createParser _, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
+  override def parts2(): List[Part2] = {
+    val part = new CsvPart(() => createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
     List(part)
   }
 }

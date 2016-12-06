@@ -1,7 +1,5 @@
 package io.eels.component.parquet
 
-import java.util.function.Consumer
-
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
@@ -11,10 +9,8 @@ import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
-import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.collection.JavaConverters._
-import scala.util.control.NonFatal
 
 object ParquetSource {
 
@@ -51,11 +47,6 @@ case class ParquetSource(pattern: FilePattern,
     AvroSchemaFns.fromAvroSchema(avroSchema)
   }
 
-  override def parts(): List[Part] = {
-    logger.debug(s"Parquet source has ${paths.size} files: $paths")
-    paths.map { it => new ParquetPart(it, predicate) }
-  }
-
   // returns the count of all records in this source, predicate is ignored
   def countNoPredicate(): Long = statistics().count
 
@@ -78,7 +69,7 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts2(): List[Part2] = {
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
-    paths.map { it => new ParquetPart2(it, predicate) }
+    paths.map { it => new ParquetPart(it, predicate) }
   }
 
   def footers(): List[Footer] = {
@@ -97,32 +88,8 @@ object Statistics {
   val Empty = Statistics(0, 0, 0)
 }
 
-class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Logging {
-
-  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
-    override def accept(sink: FluxSink[Row]): Unit = {
-      //  logger.debug("Starting parquet reader on thread " + Thread.currentThread)
-      val reader = ParquetReaderFn(path, predicate, None)
-      try {
-        val iter = ParquetRowIterator(reader)
-        while (!sink.isCancelled && iter.hasNext) {
-          sink.next(iter.next)
-        }
-        sink.complete()
-        //    logger.debug(s"Parquet reader completed on thread " + Thread.currentThread)
-      } catch {
-        case NonFatal(error) =>
-          logger.warn("Could not read file", error)
-          sink.error(error)
-      } finally {
-        reader.close()
-      }
-    }
-  }, FluxSink.OverflowStrategy.BUFFER)
-}
-
-class ParquetPart2(path: Path,
-                   predicate: Option[Predicate]) extends Part2 with Logging {
+class ParquetPart(path: Path,
+                  predicate: Option[Predicate]) extends Part2 with Logging {
 
   override def stream(): PartStream = new PartStream {
 
