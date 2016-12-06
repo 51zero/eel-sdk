@@ -65,6 +65,7 @@ object HiveSchemaFns extends Logging {
   def toHiveType(field: Field): String = field.dataType match {
     case BigIntType => "bigint"
     case BooleanType => "boolean"
+    case DateType => "date"
     case DecimalType(precision, scale) => s"decimal(${scale.value},${precision.value})"
     case DoubleType => "double"
     case FloatType => "float"
@@ -73,7 +74,6 @@ object HiveSchemaFns extends Logging {
     case ShortType => "smallint"
     case StringType => "string"
     case TimestampType => "timestamp"
-    case DateType => "date"
     case StructType(fields) => toStructDDL(fields)
     case _ =>
       logger.warn(s"No conversion from eel type [${field.dataType}] to hive type; defaulting to string")
