@@ -65,6 +65,24 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
+  // returns stats, predicate is ignored
+  def statistics(): Statistics = {
+    val paths = pattern.toPaths()
+    if (paths.isEmpty) Statistics.Empty
+    else {
+      paths.foldLeft(Statistics.Empty) { (stats, path) =>
+        val footer = ParquetFileReader.open(conf, path).getFooter
+        footer.getBlocks.asScala.foldLeft(stats) { (stats, block) =>
+          stats.copy(
+            count = stats.count + block.getRowCount,
+            compressedSize = stats.compressedSize + block.getCompressedSize,
+            uncompressedSize = stats.uncompressedSize + block.getTotalByteSize
+          )
+        }
+      }
+    }
+  }
+
   def parts2(): List[Part2] = {
     val paths = pattern.toPaths()
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
@@ -80,6 +98,12 @@ case class ParquetSource(pattern: FilePattern,
       ParquetFileReader.readAllFootersInParallel(fs.getConf, status).asScala
     }
   }
+}
+
+case class Statistics(count: Long, compressedSize: Long, uncompressedSize: Long)
+
+object Statistics {
+  val Empty = Statistics(0, 0, 0)
 }
 
 class ParquetPart(path: Path, predicate: Option[Predicate]) extends Part with Logging {
