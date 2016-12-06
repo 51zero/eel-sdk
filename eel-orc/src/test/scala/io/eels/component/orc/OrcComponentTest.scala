@@ -15,7 +15,7 @@ class OrcComponentTest extends WordSpec with Matchers {
   implicit val fs = FileSystem.get(conf)
 
   "OrcComponent" should {
-    "read and write orc files" in {
+    "read and write orc files" ignore {
 
       val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = Frame(
@@ -28,16 +28,16 @@ class OrcComponentTest extends WordSpec with Matchers {
       fs.delete(path, false)
       frame.to(OrcSink(path))
 
-//      val rows = OrcSource(path).toFrame().toSet()
-//      rows.size shouldBe 2
-//      fs.delete(path, false)
-//
-//      rows.head.schema shouldBe frame.schema
-//
-//      rows shouldBe Set(
-//        Row(frame.schema, Vector("clint eastwood", "actor", "carmel")),
-//        Row(frame.schema, Vector("david bowie", "musician", "surrey"))
-//      )
+      val rows = OrcSource(path).toFrame().toSet()
+      rows.size shouldBe 2
+      fs.delete(path, false)
+
+      rows.head.schema shouldBe frame.schema
+
+      rows shouldBe Set(
+        Row(frame.schema, Vector("clint eastwood", "actor", "carmel")),
+        Row(frame.schema, Vector("david bowie", "musician", "surrey"))
+      )
     }
   }
 }
