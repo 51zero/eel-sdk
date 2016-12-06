@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import io.eels.Row
-import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
+import io.eels.component.hive.dialect.ParquetHiveDialect
 import io.eels.component.parquet.Predicate
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
@@ -52,8 +52,8 @@ object HiveDialect extends Logging {
 
   def apply(format: String): HiveDialect = format match {
     case "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat" => ParquetHiveDialect
-    case "org.apache.orc.mapreduce.OrcInputFormat" => OrcHiveDialect
-    case "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" => OrcHiveDialect
+//    case "org.apache.orc.mapreduce.OrcInputFormat" => OrcHiveDialect
+//    case "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat" => OrcHiveDialect
     //      "org.apache.hadoop.mapred.TextInputFormat" -> TextHiveDialect
     //      "org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat" -> AvroHiveDialect
     case _ => throw new UnsupportedOperationException(s"Unknown hive input format $format")
