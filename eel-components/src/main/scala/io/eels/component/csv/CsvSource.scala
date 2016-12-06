@@ -70,7 +70,7 @@ case class CsvSource(path: Path,
   }
 
   override def parts(): List[Part] = {
-    val part = new CsvPart(createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
+    val part = new CsvPart(createParser _, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
     List(part)
   }
 }

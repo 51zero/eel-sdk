@@ -57,19 +57,14 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   // returns the count of all records in this source, predicate is ignored
-  def countNoPredicate(): Long = {
-    if (paths.isEmpty) 0
-    else {
-      paths.map { path => ParquetFileReader.open(conf, path).getRecordCount }.sum
-    }
-  }
+  def countNoPredicate(): Long = statistics().count
 
   // returns stats, predicate is ignored
   def statistics(): Statistics = {
     if (paths.isEmpty) Statistics.Empty
     else {
       paths.foldLeft(Statistics.Empty) { (stats, path) =>
-        val footer = ParquetFileReader.open(conf, path).getFooter
+        val footer = ParquetFileReader.readFooter(conf, path)
         footer.getBlocks.asScala.foldLeft(stats) { (stats, block) =>
           stats.copy(
             count = stats.count + block.getRowCount,

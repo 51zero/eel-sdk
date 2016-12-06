@@ -38,7 +38,7 @@ object ParquetReaderFn extends Logging {
         AvroReadSupport.setAvroReadSchema(conf, it)
         AvroReadSupport.setRequestedProjection(conf, it)
       }
-      conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
+      //conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
       conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
       conf
     }
