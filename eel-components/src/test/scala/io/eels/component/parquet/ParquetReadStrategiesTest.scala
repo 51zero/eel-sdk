@@ -16,6 +16,7 @@ import scala.util.Random
 // test different strategies of reading a file into rows
 object ParquetReadStrategiesTest extends App with Timed {
 
+  implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration)
   ParquetLogMute()
 

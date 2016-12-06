@@ -11,6 +11,7 @@ import scala.util.Random
 
 object ParquetGenerator extends App {
 
+  implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration)
 
   val text = getClass.getResourceAsStream("/wisdom_of_fools.txt")

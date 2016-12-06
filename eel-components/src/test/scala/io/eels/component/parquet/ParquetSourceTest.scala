@@ -15,7 +15,8 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSourceTest extends WordSpec with Matchers {
   ParquetLogMute()
 
-  implicit val fs = FileSystem.get(new Configuration())
+  implicit val conf = new Configuration()
+  implicit val fs = FileSystem.get(conf)
 
   val personFile = Paths.get(getClass.getResource("/parquet/person.pq").getFile)
   val resourcesDir = personFile.getParent

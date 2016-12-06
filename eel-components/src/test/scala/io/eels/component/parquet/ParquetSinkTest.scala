@@ -20,6 +20,7 @@ class ParquetSinkTest extends WordSpec with Matchers {
     Vector("elton john", "musician", "pinner")
   )
 
+  implicit val conf = new Configuration()
   implicit val fs = FileSystem.get(new Configuration())
   val path = new Path("test.pq")
 

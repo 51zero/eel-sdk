@@ -12,6 +12,7 @@ import scala.io.Source
 
 object GroupedByParquetSpeedTest extends App with Timed {
 
+  implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration)
   ParquetLogMute()
 

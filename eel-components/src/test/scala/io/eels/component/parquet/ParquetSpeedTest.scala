@@ -22,6 +22,7 @@ object ParquetSpeedTest extends App with Timed {
   val rows = List.fill(2000000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4)))
   val frame = Frame(schema, rows)
 
+  implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
 
   while (true) {
