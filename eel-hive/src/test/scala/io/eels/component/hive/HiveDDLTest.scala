@@ -45,13 +45,13 @@ class HiveDDLTest extends FunSuite with Matchers {
         |   `str` string,
         |   `i` bigint,
         |   `b` boolean)
-        |LOCATION 'hdfs://location'
         |ROW FORMAT SERDE
         |   'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
         |STORED AS INPUTFORMAT
         |   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
         |OUTPUTFORMAT
-        |   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'""".stripMargin
+        |   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+        |LOCATION 'hdfs://location'""".stripMargin
   }
 
   test("include inputFormat") {
