@@ -32,12 +32,13 @@ case class ParquetSource(pattern: FilePattern,
                          predicate: Option[Predicate] = None)
                         (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
+  lazy val paths = pattern.toPaths()
+
   def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
 
   // the schema returned by the parquet source should be a merged version of the
   // schemas contained in all the files.
   override def schema(): StructType = {
-    val paths = pattern.toPaths()
     val schemas = paths.map { path =>
       using(ParquetReaderFn.apply(path, predicate, None)) { reader =>
         val record = Option(reader.read()).getOrElse {
@@ -51,14 +52,12 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   override def parts(): List[Part] = {
-    val paths = pattern.toPaths()
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
     paths.map { it => new ParquetPart(it, predicate) }
   }
 
   // returns the count of all records in this source, predicate is ignored
   def countNoPredicate(): Long = {
-    val paths = pattern.toPaths()
     if (paths.isEmpty) 0
     else {
       paths.map { path => ParquetFileReader.open(conf, path).getRecordCount }.sum
@@ -67,7 +66,6 @@ case class ParquetSource(pattern: FilePattern,
 
   // returns stats, predicate is ignored
   def statistics(): Statistics = {
-    val paths = pattern.toPaths()
     if (paths.isEmpty) Statistics.Empty
     else {
       paths.foldLeft(Statistics.Empty) { (stats, path) =>
@@ -83,14 +81,12 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
-  def parts2(): List[Part2] = {
-    val paths = pattern.toPaths()
+  override def parts2(): List[Part2] = {
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
     paths.map { it => new ParquetPart2(it, predicate) }
   }
 
   def footers(): List[Footer] = {
-    val paths = pattern.toPaths()
     logger.debug(s"Parquet source will read footers from $paths")
     paths.flatMap { it =>
       val status = fs.getFileStatus(it)
@@ -136,7 +132,7 @@ class ParquetPart2(path: Path,
   override def stream(): PartStream = new PartStream {
 
     val reader = ParquetReaderFn(path, predicate, None)
-    val iter = ParquetRowIterator(reader).grouped(1000).withPartial(true)
+    val iter = ParquetRowIterator(reader).grouped(100).withPartial(true)
     var closed = false
 
     override def next(): List[Row] = iter.next

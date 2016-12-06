@@ -27,6 +27,8 @@ trait Source extends Logging {
 
   def parts(): List[Part]
 
+  def parts2(): List[Part2] = Nil
+
   def toFrame(): Frame = toFrame(NoopListener)
 
   def toFrame(ioThreads: Int): Frame = toFrame(Executors.newFixedThreadPool(ioThreads))

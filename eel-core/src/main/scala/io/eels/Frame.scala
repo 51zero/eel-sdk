@@ -396,6 +396,10 @@ trait Frame {
   def to(sink: Sink, listener: Listener = NoopListener): Long = SinkAction.execute(sink, this, listener)
   def size(): Long = rows().count().block()
 
+  // alias for size()
+  def count(): Long = size()
+
+  // alias for toVector()
   def collect(): Vector[Row] = VectorAction(this)
 
   def toSeq(): Seq[Row] = VectorAction(this)

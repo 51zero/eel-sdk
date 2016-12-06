@@ -7,7 +7,7 @@ import java.util.function.Consumer
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import com.sksamuel.exts.metrics.Timed
 import io.eels.schema._
-import io.eels.{FilePattern, Row}
+import io.eels.{FilePattern, Row, SourceFrame}
 import io.reactivex.disposables.Disposable
 import io.reactivex.{Observable, ObservableEmitter, ObservableOnSubscribe, Observer}
 import org.apache.hadoop.conf.Configuration
@@ -43,6 +43,7 @@ object ParquetReadTest extends App with Timed {
   //    println(s"Written $path")
   //  }
 
+  val source = ParquetSource("./parquettest/*")
 
   while (true) {
 
@@ -85,9 +86,9 @@ object ParquetReadTest extends App with Timed {
 
       val counter = new AtomicLong(0)
       val executor = Executors.newFixedThreadPool(8)
-      val parts = ParquetSource("./parquettest/*").parts2().foreach { part =>
+      val parts = source.parts2().foreach { part =>
         executor.submit {
-          part.stream().foreach(_ => counter.incrementAndGet)
+          part.stream().foreach(rows => counter.addAndGet(rows.size))
         }
       }
       executor.shutdown()
@@ -101,7 +102,7 @@ object ParquetReadTest extends App with Timed {
       val executor = Executors.newFixedThreadPool(8)
       val queue = new LinkedBlockingQueue[List[Row]](1000)
 
-      val parts = ParquetSource("./parquettest/*").parts2()
+      val parts = source.parts2()
       val latch = new CountDownLatch(parts.size)
 
       parts.foreach { part =>
@@ -127,8 +128,46 @@ object ParquetReadTest extends App with Timed {
       println(counter.get())
     }
 
+    timed("using new parts2") {
+      val count = new SourceFrame(source).count()
+      println(count)
+    }
+
+    timed("using new parts2 without flux count block") {
+
+      val counter = new AtomicLong(0)
+      val latch = new CountDownLatch(1)
+
+
+      val frame = new SourceFrame(source)
+      frame.rows().subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
+        override def accept(t: Row): Unit = counter.incrementAndGet()
+      }, new Consumer[Throwable] {
+        override def accept(t: Throwable): Unit = ???
+      }, new Runnable {
+        override def run(): Unit = latch.countDown()
+      })
+
+      latch.await()
+      println(counter.get())
+    }
+
+    timed("using new parts2 using iterator") {
+
+      val counter = new AtomicLong(0)
+
+      val frame = new SourceFrame(source)
+      val iter = frame.rows2
+      while (iter.hasNext) {
+        val rows = iter.next()
+        counter.addAndGet(rows.size)
+      }
+
+      println(counter.get())
+    }
+
     timed("each part via a Flux using a par") {
-      val parts = ParquetSource("./parquettest/*").parts()
+      val parts = source.parts()
       val par = Schedulers.newParallel("par", 8)
       val counter = new AtomicLong(0)
       val latch = new CountDownLatch(parts.size)
@@ -158,7 +197,7 @@ object ParquetReadTest extends App with Timed {
       val counter = new AtomicLong(0)
       val latch = new CountDownLatch(1)
       Flux.merge(1000,
-        ParquetSource("./parquettest/*").parts.map(_.data.subscribeOn(par)): _*
+        source.parts.map(_.data.subscribeOn(par)): _*
       ).subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
         override def accept(t: Row): Unit = {
           counter.incrementAndGet()
@@ -285,7 +324,7 @@ object ParquetReadTest extends App with Timed {
       val queue = new LinkedBlockingQueue[Row](1000)
       val sched = Schedulers.newParallel("nMQWSDFDSF", 8)
 
-      val parts = ParquetSource(FilePattern(new Path("./parquettest/*"))).parts()
+      val parts = source.parts()
       val latch = new CountDownLatch(parts.size)
 
       parts.foreach { part =>
@@ -383,7 +422,7 @@ object ParquetReadTest extends App with Timed {
     timed("multiple files via parquet source") {
       val executor = Executors.newFixedThreadPool(8)
       println(
-        ParquetSource("./parquettest/*")
+        source
           .toFrame(executor)
           .size()
       )
