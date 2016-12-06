@@ -5,16 +5,16 @@ trait DataType {
   def matches(from: DataType): Boolean = this == from
 }
 
-object StringType extends DataType
+object BigIntType extends DataType
+object BinaryType extends DataType
 object BooleanType extends DataType
 object BytesType extends DataType
-object TimestampType extends DataType
-object ShortType extends DataType
-object FloatType extends DataType
-object DoubleType extends DataType
 object DateType extends DataType
-object BinaryType extends DataType
-object BigIntType extends DataType
+object DoubleType extends DataType
+object FloatType extends DataType
+object ShortType extends DataType
+object StringType extends DataType
+object TimestampType extends DataType
 
 case class IntType(signed: Boolean = true) extends DataType
 
