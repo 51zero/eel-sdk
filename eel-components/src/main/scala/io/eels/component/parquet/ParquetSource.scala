@@ -18,13 +18,13 @@ import scala.util.control.NonFatal
 
 object ParquetSource {
 
-  def apply(uri: java.net.URI)(implicit fs: FileSystem): ParquetSource =
+  def apply(uri: java.net.URI)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
     apply(FilePattern(new Path(uri.toString)))
 
-  def apply(path: java.nio.file.Path)(implicit fs: FileSystem): ParquetSource =
+  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
     apply(FilePattern(path))
 
-  def apply(path: Path)(implicit fs: FileSystem): ParquetSource =
+  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
     apply(FilePattern(path))
 }
 
