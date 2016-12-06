@@ -8,6 +8,7 @@ import com.sksamuel.exts.io.Using
 import io.eels._
 import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
 import io.eels.schema.StructType
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 import reactor.core.publisher.{Flux, FluxSink}
@@ -29,7 +30,7 @@ object ParquetSource {
 
 case class ParquetSource(pattern: FilePattern,
                          predicate: Option[Predicate] = None)
-                        (implicit fs: FileSystem) extends Source with Logging with Using {
+                        (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
   def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
 
@@ -53,6 +54,15 @@ case class ParquetSource(pattern: FilePattern,
     val paths = pattern.toPaths()
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
     paths.map { it => new ParquetPart(it, predicate) }
+  }
+
+  // returns the count of all records in this source, predicate is ignored
+  def countNoPredicate(): Long = {
+    val paths = pattern.toPaths()
+    if (paths.isEmpty) 0
+    else {
+      paths.map { path => ParquetFileReader.open(conf, path).getRecordCount }.sum
+    }
   }
 
   def parts2(): List[Part2] = {
