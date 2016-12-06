@@ -9,21 +9,24 @@ object Build extends Build {
 
   val org = "io.eels"
 
+  val AvroVersion = "1.8.1"
+  val DerbyVersion = "10.13.1.1"
   val ExtsVersion = "1.37.0"
-  val HadoopVersion = "2.7.3"
-  val HiveVersion = "1.2.0"
+  val H2Version = "1.4.192"
+  val HadoopVersion = "2.6.4"
+  val HiveVersion = "1.2.1"
   val JacksonVersion = "2.8.4"
   val Log4jVersion = "1.2.17"
+  val MetricsVersion = "3.1.2"
+  val MysqlVersion = "5.1.39"
   val OrcVersion = "1.1.2"
+  val ParquetVersion = "1.8.1"
+  val RxJavaVersion = "2.0.1"
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
   val Slf4jVersion = "1.7.12"
-  val ParquetVersion = "1.9.0"
   val UnivocityVersion = "2.2.3"
-  val RxJavaVersion = "2.0.1"
   val ConfigVersion = "1.3.0"
-  val H2Version = "1.4.192"
-  val MetricsVersion = "3.1.2"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -43,7 +46,7 @@ object Build extends Build {
       "org.apache.hadoop"                       % "hadoop-mapreduce-client" % HadoopVersion,
       "org.apache.hadoop"                       % "hadoop-mapreduce-client-core" % HadoopVersion,
       "org.apache.parquet"                      % "parquet-avro"            % ParquetVersion,
-      "org.apache.derby"                        % "derby"                   % "10.13.1.1",
+      "org.apache.derby"                        % "derby"                   % DerbyVersion,
       "com.h2database"                          % "h2"                      % H2Version
     )
   )
@@ -72,19 +75,19 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "org.scala-lang"              % "scala-reflect"           % scalaVersion.value,
       "io.projectreactor"           % "reactor-core"            % "3.0.3.RELEASE",
-      "io.reactivex.rxjava2"        % "rxjava"                  % "2.0.1",
+      "io.reactivex.rxjava2"        % "rxjava"                  % RxJavaVersion,
       "com.typesafe"                % "config"                  % ConfigVersion,
       "com.sksamuel.exts"           %% "exts"                   % ExtsVersion,
       "com.univocity"               % "univocity-parsers"       % UnivocityVersion,
-      "org.apache.avro"             % "avro"                    % "1.8.1",
+      "org.apache.avro"             % "avro"                    % AvroVersion,
       "org.apache.hadoop"           % "hadoop-common"           % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
       "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
-      "org.slf4j"                   % "slf4j-api"               % "1.7.21",
-      "org.apache.logging.log4j"    % "log4j-api"            % "2.7"             % "test",
-      "org.apache.logging.log4j"    % "log4j-core"           % "2.7"             % "test",
-      "org.apache.logging.log4j"    % "log4j-slf4j-impl"     % "2.7"             % "test",
-      "mysql"                       % "mysql-connector-java"    % "5.1.39"          % "test",
+      "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
+      "org.apache.logging.log4j"    % "log4j-api"               % "2.7"             % "test",
+      "org.apache.logging.log4j"    % "log4j-core"              % "2.7"             % "test",
+      "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % "2.7"             % "test",
+      "mysql"                       % "mysql-connector-java"    % MysqlVersion      % "test",
       "org.scalatest"               %% "scalatest"              % ScalatestVersion  % "test"
     ),
     excludeDependencies += "org.slf4j" % "slf4j-log4j12",
