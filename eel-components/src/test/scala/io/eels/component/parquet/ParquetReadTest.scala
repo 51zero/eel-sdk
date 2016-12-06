@@ -136,19 +136,11 @@ object ParquetReadTest extends App with Timed {
     timed("using new parts2 without flux count block") {
 
       val counter = new AtomicLong(0)
-      val latch = new CountDownLatch(1)
 
+      new SourceFrame(source).rows2.foreach { rows =>
+        counter.addAndGet(rows.size)
+      }
 
-      val frame = new SourceFrame(source)
-      frame.rows().subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
-        override def accept(t: Row): Unit = counter.incrementAndGet()
-      }, new Consumer[Throwable] {
-        override def accept(t: Throwable): Unit = ???
-      }, new Runnable {
-        override def run(): Unit = latch.countDown()
-      })
-
-      latch.await()
       println(counter.get())
     }
 
@@ -157,12 +149,18 @@ object ParquetReadTest extends App with Timed {
       val counter = new AtomicLong(0)
 
       val frame = new SourceFrame(source)
-      val iter = frame.rows2
-      while (iter.hasNext) {
-        val rows = iter.next()
-        counter.addAndGet(rows.size)
-      }
-
+      val latch = new CountDownLatch(1)
+      new Thread(new Runnable {
+        override def run(): Unit = {
+          val iter = frame.rows2
+          while (iter.hasNext) {
+            val rows = iter.next()
+            counter.addAndGet(rows.size)
+          }
+          latch.countDown()
+        }
+      }).start()
+      latch.await()
       println(counter.get())
     }
 

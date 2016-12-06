@@ -12,17 +12,17 @@ import reactor.core.publisher.{Flux, FluxSink}
 
 class SourceFrame(source: Source, ioThreads: Int = 8) extends Frame with Logging {
 
-  private val RowListSentinel = List(Row.Sentinel)
+  val RowListSentinel = List(Row.Sentinel)
 
   override val schema: StructType = source.schema()
 
   def rows2(): Iterator[List[Row]] = {
 
-    val queue = new LinkedBlockingQueue[List[Row]](100)
-    val parts = source.parts2()
     val completed = new AtomicInteger(0)
-
     val executor = Executors.newFixedThreadPool(ioThreads)
+    val queue = new LinkedBlockingQueue[List[Row]](1000)
+    val parts = source.parts2()
+
     logger.debug(s"Submitting ${parts.size} parts to executor")
     parts.foreach { part =>
       executor.submit {
@@ -38,11 +38,7 @@ class SourceFrame(source: Source, ioThreads: Int = 8) extends Frame with Logging
     }
     executor.shutdown()
 
-    Iterator.continually(queue.take).takeWhile { e =>
-      if (e == RowListSentinel)
-        queue.put(e)
-      e != RowListSentinel
-    }
+    Iterator.continually(queue.take).takeWhile(_ != RowListSentinel)
   }
 
   override def rows(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
