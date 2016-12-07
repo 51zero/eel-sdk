@@ -45,7 +45,7 @@ class ListenerTest extends WordSpec with Matchers {
         override def onNext(value: Row): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
-      }).toList()
+      }).collect()
 
       latch.await(20, TimeUnit.SECONDS) shouldBe true
       path.toFile.delete()

@@ -42,6 +42,6 @@ trait Source extends Logging {
     * @param observer  a listener for row items
     * @return a new frame
     */
-  def toFrame(executor: ExecutorService, _listener: Listener): Frame = new SourceFrame(this)
+  def toFrame(executor: ExecutorService, _listener: Listener): Frame = new SourceFrame(this, _listener)
 
 }

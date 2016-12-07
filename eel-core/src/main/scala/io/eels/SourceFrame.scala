@@ -9,7 +9,7 @@ import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import io.eels.schema.StructType
 import reactor.core.publisher.{Flux, FluxSink}
 
-class SourceFrame(source: Source, ioThreads: Int = 8) extends Frame with Logging {
+class SourceFrame(source: Source, listener: Listener = NoopListener, ioThreads: Int = 8) extends Frame with Logging {
 
   val RowListSentinel = List(Row.Sentinel)
 
@@ -51,13 +51,17 @@ class SourceFrame(source: Source, ioThreads: Int = 8) extends Frame with Logging
       logger.debug(s"Submitting ${parts.size} parts to executor")
       parts.foreach { part =>
         executor.submit {
-          part.iterator().takeWhile(_ => !sink.isCancelled).foreach(queue.put)
+          part.iterator().takeWhile(_ => !sink.isCancelled).foreach { rows =>
+            queue.put(rows)
+            rows.foreach(listener.onNext)
+          }
           // once all the reading tasks are complete we need to indicate that we
           // are finished with the queue, so we add a sentinel for the reading thread to pick up
           // by using an atomic int, we know only one thread will get inside the condition
           if (completed.incrementAndGet == parts.size) {
             logger.debug("All parts completed; adding sentinel to close queue")
             queue.put(RowListSentinel)
+            listener.onComplete()
           }
         }
       }
