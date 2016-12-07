@@ -40,14 +40,16 @@ object Build extends Build {
 
   val componentsSettings = Seq(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.module"            %% "jackson-module-scala"   % JacksonVersion,
-      "org.apache.hadoop"                       % "hadoop-hdfs"             % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-mapreduce"        % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-mapreduce-client" % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-mapreduce-client-core" % HadoopVersion,
-      "org.apache.parquet"                      % "parquet-avro"            % ParquetVersion,
-      "org.apache.derby"                        % "derby"                   % DerbyVersion,
-      "com.h2database"                          % "h2"                      % H2Version
+      "com.fasterxml.jackson.module"            %% "jackson-module-scala"           % JacksonVersion,
+      "org.apache.hadoop"                       % "hadoop-hdfs"                     % HadoopVersion,
+      "org.apache.hadoop"                       % "hadoop-mapreduce"                % HadoopVersion,
+      "org.apache.hadoop"                       % "hadoop-mapreduce-client"         % HadoopVersion,
+      "org.apache.hadoop"                       % "hadoop-mapreduce-client-core"    % HadoopVersion,
+      "org.apache.hadoop"                       % "hadoop-yarn-client"              % HadoopVersion,
+      "org.apache.hadoop"                       % "hadoop-yarn-server-resourcemanager"              % HadoopVersion,
+      "org.apache.parquet"                      % "parquet-avro"                    % ParquetVersion,
+      "org.apache.derby"                        % "derby"                           % DerbyVersion,
+      "com.h2database"                          % "h2"                              % H2Version
     )
   )
 
