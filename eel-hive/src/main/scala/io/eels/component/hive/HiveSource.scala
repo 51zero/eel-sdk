@@ -194,7 +194,7 @@ case class HiveSource(dbName: String,
     projection.nonEmpty && projection.map { it => it.toLowerCase() }.forall { it => partitionKeyNames.contains(it) }
   }
 
-  override def parts2(): List[Part] = {
+  override def parts(): List[Part] = {
     login()
 
     val table = client.getTable(dbName, tableName)

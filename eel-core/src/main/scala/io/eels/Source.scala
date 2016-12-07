@@ -25,8 +25,6 @@ trait Source extends Logging {
 
   def parts(): List[Part] = Nil
 
-  def parts2(): List[Part] = Nil
-
   def toFrame(): Frame = toFrame(NoopListener)
 
   def toFrame(ioThreads: Int): Frame = toFrame(Executors.newFixedThreadPool(ioThreads))
@@ -43,5 +41,4 @@ trait Source extends Logging {
     * @return a new frame
     */
   def toFrame(executor: ExecutorService, _listener: Listener): Frame = new SourceFrame(this, _listener)
-
 }

@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable}
 
 case class SequenceSource(path: Path)(implicit conf: Configuration) extends Source with Using with Logging {
-    logger.debug("Creating sequence source from $path")
+  logger.debug(s"Creating sequence source from $path")
 
   override def schema(): StructType = SequenceSupport.schema(path)
   override def parts(): List[Part] = List(new SequencePart(path))
@@ -32,6 +32,7 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
       val row = Row(schema, SequenceSupport.toValues(v).toVector)
       List(row)
     }
+
     override def hasNext(): Boolean = !closed && reader.next(k, v)
 
     override def close(): Unit = {

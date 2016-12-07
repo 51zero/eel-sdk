@@ -67,7 +67,7 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts2(): List[Part] = {
+  override def parts(): List[Part] = {
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
     paths.map { it => new ParquetPart(it, predicate) }
   }

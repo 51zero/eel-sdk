@@ -53,7 +53,7 @@ object ParquetReadTest extends App with Timed {
       val executor = Executors.newFixedThreadPool(8)
       val queue = new LinkedBlockingQueue[List[Row]](1000)
 
-      val parts = source.parts2()
+      val parts = source.parts()
       val latch = new CountDownLatch(parts.size)
 
       parts.foreach { part =>

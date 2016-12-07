@@ -20,7 +20,7 @@ class SourceFrame(source: Source, listener: Listener = NoopListener, ioThreads: 
     val completed = new AtomicInteger(0)
     val executor = Executors.newFixedThreadPool(ioThreads)
     val queue = new LinkedBlockingQueue[List[Row]](1000)
-    val parts = source.parts2()
+    val parts = source.parts()
 
     logger.debug(s"Submitting ${parts.size} parts to executor")
     parts.foreach { part =>
@@ -43,37 +43,42 @@ class SourceFrame(source: Source, listener: Listener = NoopListener, ioThreads: 
   override def rows(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
     override def accept(sink: FluxSink[Row]): Unit = {
 
-      val queue = new LinkedBlockingQueue[List[Row]](100)
-      val parts = source.parts2()
-      val completed = new AtomicInteger(0)
+      val parts = source.parts()
+      if (parts.isEmpty) {
+        Flux.empty()
+      } else {
+        val queue = new LinkedBlockingQueue[List[Row]](100)
+        val completed = new AtomicInteger(0)
 
-      val executor = Executors.newFixedThreadPool(ioThreads)
-      logger.debug(s"Submitting ${parts.size} parts to executor")
-      parts.foreach { part =>
-        executor.submit {
-          part.iterator().takeWhile(_ => !sink.isCancelled).foreach { rows =>
-            queue.put(rows)
-            rows.foreach(listener.onNext)
-          }
-          // once all the reading tasks are complete we need to indicate that we
-          // are finished with the queue, so we add a sentinel for the reading thread to pick up
-          // by using an atomic int, we know only one thread will get inside the condition
-          if (completed.incrementAndGet == parts.size) {
-            logger.debug("All parts completed; adding sentinel to close queue")
-            queue.put(RowListSentinel)
-            listener.onComplete()
+        val executor = Executors.newFixedThreadPool(ioThreads)
+        logger.debug(s"Submitting ${parts.size} parts to executor")
+        parts.foreach { part =>
+          executor.submit {
+            part.iterator().takeWhile(_ => !sink.isCancelled).foreach { rows =>
+              queue.put(rows)
+              rows.foreach(listener.onNext)
+            }
+            // once all the reading tasks are complete we need to indicate that we
+            // are finished with the queue, so we add a sentinel for the reading thread to pick up
+            // by using an atomic int, we know only one thread will get inside the condition
+            if (completed.incrementAndGet == parts.size) {
+              logger.debug("All parts completed; adding sentinel to close queue")
+              queue.put(RowListSentinel)
+              listener.onComplete()
+            }
           }
         }
+        executor.shutdown()
+
+        Iterator.continually(queue.take)
+          .takeWhile(_ != RowListSentinel)
+          .foreach { rows =>
+            rows.foreach(sink.next)
+          }
+
+        sink.complete()
+
       }
-      executor.shutdown()
-
-      Iterator.continually(queue.take)
-        .takeWhile(_ != RowListSentinel)
-        .foreach { rows =>
-          rows.foreach(sink.next)
-        }
-
-      sink.complete()
     }
   })
 }

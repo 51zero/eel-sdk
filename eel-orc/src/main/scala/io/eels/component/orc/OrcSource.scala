@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 
 case class OrcSource(path: Path)(implicit conf: Configuration) extends Source with Using {
 
-  override def parts2(): List[Part] = List(new OrcPart(path))
+  override def parts(): List[Part] = List(new OrcPart(path))
 
   override def schema(): StructType = OrcFns.readSchema(path)
 

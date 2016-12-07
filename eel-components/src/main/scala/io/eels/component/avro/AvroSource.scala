@@ -16,7 +16,7 @@ case class AvroSource(path: Path) extends Source with Using {
     }
   }
 
-  override def parts2(): List[Part] = List(new AvroSourcePart(path, schema()))
+  override def parts(): List[Part] = List(new AvroSourcePart(path, schema()))
 }
 
 class AvroSourcePart(val path: Path, val schema: StructType) extends Part with Logging {
