@@ -1,49 +1,39 @@
 package io.eels.component.hive.dialect
 
-import java.util.function.Consumer
-
 import com.sksamuel.exts.Logging
-import io.eels.Row
+import com.typesafe.config.ConfigFactory
 import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.schema.StructType
+import io.eels.{CloseableIterator, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
-import reactor.core.publisher.{Flux, FluxSink}
-
-import scala.util.control.NonFatal
 
 object ParquetHiveDialect extends HiveDialect with Logging {
+
+  private val config = ConfigFactory.load()
+  private val bufferSize = config.getInt("eel.hive.dialect.reader.buffer-size")
 
   override def read(path: Path,
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Flux[Row] = {
+                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
 
-    val schema = AvroSchemaFns.toAvroSchema(projectionSchema)
+    // an avro conversion for the projection schema
+    val avroProjectionSchema = AvroSchemaFns.toAvroSchema(projectionSchema)
+    val reader = ParquetReaderFn(path, predicate, Option(avroProjectionSchema))
+    val iter = ParquetRowIterator(reader).grouped(bufferSize).withPartial(true)
+    var closed = false
 
-    Flux.create(new Consumer[FluxSink[Row]] {
-      override def accept(sink: FluxSink[Row]): Unit = {
-        val reader = ParquetReaderFn(path, predicate, Option(schema))
-        try {
-          val iter = ParquetRowIterator(reader)
-          while (!sink.isCancelled && iter.hasNext) {
-            logger.debug("Reading from parquet in thread" + Thread.currentThread().getId)
-            sink.next(iter.next)
-          }
-          sink.complete()
-        } catch {
-          case NonFatal(error) =>
-            logger.warn("Could not read file", error)
-            sink.error(error)
-        } finally {
-          reader.close()
-        }
-      }
-    }, FluxSink.OverflowStrategy.BUFFER)
+    override def next(): List[Row] = iter.next()
+    override def hasNext(): Boolean = !closed && iter.hasNext
+    override def close(): Unit = {
+      reader.close()
+      closed = true
+    }
   }
 
   override def writer(schema: StructType,

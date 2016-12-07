@@ -3,10 +3,9 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
-import io.eels.{Part, Row}
+import io.eels.{CloseableIterator, Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
-import reactor.core.publisher.Flux
 
 import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
@@ -50,7 +49,7 @@ class HivePartitionPart(dbName: String,
     }
   }
 
-  override def data(): Flux[Row] = {
+  override def iterator(): CloseableIterator[List[Row]] = {
 
     // each row will contain just the values from the metastore
     val rows = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.filter { part =>
@@ -63,6 +62,6 @@ class HivePartitionPart(dbName: String,
       Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
     }
     logger.debug(s"After scanning partitions and files we have ${rows.size} rows")
-    if (rows.isEmpty) Flux.empty() else Flux.fromIterable(rows.asJava)
+    if (rows.isEmpty) CloseableIterator.empty else CloseableIterator.fromIterable(List(rows.toList))
   }
 }

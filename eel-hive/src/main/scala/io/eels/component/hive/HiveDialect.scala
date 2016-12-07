@@ -1,20 +1,19 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.Row
 import io.eels.component.hive.dialect.ParquetHiveDialect
 import io.eels.component.parquet.Predicate
 import io.eels.schema.StructType
+import io.eels.{CloseableIterator, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table
-import reactor.core.publisher.Flux
 
 trait HiveDialect extends Logging {
 
   /**
-   * Creates an rows that will read from the given hadoop path.
+   * Creates a closeable iterator that will read from the given hadoop path.
    *
    * @param path where to load the data from
    *
@@ -40,7 +39,7 @@ trait HiveDialect extends Logging {
            metastoreSchema: StructType,
            projectionSchema: StructType,
            predicate: Option[Predicate])
-          (implicit fs: FileSystem, conf: Configuration): Flux[Row]
+          (implicit fs: FileSystem, conf: Configuration): CloseableIterator[List[Row]]
 
   def writer(schema: StructType,
              path: Path,

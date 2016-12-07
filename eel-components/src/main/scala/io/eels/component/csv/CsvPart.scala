@@ -3,7 +3,7 @@ package io.eels.component.csv
 import com.sksamuel.exts.Logging
 import com.univocity.parsers.csv.CsvParser
 import io.eels.schema.StructType
-import io.eels.{Part2, PartStream, Row}
+import io.eels.{Part, CloseableIterator, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 class CsvPart(val createParser: () => CsvParser,
@@ -11,14 +11,14 @@ class CsvPart(val createParser: () => CsvParser,
               val header: Header,
               val skipBadRows: Boolean,
               val schema: StructType)
-             (implicit fs: FileSystem) extends Part2 with Logging {
+             (implicit fs: FileSystem) extends Part with Logging {
 
   val rowsToSkip: Int = header match {
     case Header.FirstRow => 1
     case _ => 0
   }
 
-  override def stream(): PartStream = new PartStream {
+  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
 
     private val parser = createParser()
     private val input = fs.open(path)

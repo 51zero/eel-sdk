@@ -1,17 +1,12 @@
 package io.eels.component.sequence
 
-import java.util.function.Consumer
-
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
+import io.eels._
 import io.eels.schema.StructType
-import io.eels.{Part, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable}
-import reactor.core.publisher.{Flux, FluxSink}
-
-import scala.util.control.NonFatal
 
 case class SequenceSource(path: Path)(implicit conf: Configuration) extends Source with Using with Logging {
     logger.debug("Creating sequence source from $path")
@@ -22,30 +17,26 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
 
 class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging {
 
-  override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
-    override def accept(sink: FluxSink[Row]): Unit = {
+  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
 
-      val reader = SequenceSupport.createReader(path)
-      val k = new IntWritable()
-      val v = new BytesWritable()
-      val schema = SequenceSupport.schema(path)
+    val reader = SequenceSupport.createReader(path)
+    val k = new IntWritable()
+    val v = new BytesWritable()
+    val schema = SequenceSupport.schema(path)
+    var closed = false
 
-      // throw away top row as that's header
-      reader.next(k, v)
+    // throw away top row as that's header
+    reader.next(k, v)
 
-      try {
-        while (!sink.isCancelled && reader.next(k, v)) {
-          val row = Row(schema, SequenceSupport.toValues(v).toVector)
-          sink.next(row)
-        }
-        sink.complete()
-      } catch {
-        case NonFatal(error) =>
-          logger.warn("Could not read file", error)
-          sink.error(error)
-      } finally {
-        reader.close()
-      }
+    override def next(): List[Row] = {
+      val row = Row(schema, SequenceSupport.toValues(v).toVector)
+      List(row)
     }
-  }, FluxSink.OverflowStrategy.BUFFER)
+    override def hasNext(): Boolean = !closed && reader.next(k, v)
+
+    override def close(): Unit = {
+      closed = true
+      reader.close()
+    }
+  }
 }

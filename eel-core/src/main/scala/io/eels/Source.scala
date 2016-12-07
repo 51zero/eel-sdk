@@ -4,8 +4,6 @@ import java.util.concurrent._
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import reactor.core.publisher.Flux
-import reactor.core.scheduler.Schedulers
 
 /**
   * A Source is a provider of data.
@@ -27,7 +25,7 @@ trait Source extends Logging {
 
   def parts(): List[Part] = Nil
 
-  def parts2(): List[Part2] = Nil
+  def parts2(): List[Part] = Nil
 
   def toFrame(): Frame = toFrame(NoopListener)
 
@@ -44,15 +42,6 @@ trait Source extends Logging {
     * @param observer  a listener for row items
     * @return a new frame
     */
-  def toFrame(executor: ExecutorService, _listener: Listener): Frame = new Frame {
-
-    override val schema: StructType = outer.schema()
-
-    // this method may be invoked multiple times, each time generating a new "load action"
-    override def rows(): Flux[Row] = {
-      val fluxes = parts.map(_.data.subscribeOn(Schedulers.fromExecutorService(executor)))
-      Flux.merge(fluxes: _*)
-    }
-  }.listener(_listener)
+  def toFrame(executor: ExecutorService, _listener: Listener): Frame = new SourceFrame(this)
 
 }

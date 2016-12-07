@@ -67,7 +67,7 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts2(): List[Part2] = {
+  override def parts2(): List[Part] = {
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
     paths.map { it => new ParquetPart(it, predicate) }
   }
@@ -89,9 +89,9 @@ object Statistics {
 }
 
 class ParquetPart(path: Path,
-                  predicate: Option[Predicate]) extends Part2 with Logging {
+                  predicate: Option[Predicate]) extends Part with Logging {
 
-  override def stream(): PartStream = new PartStream {
+  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
 
     val reader = ParquetReaderFn(path, predicate, None)
     val iter = ParquetRowIterator(reader).grouped(100).withPartial(true)

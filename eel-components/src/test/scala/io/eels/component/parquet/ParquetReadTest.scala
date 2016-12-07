@@ -47,55 +47,6 @@ object ParquetReadTest extends App with Timed {
 
   while (true) {
 
-    timed("multiple files via scala iterator") {
-      val counter = new AtomicLong(0)
-      FilePattern(new Path("./parquettest/*")).toPaths().foreach { path =>
-        val reader = ParquetReaderFn(path, None, None)
-        val iter = ParquetRowIterator(reader)
-        iter.foreach { row =>
-          counter.incrementAndGet()
-        }
-      }
-      println(counter.get())
-    }
-
-    timed("multiple files via executor") {
-
-      val counter = new AtomicLong(0)
-      val executor = Executors.newFixedThreadPool(8)
-      FilePattern(new Path("./parquettest/*")).toPaths().foreach { path =>
-        executor.submit {
-          try {
-            val reader = ParquetReaderFn(path, None, None)
-            val iter = ParquetRowIterator(reader)
-            iter.foreach { row =>
-              counter.incrementAndGet()
-            }
-            //   println("Part completed " + Thread.currentThread)
-          } catch {
-            case e: Throwable => println(e)
-          }
-        }
-      }
-      executor.shutdown()
-      executor.awaitTermination(1, TimeUnit.DAYS)
-      println(counter.get())
-    }
-
-    timed("multiple files via part stream on executor") {
-
-      val counter = new AtomicLong(0)
-      val executor = Executors.newFixedThreadPool(8)
-      val parts = source.parts2().foreach { part =>
-        executor.submit {
-          part.stream().foreach(rows => counter.addAndGet(rows.size))
-        }
-      }
-      executor.shutdown()
-      executor.awaitTermination(1, TimeUnit.DAYS)
-      println(counter.get())
-    }
-
     timed("multiple files via part stream into blocking queue on executor") {
 
       val counter = new AtomicLong(0)
@@ -107,7 +58,7 @@ object ParquetReadTest extends App with Timed {
 
       parts.foreach { part =>
         executor.submit {
-          part.stream().foreach(queue.put)
+          part.iterator().foreach(queue.put)
           latch.countDown()
         }
       }
@@ -128,12 +79,12 @@ object ParquetReadTest extends App with Timed {
       println(counter.get())
     }
 
-    timed("using new parts2") {
+    timed("using parts2 using flux count") {
       val count = new SourceFrame(source).count()
       println(count)
     }
 
-    timed("using new parts2 without flux count block") {
+    timed("using parts2 using rows 2") {
 
       val counter = new AtomicLong(0)
 
@@ -163,58 +114,6 @@ object ParquetReadTest extends App with Timed {
       latch.await()
       println(counter.get())
     }
-
-    timed("each part via a Flux using a par") {
-      val parts = source.parts()
-      val par = Schedulers.newParallel("par", 8)
-      val counter = new AtomicLong(0)
-      val latch = new CountDownLatch(parts.size)
-      parts.foreach { part =>
-        part.data().subscribeOn(par).subscribe(new Consumer[Row] {
-          override def accept(t: Row): Unit = {
-            counter.incrementAndGet()
-          }
-        }, new Consumer[Throwable] {
-          override def accept(t: Throwable): Unit = {
-            println(t)
-            latch.countDown()
-          }
-        }, new Runnable {
-          override def run(): Unit = {
-            //  println("Part completed " + Thread.currentThread)
-            latch.countDown()
-          }
-        })
-      }
-      latch.await()
-      println(counter.get())
-    }
-
-    timed("each part via a Flux merge") {
-      val par = Schedulers.newParallel("par", 8)
-      val counter = new AtomicLong(0)
-      val latch = new CountDownLatch(1)
-      Flux.merge(1000,
-        source.parts.map(_.data.subscribeOn(par)): _*
-      ).subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
-        override def accept(t: Row): Unit = {
-          counter.incrementAndGet()
-        }
-      }, new Consumer[Throwable] {
-        override def accept(t: Throwable): Unit = {
-          println(t)
-          latch.countDown()
-        }
-      }, new Runnable {
-        override def run(): Unit = {
-          println("Part completed " + Thread.currentThread)
-          latch.countDown()
-        }
-      })
-      latch.await()
-      println(counter.get())
-    }
-
     timed("each part via an Observable") {
 
       val obs = FilePattern(new Path("./parquettest/*")).toPaths().map { path =>
@@ -317,60 +216,6 @@ object ParquetReadTest extends App with Timed {
       println(counter.get())
     }
 
-    timed("flux into a blocking queue") {
-
-      val queue = new LinkedBlockingQueue[Row](1000)
-      val sched = Schedulers.newParallel("nMQWSDFDSF", 8)
-
-      val parts = source.parts()
-      val latch = new CountDownLatch(parts.size)
-
-      parts.foreach { part =>
-        part.data.subscribeOn(sched).subscribe(new Consumer[Row] {
-          override def accept(row: Row): Unit = {
-            queue.put(row)
-          }
-        }, new Consumer[Throwable] {
-          override def accept(t: Throwable): Unit = println(t)
-        }, new Runnable {
-          override def run(): Unit = latch.countDown()
-        })
-      }
-
-      new Thread(new Runnable {
-        override def run(): Unit = {
-          latch.await()
-          queue.put(Row.Sentinel)
-        }
-      }).start()
-
-      val counter = new AtomicLong(0)
-
-      val latch2 = new CountDownLatch(1)
-
-      Flux.create(new Consumer[FluxSink[Row]] {
-        override def accept(sink: FluxSink[Row]): Unit = {
-          var row = queue.take
-          while (!sink.isCancelled && row != Row.Sentinel) {
-            sink.next(row)
-            row = queue.take()
-          }
-          queue.put(Row.Sentinel)
-          sink.complete()
-        }
-      }, FluxSink.OverflowStrategy.BUFFER).subscribeOn(Schedulers.single()).subscribe(new Consumer[Row] {
-        override def accept(t: Row): Unit = {
-          counter.incrementAndGet()
-        }
-      }, new Consumer[Throwable] {
-        override def accept(t: Throwable): Unit = println(t)
-      }, new Runnable {
-        override def run(): Unit = latch2.countDown()
-      })
-
-      latch2.await()
-      println(counter.get())
-    }
 
     timed("each part via an Observable merge") {
 

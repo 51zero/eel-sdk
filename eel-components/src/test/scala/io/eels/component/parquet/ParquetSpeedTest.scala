@@ -10,10 +10,12 @@ import scala.util.Random
 
 /**
   * v0.90 1m rows insertion: 2500 reading: 4438
-  * v1.1 1m rows insertion 3400 reading: 2800
-  * 1m rows string of length 4; writing=3397;reading=1186
-  * 2m rows string of length 4; writing=7725;reading=5479
-  * 2m rows string of length 4; writing=7766;reading=5177 dictionary enabled for read
+  * v1.1.0-snapshot-1st-dec 1m rows insertion 3400 reading: 2800
+  * 1m rows string of length 4; writing=3397; reading=1186
+  * 2m rows string of length 4; writing=7725; reading=5479
+  * 2m rows string of length 4; writing=7766; reading=5177 dictionary enabled for read
+  * v1.1.0-snapshot-7th-dec
+  * 2m rows string of length 4; writing=5964; reading=4193
   */
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()

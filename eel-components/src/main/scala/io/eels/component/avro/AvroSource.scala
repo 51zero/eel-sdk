@@ -16,12 +16,12 @@ case class AvroSource(path: Path) extends Source with Using {
     }
   }
 
-  override def parts2(): List[Part2] = List(new AvroSourcePart(path, schema()))
+  override def parts2(): List[Part] = List(new AvroSourcePart(path, schema()))
 }
 
-class AvroSourcePart(val path: Path, val schema: StructType) extends Part2 with Logging {
+class AvroSourcePart(val path: Path, val schema: StructType) extends Part with Logging {
 
-  override def stream(): PartStream = new PartStream {
+  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
 
     val deserializer = new AvroDeserializer()
     val reader = AvroReaderFns.createAvroReader(path)

@@ -1,19 +1,18 @@
 package io.eels.component.orc
 
 import com.sksamuel.exts.io.Using
+import io.eels._
 import io.eels.schema.StructType
-import io.eels.{Part, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.orc.OrcFile.ReaderOptions
 import org.apache.orc.{ColumnStatistics, OrcFile, StripeInformation, StripeStatistics}
-import reactor.core.publisher.Flux
 
 import scala.collection.JavaConverters._
 
 case class OrcSource(path: Path)(implicit conf: Configuration) extends Source with Using {
 
-  override def parts(): List[Part] = List(new OrcPart(path))
+  override def parts2(): List[Part] = List(new OrcPart(path))
 
   override def schema(): StructType = OrcFns.readSchema(path)
 
@@ -25,6 +24,6 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
   def stripeStatistics(): Seq[StripeStatistics] = reader().getStripeStatistics.asScala
 
   class OrcPart(path: Path) extends Part {
-    override def data(): Flux[Row] = new OrcReader(path).rows()
+    override def iterator(): CloseableIterator[List[Row]] = OrcBatchIterator(path)
   }
 }

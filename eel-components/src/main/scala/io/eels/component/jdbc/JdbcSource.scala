@@ -30,7 +30,7 @@ case class JdbcSource(connFn: () => Connection,
 
   private def dialect(): JdbcDialect = providedDialect.getOrElse(new GenericJdbcDialect())
 
-  override def parts(): List[Part] = {
+  override def parts2(): List[Part] = {
     val conn = connFn()
     val stmt = conn.prepareStatement(query)
     stmt.setFetchSize(fetchSize)

@@ -8,7 +8,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.{AvroParquetReader, AvroReadSupport}
 import org.apache.parquet.filter2.compat.FilterCompat
-import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
+import org.apache.parquet.hadoop.ParquetReader
 
 /**
   * Helper function to create a parquet reader, using the apache parquet library.

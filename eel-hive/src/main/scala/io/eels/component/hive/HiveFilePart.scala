@@ -5,7 +5,6 @@ import io.eels.component.parquet.Predicate
 import io.eels.schema.{PartitionPart, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
-import reactor.core.publisher.Flux
 
 /**
   * @param metastoreSchema  the schema as present in the metastore and used to match up with the raw data in dialects
@@ -27,9 +26,9 @@ class HiveFilePart(val dialect: HiveDialect,
                    val predicate: Option[Predicate],
                    val partitions: List[PartitionPart])
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
+  require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
-  override def data(): Flux[Row] = {
-    require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
+  override def iterator(): CloseableIterator[List[Row]] = {
 
     val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
 
@@ -51,8 +50,8 @@ class HiveFilePart(val dialect: HiveDialect,
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema
-    reader.map(new java.util.function.Function[Row, Row] {
-      override def apply(row: Row): Row = {
+    reader.map { rows =>
+      rows.map { row =>
         if (projectionFields.isEmpty) {
           val values = projectionSchema.fieldNames().map(partitionMap.apply)
           Row(projectionSchema, values.toVector)
@@ -60,6 +59,6 @@ class HiveFilePart(val dialect: HiveDialect,
           RowUtils.rowAlign(row, projectionSchema, partitionMap)
         }
       }
-    })
+    }
   }
 }

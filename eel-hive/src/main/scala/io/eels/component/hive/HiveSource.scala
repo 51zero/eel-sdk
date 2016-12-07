@@ -5,7 +5,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.{ParquetLogMute, Predicate}
 import io.eels.schema.{PartitionConstraint, StructType}
-import io.eels.{FilePattern, Part, Source}
+import io.eels.{FilePattern, Part, Part, Source}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -194,7 +194,7 @@ case class HiveSource(dbName: String,
     projection.nonEmpty && projection.map { it => it.toLowerCase() }.forall { it => partitionKeyNames.contains(it) }
   }
 
-  override def parts(): List[Part] = {
+  override def parts2(): List[Part] = {
     login()
 
     val table = client.getTable(dbName, tableName)

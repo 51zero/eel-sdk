@@ -1,17 +1,13 @@
 package io.eels.component.json
 
-import java.util.function.Consumer
-
 import com.sksamuel.exts.io.Using
+import io.eels._
 import io.eels.schema.{Field, StructType}
-import io.eels.{Part, Row, Source}
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
-import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.collection.JavaConverters._
-import scala.util.control.NonFatal
 
 case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
   require(fs.exists(path), s"$path must exist")
@@ -38,28 +34,24 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       val values = node.getElements.asScala.map { it => it.getTextValue }.toList
       Row(_schema, values)
     }
+    /**
+      * Returns the data contained in this part in the form of an iterator. This function should return a new
+      * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
+      */
+    override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
 
-    override def data(): Flux[Row] = Flux.create(new Consumer[FluxSink[Row]] {
-      override def accept(sink: FluxSink[Row]): Unit = {
+      val input = createInputStream(path)
+      val iter = reader.readValues[JsonNode](input).asScala.map(nodeToRow).grouped(100).withPartial(true)
+      var closed = false
 
-        val input = createInputStream(path)
-        val iter = reader.readValues[JsonNode](input).asScala
+      override def next(): List[Row] = iter.next()
+      override def hasNext(): Boolean = !closed && iter.hasNext
 
-        try {
-          while (iter.hasNext) {
-            val row = nodeToRow(iter.next)
-            sink.next(row)
-          }
-          sink.complete()
-        } catch {
-          case NonFatal(error) =>
-            logger.warn("Could not read file", error)
-            sink.error(error)
-        } finally {
-          input.close()
-        }
+      override def close(): Unit = {
+        closed = true
+        input.close()
       }
-    }, FluxSink.OverflowStrategy.BUFFER)
+    }
   }
 }
 
