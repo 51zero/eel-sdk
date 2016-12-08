@@ -3,12 +3,12 @@ package io.eels
 import io.eels.schema.{Field, StructType, StringType}
 
 object Row {
-  val Sentinel = Row(StructType(Field("a", StringType)), Vector[Any](null))
-  def apply(schema: StructType, first: Any, rest: Any*): Row = apply(schema, (first +: rest).toVector)
-  def apply(schema: StructType, values: Seq[Any]): Row = apply(schema, values.toVector)
+  val Sentinel = new Row(StructType(Field("a", StringType)), Array(null))
+  def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
+  def apply(schena: StructType, array: Array[Any]) = new Row(schena, array)
 }
 
-case class Row(schema: StructType, values: Vector[Any]) {
+case class Row(schema: StructType, values: Seq[Any]) {
 
   require(values.nonEmpty, "Cannot create an empty row")
   require(

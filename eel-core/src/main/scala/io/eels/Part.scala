@@ -12,5 +12,5 @@ trait Part {
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  def iterator(): CloseableIterator[List[Row]]
+  def iterator(): CloseableIterator[Seq[Row]]
 }

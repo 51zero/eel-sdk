@@ -15,11 +15,11 @@ class SourceFrame(source: Source, listener: Listener = NoopListener, ioThreads: 
 
   override lazy val schema: StructType = source.schema()
 
-  def rows2(): Iterator[List[Row]] = {
+  def rows2(): Iterator[Seq[Row]] = {
 
     val completed = new AtomicInteger(0)
     val executor = Executors.newFixedThreadPool(ioThreads)
-    val queue = new LinkedBlockingQueue[List[Row]](1000)
+    val queue = new LinkedBlockingQueue[Seq[Row]](1000)
     val parts = source.parts()
 
     logger.debug(s"Submitting ${parts.size} parts to executor")
@@ -47,7 +47,7 @@ class SourceFrame(source: Source, listener: Listener = NoopListener, ioThreads: 
       if (parts.isEmpty) {
         Flux.empty()
       } else {
-        val queue = new LinkedBlockingQueue[List[Row]](100)
+        val queue = new LinkedBlockingQueue[Seq[Row]](100)
         val completed = new AtomicInteger(0)
 
         val executor = Executors.newFixedThreadPool(ioThreads)

@@ -3,7 +3,8 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
-import io.eels._
+import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
+import io.eels.{FilePattern, _}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -11,33 +12,39 @@ import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 
 import scala.collection.JavaConverters._
 
-object ParquetSource {
+object AvroParquetSource {
 
-  def apply(uri: java.net.URI)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+  def apply(uri: java.net.URI)(implicit fs: FileSystem, conf: Configuration): AvroParquetSource =
     apply(FilePattern(new Path(uri.toString)))
 
-  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): AvroParquetSource =
     apply(FilePattern(path))
 
-  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
+  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): AvroParquetSource =
     apply(FilePattern(path))
 }
 
-case class ParquetSource(pattern: FilePattern,
-                         predicate: Option[Predicate] = None)
-                        (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
+case class AvroParquetSource(pattern: FilePattern,
+                             predicate: Option[Predicate] = None)
+                            (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
   lazy val paths = pattern.toPaths()
 
-  def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
+  def withPredicate(pred: Predicate): AvroParquetSource = copy(predicate = pred.some)
 
+  // the schema returned by the parquet source should be a merged version of the
+  // schemas contained in all the files.
   override def schema(): StructType = {
-    using(ParquetReaderFn.apply(paths.head, predicate, None)) { reader =>
-      val group = Option(reader.read()).getOrElse {
-        sys.error(s"Cannot read $paths.head for schema; file contains no records")
+    val schemas = paths.map { path =>
+      using(AvroParquetReaderFn.apply(path, predicate, None)) { reader =>
+        val record = Option(reader.read()).getOrElse {
+          sys.error(s"Cannot read $path for schema; file contains no records")
+        }
+        record.getSchema
       }
-      ParquetSchemaFns.fromParquetSchema(group.getType)
     }
+    val avroSchema = AvroSchemaMerge("record", "namspace", schemas)
+    AvroSchemaFns.fromAvroSchema(avroSchema)
   }
 
   // returns the count of all records in this source, predicate is ignored
@@ -62,7 +69,7 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts(): List[Part] = {
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
-    paths.map { it => new ParquetPart(it, predicate) }
+    paths.map { it => new AvroParquetPart(it, predicate) }
   }
 
   def footers(): List[Footer] = {

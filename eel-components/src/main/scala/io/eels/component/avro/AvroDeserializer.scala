@@ -6,7 +6,6 @@ import io.eels.schema.StructType
 import org.apache.avro.Schema.Field
 import org.apache.avro.generic.GenericRecord
 import org.apache.avro.util.Utf8
-import org.apache.parquet.column.Dictionary
 
 import scala.collection.JavaConverters._
 
@@ -31,19 +30,19 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
       range = fields.indices
     }
 
-    val vector = Vector.newBuilder[Any]
+    val array = Array.ofDim[Any](fields.length)
     for (k <- range) {
       val value = record.get(k)
       if (useJavaString && value.isInstanceOf[Utf8]) {
         // use the utf8's toString as it is optimized
         val str = value.asInstanceOf[Utf8].toString
-        vector.+=(str)
+        array.update(k, value)
       } else {
-        vector.+=(value)
+        array.update(k, value)
       }
     }
 
-    Row(schema, vector.result)
+    Row(schema, array)
   }
 }
 

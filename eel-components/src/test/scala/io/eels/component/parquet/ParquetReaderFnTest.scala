@@ -9,6 +9,9 @@ import org.apache.avro.generic.{GenericData, GenericRecord}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
+import org.apache.parquet.schema.Type.Repetition
+import org.apache.parquet.schema.{MessageType, OriginalType, PrimitiveType}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
@@ -37,43 +40,54 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
   val schema = StructType(Field("str"), Field("looong", LongType(true), true), Field("dooble", DoubleType, true))
 
   "ParquetReaderFn" should {
-    "support projections on doubles" in {
-
-      val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
-      val record = reader.read()
+    "read schema" in {
+      val reader = ParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
+      val group = reader.read()
       reader.close()
 
-      record.get("str").toString() shouldBe "wibble"
-      record.get("dooble") shouldBe 12.34
+      group.getType shouldBe new MessageType("com.chuckle",
+        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.BINARY, "str", OriginalType.UTF8),
+        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT64, "looong"),
+        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.DOUBLE, "dooble")
+      )
+    }
+    "support projections on doubles" in {
+
+      val reader = ParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
+      val group = reader.read()
+      reader.close()
+
+      group.getString("str", 0) shouldBe "wibble"
+      group.getDouble("dooble", 0) shouldBe 12.34
     }
     "support projections on longs" in {
 
-      val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("str"))))
-      val record = reader.read()
+      val reader = ParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("str"))))
+      val group = reader.read()
       reader.close()
 
-      record.get("looong") shouldBe 999L
+      group.getLong("looong", 0) shouldBe 999L
     }
     "support full projections" in {
 
-      val reader = ParquetReaderFn.apply(path, None, Option(AvroSchemaFns.toAvroSchema(schema)))
-      val record = reader.read()
+      val reader = ParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema)))
+      val group = reader.read()
       reader.close()
 
-      record.get("str").toString() shouldBe "wibble"
-      record.get("looong") shouldBe 999L
-      record.get("dooble") shouldBe 12.34
+      group.getString("str", 0) shouldBe "wibble"
+      group.getLong("looong", 0) shouldBe 999L
+      group.getDouble("dooble", 0) shouldBe 12.34
 
     }
     "support non projections" in {
 
-      val reader = ParquetReaderFn.apply(path, None, None)
-      val record = reader.read()
+      val reader = ParquetReaderFn(path, None, None)
+      val group = reader.read()
       reader.close()
 
-      record.get("str").toString() shouldBe "wibble"
-      record.get("looong") shouldBe 999L
-      record.get("dooble") shouldBe 12.34
+      group.getString("str", 0) shouldBe "wibble"
+      group.getLong("looong", 0) shouldBe 999L
+      group.getDouble("dooble", 0) shouldBe 12.34
 
     }
   }

@@ -4,8 +4,28 @@ import io.eels.schema._
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
 import org.apache.parquet.schema.Type.Repetition
 import org.apache.parquet.schema._
+import scala.collection.JavaConverters._
 
 object ParquetSchemaFns {
+
+  def fromParquetType(`type`: Type): Field = {
+    val dataType = `type`.asPrimitiveType.getPrimitiveTypeName match {
+      case PrimitiveTypeName.INT64 => LongType.Signed
+      case PrimitiveTypeName.BINARY => StringType
+      case PrimitiveTypeName.BOOLEAN => BooleanType
+      case PrimitiveTypeName.DOUBLE => DoubleType
+      case PrimitiveTypeName.FLOAT => FloatType
+      case PrimitiveTypeName.INT32 => IntType.Signed
+      case PrimitiveTypeName.INT96 => BigIntType
+      case other => sys.error("Unsupported type " + other)
+    }
+    Field(`type`.getName, dataType, `type`.getRepetition == Repetition.OPTIONAL)
+  }
+
+  def fromParquetSchema(gt: GroupType): StructType = {
+    val fields = gt.getFields.asScala.map(fromParquetType)
+    StructType(fields)
+  }
 
   def toParquetType(field: Field): Type = {
     val repetition = if (field.nullable) Repetition.OPTIONAL else Repetition.REQUIRED

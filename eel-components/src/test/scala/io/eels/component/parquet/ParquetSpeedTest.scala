@@ -36,8 +36,13 @@ object ParquetSpeedTest extends App with Timed {
       frame.to(ParquetSink(path))
     }
 
-    timed("Reading") {
+    timed("Reading with ParquetSource") {
       val in = ParquetSource(path).toFrame().collect()
+      assert(in.size == rows.size, in.size)
+    }
+
+    timed("Reading with AvroParquetSource") {
+      val in = AvroParquetSource(path).toFrame().collect()
       assert(in.size == rows.size, in.size)
     }
 

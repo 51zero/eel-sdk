@@ -1,6 +1,7 @@
 package io.eels.schema
 
 case class StructType(fields: List[Field]) extends DataType {
+
   require(fields.map(_.name).distinct.length == fields.size, "StructType cannot have duplicated field names")
   require(fields.nonEmpty, "StructType cannot be empty")
 
