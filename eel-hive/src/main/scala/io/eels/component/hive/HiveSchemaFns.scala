@@ -36,14 +36,14 @@ object HiveSchemaFns extends Logging {
       case "double" => Field(name, DoubleType, nullable)
       case "float" => Field(name, FloatType, nullable)
       case "int" => Field(name, IntType.Signed, nullable)
-      case "smallint" => Field(name, ShortType, nullable)
-      case "tinyint" => Field(name, ShortType, nullable)
+      case "smallint" => Field(name, ShortType.Signed, nullable)
+      case "tinyint" => Field(name, ShortType.Signed, nullable)
       case "char" => Field(name, StringType, nullable)
       case "string" => Field(name, StringType, nullable)
       case "date" => Field(name, DateType, nullable)
       case "timestamp" => Field(name, TimestampType, nullable)
-      case DecimalRegex(scale, precision) =>
-        Field(name, DecimalType(Scale(scale.toInt), Precision(precision.toInt)), nullable)
+      case DecimalRegex(precision, scale) =>
+        Field(name, DecimalType(Precision(precision.toInt), Scale(scale.toInt)), nullable)
       case VarcharRegex(precision) =>
         Field(name, VarcharType(precision.toInt), nullable)
       case StructRegex(structType) =>
@@ -71,7 +71,7 @@ object HiveSchemaFns extends Logging {
     case FloatType => "float"
     case i: IntType => "int"
     case l: LongType => "bigint"
-    case ShortType => "smallint"
+    case s: ShortType => "smallint"
     case StringType => "string"
     case TimestampType => "timestamp"
     case StructType(fields) => toStructDDL(fields)

@@ -12,9 +12,20 @@ object BytesType extends DataType
 object DateType extends DataType
 object DoubleType extends DataType
 object FloatType extends DataType
-object ShortType extends DataType
 object StringType extends DataType
+
+// a time without a date; number of milliseconds after midnight
+object TimeType extends DataType
+
+// number of millis since the unix epoch for UTC
 object TimestampType extends DataType
+
+case class ShortType(signed: Boolean = true) extends DataType
+
+object ShortType {
+  val Signed = ShortType(true)
+  val Unsigned = ShortType(false)
+}
 
 case class IntType(signed: Boolean = true) extends DataType
 
@@ -33,19 +44,19 @@ object LongType {
 case class CharType(size: Int) extends DataType
 case class VarcharType(size: Int) extends DataType
 
-case class DecimalType(scale: Scale = Scale(0),
-                       precision: Precision = Precision(0)
-                      ) extends DataType {
+case class DecimalType(precision: Precision = Precision(0),
+                       scale: Scale = Scale(0)) extends DataType {
+  require(scale.value <= precision.value)
   override def canonicalName: String = "decimal(" + precision.value + "," + scale.value + ")"
   override def matches(from: DataType) = from match {
-    case DecimalType(s, p) => (s == scale || s.value == -1 || scale.value == -1) && (p == precision || p.value == -1 || precision.value == -1)
+    case DecimalType(p, s) => (s == scale || s.value == -1 || scale.value == -1) && (p == precision || p.value == -1 || precision.value == -1)
     case other => false
   }
 }
 
 object DecimalType {
-  val Wildcard = DecimalType(Scale(-1), Precision(-1))
-  val Default = DecimalType(Scale(18), Precision(18))
+  val Wildcard = DecimalType(Precision(-1), Scale(-1))
+  val Default = DecimalType(Precision(18), Scale(2))
 }
 
 case class ArrayType(elementType: DataType) extends DataType {

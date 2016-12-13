@@ -24,7 +24,7 @@ object AvroSchemaFns extends Logging {
       case FloatType => SchemaBuilder.builder().floatType()
       case i: IntType => SchemaBuilder.builder().intType()
       case l: LongType => SchemaBuilder.builder().longType()
-      case ShortType => SchemaBuilder.builder().intType()
+      case s: ShortType => SchemaBuilder.builder().intType()
       case StringType => SchemaBuilder.builder().stringType()
       case struct: StructType => toAvroSchema(struct)
       case TimestampType => SchemaBuilder.builder().longType()

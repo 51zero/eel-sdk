@@ -16,7 +16,7 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
     "toHiveField(field) should return correct hive type" in {
       HiveSchemaFns.toHiveField(Field("a", dataType = BooleanType)) shouldBe new FieldSchema("a", "boolean", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = BinaryType)) shouldBe new FieldSchema("a", "string", null)
-      HiveSchemaFns.toHiveField(Field("a", dataType = DecimalType(Scale(2), Precision(3)))) shouldBe new FieldSchema("a", "decimal(3,2)", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = DecimalType(Precision(2), Scale(3)))) shouldBe new FieldSchema("a", "decimal(2,3)", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = DateType)) shouldBe new FieldSchema("a", "date", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = DoubleType)) shouldBe new FieldSchema("a", "double", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = FloatType)) shouldBe new FieldSchema("a", "float", null)
@@ -27,7 +27,7 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
     }
 
     "fromHiveField should support decimals" in {
-      HiveSchemaFns.fromHiveField(new FieldSchema("a", "decimal(10,5)", null), true) shouldBe Field("a", dataType = DecimalType(Scale(10), Precision(5)))
+      HiveSchemaFns.fromHiveField(new FieldSchema("a", "decimal(10,5)", null), true) shouldBe Field("a", dataType = DecimalType(Precision(10), Scale(5)))
     }
 
     "fromHiveField should support varchar" in {

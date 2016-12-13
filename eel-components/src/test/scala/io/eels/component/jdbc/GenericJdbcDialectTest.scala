@@ -12,7 +12,7 @@ class GenericJdbcDialectTest extends WordSpec with Matchers {
       new GenericJdbcDialect().toJdbcType(Field("b", BooleanType, false)) shouldBe "BOOLEAN"
     }
     "convert short field to SMALLINT type" in {
-      new GenericJdbcDialect().toJdbcType(Field("a", ShortType, false)) shouldBe "smallint"
+      new GenericJdbcDialect().toJdbcType(Field("a", ShortType.Signed, false)) shouldBe "smallint"
     }
     "convert String field to text" in {
       new GenericJdbcDialect().toJdbcType(Field("a", StringType, false)) shouldBe "text"

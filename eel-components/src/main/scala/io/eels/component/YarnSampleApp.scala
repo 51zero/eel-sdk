@@ -3,6 +3,8 @@ package io.eels.component
 import java.nio.ByteBuffer
 import java.util
 
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.service.{Service, ServiceStateChangeListener}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records._
@@ -14,8 +16,15 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration
 
 object YarnSampleApp extends App {
 
+  val conf = new YarnConfiguration()
+  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
+  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
+  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/yarn-site.xml"))
+  conf.reloadConfiguration()
+  println(conf)
+
   val yarnClient = YarnClient.createYarnClient()
-  yarnClient.init(new YarnConfiguration())
+  yarnClient.init(conf)
   yarnClient.start()
 
   val app = yarnClient.createApplication()
@@ -55,7 +64,7 @@ object YarnSampleApp extends App {
     override def onContainersCompleted(statuses: util.List[ContainerStatus]): Unit = println(statuses)
     override def onContainersAllocated(containers: util.List[Container]): Unit = println(containers)
   })
-  amRMClient.init(new YarnConfiguration())
+  amRMClient.init(conf)
   amRMClient.start()
 
   val nmClientAsync = new NMClientAsyncImpl(new NMClientAsync.CallbackHandler {
@@ -66,12 +75,16 @@ object YarnSampleApp extends App {
     override def onStopContainerError(containerId: ContainerId, t: Throwable): Unit = println(t)
     override def onGetContainerStatusError(containerId: ContainerId, t: Throwable): Unit = println(t)
   })
-  nmClientAsync.init(new YarnConfiguration())
+  nmClientAsync.init(conf)
   nmClientAsync.start()
 
   amRMClient.registerServiceListener(new ServiceStateChangeListener {
     override def stateChanged(service: Service): Unit = println(service)
   })
 
-  //val response = amRMClient.registerApplicationMaster("localhost", 8080, "localhost")
+  if (UserGroupInformation.isSecurityEnabled()) {
+    ???
+  }
+
+  val response = amRMClient.registerApplicationMaster("", 0, "")
 }

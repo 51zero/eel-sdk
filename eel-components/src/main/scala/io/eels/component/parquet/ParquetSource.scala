@@ -36,7 +36,7 @@ case class ParquetSource(pattern: FilePattern,
       val group = Option(reader.read()).getOrElse {
         sys.error(s"Cannot read $paths.head for schema; file contains no records")
       }
-      ParquetSchemaFns.fromParquetSchema(group.getType)
+      ParquetSchemaFns.fromParquetGroupType(group.getType)
     }
   }
 

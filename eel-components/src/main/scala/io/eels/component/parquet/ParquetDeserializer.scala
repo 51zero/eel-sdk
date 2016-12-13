@@ -1,5 +1,7 @@
 package io.eels.component.parquet
 
+import java.math.BigInteger
+
 import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.schema._
@@ -22,7 +24,7 @@ class ParquetDeserializer extends Logging {
 
     // take the schema from the first record
     if (schema == null) {
-      schema = ParquetSchemaFns.fromParquetSchema(group.getType)
+      schema = ParquetSchemaFns.fromParquetGroupType(group.getType)
       indices = schema.fields.indices
       fields = schema.fields.toArray
       logger.debug(s"Parquet deser has created schema from parquet file $schema")
@@ -31,12 +33,20 @@ class ParquetDeserializer extends Logging {
     val values = Vector.newBuilder[Any]
     for (k <- indices) {
       val value = fields(k).dataType match {
-        case StringType => group.getString(k, 0)
-        case l: LongType => group.getLong(k, 0)
-        case i: IntType => group.getInteger(k, 0)
+        case BigIntType => BigInteger.ZERO
+        case BinaryType => group.getBinary(k, 0).getBytes
         case BooleanType => group.getBoolean(k, 0)
+        case DateType => group.getInteger(k, 0)
         case DoubleType => group.getDouble(k, 0)
+        case DecimalType(_, _) => group.getBinary(k, 0).getBytes
         case FloatType => group.getFloat(k, 0)
+        case _: IntType => group.getInteger(k, 0)
+        case _: LongType => group.getLong(k, 0)
+        case _: ShortType => group.getInteger(k, 0).toShort
+        case _: StructType => toRow(group.getGroup(k, 0))
+        case StringType => group.getString(k, 0)
+        case TimeType => group.getInteger(k, 0)
+        case TimestampType => group.getLong(k, 0)
         case _ => group.getValueToString(k, 0)
       }
       values += value

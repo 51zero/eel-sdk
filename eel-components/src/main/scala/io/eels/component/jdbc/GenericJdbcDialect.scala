@@ -12,7 +12,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case LongType(_) => "int"
     case BigIntType => "int"
     case IntType(_) => "int"
-    case ShortType => "smallint"
+    case ShortType(_) => "smallint"
     case BooleanType => "BOOLEAN"
     case StringType => "text"
     case VarcharType(size) =>
@@ -51,12 +51,12 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.REAL => DoubleType
     case Types.REF => StringType
     case Types.ROWID => LongType.Signed
-    case Types.SMALLINT => ShortType
+    case Types.SMALLINT => ShortType.Signed
     case Types.SQLXML => StringType
     case Types.STRUCT => StringType
-    case Types.TIME => TimestampType
+    case Types.TIME => TimeType
     case Types.TIMESTAMP => TimestampType
-    case Types.TINYINT => ShortType
+    case Types.TINYINT => ShortType.Signed
     case Types.VARBINARY => BinaryType
     case Types.VARCHAR => StringType
     case _ => StringType

@@ -25,10 +25,11 @@ object ParquetHiveDialect extends HiveDialect with Logging {
     // an avro conversion for the projection schema
     val avroProjectionSchema = AvroSchemaFns.toAvroSchema(projectionSchema)
     val reader = ParquetReaderFn(path, predicate, Option(avroProjectionSchema))
-    val iter = ParquetRowIterator(reader).grouped(bufferSize).withPartial(true)
+    val iter = ParquetIterator(reader).grouped(bufferSize).withPartial(true)
+    val deser = new ParquetDeserializer()
     var closed = false
 
-    override def next(): List[Row] = iter.next()
+    override def next(): List[Row] = iter.next.map(deser.toRow)
     override def hasNext(): Boolean = !closed && iter.hasNext
     override def close(): Unit = {
       reader.close()

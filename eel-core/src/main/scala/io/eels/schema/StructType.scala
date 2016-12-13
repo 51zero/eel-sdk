@@ -150,7 +150,7 @@ object SchemaFn {
     val bigdecimalClass = classOf[BigDecimal]
     val longClass = classOf[Long]
     clz match {
-      case `bigdecimalClass` => DecimalType(Scale(18), Precision(18))
+      case `bigdecimalClass` => DecimalType(Precision(18), Scale(2))
       case `bigIntClass` => BigIntType
       case `booleanClass` => BooleanType
       case `doubleClass` => DoubleType

@@ -76,22 +76,22 @@ class StructTypeTest extends WordSpec with Matchers {
 
   "StructType.replaceDataType" should {
     "support decimal matches" in {
-      val decimal34 = DecimalType(Scale(3), Precision(4))
-      val decimal45 = DecimalType(Scale(4), Precision(5))
+      val decimal34 = DecimalType(Precision(4), Scale(3))
+      val decimal45 = DecimalType(Precision(5), Scale(4))
       StructType(Field("a", dataType = decimal45), Field("b", dataType = decimal34))
         .replaceFieldType(decimal34, StringType) shouldBe StructType(Field("a", dataType = decimal45), Field("b"))
     }
     "support decimal wildcards" in {
-      val decimal34 = DecimalType(Scale(3), Precision(4))
-      val decimal45 = DecimalType(Scale(4), Precision(5))
+      val decimal34 = DecimalType(Precision(4), Scale(3))
+      val decimal45 = DecimalType(Precision(5), Scale(4))
       StructType(Field("a", dataType = decimal45), Field("b", dataType = decimal34))
         .replaceFieldType(DecimalType.Wildcard, StringType) shouldBe StructType(Field("a"), Field("b"))
     }
     "support decimal part wildcards" in {
-      val decimal34 = DecimalType(Scale(3), Precision(4))
-      val decimal45 = DecimalType(Scale(4), Precision(5))
+      val decimal34 = DecimalType(Precision(4), Scale(3))
+      val decimal45 = DecimalType(Precision(5), Scale(4))
       StructType(Field("a", dataType = decimal45), Field("b", dataType = decimal34))
-        .replaceFieldType(DecimalType(Scale(-1), Precision(5)), StringType) shouldBe StructType(Field("a"), Field("b", dataType = decimal34))
+        .replaceFieldType(DecimalType(Precision(5), Scale(-1)), StringType) shouldBe StructType(Field("a"), Field("b", dataType = decimal34))
     }
   }
 
@@ -154,7 +154,7 @@ class StructTypeTest extends WordSpec with Matchers {
           Field("age", IntType(true), true),
           Field("salary", DoubleType, true),
           Field("isPartTime", BooleanType, true),
-          Field("value1", DecimalType(Scale(18), Precision(18)), true),
+          Field("value1", DecimalType(Precision(18), Scale(2)), true),
           Field("value2", FloatType, true),
           Field("value3", LongType(true), true)
         ))
@@ -166,7 +166,7 @@ class StructTypeTest extends WordSpec with Matchers {
     " set new schema type and leave other fields untouched" in {
       StructType(
         Field("a", IntType(true), true),
-        Field("b", ShortType)
+        Field("b", ShortType.Signed)
       ).updateFieldType("b", BooleanType) shouldBe
         StructType(
           Field("a", IntType(true)),
