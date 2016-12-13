@@ -1,13 +1,13 @@
 package io.eels.component.parquet
 
-import org.apache.avro.Schema
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.parquet.avro.AvroReadSupport
 import org.apache.parquet.example.data.Group
 import org.apache.parquet.filter2.compat.FilterCompat
 import org.apache.parquet.hadoop.ParquetReader
+import org.apache.parquet.hadoop.api.ReadSupport
 import org.apache.parquet.hadoop.example.GroupReadSupport
+import org.apache.parquet.schema.Type
 
 /**
   * Helper function to create a parquet reader, using the apache parquet library.
@@ -24,14 +24,13 @@ object ParquetReaderFn extends ReaderFn {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[Schema]): ParquetReader[Group] = {
+            projectionSchema: Option[Type]): ParquetReader[Group] = {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {
       val conf = new Configuration()
       projectionSchema.foreach { it =>
-        AvroReadSupport.setAvroReadSchema(conf, it)
-        AvroReadSupport.setRequestedProjection(conf, it)
+        conf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
       //conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
       conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)

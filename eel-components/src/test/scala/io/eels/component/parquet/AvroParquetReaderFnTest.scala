@@ -2,6 +2,7 @@ package io.eels.component.parquet
 
 import java.util.UUID
 
+import io.eels.component.avro.AvroSchemaFns
 import io.eels.schema.{DoubleType, Field, LongType, StructType}
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.{GenericData, GenericRecord}
@@ -13,7 +14,7 @@ import org.apache.parquet.schema.Type.Repetition
 import org.apache.parquet.schema.{MessageType, OriginalType, PrimitiveType}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
-class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
+class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
   val path = new Path(UUID.randomUUID().toString())
 
@@ -38,13 +39,13 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
 
   val schema = StructType(Field("str"), Field("looong", LongType(true), true), Field("dooble", DoubleType, true))
 
-  "ParquetReaderFn" should {
+  "AvroParquetReaderFn" should {
     "read schema" in {
-      val reader = ParquetReaderFn(path, None, Option(ParquetSchemaFns.toParquetSchema(schema.removeField("looong"))))
-      val group = reader.read()
+      val reader = AvroParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
+      val record = reader.read()
       reader.close()
 
-      group.getType shouldBe new MessageType("com.chuckle",
+      record.getSchema shouldBe new MessageType("com.chuckle",
         new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.BINARY, "str", OriginalType.UTF8),
         new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT64, "looong"),
         new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.DOUBLE, "dooble")
@@ -52,41 +53,41 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
     }
     "support projections on doubles" in {
 
-      val reader = ParquetReaderFn(path, None, Option(ParquetSchemaFns.toParquetSchema(schema.removeField("looong"))))
-      val group = reader.read()
+      val reader = AvroParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
+      val record = reader.read()
       reader.close()
 
-      group.getString("str", 0) shouldBe "wibble"
-      group.getDouble("dooble", 0) shouldBe 12.34
+      record.get("str") shouldBe "wibble"
+      record.get("dooble") shouldBe 12.34
     }
     "support projections on longs" in {
 
-      val reader = ParquetReaderFn(path, None, Option(ParquetSchemaFns.toParquetSchema(schema.removeField("str"))))
-      val group = reader.read()
+      val reader = AvroParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("str"))))
+      val record = reader.read()
       reader.close()
 
-      group.getLong("looong", 0) shouldBe 999L
+      record.get("looong") shouldBe 999L
     }
     "support full projections" in {
 
-      val reader = ParquetReaderFn(path, None, Option(ParquetSchemaFns.toParquetSchema(schema)))
-      val group = reader.read()
+      val reader = AvroParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema)))
+      val record = reader.read()
       reader.close()
 
-      group.getString("str", 0) shouldBe "wibble"
-      group.getLong("looong", 0) shouldBe 999L
-      group.getDouble("dooble", 0) shouldBe 12.34
+      record.get("str") shouldBe "wibble"
+      record.get("looong") shouldBe 999L
+      record.get("dooble") shouldBe 12.34
 
     }
     "support non projections" in {
 
-      val reader = ParquetReaderFn(path, None, None)
+      val reader = AvroParquetReaderFn(path, None, None)
       val group = reader.read()
       reader.close()
 
-      group.getString("str", 0) shouldBe "wibble"
-      group.getLong("looong", 0) shouldBe 999L
-      group.getDouble("dooble", 0) shouldBe 12.34
+      group.get("str") shouldBe "wibble"
+      group.get("looong") shouldBe 999L
+      group.get("dooble") shouldBe 12.34
 
     }
   }
