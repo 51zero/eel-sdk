@@ -10,7 +10,7 @@ class ParquetPart(path: Path,
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
     val reader = ParquetReaderFn(path, predicate, None)
-    val iter = ParquetIterator(reader).grouped(10).withPartial(true)
+    val iter = ParquetIterator(reader).grouped(1000).withPartial(true)
     val deser = new ParquetDeserializer()
     var closed = false
 

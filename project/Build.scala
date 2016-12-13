@@ -20,7 +20,7 @@ object Build extends Build {
   val MetricsVersion = "3.1.2"
   val MysqlVersion = "5.1.39"
   val OrcVersion = "1.1.2"
-  val ParquetVersion = "1.8.1"
+  val ParquetVersion = "1.9.0"
   val RxJavaVersion = "2.0.1"
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
