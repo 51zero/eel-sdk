@@ -27,7 +27,10 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
     logger.debug(s"Submitting ${parts.size} parts to executor")
     parts.foreach { part =>
       SourceFrame.executor.submit {
-        part.iterator().foreach(queue.put)
+        part.iterator().foreach { rows =>
+          queue.put(rows)
+          rows.foreach(listener.onNext)
+        }
         // once all the reading tasks are complete we need to indicate that we
         // are finished with the queue, so we add a sentinel for the reading thread to pick up
         // by using an atomic int, we know only one thread will get inside the condition

@@ -6,12 +6,10 @@ import io.eels.component.avro.AvroSchemaFns
 import io.eels.schema.{DoubleType, Field, LongType, StructType}
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.{GenericData, GenericRecord}
+import org.apache.avro.util.Utf8
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.avro.AvroParquetWriter
-import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
-import org.apache.parquet.schema.Type.Repetition
-import org.apache.parquet.schema.{MessageType, OriginalType, PrimitiveType}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
@@ -40,24 +38,13 @@ class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfter
   val schema = StructType(Field("str"), Field("looong", LongType(true), true), Field("dooble", DoubleType, true))
 
   "AvroParquetReaderFn" should {
-    "read schema" in {
-      val reader = AvroParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
-      val record = reader.read()
-      reader.close()
-
-      record.getSchema shouldBe new MessageType("com.chuckle",
-        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.BINARY, "str", OriginalType.UTF8),
-        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT64, "looong"),
-        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.DOUBLE, "dooble")
-      )
-    }
     "support projections on doubles" in {
 
       val reader = AvroParquetReaderFn(path, None, Option(AvroSchemaFns.toAvroSchema(schema.removeField("looong"))))
       val record = reader.read()
       reader.close()
 
-      record.get("str") shouldBe "wibble"
+      record.get("str").asInstanceOf[Utf8].toString shouldBe "wibble"
       record.get("dooble") shouldBe 12.34
     }
     "support projections on longs" in {
@@ -74,7 +61,7 @@ class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfter
       val record = reader.read()
       reader.close()
 
-      record.get("str") shouldBe "wibble"
+      record.get("str").asInstanceOf[Utf8].toString shouldBe "wibble"
       record.get("looong") shouldBe 999L
       record.get("dooble") shouldBe 12.34
 
@@ -85,7 +72,7 @@ class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfter
       val group = reader.read()
       reader.close()
 
-      group.get("str") shouldBe "wibble"
+      group.get("str").asInstanceOf[Utf8].toString shouldBe "wibble"
       group.get("looong") shouldBe 999L
       group.get("dooble") shouldBe 12.34
 

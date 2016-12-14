@@ -46,7 +46,8 @@ case class VarcharType(size: Int) extends DataType
 
 case class DecimalType(precision: Precision = Precision(0),
                        scale: Scale = Scale(0)) extends DataType {
-  require(scale.value <= precision.value)
+  if (precision.value != -1)
+    require(scale.value <= precision.value, s"Scale ${scale.value} should be less than or equal to precision ${precision.value}")
   override def canonicalName: String = "decimal(" + precision.value + "," + scale.value + ")"
   override def matches(from: DataType) = from match {
     case DecimalType(p, s) => (s == scale || s.value == -1 || scale.value == -1) && (p == precision || p.value == -1 || precision.value == -1)
