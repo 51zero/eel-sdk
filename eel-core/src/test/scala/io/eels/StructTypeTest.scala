@@ -46,7 +46,7 @@ class StructTypeTest extends WordSpec with Matchers {
 
   "Schema.size " should {
     " return number of fields" in {
-      StructType(Field("a"), Field("b"), Field("c")).size() shouldBe 3
+      StructType(Field("a"), Field("b"), Field("c")).size shouldBe 3
     }
   }
   "Schema.indexOf(name) " should {

@@ -66,7 +66,7 @@ object HiveSchemaFns extends Logging {
     case BigIntType => "bigint"
     case BooleanType => "boolean"
     case DateType => "date"
-    case DecimalType(precision, scale) => s"decimal(${scale.value},${precision.value})"
+    case DecimalType(precision, scale) => s"decimal(${precision.value},${scale.value})"
     case DoubleType => "double"
     case FloatType => "float"
     case i: IntType => "int"
