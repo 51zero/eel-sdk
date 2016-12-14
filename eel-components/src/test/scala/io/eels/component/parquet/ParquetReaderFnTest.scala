@@ -36,17 +36,16 @@ class ParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll 
   writer.write(record)
   writer.close()
 
-  val schema = StructType(Field("str"), Field("looong", LongType(true), true), Field("dooble", DoubleType, true))
+  val schema = StructType(Field("str", nullable = false), Field("looong", LongType(true), nullable = false), Field("dooble", DoubleType, nullable = false))
 
   "ParquetReaderFn" should {
     "read schema" in {
-      val reader = ParquetReaderFn(path, None, Option(ParquetSchemaFns.toParquetSchema(schema.removeField("looong"))))
+      val reader = ParquetReaderFn(path, None, Option(ParquetSchemaFns.toParquetSchema(schema.removeField("looong"), name = "com.chuckle")))
       val group = reader.read()
       reader.close()
 
       group.getType shouldBe new MessageType("com.chuckle",
         new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.BINARY, "str", OriginalType.UTF8),
-        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.INT64, "looong"),
         new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.DOUBLE, "dooble")
       )
     }

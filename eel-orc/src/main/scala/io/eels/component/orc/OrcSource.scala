@@ -26,8 +26,7 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
   class OrcPart(path: Path) extends Part {
     override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
       private val reader = OrcFile.createReader(path, new ReaderOptions(conf))
-      private val iter = OrcBatchIterator(reader)
-      override val iterator: Iterator[List[Row]] = iter
+      override val iterator: Iterator[List[Row]] = OrcBatchIterator(reader)
     }
   }
 }

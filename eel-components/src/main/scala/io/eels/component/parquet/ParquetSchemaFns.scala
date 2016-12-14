@@ -73,8 +73,8 @@ object ParquetSchemaFns {
     }
   }
 
-  def toParquetSchema(schema: StructType): MessageType = {
+  def toParquetSchema(schema: StructType, name: String = "row"): MessageType = {
     val types = schema.fields.map(toParquetType)
-    new MessageType("row", types: _*)
+    new MessageType(name, types: _*)
   }
 }

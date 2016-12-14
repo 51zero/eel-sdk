@@ -36,7 +36,7 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
       if (useJavaString && value.isInstanceOf[Utf8]) {
         // use the utf8's toString as it is optimized
         val str = value.asInstanceOf[Utf8].toString
-        array.update(k, value)
+        array.update(k, str)
       } else {
         array.update(k, value)
       }

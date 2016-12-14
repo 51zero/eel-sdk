@@ -23,7 +23,7 @@ class AvroSourceTest extends WordSpec with Matchers {
         List("elton john", "musician", "pinner"),
         List("issac newton", "scientist", "heaven")
       )
-      System.setProperty("eel.avro.java.string", "true")
+      System.setProperty("eel.avro.java.string", "false")
       ConfigFactory.invalidateCaches()
     }
     "read strings as utf8 when eel.avro.java.string is false" in {
