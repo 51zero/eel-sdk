@@ -23,10 +23,6 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
     val k = new IntWritable()
     val v = new BytesWritable()
     val schema = SequenceSupport.schema(path)
-    var closed = false
-
-    // throw away top row as that's header
-    reader.next(k, v)
 
     override def close(): Unit = {
       super.close()
@@ -35,7 +31,7 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
 
     override val iterator: Iterator[Seq[Row]] = new Iterator[Row] {
       override def next(): Row = Row(schema, SequenceSupport.toValues(v).toVector)
-      override def hasNext(): Boolean = !closed && reader.next(k, v)
+      override def hasNext(): Boolean = reader.next(k, v)
     }.grouped(100).withPartial(true)
   }
 }
