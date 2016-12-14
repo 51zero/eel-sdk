@@ -1,13 +1,9 @@
 package io.eels
 
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.function.Consumer
+import java.util.concurrent.CountDownLatch
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-import reactor.core.publisher.Flux
-
-import scala.collection.JavaConverters._
 
 object GroupedFrame {
   val FullDatasetKeyFn: Row => Any = { row => 0 }
@@ -34,37 +30,26 @@ trait GroupedFrame {
       )
     }
 
-    override def rows(): Flux[Row] = {
+    override def rows(): CloseableIterator[Row] = new CloseableIterator[Row] {
 
       val keys = scala.collection.mutable.Set.empty[Any]
       val latch = new CountDownLatch(1)
 
-      source.rows.subscribe(new Consumer[Row] {
-        override def accept(row: Row): Unit = {
+      override val iterator: Iterator[Row] = {
+
+        source.rows().foreach { row =>
           val key = keyFn(row)
           keys.add(key)
           aggregations.foreach(_.aggregate(key, row))
         }
-      }, new Consumer[Throwable] {
-        override def accept(t: Throwable): Unit = {
-          logger.error("Error when building grouped result", t)
-          latch.countDown()
-        }
-      }, new Runnable {
-        override def run(): Unit = {
-          logger.debug("Subscription on grouped data has completed")
-          latch.countDown()
-        }
-      })
 
-      latch.await(100, TimeUnit.DAYS)
+        val rows = keys.map { key =>
+          val values = aggregations.map(_.value(key))
+          Row(schema, if (keyFn == GroupedFrame.FullDatasetKeyFn) values else key +: values)
+        }
 
-      val rows = keys.map { key =>
-        val values = aggregations.map(_.value(key))
-        Row(schema, if (keyFn == GroupedFrame.FullDatasetKeyFn) values else key +: values)
+        rows.iterator
       }
-
-      Flux.fromIterable(rows.asJava)
     }
   }
 

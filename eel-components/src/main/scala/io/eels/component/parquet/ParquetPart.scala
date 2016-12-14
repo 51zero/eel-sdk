@@ -10,17 +10,14 @@ class ParquetPart(path: Path,
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
     val reader = ParquetReaderFn(path, predicate, None)
-    val iter = ParquetIterator(reader).grouped(1000).withPartial(true)
     val deser = new ParquetDeserializer()
-    var closed = false
-
-    override def next(): Seq[Row] = iter.next.map(deser.toRow)
-
-    override def hasNext(): Boolean = !closed && iter.hasNext
 
     override def close(): Unit = {
-      closed = true
+      super.close()
       reader.close()
     }
+
+    override val iterator: Iterator[Seq[Row]] =
+      ParquetIterator(reader).grouped(10000).withPartial(true).map(rows => rows.map(deser.toRow))
   }
 }

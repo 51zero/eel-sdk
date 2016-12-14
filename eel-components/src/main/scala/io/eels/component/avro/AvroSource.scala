@@ -21,22 +21,18 @@ case class AvroSource(path: Path) extends Source with Using {
 
 class AvroSourcePart(val path: Path, val schema: StructType) extends Part with Logging {
 
-  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
+  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
     val deserializer = new AvroDeserializer()
     val reader = AvroReaderFns.createAvroReader(path)
 
-    val iter = AvroRecordIterator(reader).map { record =>
-      deserializer.toRow(record)
-    }.grouped(1000).withPartial(true)
-
-    var closed = false
-
-    override def next(): List[Row] = iter.next
-    override def hasNext(): Boolean = !closed && iter.hasNext
     override def close(): Unit = {
-      closed = true
+      super.close()
       reader.close()
     }
+
+    override val iterator: Iterator[Seq[Row]] = AvroRecordIterator(reader).map { record =>
+      deserializer.toRow(record)
+    }.grouped(1000).withPartial(true)
   }
 }

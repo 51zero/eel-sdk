@@ -20,28 +20,28 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
+                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]] =
+    new CloseableIterator[Seq[Row]] {
 
-    // an avro conversion for the projection schema
-    val parquetProjectionSchema = ParquetSchemaFns.toParquetSchema(projectionSchema)
-    val reader = ParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
-    val iter = ParquetIterator(reader).grouped(bufferSize).withPartial(true)
-    val deser = new ParquetDeserializer()
-    var closed = false
+      // an avro conversion for the projection schema
+      val parquetProjectionSchema = ParquetSchemaFns.toParquetSchema(projectionSchema)
+      val reader = ParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
+      val deser = new ParquetDeserializer()
 
-    override def next(): List[Row] = iter.next.map(deser.toRow)
-    override def hasNext(): Boolean = !closed && iter.hasNext
-    override def close(): Unit = {
-      reader.close()
-      closed = true
+      override def close(): Unit = {
+        super.close()
+        reader.close()
+      }
+
+      override val iterator: Iterator[Seq[Row]] =
+        ParquetIterator(reader).grouped(bufferSize).withPartial(true).map { rows => rows.map(deser.toRow) }
     }
-  }
 
   override def writer(schema: StructType,
                       path: Path,
                       permission: Option[FsPermission])
                      (implicit fs: FileSystem, conf: Configuration): HiveWriter = new HiveWriter {
-      ParquetLogMute()
+    ParquetLogMute()
 
     // hive is case insensitive so we must lower case the fields to keep it consistent
     val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = false)

@@ -1,7 +1,5 @@
 package io.eels
 
-import java.util.concurrent._
-
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
 
@@ -27,18 +25,5 @@ trait Source extends Logging {
 
   def toFrame(): Frame = toFrame(NoopListener)
 
-  def toFrame(ioThreads: Int): Frame = toFrame(Executors.newFixedThreadPool(ioThreads))
-
-  def toFrame(executor: ExecutorService): Frame = toFrame(executor, NoopListener)
-
-  def toFrame(listener: Listener): Frame = toFrame(Executors.newSingleThreadExecutor, listener)
-
-  /**
-    * Builds a frame from this source. The frame will be lazily loaded when an action is performed.
-    *
-    * @param ioThreads the number of threads to use in the source reader
-    * @param observer  a listener for row items
-    * @return a new frame
-    */
-  def toFrame(executor: ExecutorService, _listener: Listener): Frame = new SourceFrame(this, _listener)
+  def toFrame(_listener: Listener): Frame = new SourceFrame(this, _listener)
 }

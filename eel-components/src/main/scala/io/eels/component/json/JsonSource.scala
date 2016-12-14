@@ -38,19 +38,17 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       * Returns the data contained in this part in the form of an iterator. This function should return a new
       * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
       */
-    override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
+    override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
       val input = createInputStream(path)
-      val iter = reader.readValues[JsonNode](input).asScala.map(nodeToRow).grouped(100).withPartial(true)
-      var closed = false
-
-      override def next(): List[Row] = iter.next()
-      override def hasNext(): Boolean = !closed && iter.hasNext
 
       override def close(): Unit = {
-        closed = true
+        super.close()
         input.close()
       }
+
+      override val iterator: Iterator[Seq[Row]] =
+        reader.readValues[JsonNode](input).asScala.map(nodeToRow).grouped(100).withPartial(true)
     }
   }
 }

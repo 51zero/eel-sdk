@@ -18,7 +18,7 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
+  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
     private val parser = createParser()
     private val input = fs.open(path)
@@ -26,17 +26,14 @@ class CsvPart(val createParser: () => CsvParser,
 
     parser.beginParsing(input)
 
-    private val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
-      Row(schema, records.toVector)
-    }.grouped(1000).withPartial(true)
-
-    override def next(): List[Row] = iterator.next()
-    override def hasNext(): Boolean = !closed && iterator.hasNext
-
     override def close(): Unit = {
       parser.stopParsing()
       input.close()
-      closed = true
+      super.close()
     }
+
+    override val iterator: Iterator[Seq[Row]] = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
+      Row(schema, records.toVector)
+    }.grouped(1000).withPartial(true)
   }
 }

@@ -21,7 +21,6 @@ object Build extends Build {
   val MysqlVersion = "5.1.39"
   val OrcVersion = "1.1.2"
   val ParquetVersion = "1.9.0"
-  val RxJavaVersion = "2.0.1"
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
   val Slf4jVersion = "1.7.12"
@@ -76,8 +75,6 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     libraryDependencies ++= Seq(
       "org.scala-lang"              % "scala-reflect"           % scalaVersion.value,
-      "io.projectreactor"           % "reactor-core"            % "3.0.3.RELEASE",
-      "io.reactivex.rxjava2"        % "rxjava"                  % RxJavaVersion,
       "com.typesafe"                % "config"                  % ConfigVersion,
       "com.sksamuel.exts"           %% "exts"                   % ExtsVersion,
       "com.univocity"               % "univocity-parsers"       % UnivocityVersion,

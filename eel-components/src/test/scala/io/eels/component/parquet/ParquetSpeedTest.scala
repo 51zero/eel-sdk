@@ -16,8 +16,10 @@ import scala.util.Random
   * 2m rows string of length 4; writing=7766; reading=5177 dictionary enabled for read
   * v1.1.0-snapshot-7th-dec
   * 2m rows string of length 4; writing=5964; reading=4193
-  * v.1.1-snapshot-13th dec
+  * v.1.1-snapshot-13th dec, flux
   * 2m rows string of length 4; writing=6082; reading parquet=4692; reading avro=4401
+  * v.1.1-snapshot-13th dec, closeable iterator
+  * 2m rows string of length 4; writing=; reading parquet=5555; reading avro=
   */
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()
@@ -29,14 +31,14 @@ object ParquetSpeedTest extends App with Timed {
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
 
+  val path = new Path("parquet_speed.csv")
+  fs.delete(path, false)
+
+  timed("Insertion") {
+    frame.to(ParquetSink(path))
+  }
+
   while (true) {
-
-    val path = new Path("parquet_speed.csv")
-    fs.delete(path, false)
-
-    timed("Insertion") {
-      frame.to(ParquetSink(path))
-    }
 
     timed("Reading with ParquetSource") {
       val in = ParquetSource(path).toFrame().collect()
@@ -47,7 +49,5 @@ object ParquetSpeedTest extends App with Timed {
       val in = AvroParquetSource(path).toFrame().collect()
       assert(in.size == rows.size, in.size)
     }
-
-    fs.delete(path, false)
   }
 }

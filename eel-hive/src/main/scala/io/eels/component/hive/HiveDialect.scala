@@ -39,7 +39,7 @@ trait HiveDialect extends Logging {
            metastoreSchema: StructType,
            projectionSchema: StructType,
            predicate: Option[Predicate])
-          (implicit fs: FileSystem, conf: Configuration): CloseableIterator[List[Row]]
+          (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]]
 
   def writer(schema: StructType,
              path: Path,

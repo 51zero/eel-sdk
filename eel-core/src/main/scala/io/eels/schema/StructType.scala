@@ -81,7 +81,7 @@ case class StructType(fields: List[Field]) extends DataType {
     })
   }
 
-  def size(): Int = fields.size
+  val size: Int = fields.size
 
   def join(other: StructType): StructType = {
     require(

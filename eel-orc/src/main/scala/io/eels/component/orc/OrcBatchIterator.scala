@@ -1,27 +1,21 @@
 package io.eels.component.orc
 
-import com.sksamuel.exts.Logging
-import io.eels.{CloseableIterator, Row}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.Path
+import io.eels.Row
 import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector
-import org.apache.orc.OrcFile
-import org.apache.orc.OrcFile.ReaderOptions
+import org.apache.orc.Reader
 
-object OrcBatchIterator extends Logging {
+object OrcBatchIterator {
 
-  def apply(path: Path)
-           (implicit conf: Configuration): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
+  def apply(reader: Reader): Iterator[List[Row]] = new Iterator[List[Row]] {
 
-    val reader = OrcFile.createReader(path, new ReaderOptions(conf))
-    val schema = OrcFns.readSchema(reader.getSchema)
     val batch = reader.getSchema().createRowBatch()
+    val schema = OrcFns.readSchema(reader.getSchema)
     val rows = reader.rows()
-    var closed = false
 
-    override def hasNext(): Boolean = !closed && rows.nextBatch(batch)
+    override def hasNext(): Boolean = rows.nextBatch(batch)
 
     override def next(): List[Row] = {
+
       val cols = batch.cols.map(_.asInstanceOf[BytesColumnVector])
       val rows = for (k <- 0 until batch.size) yield {
         val values = cols.map {
@@ -32,10 +26,6 @@ object OrcBatchIterator extends Logging {
         Row(schema, values.toVector)
       }
       rows.toList
-    }
-
-    override def close(): Unit = {
-      closed = true
     }
   }
 }

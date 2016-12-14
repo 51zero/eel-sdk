@@ -6,7 +6,7 @@ import com.sksamuel.exts.metrics.Timed
 import io.eels.schema._
 import io.eels.{Listener, Row}
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.FileSystem
 
 import scala.io.Source
 
@@ -42,7 +42,7 @@ object GroupedByParquetSpeedTest extends App with Timed {
     timed("multiple files") {
 
       val f = ParquetSource("./parquettest/*")
-        .toFrame(executor)
+        .toFrame()
         .listener(new Listener {
           var count = 0
           override def onNext(row: Row): Unit = {

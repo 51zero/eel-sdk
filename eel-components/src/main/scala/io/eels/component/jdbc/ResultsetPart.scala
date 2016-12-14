@@ -18,9 +18,14 @@ class ResultsetPart(val rs: ResultSet,
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def iterator(): CloseableIterator[List[Row]] = new CloseableIterator[List[Row]] {
+  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
-    val iter = new Iterator[Row] {
+    override def close(): Unit = {
+      super.close()
+      rs.close()
+    }
+
+    override val iterator: Iterator[Seq[Row]] = new Iterator[Row] {
 
       var _hasnext = false
 
@@ -36,15 +41,5 @@ class ResultsetPart(val rs: ResultSet,
       }
 
     }.grouped(100).withPartial(true)
-
-    var closed = false
-
-    override def next(): List[Row] = iter.next()
-    override def hasNext(): Boolean = !closed && iter.hasNext
-
-    override def close(): Unit = {
-      closed = true
-      rs.close()
-    }
   }
 }

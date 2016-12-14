@@ -24,9 +24,7 @@ class ResultsetPartTest extends WordSpec with Matchers {
 
       val stmt = conn.createStatement()
       val rs = stmt.executeQuery("select * from mytable")
-      val iter = new ResultsetPart(rs, stmt, conn, schema).iterator()
-      iter.hasNext()
-      val rows = iter.next()
+      val rows = new ResultsetPart(rs, stmt, conn, schema).iterator().take(1).toList.head
       rows.head.values shouldBe Vector(3L, true, 1)
       rows.last.values shouldBe Vector(6L, true, 4)
     }
