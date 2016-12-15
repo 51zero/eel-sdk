@@ -45,7 +45,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
 
     // hive is case insensitive so we must lower case the fields to keep it consistent
     val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = false)
-    val writer = new ParquetRowWriter(path, avroSchema)
+    val writer = new AvroParquetRowWriter(path, avroSchema)
     val serializer = new RecordSerializer(avroSchema)
 
     override def write(row: Row) {

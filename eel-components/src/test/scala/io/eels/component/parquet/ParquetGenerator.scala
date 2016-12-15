@@ -29,7 +29,7 @@ object ParquetGenerator extends App {
 
     val path = new Path("wisdom_of_fools.parquet")
     fs.delete(path, false)
-    ParquetSink(path).write(rows)
+    AvroParquetSink(path).write(rows)
   }
 
 }

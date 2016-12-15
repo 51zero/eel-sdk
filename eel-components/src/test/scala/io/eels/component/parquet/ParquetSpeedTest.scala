@@ -49,5 +49,6 @@ object ParquetSpeedTest extends App with Timed {
       val in = AvroParquetSource(path).toFrame().collect()
       assert(in.size == rows.size, in.size)
     }
+
   }
 }

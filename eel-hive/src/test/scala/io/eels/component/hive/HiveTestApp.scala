@@ -1,19 +1,28 @@
 package io.eels.component.hive
 
+import java.sql.Date
+import java.util.Properties
+
 import com.sksamuel.exts.metrics.Timed
 import io.eels.component.parquet.Predicate
 import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+import org.apache.hadoop.hive.ql.io.IOConstants
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+import org.apache.hadoop.hive.serde2.io.{DateWritable, HiveDecimalWritable, TimestampWritable}
+import org.apache.hadoop.io._
+import org.apache.hadoop.mapred.JobConf
+import org.apache.parquet.hadoop.ParquetOutputFormat
+import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 object HiveTestApp extends App with Timed {
 
-  val Database = "sam"
-  val Table = "foo1"
-
-  val conf = new Configuration
+  implicit val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
   conf.reloadConfiguration()
@@ -25,6 +34,52 @@ object HiveTestApp extends App with Timed {
   hiveConf.reloadConfiguration()
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
+
+  val path = new Path("hive.test")
+
+  val tableProperties = new Properties
+  tableProperties.put(IOConstants.COLUMNS, "myBoolean,myTinyInt,mySmallInt,myInt,myBigInt,myFloat,myDouble,myDecimal,myString,myVarchar,myChar,myTimeStamp,myDate")
+  tableProperties.put(IOConstants.COLUMNS_TYPES, "boolean,tinyint,smallint,int,bigint,float,double,decimal(10,3),string,varchar(10),char(3),timestamp,date")
+  tableProperties.put(ParquetOutputFormat.COMPRESSION, CompressionCodecName.SNAPPY.name)
+
+  // Create the writer (output format can be ascertained from Hive MetaStore and instantiated via reflection)
+  val outputFormat = new MapredParquetOutputFormat
+  val jobConf = new JobConf()
+  val writer = outputFormat.getHiveRecordWriter(jobConf, path, null, true, tableProperties, null)
+
+  // Create the record (SERDE can be ascertained from Hive MetaStore and instantiated via reflection)
+  val parquetHiveSerDe = new ParquetHiveSerDe
+  parquetHiveSerDe.initialize(conf, tableProperties)
+  val timeStampWritable = new TimestampWritable() // timestamp
+  timeStampWritable.setTime(System.currentTimeMillis())
+
+  val row = new ArrayWritable(classOf[ArrayWritable])
+  val recordArray = Array[Writable](
+    new BooleanWritable(true), // boolean
+    new ByteWritable(2), // tinyint
+    new ShortWritable(25), // smallint
+    new IntWritable(123), // int
+    new LongWritable(25L), // bigint
+    new FloatWritable(99.99F), // float
+    new DoubleWritable(999.99D), // double
+    new HiveDecimalWritable(HiveDecimal.create("99.232")), // decimal(10,3)
+    new Text("MyString"), // string
+    new Text("MyVarchar"), // varchar(10)
+    new Text("CHR"), // char(3)
+    timeStampWritable, // timestamp
+    new DateWritable(new Date(System.currentTimeMillis())) // date
+  )
+  row.set(recordArray)
+
+  // Write the record
+  writer.write(parquetHiveSerDe.serialize(row, parquetHiveSerDe.getObjectInspector))
+
+  // Close the writer
+  writer.close(true)
+
+  //  val Database = "sam"
+  //  val Table = "foo1"
+
 
 //  val data = Array(
 //    Vector("elton", "yellow brick road ", "1972"),
@@ -86,21 +141,21 @@ object HiveTestApp extends App with Timed {
   //
   //  val m = HiveSource(Database, Table).withProjection("artist").toFrame(4).take(3).toList()
   //  println(m)
-
-  val y = HiveSource(Database, Table).withProjection("artist").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame().take(10).toList()
-  println(y)
-
-  val x = HiveSource(Database, Table).withProjection("album").withPredicate(Predicate.equals("album", "white album")).toFrame().take(10).toList()
-  println(x)
-
-  val t = HiveSource(Database, Table).withProjection("album").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame().take(10).toList()
-  println(t)
-
-  val w = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "elton")).toFrame().take(10).toList()
-  println(w)
-
-  val m = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "the wall")).toFrame().take(10).toList()
-  println(m)
+  //
+  //  val y = HiveSource(Database, Table).withProjection("artist").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame().take(10).toList()
+  //  println(y)
+  //
+  //  val x = HiveSource(Database, Table).withProjection("album").withPredicate(Predicate.equals("album", "white album")).toFrame().take(10).toList()
+  //  println(x)
+  //
+  //  val t = HiveSource(Database, Table).withProjection("album").withPartitionConstraint(PartitionConstraint.equals("artist", "elton")).toFrame().take(10).toList()
+  //  println(t)
+  //
+  //  val w = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "elton")).toFrame().take(10).toList()
+  //  println(w)
+  //
+  //  val m = HiveSource(Database, Table).withProjection("artist").withPredicate(Predicate.equals("album", "the wall")).toFrame().take(10).toList()
+  //  println(m)
 
 
   //val partitionNames = client.listPartitionNames("sam", "albums", Short.MaxValue)
