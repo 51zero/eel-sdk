@@ -8,7 +8,6 @@ trait DataType {
 object BigIntType extends DataType
 object BinaryType extends DataType
 object BooleanType extends DataType
-object BytesType extends DataType
 object DateType extends DataType
 object DoubleType extends DataType
 object FloatType extends DataType

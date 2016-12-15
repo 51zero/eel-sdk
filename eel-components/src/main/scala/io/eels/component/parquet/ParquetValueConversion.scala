@@ -12,13 +12,41 @@ trait ParquetValueConversion {
 object ParquetValueConversion {
   def apply(dataType: DataType): ParquetValueConversion = {
     dataType match {
-      case StringType => StringParquetValueConversion
-      case DoubleType => DoubleParquetValueConversion
+      case BigIntType => BigIntParquetValueConversion
       case BooleanType => BooleanParquetValueConversion
+      case DateType => DateParquetValueConversion
+      case DoubleType => DoubleParquetValueConversion
       case FloatType => FloatParquetValueConversion
       case _: IntType => IntParquetValueWriter
       case _: LongType => LongParquetValueWriter
+      case StringType => StringParquetValueConversion
+      case TimeType => TimeParquetValueConversion
+      case TimestampType => TimestampParquetValueConversion
     }
+  }
+}
+
+object BigIntParquetValueConversion extends ParquetValueConversion {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    record.addLong(value.asInstanceOf[BigInt].toLong)
+  }
+}
+
+object DateParquetValueConversion extends ParquetValueConversion {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    record.addInteger(value.toString.toInt)
+  }
+}
+
+object TimeParquetValueConversion extends ParquetValueConversion {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    record.addLong(value.toString.toLong)
+  }
+}
+
+object TimestampParquetValueConversion extends ParquetValueConversion {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    record.addLong(value.toString.toLong)
   }
 }
 
