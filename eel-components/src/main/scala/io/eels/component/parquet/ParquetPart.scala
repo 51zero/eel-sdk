@@ -18,6 +18,6 @@ class ParquetPart(path: Path,
     }
 
     override val iterator: Iterator[Seq[Row]] =
-      ParquetIterator(reader).grouped(10000).withPartial(true).map(rows => rows.map(deser.toRow))
+      ParquetIterator(reader).grouped(10000).withPartial(true)
   }
 }

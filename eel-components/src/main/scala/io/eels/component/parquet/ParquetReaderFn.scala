@@ -1,12 +1,11 @@
 package io.eels.component.parquet
 
+import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.parquet.example.data.Group
 import org.apache.parquet.filter2.compat.FilterCompat
 import org.apache.parquet.hadoop.ParquetReader
 import org.apache.parquet.hadoop.api.ReadSupport
-import org.apache.parquet.hadoop.example.GroupReadSupport
 import org.apache.parquet.schema.Type
 
 /**
@@ -24,7 +23,7 @@ object ParquetReaderFn extends ReaderFn {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[Type]): ParquetReader[Group] = {
+            projectionSchema: Option[Type]): ParquetReader[Row] = {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {
@@ -40,7 +39,7 @@ object ParquetReaderFn extends ReaderFn {
     // a filter is set when we have a predicate for the read
     def filter(): FilterCompat.Filter = predicate.map(_.parquet).map(FilterCompat.get).getOrElse(FilterCompat.NOOP)
 
-    ParquetReader.builder(new GroupReadSupport, path)
+    ParquetReader.builder(new RowReadSupport, path)
       .withConf(configuration())
       .withFilter(filter())
       .build()

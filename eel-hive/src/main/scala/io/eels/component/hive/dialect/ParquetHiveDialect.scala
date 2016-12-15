@@ -6,7 +6,6 @@ import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.component.parquet.avro.AvroParquetRowWriter
-import io.eels.component.parquet.vanilla.ParquetReaderFn
 import io.eels.schema.StructType
 import io.eels.{CloseableIterator, Row}
 import org.apache.hadoop.conf.Configuration
@@ -28,7 +27,6 @@ object ParquetHiveDialect extends HiveDialect with Logging {
       // an avro conversion for the projection schema
       val parquetProjectionSchema = ParquetSchemaFns.toParquetSchema(projectionSchema)
       val reader = ParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
-      val deser = new ParquetDeserializer()
 
       override def close(): Unit = {
         super.close()
@@ -36,7 +34,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
       }
 
       override val iterator: Iterator[Seq[Row]] =
-        ParquetIterator(reader).grouped(bufferSize).withPartial(true).map { rows => rows.map(deser.toRow) }
+        ParquetIterator(reader).grouped(bufferSize).withPartial(true)
     }
 
   override def writer(schema: StructType,

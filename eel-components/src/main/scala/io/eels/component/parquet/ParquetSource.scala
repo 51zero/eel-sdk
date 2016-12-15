@@ -33,10 +33,10 @@ case class ParquetSource(pattern: FilePattern,
 
   override def schema(): StructType = {
     using(ParquetReaderFn.apply(paths.head, predicate, None)) { reader =>
-      val group = Option(reader.read()).getOrElse {
-        sys.error(s"Cannot read $paths.head for schema; file contains no records")
+      val row = Option(reader.read()).getOrElse {
+        sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
       }
-      ParquetSchemaFns.fromParquetGroupType(group.getType)
+      row.schema
     }
   }
 
