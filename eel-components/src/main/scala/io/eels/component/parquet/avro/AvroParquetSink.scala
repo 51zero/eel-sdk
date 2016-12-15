@@ -1,8 +1,9 @@
-package io.eels.component.parquet
+package io.eels.component.parquet.avro
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
+import io.eels.component.parquet.ParquetWriterFn
 import io.eels.schema.StructType
 import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}

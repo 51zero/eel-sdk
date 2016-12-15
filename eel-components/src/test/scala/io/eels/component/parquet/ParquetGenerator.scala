@@ -2,6 +2,7 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.OptionImplicits._
 import io.eels.Row
+import io.eels.component.parquet.avro.AvroParquetSink
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}

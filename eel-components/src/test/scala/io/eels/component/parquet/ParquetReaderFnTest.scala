@@ -2,6 +2,7 @@ package io.eels.component.parquet
 
 import java.util.UUID
 
+import ParquetReaderFn
 import io.eels.schema.{DoubleType, Field, LongType, StructType}
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.{GenericData, GenericRecord}

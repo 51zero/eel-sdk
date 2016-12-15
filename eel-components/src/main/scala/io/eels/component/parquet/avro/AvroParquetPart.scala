@@ -1,7 +1,8 @@
-package io.eels.component.parquet
+package io.eels.component.parquet.avro
 
 import com.sksamuel.exts.Logging
 import io.eels.component.avro.AvroDeserializer
+import io.eels.component.parquet.{ParquetIterator, Predicate}
 import io.eels.{CloseableIterator, Part, Row}
 import org.apache.hadoop.fs.Path
 

@@ -1,6 +1,7 @@
 package io.eels.component.parquet
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.component.parquet.avro.{AvroParquetSource, ParquetSink}
 import io.eels.schema.StructType
 import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration

@@ -1,6 +1,7 @@
 package io.eels.component.parquet
 
 import io.eels.Frame
+import io.eels.component.parquet.avro.AvroParquetSink
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}

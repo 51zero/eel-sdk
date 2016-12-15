@@ -3,6 +3,7 @@ package io.eels.component.parquet
 import java.util.UUID
 
 import io.eels.component.avro.AvroSchemaFns
+import io.eels.component.parquet.avro.AvroParquetReaderFn
 import io.eels.schema.{DoubleType, Field, LongType, StructType}
 import org.apache.avro.SchemaBuilder
 import org.apache.avro.generic.{GenericData, GenericRecord}

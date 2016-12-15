@@ -1,11 +1,12 @@
-package io.eels.component.parquet
+package io.eels.component.parquet.avro
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
-import io.eels.{FilePattern, _}
+import io.eels.component.parquet._
 import io.eels.schema.StructType
+import io.eels.{FilePattern, _}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}

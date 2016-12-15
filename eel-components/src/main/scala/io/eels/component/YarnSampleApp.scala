@@ -3,8 +3,9 @@ package io.eels.component
 import java.nio.ByteBuffer
 import java.util
 
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.security.UserGroupInformation
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.io.DataOutputBuffer
+import org.apache.hadoop.security.Credentials
 import org.apache.hadoop.service.{Service, ServiceStateChangeListener}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records._
@@ -22,6 +23,8 @@ object YarnSampleApp extends App {
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/yarn-site.xml"))
   conf.reloadConfiguration()
   println(conf)
+
+  implicit val fs = FileSystem.get(conf)
 
   val yarnClient = YarnClient.createYarnClient()
   yarnClient.init(conf)
@@ -82,9 +85,19 @@ object YarnSampleApp extends App {
     override def stateChanged(service: Service): Unit = println(service)
   })
 
-  if (UserGroupInformation.isSecurityEnabled()) {
-    ???
+  val credentials = new Credentials()
+
+  // For now, only getting tokens for the default file-system.
+  val tokens = fs.addDelegationTokens("sammy", credentials)
+  if (tokens != null) {
+    for (token <- tokens) {
+      println("Got dt for " + fs.getUri() + "; " + token)
+    }
   }
+  val dob = new DataOutputBuffer()
+  credentials.writeTokenStorageToStream(dob)
+  val fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength())
+  amContainer.setTokens(fsTokens)
 
   val response = amRMClient.registerApplicationMaster("", 0, "")
 }
