@@ -31,9 +31,10 @@ case class ParquetSource(pattern: FilePattern,
 
   def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
 
-  override def schema(): StructType = {
-    using(ParquetReaderFn.apply(paths.head, predicate, None)) { reader =>
-      val row = Option(reader.read()).getOrElse {
+  lazy val schema: StructType = {
+    println("Getting schema")
+    using(ParquetReaderFn(paths.head, None, None)) { reader =>
+      val row = Option(reader.read).getOrElse {
         sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
       }
       row.schema

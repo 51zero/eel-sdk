@@ -43,6 +43,8 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
 
     new CloseableIterator[Row] {
 
+      println("hello")
+
       override def close(): Unit = {
         super.close()
         queue.put(Poison)

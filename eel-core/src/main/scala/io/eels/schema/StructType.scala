@@ -1,9 +1,11 @@
 package io.eels.schema
 
-case class StructType(fields: List[Field]) extends DataType {
+case class StructType(fields: Vector[Field]) extends DataType {
 
   require(fields.map(_.name).distinct.length == fields.size, "StructType cannot have duplicated field names")
   require(fields.nonEmpty, "StructType cannot be empty")
+
+  val size: Int = fields.size
 
   def apply(name: String): Option[Field] = fields.find(_.name == name)
 
@@ -32,11 +34,12 @@ case class StructType(fields: List[Field]) extends DataType {
     })
   }
 
+  def field(pos: Int): Field = fields.apply(pos)
   def field(name: String): Option[Field] = fields.find(_.name == name)
 
   def toLowerCase(): StructType = copy(fields = fields.map(_.toLowerCase()))
 
-  def fieldNames(): List[String] = fields.map(_.name)
+  def fieldNames(): Seq[String] = fields.map(_.name)
 
   def addField(name: String): StructType = addField(Field(name, StringType))
 
@@ -47,8 +50,7 @@ case class StructType(fields: List[Field]) extends DataType {
 
   def contains(fieldName: String, caseSensitive: Boolean = true): Boolean = {
     def contains(fields: Seq[Field]): Boolean = fields.exists { it =>
-      (if (caseSensitive) fieldName == it.name else fieldName equalsIgnoreCase it.name) || fields
-        .map(_.dataType).collect {
+      (if (caseSensitive) fieldName == it.name else fieldName equalsIgnoreCase it.name) || fields.map(_.dataType).collect {
         case struct: StructType => struct.fields
       }.exists(contains)
     }
@@ -81,7 +83,6 @@ case class StructType(fields: List[Field]) extends DataType {
     })
   }
 
-  val size: Int = fields.size
 
   def join(other: StructType): StructType = {
     require(
@@ -121,9 +122,9 @@ object StructType {
 
   def fromFieldNames(names: Seq[String]): StructType = apply(names.map(Field.apply(_, StringType)))
 
-  def apply(fields: Seq[Field]): StructType = apply(fields.toList)
-  def apply(first: Field, rest: Field*): StructType = apply((first +: rest).toList)
-  def apply(first: String, rest: String*): StructType = apply((first +: rest).map(name => Field(name, StringType)).toList)
+  def apply(fields: Seq[Field]): StructType = new StructType(fields.toVector)
+  def apply(first: Field, rest: Field*): StructType = new StructType((first +: rest).toVector)
+  def apply(first: String, rest: String*): StructType = new StructType((first +: rest).map(name => Field(name, StringType)).toVector)
 
   import scala.reflect.runtime.universe._
 

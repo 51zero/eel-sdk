@@ -19,7 +19,7 @@ import io.eels.schema.StructType
 trait Source extends Logging {
   outer =>
 
-  def schema(): StructType
+  def schema: StructType
 
   def parts(): List[Part] = Nil
 

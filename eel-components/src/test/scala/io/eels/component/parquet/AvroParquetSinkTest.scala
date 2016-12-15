@@ -31,7 +31,7 @@ class AvroParquetSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
       frame.to(AvroParquetSink(path))
       val people = ParquetSource(path)
-      people.schema() shouldBe StructType(
+      people.schema shouldBe StructType(
         Field("name", StringType, false),
         Field("job", StringType, false),
         Field("location", StringType, false)

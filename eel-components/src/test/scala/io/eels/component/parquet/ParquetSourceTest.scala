@@ -24,7 +24,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
   "ParquetSource" should {
     "read schema" in {
       val people = ParquetSource(personFile)
-      people.schema() shouldBe StructType(
+      people.schema shouldBe StructType(
         Field("name", StringType, nullable = false),
         Field("job", StringType, nullable = false),
         Field("location", StringType, nullable = false)
@@ -81,7 +81,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
       writer2.write(record2)
       writer2.close()
 
-      ParquetSource(new Path("merge*")).schema() shouldBe
+      ParquetSource(new Path("merge*")).schema shouldBe
         StructType(
           Field("a", StringType, nullable = false),
           Field("b", DoubleType, nullable = false),

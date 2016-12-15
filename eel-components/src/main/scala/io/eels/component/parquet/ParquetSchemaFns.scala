@@ -18,6 +18,9 @@ object ParquetSchemaFns {
       case PrimitiveTypeName.BOOLEAN => BooleanType
       case PrimitiveTypeName.DOUBLE => DoubleType
       case PrimitiveTypeName.FLOAT => FloatType
+      case PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY if `type`.getOriginalType == OriginalType.DECIMAL =>
+        val meta = `type`.getDecimalMetadata
+        DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
       case PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY => BinaryType
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.UINT_32 => IntType.Unsigned
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.UINT_16 => ShortType.Unsigned
@@ -25,13 +28,14 @@ object ParquetSchemaFns {
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.INT_16 => ShortType.Signed
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.INT_8 => ShortType.Signed
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.TIME_MILLIS => TimeType
+      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DATE => DateType
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(9), Scale(2))
       case PrimitiveTypeName.INT32 => IntType.Signed
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.UINT_64 => IntType.Unsigned
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampType
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
       case PrimitiveTypeName.INT64 => LongType.Signed
-      case PrimitiveTypeName.INT96 => BigIntType
+      case PrimitiveTypeName.INT96 => TimestampType
       case other => sys.error("Unsupported type " + other)
     }
   }
