@@ -1,7 +1,7 @@
 package io.eels.schema
 
 trait DataType {
-  def canonicalName: String = getClass.getSimpleName.toLowerCase.stripSuffix("type")
+  def canonicalName: String = getClass.getSimpleName.toLowerCase.stripSuffix("$").stripSuffix("type")
   def matches(from: DataType): Boolean = this == from
 }
 

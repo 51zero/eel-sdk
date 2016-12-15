@@ -22,7 +22,7 @@ class HiveDDLTest extends FunSuite with Matchers {
   }
 
   test("include partitions") {
-    HiveDDL.showDDL("MYTAB", fields, partitions = List("a", "b", "c")) shouldBe
+    HiveDDL.showDDL("MYTAB", fields, partitions = List(PartitionColumn("a"), PartitionColumn("b"), PartitionColumn("c"))) shouldBe
       """CREATE TABLE IF NOT EXISTS `MYTAB` (
         |   `str` string,
         |   `i` bigint,

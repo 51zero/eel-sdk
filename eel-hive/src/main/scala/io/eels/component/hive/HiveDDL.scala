@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.{Field, StructType}
+import io.eels.schema.{DataType, Field, StringType, StructType}
 import org.apache.hadoop.hive.metastore.TableType
 
 object HiveDDL {
@@ -8,7 +8,7 @@ object HiveDDL {
   def showDDL(tableName: String,
               fields: Seq[Field],
               tableType: TableType = TableType.MANAGED_TABLE,
-              partitions: Seq[String] = Nil,
+              partitions: Seq[PartitionColumn] = Nil,
               location: Option[String] = None,
               serde: String = "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
               inputFormat: String = "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
@@ -31,7 +31,7 @@ object HiveDDL {
     val parts = if (partitions.isEmpty)
       None
     else
-      Some(partitions.map(x => s"`$x` string").mkString("PARTITIONED BY (\n   ", ",\n   ", ")"))
+      Some(partitions.map(col => s"`${col.name}` ${col.dataType.canonicalName}").mkString("PARTITIONED BY (\n   ", ",\n   ", ")"))
 
     val tblprops = if (props.isEmpty)
       None
@@ -45,7 +45,7 @@ object HiveDDL {
 
     def showDDL(tableName: String,
                 tableType: TableType = TableType.MANAGED_TABLE,
-                partitions: Seq[String] = Nil,
+                partitions: Seq[PartitionColumn] = Nil,
                 location: Option[String] = None,
                 format: HiveFormat,
                 props: Map[String, String] = Map.empty,
@@ -65,3 +65,5 @@ object HiveDDL {
     }
   }
 }
+
+case class PartitionColumn(name: String, dataType: DataType = StringType)
