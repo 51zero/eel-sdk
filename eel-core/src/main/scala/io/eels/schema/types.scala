@@ -40,8 +40,13 @@ object LongType {
   val Unsigned = LongType(false)
 }
 
-case class CharType(size: Int) extends DataType
-case class VarcharType(size: Int) extends DataType
+case class CharType(size: Int) extends DataType {
+  override def canonicalName: String = s"char($size)"
+}
+
+case class VarcharType(size: Int) extends DataType {
+  override def canonicalName: String = s"varchar($size)"
+}
 
 case class DecimalType(precision: Precision = Precision(0),
                        scale: Scale = Scale(0)) extends DataType {

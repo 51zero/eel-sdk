@@ -6,7 +6,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
 import io.eels.schema.StructType
-import io.eels.{Part, Source}
+import io.eels.{CloseableIterator, Part, Row, Source}
 
 object JdbcSource {
   def apply(url: String, query: String): JdbcSource = JdbcSource(() => DriverManager.getConnection(url), query)
@@ -21,7 +21,7 @@ case class JdbcSource(connFn: () => Connection,
                       bucketing: Option[Bucketing] = None)
   extends Source with JdbcPrimitives with Logging with Using with Timed {
 
-  override def schema(): StructType = providedSchema.getOrElse(fetchSchema())
+  override lazy val schema: StructType = providedSchema.getOrElse(fetchSchema())
 
   def withBind(bind: (PreparedStatement) => Unit) = copy(bind = bind)
   def withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
@@ -30,20 +30,7 @@ case class JdbcSource(connFn: () => Connection,
 
   private def dialect(): JdbcDialect = providedDialect.getOrElse(new GenericJdbcDialect())
 
-  override def parts(): List[Part] = {
-    val conn = connFn()
-    val stmt = conn.prepareStatement(query)
-    stmt.setFetchSize(fetchSize)
-    bind(stmt)
-
-    val rs = timed("Executing query $query") {
-      stmt.executeQuery()
-    }
-
-    val schema = schemaFor(dialect(), rs)
-    val part = new ResultsetPart(rs, stmt, conn, schema)
-    List(part)
-  }
+  override def parts(): List[JdbcPart] = List(new JdbcPart(connFn, query, bind, fetchSize, dialect()))
 
   def fetchSchema(): StructType = {
     using(connFn()) { conn =>
@@ -66,3 +53,52 @@ case class JdbcSource(connFn: () => Connection,
 }
 
 case class Bucketing(columnName: String, numberOfBuckets: Int)
+
+class JdbcPart(connFn: () => Connection,
+               query: String,
+               bind: (PreparedStatement) => Unit = stmt => (),
+               fetchSize: Int = 100,
+               dialect: JdbcDialect
+              ) extends Part with Timed with JdbcPrimitives {
+
+  /**
+    * Returns the data contained in this part in the form of an iterator. This function should return a new
+    * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
+    */
+  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
+
+    val conn = connFn()
+    val stmt = conn.prepareStatement(query)
+    stmt.setFetchSize(fetchSize)
+    bind(stmt)
+
+    val rs = timed(s"Executing query $query") {
+      stmt.executeQuery()
+    }
+
+    val schema = schemaFor(dialect, rs)
+
+    override def close(): Unit = {
+      super.close()
+      rs.close()
+      conn.close()
+    }
+
+    override val iterator: Iterator[Seq[Row]] = new Iterator[Row] {
+
+      var _hasnext = false
+
+      override def hasNext(): Boolean = _hasnext || {
+        _hasnext = rs.next()
+        _hasnext
+      }
+
+      override def next(): Row = {
+        _hasnext = false
+        val values = schema.fieldNames().map(name => rs.getObject(name))
+        Row(schema, values)
+      }
+
+    }.grouped(100).withPartial(true)
+  }
+}

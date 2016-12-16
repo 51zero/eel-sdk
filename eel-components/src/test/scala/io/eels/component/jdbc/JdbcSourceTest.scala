@@ -15,7 +15,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
       conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('1','2','3')")
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
-      JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema() shouldBe
+      JdbcSource("jdbc:h2:mem:test", "select * from mytable").schema shouldBe
         StructType(
           Field("A", IntType(true), true),
           Field("B", BooleanType, true),

@@ -8,7 +8,7 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
 
   "HiveSchemaFns" should {
     "StructDDL should be valid" in {
-      val fields = List(Field("a", StringType), Field("b", DoubleType))
+      val fields = Vector(Field("a", StringType), Field("b", DoubleType))
       val ddl = HiveSchemaFns.toStructDDL(fields)
       ddl shouldBe "struct<a:string,b:double>"
     }

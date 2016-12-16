@@ -16,10 +16,10 @@ object HiveSchemaFns extends Logging {
   def toHiveField(field: Field): FieldSchema = new FieldSchema(field.name.toLowerCase(), toHiveType(field), field.comment.orNull)
 
   // converts an eel Schema into a list of hive FieldSchema's
-  def toHiveFields(schema: StructType): List[FieldSchema] = toHiveFields(schema.fields)
+  def toHiveFields(schema: StructType): Vector[FieldSchema] = toHiveFields(schema.fields)
 
-  // converts a list of eel fields into a list of hive FieldSchema's
-  def toHiveFields(fields: List[Field]): List[FieldSchema] = fields.map(toHiveField)
+  // converts a seq of eel fields into a list of hive FieldSchema's
+  def toHiveFields(fields: Vector[Field]): Vector[FieldSchema] = fields.map(toHiveField)
 
   /**
     * Converts a hive FieldSchema into an eel Column type, with the given nullability.
@@ -80,7 +80,7 @@ object HiveSchemaFns extends Logging {
       "string"
   }
 
-  def toStructDDL(fields: List[Field]): String = {
+  def toStructDDL(fields: Vector[Field]): String = {
     val types = fields.map { it => it.name + ":" + toHiveType(it) }.mkString(",")
     s"struct<$types>"
   }

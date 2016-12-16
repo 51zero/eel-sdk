@@ -23,6 +23,7 @@ class ResultsetPart(val rs: ResultSet,
     override def close(): Unit = {
       super.close()
       rs.close()
+      conn.close()
     }
 
     override val iterator: Iterator[Seq[Row]] = new Iterator[Row] {

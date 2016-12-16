@@ -15,7 +15,7 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
 
   private val Poison = List(Row.Sentinel)
 
-  override lazy val schema: StructType = source.schema()
+  override lazy val schema: StructType = source.schema
 
   def rows(): CloseableIterator[Row] = {
 
