@@ -15,9 +15,15 @@ import org.apache.parquet.schema.MessageType
   * @param path     the path to save the file at
   * @param schema   the schema to use for this file. This schema is the one that will be set, regardless
   *                 of the schema set in the data.
-  * @param metadata extra metadata to add to the parquet file
+  * @param metadata extra metadata to add to the parquet file when it is closed
   */
 object ParquetWriterFn {
+
+  class RowParquetWriterBuilder(path: Path, schema: MessageType, metadata: Map[String, String])
+    extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {
+    override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema, metadata)
+    override def self(): RowParquetWriterBuilder = this
+  }
 
   def apply(path: Path, schema: StructType, metadata: Map[String, String]): ParquetWriter[Row] = {
     val config = ParquetWriterConfig()
@@ -31,10 +37,4 @@ object ParquetWriterFn {
       .withValidation(config.validating)
       .build()
   }
-}
-
-class RowParquetWriterBuilder(path: Path, schema: MessageType, metadata: Map[String, String])
-  extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {
-  override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema, metadata)
-  override def self(): RowParquetWriterBuilder = this
 }

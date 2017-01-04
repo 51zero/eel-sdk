@@ -26,7 +26,8 @@ class HiveSinkWriter(sourceSchema: StructType,
                      bufferSize: Int,
                      inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission],
-                     fileListener: FileListener)
+                     fileListener: FileListener,
+                     metadata: Map[String, String])
                     (implicit fs: FileSystem,
                      conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
@@ -172,7 +173,7 @@ class HiveSinkWriter(sourceSchema: StructType,
       }
       logger.debug(s"Creating hive writer for $filePath")
       fileListener.onFileCreated(filePath)
-      filePath -> dialect.writer(fileSchema, filePath, permission)
+      filePath -> dialect.writer(fileSchema, filePath, permission, metadata)
     })
   }
 }

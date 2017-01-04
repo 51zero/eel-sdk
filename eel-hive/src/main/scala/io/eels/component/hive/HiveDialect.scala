@@ -43,7 +43,8 @@ trait HiveDialect extends Logging {
 
   def writer(schema: StructType,
              path: Path,
-             permission: Option[FsPermission])
+             permission: Option[FsPermission],
+             metadata: Map[String, String])
             (implicit fs: FileSystem, conf: Configuration): HiveWriter
 }
 

@@ -2,10 +2,8 @@ package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
-import io.eels.component.parquet.avro.AvroParquetRowWriter
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.schema.StructType
 import io.eels.{CloseableIterator, Row}
@@ -40,19 +38,17 @@ object ParquetHiveDialect extends HiveDialect with Logging {
 
   override def writer(schema: StructType,
                       path: Path,
-                      permission: Option[FsPermission])
+                      permission: Option[FsPermission],
+                      metadata: Map[String, String])
                      (implicit fs: FileSystem, conf: Configuration): HiveWriter = new HiveWriter {
     ParquetLogMute()
 
     // hive is case insensitive so we must lower case the fields to keep it consistent
-    val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = false)
-    val writer = new AvroParquetRowWriter(path, avroSchema)
-    val serializer = new RecordSerializer(avroSchema)
+    val writer = ParquetWriterFn(path, schema, metadata)
 
     override def write(row: Row) {
       require(row.values.nonEmpty, "Attempting to write an empty row")
-      val record = serializer.serialize(row)
-      writer.write(record)
+      writer.write(row)
     }
 
     override def close() = {

@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.security.UserGroupInformation
 import com.sksamuel.exts.OptionImplicits._
+import io.eels.component.parquet.ParquetSink
 import io.eels.schema.StructType
 
 object HiveSink {
@@ -31,7 +32,8 @@ case class HiveSink(dbName: String,
                     principal: Option[String] = None,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
-                    createTable: Boolean = false)
+                    createTable: Boolean = false,
+                    metadata: Map[String, String] = Map.empty)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
   import HiveSink._
@@ -46,6 +48,7 @@ case class HiveSink(dbName: String,
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
   def withFileListener(listener: FileListener): HiveSink = copy(fileListener = listener)
+  def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
     login()
@@ -96,7 +99,8 @@ case class HiveSink(dbName: String,
       bufferSize,
       inheritPermissions,
       permission,
-      fileListener
+      fileListener,
+      metadata
     )
   }
 }
