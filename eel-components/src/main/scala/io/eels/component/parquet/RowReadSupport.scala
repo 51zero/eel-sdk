@@ -1,7 +1,11 @@
 package io.eels.component.parquet
 
 import java.math.{BigInteger, MathContext}
+import java.nio.{ByteBuffer, ByteOrder}
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneId}
 import java.util
+import java.util.Date
 
 import io.eels.schema._
 import io.eels.{Row, RowBuilder}
@@ -48,7 +52,7 @@ class RowMaterializer(fileSchema: MessageType,
       field.dataType match {
         case BinaryType => new DefaultPrimitiveConverter(builder)
         case BooleanType => new DefaultPrimitiveConverter(builder)
-        case DateType => new DefaultPrimitiveConverter(builder)
+        case DateType => new DateConverter(builder)
         case DecimalType(precision, scale) => new DecimalConverter(builder, precision, scale)
         case DoubleType => new DefaultPrimitiveConverter(builder)
         case FloatType => new DefaultPrimitiveConverter(builder)
@@ -56,7 +60,8 @@ class RowMaterializer(fileSchema: MessageType,
         case _: LongType => new DefaultPrimitiveConverter(builder)
         case _: ShortType => new DefaultPrimitiveConverter(builder)
         case StringType => new StringPrimitiveConverter(builder)
-        case TimestampType => new DefaultPrimitiveConverter(builder)
+        case TimestampType => new TimestampConverter(builder)
+        case other => sys.error("Unsupported type" + other)
       }
     }
     override def end(): Unit = row = builder.build()
@@ -90,4 +95,25 @@ class DecimalConverter(builder: RowBuilder,
     val bd = BigDecimal.apply(bi, scale.value, new MathContext(precision.value))
     builder.add(bd)
   }
+}
+
+// https://github.com/Parquet/parquet-mr/issues/218
+class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
+
+  val julianEpoch = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
+
+  override def addBinary(value: Binary): Unit = {
+    // first 8 bytes is the nanoseconds
+    // second 8 bytes is the day
+    val nanos = ByteBuffer.wrap(value.getBytes.slice(0, 8)).order(ByteOrder.LITTLE_ENDIAN).getLong()
+    val days = ByteBuffer.wrap(value.getBytes.slice(8, 12)).order(ByteOrder.LITTLE_ENDIAN).getInt()
+    println(days)
+    val dt = julianEpoch.plusDays(days).plusNanos(nanos)
+    val timestamp = new Timestamp(dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli)
+    builder.add(timestamp)
+  }
+}
+
+class DateConverter(builder: RowBuilder) extends PrimitiveConverter {
+  override def addInt(value: Int): Unit = builder.add(new Date(value))
 }

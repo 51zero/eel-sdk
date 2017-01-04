@@ -18,8 +18,6 @@ case class Foo(
                 myFloat: Float,
                 myShort: Short,
                 myDecimal: BigDecimal,
-                myBytes: Array[Byte],
-                myDate: Date,
                 myTimestamp: Timestamp
               )
 
@@ -49,9 +47,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
         1825.5F, // float
         12, // short
         72.72, // big decimal
-        Array[Byte](1, 2, 3), // bytes
-        new Date(1979, 9, 10), // date
-        new Timestamp(11112323123L) // timestamp
+        new Timestamp(1483492808000L) // sql timestamp
       )
     ))
 
@@ -72,12 +68,10 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
       Field("myFloat", FloatType, false),
       Field("myShort", ShortType.Signed, false),
       Field("myDecimal", DecimalType(Precision(38), Scale(18)), true),
-      Field("myBytes", BinaryType, true),
-      Field("myDate", DateType, true),
       Field("myTimestamp", TimestampType, true)
     )
 
-    frame.collect().head.values shouldBe Seq(
+    frame.collect().head.values shouldBe Vector(
       "wibble",
       13.46D,
       1414L,
@@ -86,9 +80,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
       1825.5F,
       12,
       BigDecimal(72.72),
-      Array[Byte](1, 2, 3),
-      new Date(1979, 9, 10),
-      new Timestamp(11112323123L)
+      new Timestamp(1483492808000L)
     )
 
     fs.delete(path, true)

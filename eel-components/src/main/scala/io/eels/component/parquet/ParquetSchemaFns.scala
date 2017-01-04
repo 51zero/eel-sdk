@@ -35,6 +35,7 @@ object ParquetSchemaFns {
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampType
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
       case PrimitiveTypeName.INT64 => LongType.Signed
+      // https://github.com/Parquet/parquet-mr/issues/218
       case PrimitiveTypeName.INT96 => TimestampType
       case other => sys.error("Unsupported type " + other)
     }
@@ -73,7 +74,7 @@ object ParquetSchemaFns {
       case StructType(fields) => new GroupType(repetition, field.name, fields.map(toParquetType): _*)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
       case TimeType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.TIME_MILLIS)
-      case TimestampType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name, OriginalType.TIMESTAMP_MILLIS)
+      case TimestampType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, field.name, OriginalType.TIMESTAMP_MICROS)
     }
   }
 
