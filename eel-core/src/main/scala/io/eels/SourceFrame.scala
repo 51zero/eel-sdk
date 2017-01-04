@@ -42,14 +42,10 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
     }
 
     new CloseableIterator[Row] {
-
-      println("hello")
-
       override def close(): Unit = {
         super.close()
         queue.put(Poison)
       }
-
       override val iterator: Iterator[Row] =
         Iterator.continually(queue.take).takeWhile(_ != Poison).flatten
     }

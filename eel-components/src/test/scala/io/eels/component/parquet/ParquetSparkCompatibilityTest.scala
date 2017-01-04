@@ -10,6 +10,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.{FlatSpec, Matchers}
 
 case class Foo(
+                myString: String,
                 myDouble: Double,
                 myLong: Long,
                 myInt: Int,
@@ -40,14 +41,17 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
 
     val df = session.sqlContext.createDataFrame(List(
       Foo(
+        "wibble",
         13.46D,
         1414L,
-        239,
+        239, // integer
         true,
-        1825.5F, 12, 72.72,
-        Array[Byte](1, 2, 3),
-        new Date(1979, 9, 10),
-        new Timestamp(11112323123L)
+        1825.5F, // float
+        12, // short
+        72.72, // big decimal
+        Array[Byte](1, 2, 3), // bytes
+        new Date(1979, 9, 10), // date
+        new Timestamp(11112323123L) // timestamp
       )
     ))
 
@@ -58,7 +62,9 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     val frame = ParquetSource(path).toFrame()
     println(frame.schema)
 
+    // some types default to null in spark, others don't
     frame.schema shouldBe StructType(
+      Field("myString", StringType, true),
       Field("myDouble", DoubleType, false),
       Field("myLong", LongType.Signed, false),
       Field("myInt", IntType.Signed, false),
@@ -69,6 +75,20 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
       Field("myBytes", BinaryType, true),
       Field("myDate", DateType, true),
       Field("myTimestamp", TimestampType, true)
+    )
+
+    frame.collect().head.values shouldBe Seq(
+      "wibble",
+      13.46D,
+      1414L,
+      239,
+      true,
+      1825.5F,
+      12,
+      BigDecimal(72.72),
+      Array[Byte](1, 2, 3),
+      new Date(1979, 9, 10),
+      new Timestamp(11112323123L)
     )
 
     fs.delete(path, true)

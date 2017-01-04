@@ -1,5 +1,6 @@
 package io.eels.component.parquet
 
+import java.math.{BigInteger, MathContext}
 import java.util
 
 import io.eels.schema._
@@ -10,6 +11,7 @@ import org.apache.parquet.hadoop.api.ReadSupport.ReadContext
 import org.apache.parquet.io.api._
 import org.apache.parquet.schema.MessageType
 
+// required by the parquet reader builder, and returns a record materializer for rows
 class RowReadSupport extends ReadSupport[Row] {
 
   override def prepareForRead(configuration: Configuration,
@@ -28,6 +30,11 @@ class RowReadSupport extends ReadSupport[Row] {
   }
 }
 
+// a row materializer retrns a group converter which is invoked for each
+// field in a group to get a converter for that field, and then each of those
+// converts is in turn called with the basic value.
+// The converter must know what to do with the basic value so where basic values
+// overlap, eg byte arrays, you must have different converters
 class RowMaterializer(fileSchema: MessageType,
                       readContext: ReadContext) extends RecordMaterializer[Row] {
 
@@ -42,13 +49,13 @@ class RowMaterializer(fileSchema: MessageType,
         case BinaryType => new DefaultPrimitiveConverter(builder)
         case BooleanType => new DefaultPrimitiveConverter(builder)
         case DateType => new DefaultPrimitiveConverter(builder)
-        case _: DecimalType => new DefaultPrimitiveConverter(builder)
+        case DecimalType(precision, scale) => new DecimalConverter(builder, precision, scale)
         case DoubleType => new DefaultPrimitiveConverter(builder)
         case FloatType => new DefaultPrimitiveConverter(builder)
         case _: IntType => new DefaultPrimitiveConverter(builder)
         case _: LongType => new DefaultPrimitiveConverter(builder)
         case _: ShortType => new DefaultPrimitiveConverter(builder)
-        case StringType => new DefaultPrimitiveConverter(builder)
+        case StringType => new StringPrimitiveConverter(builder)
         case TimestampType => new DefaultPrimitiveConverter(builder)
       }
     }
@@ -72,4 +79,15 @@ class DefaultPrimitiveConverter(builder: RowBuilder) extends PrimitiveConverter 
 
 class StringPrimitiveConverter(builder: RowBuilder) extends PrimitiveConverter {
   override def addBinary(value: Binary): Unit = builder.add(value.toStringUsingUTF8)
+}
+
+// we must use the precision and scale to build the value back from the bytes
+class DecimalConverter(builder: RowBuilder,
+                       precision: Precision,
+                       scale: Scale) extends PrimitiveConverter {
+  override def addBinary(value: Binary): Unit = {
+    val bi = new BigInteger(value.getBytes)
+    val bd = BigDecimal.apply(bi, scale.value, new MathContext(precision.value))
+    builder.add(bd)
+  }
 }
