@@ -36,7 +36,7 @@ class RowWriter(record: RecordConsumer) {
   private def writeRow(row: Row): Unit = {
     row.schema.fields.zipWithIndex.foreach { case (field, pos) =>
       record.startField(field.name, pos)
-      val writer = ParquetValueConversion(field.dataType)
+      val writer = ParquetValueWriter(field.dataType)
       writer.write(record, row.get(pos))
       record.endField(field.name, pos)
     }

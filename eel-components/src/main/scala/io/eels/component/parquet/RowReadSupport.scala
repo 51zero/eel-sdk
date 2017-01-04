@@ -102,7 +102,7 @@ class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
 
   override def addBinary(value: Binary): Unit = {
     // first 8 bytes is the nanoseconds
-    // second 8 bytes is the day
+    // second 4 bytes are the days
     val nanos = ByteBuffer.wrap(value.getBytes.slice(0, 8)).order(ByteOrder.LITTLE_ENDIAN).getLong()
     val days = ByteBuffer.wrap(value.getBytes.slice(8, 12)).order(ByteOrder.LITTLE_ENDIAN).getInt()
     val dt = JulianEpochInGregorian.plusDays(days).plusNanos(nanos)

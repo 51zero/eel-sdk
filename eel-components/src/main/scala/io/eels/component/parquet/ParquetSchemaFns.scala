@@ -57,6 +57,16 @@ object ParquetSchemaFns {
     StructType(fields)
   }
 
+  def byteSizeForPrecision(precision: Precision): Int = {
+    var fixedArrayLength = 0
+    var base10Digits = 0
+    while (base10Digits < precision.value) {
+      fixedArrayLength = fixedArrayLength + 1
+      base10Digits = Math.floor(Math.log10(Math.pow(2, 8 * fixedArrayLength - 1) - 1)).toInt
+    }
+    fixedArrayLength
+  }
+
   def toParquetType(field: Field): Type = {
     val repetition = if (field.nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     field.dataType match {
@@ -72,16 +82,14 @@ object ParquetSchemaFns {
       // The scale stores the number of digits of that value that are to the right of the decimal point,
       // and the precision stores the maximum number of digits supported in the unscaled value.
       case DecimalType(precision, scale) =>
-        var fixedArrayLength = 0
-        var base10Digits = 0
-        while (base10Digits < precision.value) {
-          base10Digits = Math.floor(Math.log10(Math.pow(2, (8 * fixedArrayLength - 1) - 1))).toInt
-          fixedArrayLength = fixedArrayLength + 1
-        }
         val metadata = new DecimalMetadata(precision.value, scale.value)
-        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY,
-          fixedArrayLength,
-          field.name, OriginalType.DECIMAL, metadata, new Type.ID(1))
+        new PrimitiveType(repetition,
+          PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY,
+          byteSizeForPrecision(precision),
+          field.name,
+          OriginalType.DECIMAL, metadata,
+          new Type.ID(1)
+        )
       case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, field.name)
       case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, field.name)
       case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name)

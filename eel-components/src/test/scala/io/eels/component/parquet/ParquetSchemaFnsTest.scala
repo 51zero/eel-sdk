@@ -23,7 +23,7 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
   it should "store decimals as FIXED_LEN_BYTE_ARRAY with OriginalType.DECIMAL and precision and scale set" in {
     val schema = StructType(Field("a", DecimalType(20, 10)))
     ParquetSchemaFns.toParquetSchema(schema) shouldBe
-      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 10, "a", OriginalType.DECIMAL, new DecimalMetadata(20, 10), new org.apache.parquet.schema.Type.ID(1)))
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 9, "a", OriginalType.DECIMAL, new DecimalMetadata(20, 10), new org.apache.parquet.schema.Type.ID(1)))
   }
 
   it should "store big int as FIXED_LEN_BYTE_ARRAY with OriginalType.DECIMAL and precision set and scale 0" in {
@@ -102,5 +102,9 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
     val schema = StructType(Field("a", StringType))
     ParquetSchemaFns.toParquetSchema(schema) shouldBe
       new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a", OriginalType.UTF8))
+  }
+
+  "ParquetSchemaFns.byteSizeForPrecision" should "calculate fixed length bytes required from precision" in {
+    ParquetSchemaFns.byteSizeForPrecision(38) shouldBe 16
   }
 }

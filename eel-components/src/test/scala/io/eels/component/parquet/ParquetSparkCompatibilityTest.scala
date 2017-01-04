@@ -3,7 +3,6 @@ package io.eels.component.parquet
 import java.sql.{Date, Timestamp}
 
 import io.eels.Row
-import io.eels.component.parquet.avro.ParquetSink
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -135,5 +134,12 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
         StructField("myTimestamp", org.apache.spark.sql.types.TimestampType, true)
       )
     )
+
+    // must convert byte array to list for deep equals
+    val dfvalues = df.collect().head.toSeq.toArray
+    dfvalues.update(8, dfvalues(8).asInstanceOf[Array[Byte]].toList)
+    // and spark will use java big decimal
+    dfvalues.update(7, dfvalues(7).asInstanceOf[java.math.BigDecimal]: BigDecimal)
+    dfvalues.toVector shouldBe row.values.toVector
   }
 }
