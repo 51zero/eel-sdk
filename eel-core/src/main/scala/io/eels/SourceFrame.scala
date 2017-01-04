@@ -8,12 +8,11 @@ import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import io.eels.schema.StructType
 
 object SourceFrame {
+  private val Poison = List(Row.Sentinel)
   private val executor = Executors.newCachedThreadPool()
 }
 
 class SourceFrame(source: Source, listener: Listener = NoopListener) extends Frame with Logging {
-
-  private val Poison = List(Row.Sentinel)
 
   override lazy val schema: StructType = source.schema
 
@@ -36,7 +35,7 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
         // by using an atomic int, we know only one thread will get inside the condition
         if (completed.incrementAndGet == parts.size) {
           logger.debug("All parts completed; adding sentinel to shutdown queue")
-          queue.put(Poison)
+          queue.put(SourceFrame.Poison)
         }
       }
     }
@@ -44,10 +43,10 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
     new CloseableIterator[Row] {
       override def close(): Unit = {
         super.close()
-        queue.put(Poison)
+        queue.put(SourceFrame.Poison)
       }
       override val iterator: Iterator[Row] =
-        Iterator.continually(queue.take).takeWhile(_ != Poison).flatten
+        Iterator.continually(queue.take).takeWhile(_ != SourceFrame.Poison).flatten
     }
   }
 }

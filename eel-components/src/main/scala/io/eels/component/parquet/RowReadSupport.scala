@@ -57,7 +57,7 @@ class RowMaterializer(fileSchema: MessageType,
         case _: IntType => new DefaultPrimitiveConverter(builder)
         case _: LongType => new DefaultPrimitiveConverter(builder)
         case _: ShortType => new DefaultPrimitiveConverter(builder)
-        case StringType => new StringPrimitiveConverter(builder)
+        case StringType => new StringConverter(builder)
         case TimestampType => new TimestampConverter(builder)
         case other => sys.error("Unsupported type " + other)
       }
@@ -80,7 +80,7 @@ class DefaultPrimitiveConverter(builder: RowBuilder) extends PrimitiveConverter 
   override def addFloat(value: Float): Unit = builder.add(value)
 }
 
-class StringPrimitiveConverter(builder: RowBuilder) extends PrimitiveConverter {
+class StringConverter(builder: RowBuilder) extends PrimitiveConverter {
   override def addBinary(value: Binary): Unit = builder.add(value.toStringUsingUTF8)
 }
 

@@ -378,4 +378,11 @@ object Frame {
     override def schema: StructType = _schema
     override def rows(): CloseableIterator[Row] = CloseableIterator.fromIterable(_rows)
   }
+
+  def fromIterator(_schema: StructType, _iter: Iterator[Row]): Frame = new Frame {
+    override def schema: StructType = _schema
+    override def rows() = new CloseableIterator[Row] {
+      override val iterator: Iterator[Row] = _iter
+    }
+  }
 }

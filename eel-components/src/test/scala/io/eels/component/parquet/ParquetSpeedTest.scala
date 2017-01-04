@@ -36,9 +36,10 @@ import scala.util.Random
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()
 
+  val size = 5000000
   val schema = StructType("a", "b", "c", "d", "e")
-  val rows = List.fill(2000000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4)))
-  val frame = Frame(schema, rows)
+  val createRow = Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4))
+  val frame = Frame.fromIterator(schema, Iterator.continually(createRow).take(size))
 
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
@@ -55,14 +56,13 @@ object ParquetSpeedTest extends App with Timed {
   while (true) {
 
     timed("Reading with ParquetSource") {
-      val size = ParquetSource(path).toFrame().size()
-      assert(size == rows.size)
+      val actual = ParquetSource(path).toFrame().size()
+      assert(actual == size)
     }
 
     timed("Reading with AvroParquetSource") {
-      val size = AvroParquetSource(path).toFrame().size()
-      assert(size == rows.size)
+      val actual = AvroParquetSource(path).toFrame().size()
+      assert(actual == size)
     }
-
   }
 }
