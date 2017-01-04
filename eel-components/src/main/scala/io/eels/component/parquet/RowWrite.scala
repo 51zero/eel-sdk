@@ -4,13 +4,18 @@ import com.sksamuel.exts.Logging
 import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.hadoop.api.WriteSupport
+import org.apache.parquet.hadoop.api.WriteSupport.FinalizedWriteContext
 import org.apache.parquet.io.api.RecordConsumer
 import org.apache.parquet.schema.MessageType
+import scala.collection.JavaConverters._
 
-class RowWriteSupport(schema: MessageType) extends WriteSupport[Row] with Logging {
+class RowWriteSupport(schema: MessageType,
+                      metadata: Map[String, String]) extends WriteSupport[Row] with Logging {
   logger.debug(s"Created parquet row write support for schema message type $schema")
 
   private var writer: RowWriter = _
+
+  override def finalizeWrite(): FinalizedWriteContext = new FinalizedWriteContext(metadata.asJava)
 
   def init(configuration: Configuration): WriteSupport.WriteContext = {
     new WriteSupport.WriteContext(schema, new java.util.HashMap())

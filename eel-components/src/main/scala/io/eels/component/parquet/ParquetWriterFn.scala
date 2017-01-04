@@ -12,16 +12,17 @@ import org.apache.parquet.schema.MessageType
   * Helper function for create a native ParquetWriter using the apache parquet library.
   * Uses config keys to support compression codec, page size, and block size.
   *
-  * @param path   the path to save the file at
-  * @param schema the schema to use for this file. This schema is the one that will be set, regardless
-  *               of the schema set in the data.
+  * @param path     the path to save the file at
+  * @param schema   the schema to use for this file. This schema is the one that will be set, regardless
+  *                 of the schema set in the data.
+  * @param metadata extra metadata to add to the parquet file
   */
 object ParquetWriterFn {
 
-  def apply(path: Path, schema: StructType): ParquetWriter[Row] = {
+  def apply(path: Path, schema: StructType, metadata: Map[String, String]): ParquetWriter[Row] = {
     val config = ParquetWriterConfig()
     val parquetSchema = ParquetSchemaFns.toParquetSchema(schema)
-    new RowParquetWriterBuilder(path, parquetSchema)
+    new RowParquetWriterBuilder(path, parquetSchema, metadata)
       .withCompressionCodec(config.compressionCodec)
       .withDictionaryEncoding(config.enableDictionary)
       .withRowGroupSize(config.blockSize)
@@ -32,8 +33,8 @@ object ParquetWriterFn {
   }
 }
 
-class RowParquetWriterBuilder(path: Path, schema: MessageType)
+class RowParquetWriterBuilder(path: Path, schema: MessageType, metadata: Map[String, String])
   extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {
-  override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema)
+  override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema, metadata)
   override def self(): RowParquetWriterBuilder = this
 }
