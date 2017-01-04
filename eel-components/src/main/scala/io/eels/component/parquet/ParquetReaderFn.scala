@@ -13,7 +13,9 @@ import org.apache.parquet.schema.Type
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */
-object ParquetReaderFn extends ReaderFn {
+object ParquetReaderFn {
+
+  private val config = ParquetReaderConfig()
 
   /**
     * Creates a new reader for the given path.
@@ -32,7 +34,7 @@ object ParquetReaderFn extends ReaderFn {
         conf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
       //conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
-      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
+      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
       conf
     }
 

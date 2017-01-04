@@ -1,6 +1,6 @@
 package io.eels.component.parquet.avro
 
-import io.eels.component.parquet.{Predicate, ReaderFn}
+import io.eels.component.parquet.{ParquetReaderConfig, Predicate}
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.conf.Configuration
@@ -14,7 +14,9 @@ import org.apache.parquet.hadoop.ParquetReader
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */
-object AvroParquetReaderFn extends ReaderFn {
+object AvroParquetReaderFn {
+
+  private val config = ParquetReaderConfig()
 
   /**
     * Creates a new reader for the given path.
@@ -34,7 +36,7 @@ object AvroParquetReaderFn extends ReaderFn {
         AvroReadSupport.setRequestedProjection(conf, it)
       }
       //conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
-      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, parallelism)
+      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
       conf
     }
 
