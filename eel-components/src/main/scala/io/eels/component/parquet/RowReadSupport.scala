@@ -86,7 +86,9 @@ class StringConverter(builder: RowBuilder) extends PrimitiveConverter {
   private var dict: Array[String] = null
 
   override def addBinary(value: Binary): Unit = builder.add(value.toStringUsingUTF8)
+  
   override def hasDictionarySupport: Boolean = true
+
   override def setDictionary(dictionary: Dictionary): Unit = {
     dict = new Array[String](dictionary.getMaxId + 1)
     for (k <- 0 to dictionary.getMaxId) {

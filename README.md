@@ -4,7 +4,8 @@
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.11*.svg?label=latest%20release%20for%202.11"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.11%22)
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.12*.svg?label=latest%20release%20for%202.12"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.12%22)
 
-<img src="https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png" width="140px" align="left"> Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel is an SDK.
+Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel is an SDK.
+![eel logo](https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png)
 
 ### Example Use Cases
 
@@ -23,6 +24,23 @@ The core data structure in Eel is the Frame. A frame consists of columns, and ro
 ### Frames
 
 ### Sources
+
+### Schema
+
+#### Types Supported
+
+|Eel Datatype|JVM Types|
+|-----|-------|
+|Short|Short|
+|Int|Int|
+|Double|Double|
+|Float|Float|
+|Decimal|BigDecimal|
+|String|String|
+|Binary|Array of Bytes|
+|DateTime|java.sql.Date|
+|Timestamp|java.sql.Timestamp|
+
 
 ### File API
 
@@ -136,23 +154,6 @@ Examples:
 csv:/some/path
 csv:/some/path:orderid,customerid
 csv:/some/path?a=b
-
-### Changelog
-
-* 0.27.0 21/02/15 
- - jdbc auto commit and warn on re-write options
- - fix for parquet projections when no columns specified (default to all)
- - added dataset url parsers
- - removed plans from external api and updated actions to accept scala execution context
-* 0.26.0 18/02/15 - Projection pushdowns in Parquet
-* 0.25.0 17/02/15 - Removed lots of boxing artifacts
-* 0.23.0 16/02/15 - Added mongo sink. Added replace, fill, dropNull and explode methods to frame. Added Avro serializer/deserializer to kafka components.
-* 0.22.0 15/02/15 - Kafka sink and kafka source added
-* 0.21.0 14/02/15 - Dynamic partioning added on write to Hive sink
-* 0.20.1 13/02/15 - Contention issues fixed in hive sink
-* 0.20.0 12/02/15 - Orc and Avro table support added to Hive components
-* 0.19.0 11/02/15 - Parquet table support added to Hive and Hive now supports writing
-* 0.18.0 10/02/15 - Multi threaded read/writes now supported
 
 ### How to use
 
