@@ -3,15 +3,33 @@ package io.eels.component.parquet
 import io.eels.schema._
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
 import org.apache.parquet.schema.Type.Repetition
-import org.apache.parquet.schema.{MessageType, OriginalType, PrimitiveType}
+import org.apache.parquet.schema.{DecimalMetadata, MessageType, OriginalType, PrimitiveType}
 import org.scalatest.{FlatSpec, Matchers}
 
 class ParquetSchemaFnsTest extends FlatSpec with Matchers {
 
-  "ParquetSchemaFns.toParquetSchema" should "store timestamps as int64 with original type tag" in {
+  "ParquetSchemaFns.toParquetSchema" should "store timestamps as INT96" in {
     val schema = StructType(Field("a", TimestampType))
     ParquetSchemaFns.toParquetSchema(schema) shouldBe
-      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT64, "a", OriginalType.TIMESTAMP_MILLIS))
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT96, "a"))
+  }
+
+  it should "store bytes as BINARY" in {
+    val schema = StructType(Field("a", BinaryType))
+    ParquetSchemaFns.toParquetSchema(schema) shouldBe
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a"))
+  }
+
+  it should "store decimals as FIXED_LEN_BYTE_ARRAY with OriginalType.DECIMAL and precision and scale set" in {
+    val schema = StructType(Field("a", DecimalType(20, 10)))
+    ParquetSchemaFns.toParquetSchema(schema) shouldBe
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 10, "a", OriginalType.DECIMAL, new DecimalMetadata(20, 10), new org.apache.parquet.schema.Type.ID(1)))
+  }
+
+  it should "store big int as FIXED_LEN_BYTE_ARRAY with OriginalType.DECIMAL and precision set and scale 0" in {
+    val schema = StructType(Field("a", BigIntType))
+    ParquetSchemaFns.toParquetSchema(schema) shouldBe
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 20, "a", OriginalType.DECIMAL, new DecimalMetadata(38, 0), new org.apache.parquet.schema.Type.ID(1)))
   }
 
   it should "store times as INT32 with original type tag TIME_MILLIS" in {

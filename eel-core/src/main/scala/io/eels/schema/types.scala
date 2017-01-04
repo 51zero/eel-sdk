@@ -1,5 +1,7 @@
 package io.eels.schema
 
+import scala.language.implicitConversions
+
 trait DataType {
   def canonicalName: String = getClass.getSimpleName.toLowerCase.stripSuffix("$").stripSuffix("type")
   def matches(from: DataType): Boolean = this == from
@@ -87,4 +89,11 @@ object ArrayType {
 }
 
 case class Precision(value: Int) extends AnyVal
+object Precision {
+  implicit def intToPrecision(value: Int): Precision = Precision(value)
+}
+
 case class Scale(value: Int) extends AnyVal
+object Scale {
+  implicit def intToScale(value: Int): Scale = Scale(value)
+}

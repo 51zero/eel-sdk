@@ -60,7 +60,11 @@ object ParquetSchemaFns {
   def toParquetType(field: Field): Type = {
     val repetition = if (field.nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     field.dataType match {
-      case BigIntType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name)
+      case BigIntType =>
+        val metadata = new DecimalMetadata(38, 0)
+        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY,
+          20,
+          field.name, OriginalType.DECIMAL, metadata, new Type.ID(1))
       case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name)
       case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, field.name)
       case DateType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.DATE)
