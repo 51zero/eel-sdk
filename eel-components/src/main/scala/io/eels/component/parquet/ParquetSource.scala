@@ -7,6 +7,7 @@ import io.eels._
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 
 import scala.collection.JavaConverters._
@@ -31,6 +32,14 @@ case class ParquetSource(pattern: FilePattern,
 
   def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
 
+  // returns the metadata in the parquet file, or an empty map if none
+  def metadata(): Map[String, String] = {
+    paths.foldLeft(Map.empty[String, String]) { (metadata, path) =>
+      val footer = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER)
+      metadata ++ footer.getFileMetaData.getKeyValueMetaData.asScala
+    }
+  }
+
   lazy val schema: StructType = {
     println("Getting schema")
     using(ParquetReaderFn(paths.head, None, None)) { reader =>
@@ -49,7 +58,7 @@ case class ParquetSource(pattern: FilePattern,
     if (paths.isEmpty) Statistics.Empty
     else {
       paths.foldLeft(Statistics.Empty) { (stats, path) =>
-        val footer = ParquetFileReader.readFooter(conf, path)
+        val footer = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER)
         footer.getBlocks.asScala.foldLeft(stats) { (stats, block) =>
           stats.copy(
             count = stats.count + block.getRowCount,
