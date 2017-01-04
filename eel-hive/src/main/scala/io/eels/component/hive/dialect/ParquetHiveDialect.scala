@@ -6,6 +6,7 @@ import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.component.parquet.avro.AvroParquetRowWriter
+import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.schema.StructType
 import io.eels.{CloseableIterator, Row}
 import org.apache.hadoop.conf.Configuration

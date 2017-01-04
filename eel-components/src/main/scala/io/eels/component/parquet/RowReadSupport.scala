@@ -4,7 +4,6 @@ import java.math.{BigInteger, MathContext}
 import java.nio.{ByteBuffer, ByteOrder}
 import java.sql.{Date, Timestamp}
 import java.time.{LocalDateTime, ZoneId}
-import java.util
 
 import io.eels.schema._
 import io.eels.{Row, RowBuilder}
@@ -18,14 +17,14 @@ import org.apache.parquet.schema.MessageType
 class RowReadSupport extends ReadSupport[Row] {
 
   override def prepareForRead(configuration: Configuration,
-                              keyValueMetaData: util.Map[String, String],
+                              keyValueMetaData: java.util.Map[String, String],
                               fileSchema: MessageType,
                               readContext: ReadContext): RecordMaterializer[Row] = {
     new RowMaterializer(fileSchema, readContext)
   }
 
   override def init(configuration: Configuration,
-                    keyValueMetaData: util.Map[String, String],
+                    keyValueMetaData: java.util.Map[String, String],
                     fileSchema: MessageType): ReadSupport.ReadContext = {
     val partialSchemaString = configuration.get(ReadSupport.PARQUET_READ_SCHEMA)
     val requestedProjection = ReadSupport.getSchemaForRead(fileSchema, partialSchemaString)
@@ -106,7 +105,6 @@ class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
     // second 8 bytes is the day
     val nanos = ByteBuffer.wrap(value.getBytes.slice(0, 8)).order(ByteOrder.LITTLE_ENDIAN).getLong()
     val days = ByteBuffer.wrap(value.getBytes.slice(8, 12)).order(ByteOrder.LITTLE_ENDIAN).getInt()
-    println(days)
     val dt = JulianEpochInGregorian.plusDays(days).plusNanos(nanos)
     val millis = dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
     builder.add(new Timestamp(millis))

@@ -1,4 +1,4 @@
-package io.eels.component.parquet
+package io.eels.component.parquet.util
 
 import java.util.logging.Logger
 

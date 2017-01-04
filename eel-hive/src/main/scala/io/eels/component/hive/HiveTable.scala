@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.component.parquet.ParquetLogMute
+import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{PartitionPart, StructType}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient

@@ -97,5 +97,3 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     fs.delete(path, true)
   }
 }
-
-

@@ -3,6 +3,7 @@ package io.eels.component.parquet
 import java.util.concurrent.Executors
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema._
 import io.eels.{Listener, Row}
 import org.apache.hadoop.conf.Configuration

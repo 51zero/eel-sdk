@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.parquet.avro.AvroParquetWriter
 import java.nio.file.Paths
 
+import io.eels.component.parquet.util.ParquetLogMute
 import org.scalatest.{Matchers, WordSpec}
 
 class ParquetSourceTest extends WordSpec with Matchers {

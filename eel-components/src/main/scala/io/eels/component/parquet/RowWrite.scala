@@ -1,7 +1,5 @@
 package io.eels.component.parquet
 
-import java.util
-
 import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.hadoop.api.WriteSupport
@@ -13,7 +11,7 @@ class RowWriteSupport(schema: MessageType) extends WriteSupport[Row] {
   private var writer: RowWriter = _
 
   def init(configuration: Configuration): WriteSupport.WriteContext = {
-    new WriteSupport.WriteContext(schema, new util.HashMap())
+    new WriteSupport.WriteContext(schema, new java.util.HashMap())
   }
 
   def prepareForWrite(record: RecordConsumer) {

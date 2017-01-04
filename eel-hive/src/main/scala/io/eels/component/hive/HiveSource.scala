@@ -4,7 +4,8 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
-import io.eels.component.parquet.{ParquetLogMute, Predicate}
+import io.eels.component.parquet.Predicate
+import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{PartitionConstraint, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{FilePattern, Part, Source}
