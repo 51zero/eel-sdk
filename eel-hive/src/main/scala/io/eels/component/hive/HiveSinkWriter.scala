@@ -22,7 +22,6 @@ class HiveSinkWriter(sourceSchema: StructType,
                      ioThreads: Int,
                      dialect: HiveDialect,
                      dynamicPartitioning: Boolean,
-                     includePartitionsInData: Boolean,
                      bufferSize: Int,
                      inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission],
@@ -33,6 +32,7 @@ class HiveSinkWriter(sourceSchema: StructType,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
 
   val config = ConfigFactory.load()
+  val sinkConfig = HiveSinkConfig()
   val writeToTempDirectory = config.getBoolean("eel.hive.sink.writeToTempFiles")
   val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
@@ -45,18 +45,19 @@ class HiveSinkWriter(sourceSchema: StructType,
 
   // the file schema is the metastore schema with the partition columns removed. This is because the
   // partition columns are not written to the file (they are taken from the partition itself)
-  // this can be overriden with the includePartitionsInData option
-  val fileSchema = if (includePartitionsInData || partitionKeyNames.isEmpty) metastoreSchema
-  else partitionKeyNames.foldLeft(metastoreSchema) { (schema, name) =>
-    schema.removeField(name, caseSensitive = false)
+  // this can be overriden with the includePartitionsInData option in which case the partitions will
+  // be kept in the file
+  val fileSchema = {
+    if (sinkConfig.includePartitionsInData || partitionKeyNames.isEmpty)
+      metastoreSchema
+    else
+      partitionKeyNames.foldLeft(metastoreSchema) { (schema, name) =>
+        schema.removeField(name, caseSensitive = false)
+      }
   }
 
-  // these are the indexes of the cells to skip in each row because they are partition values
-  // we build up the ones to skip, then we can make an array that contains only the ones to keep
-  // this array is used to iterate over using the indexes to pick out the values from the row quickly
-  val indexesToSkip = if (includePartitionsInData) Nil else partitionKeyNames.map(sourceSchema.indexOf)
-  val indexesToWrite = List.range(0, sourceSchema.size).filterNot(indexesToSkip.contains)
-  assert(indexesToWrite.nonEmpty, "Cannot write frame where all fields are partitioned")
+  // the normalizer takes care of making sure the row is aligned with the file schema
+  val normalizer = new RowNormalizerFn(fileSchema)
 
   // Since the data can come in unordered, we need to keep open a stream per partition path otherwise we'd
   // be opening and closing streams frequently.
@@ -76,7 +77,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   // the io threads will run in their own threads inside this executor
   val writerPool = Executors.newFixedThreadPool(ioThreads)
 
-  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads; includePartitionsInData=$includePartitionsInData")
+  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads")
 
   import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
@@ -86,17 +87,8 @@ class HiveSinkWriter(sourceSchema: StructType,
       try {
         BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
           val writer = getOrCreateHiveWriter(row, k)._2
-          // need to strip out any partition information from the written data
-          // keeping this as a list as I want it ordered and no need to waste cycles on an ordered map
-          val rowToWrite = if (indexesToSkip.isEmpty) {
-            row
-          } else {
-            val values = for (k <- indexesToWrite) yield {
-              row.get(k)
-            }
-            Row(fileSchema, values.toVector)
-          }
-          writer.write(rowToWrite)
+          // need to strip out any partition information from the written data and possibly pad
+          writer.write(normalizer(row))
         }
       } catch {
         case NonFatal(e) =>

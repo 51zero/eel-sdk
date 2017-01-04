@@ -41,7 +41,16 @@ trait HiveDialect extends Logging {
            predicate: Option[Predicate])
           (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]]
 
-  def writer(schema: StructType,
+  /**
+    * Creates a new writer ready to do the bidding of the hive sink.
+    *
+    * @param schema     the schema that will be written to the underlying file.
+    *                   Since this is Hive, the caller should have stripped out any partition values
+    * @param path       the location to write the file
+    * @param permission optional permission to set on the file once completed
+    * @param metadata   any metadata we wish to include in the file, this might not be supported by all filetypes
+    */
+  def writer(schema: StructType, // schema without partition information
              path: Path,
              permission: Option[FsPermission],
              metadata: Map[String, String])

@@ -43,7 +43,6 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                      (implicit fs: FileSystem, conf: Configuration): HiveWriter = new HiveWriter {
     ParquetLogMute()
 
-    // hive is case insensitive so we must lower case the fields to keep it consistent
     val writer = ParquetWriterFn(path, schema, metadata)
 
     override def write(row: Row) {
@@ -53,6 +52,8 @@ object ParquetHiveDialect extends HiveDialect with Logging {
 
     override def close() = {
       writer.close()
+      // after the files are closed, we should set permissions if we've been asked to, this allows
+      // all the files we create to stay consistent
       permission.foreach(fs.setPermission(path, _))
     }
   }

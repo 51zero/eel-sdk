@@ -8,14 +8,12 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.security.UserGroupInformation
 import com.sksamuel.exts.OptionImplicits._
-import io.eels.component.parquet.ParquetSink
 import io.eels.schema.StructType
 
 object HiveSink {
   val CaseErrorMsg = "Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive"
 
   val config: Config = ConfigFactory.load()
-  val includePartitionsInData = config.getBoolean("eel.hive.includePartitionsInData")
   val bufferSize = config.getInt("eel.hive.bufferSize")
   val schemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
   val dynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
@@ -95,7 +93,6 @@ case class HiveSink(dbName: String,
       ioThreads,
       dialect(),
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
-      includePartitionsInData,
       bufferSize,
       inheritPermissions,
       permission,
