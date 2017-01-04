@@ -35,7 +35,7 @@ case class AvroParquetSource(pattern: FilePattern,
 
   // the schema returned by the parquet source should be a merged version of the
   // schemas contained in all the files.
-  override def schema(): StructType = {
+  override def schema: StructType = {
     val schemas = paths.map { path =>
       using(AvroParquetReaderFn.apply(path, predicate, None)) { reader =>
         val record = Option(reader.read()).getOrElse {

@@ -8,6 +8,7 @@ import java.time.{LocalDateTime, ZoneId}
 import io.eels.schema._
 import io.eels.{Row, RowBuilder}
 import org.apache.hadoop.conf.Configuration
+import org.apache.parquet.column.Dictionary
 import org.apache.parquet.hadoop.api.ReadSupport
 import org.apache.parquet.hadoop.api.ReadSupport.ReadContext
 import org.apache.parquet.io.api._
@@ -20,7 +21,7 @@ class RowReadSupport extends ReadSupport[Row] {
                               keyValueMetaData: java.util.Map[String, String],
                               fileSchema: MessageType,
                               readContext: ReadContext): RecordMaterializer[Row] = {
-    new RowMaterializer(fileSchema, readContext)
+    new RowRecordMaterializer(fileSchema, readContext)
   }
 
   override def init(configuration: Configuration,
@@ -37,8 +38,8 @@ class RowReadSupport extends ReadSupport[Row] {
 // converts is in turn called with the basic value.
 // The converter must know what to do with the basic value so where basic values
 // overlap, eg byte arrays, you must have different converters
-class RowMaterializer(fileSchema: MessageType,
-                      readContext: ReadContext) extends RecordMaterializer[Row] {
+class RowRecordMaterializer(fileSchema: MessageType,
+                            readContext: ReadContext) extends RecordMaterializer[Row] {
 
   val schema = ParquetSchemaFns.fromParquetGroupType(fileSchema)
   val builder = new RowBuilder(schema)
@@ -81,7 +82,21 @@ class DefaultPrimitiveConverter(builder: RowBuilder) extends PrimitiveConverter 
 }
 
 class StringConverter(builder: RowBuilder) extends PrimitiveConverter {
+
+  private var dict: Array[String] = null
+
   override def addBinary(value: Binary): Unit = builder.add(value.toStringUsingUTF8)
+  override def hasDictionarySupport: Boolean = true
+  override def setDictionary(dictionary: Dictionary): Unit = {
+    dict = new Array[String](dictionary.getMaxId + 1)
+    for (k <- 0 to dictionary.getMaxId) {
+      dict(k) = dictionary.decodeToBinary(k).toStringUsingUTF8
+    }
+  }
+
+  override def addValueFromDictionary(dictionaryId: Int): Unit = {
+    builder.add(dict(dictionaryId))
+  }
 }
 
 // we must use the precision and scale to build the value back from the bytes

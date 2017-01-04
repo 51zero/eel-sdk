@@ -21,6 +21,6 @@ class AvroParquetPart(path: Path,
     }
 
     override val iterator: Iterator[Seq[Row]] =
-      ParquetIterator(reader).grouped(100).withPartial(true).map(rows => rows.map(deser.toRow))
+      ParquetIterator(reader).grouped(1000).withPartial(true).map(rows => rows.map(deser.toRow))
   }
 }
