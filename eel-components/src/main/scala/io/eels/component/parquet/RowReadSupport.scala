@@ -2,10 +2,9 @@ package io.eels.component.parquet
 
 import java.math.{BigInteger, MathContext}
 import java.nio.{ByteBuffer, ByteOrder}
-import java.sql.Timestamp
+import java.sql.{Date, Timestamp}
 import java.time.{LocalDateTime, ZoneId}
 import java.util
-import java.util.Date
 
 import io.eels.schema._
 import io.eels.{Row, RowBuilder}
@@ -61,7 +60,7 @@ class RowMaterializer(fileSchema: MessageType,
         case _: ShortType => new DefaultPrimitiveConverter(builder)
         case StringType => new StringPrimitiveConverter(builder)
         case TimestampType => new TimestampConverter(builder)
-        case other => sys.error("Unsupported type" + other)
+        case other => sys.error("Unsupported type " + other)
       }
     }
     override def end(): Unit = row = builder.build()
@@ -100,7 +99,7 @@ class DecimalConverter(builder: RowBuilder,
 // https://github.com/Parquet/parquet-mr/issues/218
 class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
 
-  val julianEpoch = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
+  val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
   override def addBinary(value: Binary): Unit = {
     // first 8 bytes is the nanoseconds
@@ -108,12 +107,17 @@ class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
     val nanos = ByteBuffer.wrap(value.getBytes.slice(0, 8)).order(ByteOrder.LITTLE_ENDIAN).getLong()
     val days = ByteBuffer.wrap(value.getBytes.slice(8, 12)).order(ByteOrder.LITTLE_ENDIAN).getInt()
     println(days)
-    val dt = julianEpoch.plusDays(days).plusNanos(nanos)
-    val timestamp = new Timestamp(dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli)
-    builder.add(timestamp)
+    val dt = JulianEpochInGregorian.plusDays(days).plusNanos(nanos)
+    val millis = dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
+    builder.add(new Timestamp(millis))
   }
 }
 
 class DateConverter(builder: RowBuilder) extends PrimitiveConverter {
-  override def addInt(value: Int): Unit = builder.add(new Date(value))
+  val UnixEpoch = LocalDateTime.of(1970, 1, 1, 0, 0, 0)
+  override def addInt(value: Int): Unit = {
+    val dt = UnixEpoch.plusDays(value)
+    val millis = dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
+    builder.add(new Date(millis))
+  }
 }
