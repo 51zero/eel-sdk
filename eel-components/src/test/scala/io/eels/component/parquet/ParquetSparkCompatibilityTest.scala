@@ -2,9 +2,12 @@ package io.eels.component.parquet
 
 import java.sql.{Date, Timestamp}
 
+import io.eels.Row
+import io.eels.component.parquet.avro.ParquetSink
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.scalatest.{FlatSpec, Matchers}
@@ -35,9 +38,25 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
 
   val path = new Path("spark_parquet.parquet")
 
+  // some types default to null in spark, others don't
+  val schema = StructType(
+    Field("myString", StringType, true),
+    Field("myDouble", DoubleType, false),
+    Field("myLong", LongType.Signed, false),
+    Field("myInt", IntType.Signed, false),
+    Field("myBoolean", BooleanType, false),
+    Field("myFloat", FloatType, false),
+    Field("myShort", ShortType.Signed, false),
+    Field("myDecimal", DecimalType(Precision(38), Scale(18)), true),
+    Field("myBytes", BinaryType, true),
+    Field("myDate", DateType, true),
+    Field("myTimestamp", TimestampType, true)
+  )
+
   // create a parquet file using spark local for all supported types and then
   // read back in using eel parquet support and compare
   "parquet reader" should "read spark generated parquet files for all types" in {
+    fs.delete(path, true)
 
     val df = session.sqlContext.createDataFrame(List(
       Foo(
@@ -55,27 +74,10 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
       )
     ))
 
-    println(df.schema)
     df.write.mode(SaveMode.Overwrite).parquet(path.toString)
-    println(path)
 
     val frame = ParquetSource(path).toFrame()
-    println(frame.schema)
-
-    // some types default to null in spark, others don't
-    frame.schema shouldBe StructType(
-      Field("myString", StringType, true),
-      Field("myDouble", DoubleType, false),
-      Field("myLong", LongType.Signed, false),
-      Field("myInt", IntType.Signed, false),
-      Field("myBoolean", BooleanType, false),
-      Field("myFloat", FloatType, false),
-      Field("myShort", ShortType.Signed, false),
-      Field("myDecimal", DecimalType(Precision(38), Scale(18)), true),
-      Field("myBytes", BinaryType, true),
-      Field("myDate", DateType, true),
-      Field("myTimestamp", TimestampType, true)
-    )
+    frame.schema shouldBe schema
 
     val values = frame.collect().head.values.toArray
     // must convert byte array to list for deep equals
@@ -95,5 +97,43 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     )
 
     fs.delete(path, true)
+  }
+
+  "parquet writer" should "generate a file compatible with spark" in {
+    fs.delete(path, true)
+
+    val row = Row(
+      schema,
+      "flibble",
+      52.972D,
+      51616L,
+      4536,
+      true,
+      2466.1F,
+      55,
+      BigDecimal(95.36),
+      List[Byte](3, 1, 3),
+      new Date(89, 8, 10),
+      new Timestamp(1483492406000L)
+    )
+
+    ParquetSink(path).write(Seq(row))
+
+    val df = session.sqlContext.read.parquet(path.toString)
+    df.schema shouldBe org.apache.spark.sql.types.StructType(
+      Seq(
+        StructField("myString", org.apache.spark.sql.types.StringType, true),
+        StructField("myDouble", org.apache.spark.sql.types.DoubleType, true),
+        StructField("myLong", org.apache.spark.sql.types.LongType, true),
+        StructField("myInt", org.apache.spark.sql.types.IntegerType, true),
+        StructField("myBoolean", org.apache.spark.sql.types.BooleanType, true),
+        StructField("myFloat", org.apache.spark.sql.types.FloatType, true),
+        StructField("myShort", org.apache.spark.sql.types.ShortType, true),
+        StructField("myDecimal", org.apache.spark.sql.types.DecimalType(38, 18), true),
+        StructField("myBytes", org.apache.spark.sql.types.BinaryType, true),
+        StructField("myDate", org.apache.spark.sql.types.DateType, true),
+        StructField("myTimestamp", org.apache.spark.sql.types.TimestampType, true)
+      )
+    )
   }
 }

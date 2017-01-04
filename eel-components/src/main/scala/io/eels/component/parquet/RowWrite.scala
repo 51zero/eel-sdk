@@ -1,12 +1,14 @@
 package io.eels.component.parquet
 
+import com.sksamuel.exts.Logging
 import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.io.api.RecordConsumer
 import org.apache.parquet.schema.MessageType
 
-class RowWriteSupport(schema: MessageType) extends WriteSupport[Row] {
+class RowWriteSupport(schema: MessageType) extends WriteSupport[Row] with Logging {
+  logger.debug(s"Created parquet row write support for schema message type $schema")
 
   private var writer: RowWriter = _
 

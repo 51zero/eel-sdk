@@ -28,12 +28,16 @@ object ParquetSchemaFns {
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.INT_16 => ShortType.Signed
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.INT_8 => ShortType.Signed
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.TIME_MILLIS => TimeType
+      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.TIME_MICROS => TimeType
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DATE => DateType
       case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(9), Scale(2))
       case PrimitiveTypeName.INT32 => IntType.Signed
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.UINT_64 => IntType.Unsigned
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIME_MILLIS => TimeType
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIME_MICROS => TimeType
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampType
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampType
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
       case PrimitiveTypeName.INT64 => LongType.Signed
       // https://github.com/Parquet/parquet-mr/issues/218
       case PrimitiveTypeName.INT96 => TimestampType
@@ -43,6 +47,7 @@ object ParquetSchemaFns {
 
   def fromParquetGroupType(gt: GroupType): StructType = {
     val fields = gt.getFields.asScala.map { field =>
+      println(s"From field $field")
       val datatype = if (field.isPrimitive)
         fromParquetPrimitiveType(field.asPrimitiveType())
       else
@@ -59,10 +64,20 @@ object ParquetSchemaFns {
       case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name)
       case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, field.name)
       case DateType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.DATE)
+      // https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md#decimal
+      // The scale stores the number of digits of that value that are to the right of the decimal point,
+      // and the precision stores the maximum number of digits supported in the unscaled value.
       case DecimalType(precision, scale) =>
-        val length = Math.floor(Math.log10(Math.pow(2, (8 * precision.value - 1) - 1))).toInt
-        // val meta = new DecimalMetadata(precision.value, scale.value)
-        new PrimitiveType(Repetition.REQUIRED, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, length, field.name)
+        var fixedArrayLength = 0
+        var base10Digits = 0
+        while (base10Digits < precision.value) {
+          base10Digits = Math.floor(Math.log10(Math.pow(2, (8 * fixedArrayLength - 1) - 1))).toInt
+          fixedArrayLength = fixedArrayLength + 1
+        }
+        val metadata = new DecimalMetadata(precision.value, scale.value)
+        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY,
+          fixedArrayLength,
+          field.name, OriginalType.DECIMAL, metadata, new Type.ID(1))
       case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, field.name)
       case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, field.name)
       case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name)
@@ -74,7 +89,8 @@ object ParquetSchemaFns {
       case StructType(fields) => new GroupType(repetition, field.name, fields.map(toParquetType): _*)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
       case TimeType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.TIME_MILLIS)
-      case TimestampType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, field.name, OriginalType.TIMESTAMP_MICROS)
+      // spark doesn't annotate timestamps, just uses int96, so same here
+      case TimestampType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, field.name)
     }
   }
 
