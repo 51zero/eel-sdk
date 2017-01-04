@@ -8,8 +8,7 @@ import org.apache.parquet.hadoop.ParquetReader
 import org.apache.parquet.hadoop.example.GroupReadSupport
 import org.scalatest.{FlatSpec, Matchers}
 
-// a suite of tests designed to ensure that eel parquet support matches the specs, and also that
-// it can read/write files that other frameworks (spark, hive, impala, etc) generate.
+
 class ParquetCompatibilityTest extends FlatSpec with Matchers {
 
   implicit val conf = new Configuration()
