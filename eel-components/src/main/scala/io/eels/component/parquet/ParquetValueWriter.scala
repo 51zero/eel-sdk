@@ -4,6 +4,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.time._
 import java.time.temporal.ChronoUnit
 
+import io.eels.coercion.{BigDecimalCoercer, DoubleCoercer}
 import io.eels.schema._
 import org.apache.parquet.io.api.{Binary, RecordConsumer}
 
@@ -50,7 +51,7 @@ class DecimalWriter(precision: Precision, scale: Scale) extends ParquetValueWrit
   val bits = ParquetSchemaFns.byteSizeForPrecision(precision.value)
 
   override def write(record: RecordConsumer, value: Any): Unit = {
-    val bd = value.asInstanceOf[BigDecimal]
+    val bd = BigDecimalCoercer.coerce(value)
       .setScale(scale.value)
       .underlying()
       .unscaledValue()
@@ -131,7 +132,7 @@ object ShortParquetWriter extends ParquetValueWriter {
 
 object DoubleParquetValueWriter extends ParquetValueWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addDouble(value.asInstanceOf[Double])
+    record.addDouble(DoubleCoercer.coerce(value))
   }
 }
 
