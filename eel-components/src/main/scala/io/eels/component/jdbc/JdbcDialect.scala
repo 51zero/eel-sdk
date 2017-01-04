@@ -8,7 +8,7 @@ trait JdbcDialect {
   def create(schema: StructType, table: String): String
   def insert(row: Row, table: String): String
   def toJdbcType(field: Field): String
-  def fromJdbcType(i: Int): DataType
+  def fromJdbcType(column: Int, metadata: java.sql.ResultSetMetaData): DataType
 
   /**
     * Returns a parameterized insert query

@@ -20,7 +20,7 @@ object JdbcSchemaFns extends Logging {
     val cols = (1 to columnCount).map { k =>
       Field(
           name = md.getColumnLabel(k),
-          dataType = dialect.fromJdbcType(md.getColumnType(k)),
+          dataType = dialect.fromJdbcType(k, md),
           nullable = md.isNullable(k) == ResultSetMetaData.columnNullable
       )
     }

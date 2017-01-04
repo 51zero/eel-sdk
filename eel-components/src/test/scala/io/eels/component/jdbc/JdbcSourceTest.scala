@@ -32,6 +32,22 @@ class JdbcSourceTest extends WordSpec with Matchers {
       a.head.values.head shouldBe 4
       a.head.values(1) shouldBe 6L
     }
+    "read decimal precision and scale" in {
+      val conn = DriverManager.getConnection("jdbc:h2:mem:decimal")
+      conn.createStatement().executeUpdate("create table mytable (a decimal(15,5))")
+      conn.createStatement().executeUpdate("insert into mytable (a) values (1.234)")
+      val schema = JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:decimal"), "select * from mytable").schema
+      schema shouldBe
+        StructType(Vector(Field("A",DecimalType(Precision(15),Scale(5)))))
+    }
+    "read numeric precision and scale" in {
+      val conn = DriverManager.getConnection("jdbc:h2:mem:numeric")
+      conn.createStatement().executeUpdate("create table mytable (a numeric(3,2))")
+      conn.createStatement().executeUpdate("insert into mytable (a) values (1.234)")
+      val schema = JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:numeric"), "select * from mytable").schema
+      schema shouldBe
+        StructType(Vector(Field("A",DecimalType(Precision(3),Scale(2)))))
+    }
     "read from jdbc" in {
       val conn = DriverManager.getConnection("jdbc:h2:mem:test4")
       conn.createStatement().executeUpdate("create table mytable (a integer, b bit, c bigint)")

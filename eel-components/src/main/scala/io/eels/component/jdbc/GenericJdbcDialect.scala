@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import io.eels.Row
 import io.eels.schema._
-import java.sql.Types
+import java.sql.{ResultSetMetaData, Types}
 
 import com.sksamuel.exts.Logging
 
@@ -23,7 +23,11 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
       "varchar(255)"
     }
 
-  override def fromJdbcType(i: Int): DataType = i match {
+  private def decimalType(column: Int, metadata: ResultSetMetaData): DataType = {
+    DecimalType(Precision(metadata.getPrecision(column)), Scale(metadata.getScale(column)))
+  }
+
+  def fromJdbcType(column: Int, metadata: ResultSetMetaData): DataType = metadata.getColumnType(column) match {
     case Types.BIGINT => BigIntType
     case Types.BINARY => BinaryType
     case Types.BIT => BooleanType
@@ -33,7 +37,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.CLOB => StringType
     case Types.DATALINK => throw new UnsupportedOperationException()
     case Types.DATE => DateType
-    case Types.DECIMAL => DecimalType()
+    case Types.DECIMAL => decimalType(column, metadata)
     case Types.DISTINCT => throw new UnsupportedOperationException()
     case Types.DOUBLE => DoubleType
     case Types.FLOAT => FloatType
@@ -45,7 +49,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.NCHAR => StringType
     case Types.NCLOB => StringType
     case Types.NULL => StringType
-    case Types.NUMERIC => DecimalType.Default
+    case Types.NUMERIC =>  decimalType(column, metadata)
     case Types.NVARCHAR => StringType
     case Types.OTHER => StringType
     case Types.REAL => DoubleType
