@@ -8,23 +8,37 @@ import com.sksamuel.exts.Logging
 
 class GenericJdbcDialect extends JdbcDialect with Logging {
 
+  val config = JdbcReaderConfig()
+
   override def toJdbcType(field: Field): String = field.dataType match {
-    case LongType(_) => "int"
     case BigIntType => "int"
+    case CharType(size) => s"char($size)"
+    case DateType => "date"
+    case LongType(_) => "int"
     case IntType(_) => "int"
+    case DoubleType => "double"
+    case FloatType => "float"
     case ShortType(_) => "smallint"
-    case BooleanType => "BOOLEAN"
+    case BooleanType => "boolean"
+    case DecimalType(precision, scale) => s"decimal(${precision.value}, ${scale.value})"
     case StringType => "text"
+    case TimestampType => "timestamp"
     case VarcharType(size) =>
       if (size > 0) s"varchar($size)"
       else "varchar(255)"
     case _ =>
-      logger.warn(s"Unknown data type ${field.dataType}")
+      logger.warn(s"Unknown data type ${field.dataType}; defaulting to varchar(255)")
       "varchar(255)"
     }
 
+  // http://stackoverflow.com/questions/593197/what-is-the-default-precision-and-scale-for-a-number-in-oracle
   private def decimalType(column: Int, metadata: ResultSetMetaData): DataType = {
-    DecimalType(Precision(metadata.getPrecision(column)), Scale(metadata.getScale(column)))
+    val precision = metadata.getPrecision(column)
+    val scale = metadata.getScale(column)
+    DecimalType(
+      if (precision <= 0) config.defaultPrecision else precision,
+      if (scale < 0) config.defaultScale else scale
+    )
   }
 
   def fromJdbcType(column: Int, metadata: ResultSetMetaData): DataType = metadata.getColumnType(column) match {
@@ -33,7 +47,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.BIT => BooleanType
     case Types.BLOB => BinaryType
     case Types.BOOLEAN => BooleanType
-    case Types.CHAR => CharType(255)
+    case Types.CHAR => CharType(metadata.getPrecision(column))
     case Types.CLOB => StringType
     case Types.DATALINK => throw new UnsupportedOperationException()
     case Types.DATE => DateType
@@ -62,7 +76,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.TIMESTAMP => TimestampType
     case Types.TINYINT => ShortType.Signed
     case Types.VARBINARY => BinaryType
-    case Types.VARCHAR => StringType
+    case Types.VARCHAR => VarcharType(metadata.getPrecision(column))
     case _ => StringType
   }
 
