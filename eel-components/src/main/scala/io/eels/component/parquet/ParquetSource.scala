@@ -25,12 +25,18 @@ object ParquetSource {
 }
 
 case class ParquetSource(pattern: FilePattern,
-                         predicate: Option[Predicate] = None)
+                         predicate: Option[Predicate] = None,
+                         projection: Seq[String] = Nil)
                         (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
   lazy val paths = pattern.toPaths()
 
   def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
+  def withProjection(first: String, rest: String*): ParquetSource = withProjection(first +: rest)
+  def withProjection(fields: Seq[String]): ParquetSource = {
+    require(fields.nonEmpty)
+    copy(projection = fields.toList)
+  }
 
   // returns the metadata in the parquet file, or an empty map if none
   def metadata(): Map[String, String] = {
@@ -41,13 +47,8 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   lazy val schema: StructType = {
-    println("Getting schema")
-    using(ParquetReaderFn(paths.head, None, None)) { reader =>
-      val row = Option(reader.read).getOrElse {
-        sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
-      }
-      row.schema
-    }
+    val messageType = ParquetFileReader.open(conf, paths.head).getFileMetaData.getSchema
+    ParquetSchemaFns.fromParquetGroupType(messageType)
   }
 
   // returns the count of all records in this source, predicate is ignored
@@ -72,7 +73,7 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts(): List[Part] = {
     logger.debug(s"Parquet source has ${paths.size} files: $paths")
-    paths.map { it => new ParquetPart(it, predicate) }
+    paths.map { it => new ParquetPart(it, predicate, projection) }
   }
 
   def footers(): List[Footer] = {

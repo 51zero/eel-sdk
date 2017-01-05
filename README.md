@@ -13,6 +13,7 @@ Eel is a toolkit for manipulating data in the hadoop ecosystem. By hadoop ecosys
 * Coalescing multiple files, such as the output from spark, into a single file
 * Querying, streaming or reading into memory (relatively) small datasets directly from your process without reaching out to YARN or similar.
 * Moving or altering partitions in hive
+* Retrieving statistics on existing tables or datasets
 * Reading schemas for existing datasets
 
 ## Frames
@@ -47,15 +48,16 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 
 ## Sources
 
+* Apache Avro
+* Apache Parquet
+* Apache Orc
 * CSV
+* Hadoop Sequence files
+* HDFS 
 * Json
 * JDBC
-* Parquet
-* Avro
-* Hadoop Sequence files
-* Hadoop Orc
 
-### Parquet Source
+## Parquet Source
 The parquet source will read from one or more parquet files. To use the source, create an instance of `ParquetSource` specifying a file pattern or `Path` object. The Parquet source implementation is optimized to use native parquet reading directly to an eel row object without creating intermediate formats such as Avro.
 
 Example reading from a single file `ParquetSource(new Path("hdfs:///myfile"))`
@@ -75,6 +77,20 @@ val frame = ParquetSource(path).withPredicate(Predicate.equals("location", "west
 ```
 
 Multiple predicates can be grouped together using `Predicate.or` and `Predicate.and`.
+
+#### Projections
+
+The parquet source also allows you to specify a projection which is a subset of the columns to return.
+Again, since parquet is columnar, if a column is not needed at all then the entire column can be skipped directly 
+in the file making parquet extremely fast at this kind of operation.
+
+To use a projection, simply use `withProjection` on the Parquet source with the fields to keep.
+
+```scala
+val frame = ParquetSource(path).withProjection("amount", "type").toFrame()
+```
+
+
 
 Hive Source
 ---

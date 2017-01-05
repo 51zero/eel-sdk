@@ -4,7 +4,7 @@ import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
-import org.apache.parquet.hadoop.ParquetReader
+import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
 import org.apache.parquet.hadoop.api.ReadSupport
 import org.apache.parquet.schema.Type
 
@@ -33,7 +33,7 @@ object ParquetReaderFn {
       projectionSchema.foreach { it =>
         conf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
-      //conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
+      conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
       conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
       conf
     }

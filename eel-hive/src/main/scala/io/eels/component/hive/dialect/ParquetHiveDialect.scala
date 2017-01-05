@@ -23,7 +23,6 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                    (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]] =
     new CloseableIterator[Seq[Row]] {
 
-      // an avro conversion for the projection schema
       val parquetProjectionSchema = ParquetSchemaFns.toParquetSchema(projectionSchema)
       val reader = ParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
 

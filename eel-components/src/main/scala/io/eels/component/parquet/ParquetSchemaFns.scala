@@ -47,7 +47,6 @@ object ParquetSchemaFns {
 
   def fromParquetGroupType(gt: GroupType): StructType = {
     val fields = gt.getFields.asScala.map { field =>
-      println(s"From field $field")
       val datatype = if (field.isPrimitive)
         fromParquetPrimitiveType(field.asPrimitiveType())
       else

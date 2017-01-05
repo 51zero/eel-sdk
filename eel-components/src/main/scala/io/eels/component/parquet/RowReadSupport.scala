@@ -41,7 +41,8 @@ class RowReadSupport extends ReadSupport[Row] {
 class RowRecordMaterializer(fileSchema: MessageType,
                             readContext: ReadContext) extends RecordMaterializer[Row] {
 
-  val schema = ParquetSchemaFns.fromParquetGroupType(fileSchema)
+  val schema = ParquetSchemaFns.fromParquetGroupType(readContext.getRequestedSchema)
+  println(schema)
   val builder = new RowBuilder(schema)
   var row: Row = null
 
