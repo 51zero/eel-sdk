@@ -23,8 +23,6 @@ The core data structure in Eel is the Frame. A frame consists of columns, and ro
 
 ### Frames
 
-### Sources
-
 ### Schema
 
 #### Types Supported
@@ -76,10 +74,25 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 
 Parquet Source
 --------------
-The parquet source will read from one or more parquet files. To use the source, create an instance of `ParquetSource` specifying a file pattern or `Path` object. Currently the Parquet source will assume the format of the parquet file is Avro.
+The parquet source will read from one or more parquet files. To use the source, create an instance of `ParquetSource` specifying a file pattern or `Path` object. The Parquet source implementation is optimized to use native parquet reading directly to an eel row object without creating intermediate formats such as Avro.
 
 Example reading from a single file `ParquetSource(new Path("hdfs:///myfile"))`
-Example reading from a wildcard pattern `ParquetSource("hdfs:///user/sam/*"))`
+Example reading from a wildcard pattern `ParquetSource("hdfs:///user/warehouse/*"))`
+
+#### Predicates
+
+Parquet as a file format supports predicates, which are row level filter operations. Because parquet is a columnar store,
+row level filters can be extremely efficient. Whenever you are reading from parquet files - either directly or through hive - 
+a row level filter will nearly always be faster than reading the data and filtering afterwards. This is
+because parquet is able to skip whole chunks of the file that do not match the predicate.
+                                              
+To use a predicate, simply add an instance of `Predicate` to the Parquet source class.
+
+```scala
+val frame = ParquetSource(path).withPredicate(Predicate.equals("location", "westeros")).toFrame()
+```
+
+Multiple predicates can be grouped together using `Predicate.or` and `Predicate.and`.
 
 Hive Source
 ---
