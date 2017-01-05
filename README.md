@@ -4,28 +4,22 @@
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.11*.svg?label=latest%20release%20for%202.11"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.11%22)
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.12*.svg?label=latest%20release%20for%202.12"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.12%22)
 
-Eel is a toolkit for manipulating data in the hadoop ecosystem. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel is an SDK.
+Eel is a toolkit for manipulating data in the hadoop ecosystem. By hadoop ecosystem we mean file formats common to the big-data world, such as parquet, orc, csv in locations such as HDFS or Hive tables. In contrast to distributed batch or streaming engines such as [Spark](http://spark.apache.org/) or [Flink](https://flink.apache.org/), Eel is an SDK intended to be used directly in process. Eel is a lower level API than higher level engines like Spark and is aimed for those use cases when you want something like a file API. 
 ![eel logo](https://raw.githubusercontent.com/eel-sdk/eel/master/eel-core/src/main/graphics/eel_small.png)
 
 ### Example Use Cases
 
-* A great use case is merging many parquet files into a single file. This functionality is not hard to write. You could make a parquet reader, a parquet writer, read -> write loop, close. But its 25 lines of code, when it should be as simple as "from" -> "to". Eel does this.
+* Importing from one source such as JDBC into another source such as Hive/HDFS
+* Coalescing multiple files, such as the output from spark, into a single file
+* Querying, streaming or reading into memory (relatively) small datasets directly from your process without reaching out to YARN or similar.
+* Moving or altering partitions in hive
+* Reading schemas for existing datasets
 
-* Reading from a kafka queue directly into parquet/hive/etc
+## Frames
 
-* Coalescing spark output
+The core data structure in Eel is the Frame. A frame consists of a schema, and rows which contain values for each field. A frame is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. Frames are constructed from sources such as hive tables, jdbc databases, delimited files, kafka queues, or even programatically from Scala or Java collections.
 
-* Dumping data from JDBC into Hadoop
-
-### Overview
-
-The core data structure in Eel is the Frame. A frame consists of columns, and rows containings values for each column. A frame is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. Frames are constructed from sources such as hive tables, jdbc databases, delimited files, kafka queues, or even programatically from Scala or Java collections.
-
-### Frames
-
-### Schema
-
-#### Types Supported
+### Types Supported
 
 |Eel Datatype|JVM Types|
 |-----|-------|
@@ -39,9 +33,6 @@ The core data structure in Eel is the Frame. A frame consists of columns, and ro
 |DateTime|java.sql.Date|
 |Timestamp|java.sql.Timestamp|
 
-
-### File API
-
 ### Examples
 
 ```scala
@@ -54,15 +45,7 @@ AvroSource("test.avro").to(JdbcSink("jdbc:....", "totable", JdbcSinkProps(create
 JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSinkProps(createTable = true)))
 ```
 
-### Frame Operations
-
-##### Union
-
-##### Join
-
-##### Projection
-
-### Sources
+## Sources
 
 * CSV
 * Json
@@ -72,8 +55,7 @@ JdbcSource("jdbc:....", "fromtable").to(JdbcSink("jdbc:....", "totable", JdbcSin
 * Hadoop Sequence files
 * Hadoop Orc
 
-Parquet Source
---------------
+### Parquet Source
 The parquet source will read from one or more parquet files. To use the source, create an instance of `ParquetSource` specifying a file pattern or `Path` object. The Parquet source implementation is optimized to use native parquet reading directly to an eel row object without creating intermediate formats such as Avro.
 
 Example reading from a single file `ParquetSource(new Path("hdfs:///myfile"))`
@@ -131,42 +113,6 @@ If the schema you need is in the form of the CSV headers, then we can easily par
 val inferrer = SchemaInferrer(SchemaType.String, SchemaRule("qty", SchemaType.Int, false), SchemaRule(".*_id", SchemaType.Int))
 CsvSource("myfile").withSchemaInferrer(inferrer)
 ```
-
-Kafka Source
----
-
-Eel integrates with [Kafka](http://kafka.apache.org/) to read messages from a topic or topics into a Frame. To connect to a Kafka server we need an instance of `KafkaSource` with an instance of `KafkaSourceConfig`. The config requires the broker list (host:port,host:port,..), the consumer group to connect as, as well as the topic or topics to read from. In addition we must specify a `KafkaDeserializer` that can convert the incoming byte array from Kafka into an eel Row. 
-
-To create a KafkaSource that uses the default Json message deserialier, we can do: 
-`KafkaSource(KafkaSourceConfig("localhost:12345", "consumer"), Set("topic1"), JsonKafkaDeserializer)`
-
-### Command Line Interface
-
-Eel comes with a handy cli interace.
-
-Supports
-
---source <sourceurl> --sink <sinkurl>
-
-##### Hive Source Url
-
-In general:
-hive:<db>:<table>(:col1,col2,col3..,coln)(?options)
-
-Examples:
-hive:prod:customers
-hive:prod:orders:orderid,date,customerid
-hive:prod:accounts?threads=4
-
-##### Csv Source Url
-
-In general:
-csv:<path>(/col1,col2,col3..,coln)(?options)
-
-Examples:
-csv:/some/path
-csv:/some/path:orderid,customerid
-csv:/some/path?a=b
 
 ### How to use
 
