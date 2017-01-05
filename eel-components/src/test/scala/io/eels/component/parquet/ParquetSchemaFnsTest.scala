@@ -32,6 +32,18 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
       new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 20, "a", OriginalType.DECIMAL, new DecimalMetadata(38, 0), new org.apache.parquet.schema.Type.ID(1)))
   }
 
+  it should "store char as BINARY with UTF8" in {
+    val schema = StructType(Field("a", CharType(255)))
+    ParquetSchemaFns.toParquetSchema(schema) shouldBe
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a", OriginalType.UTF8))
+  }
+
+  it should "store varchar as BINARY with UTF8" in {
+    val schema = StructType(Field("a", VarcharType(255)))
+    ParquetSchemaFns.toParquetSchema(schema) shouldBe
+      new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a", OriginalType.UTF8))
+  }
+
   it should "store times as INT32 with original type tag TIME_MILLIS" in {
     val schema = StructType(Field("a", TimeType))
     ParquetSchemaFns.toParquetSchema(schema) shouldBe
