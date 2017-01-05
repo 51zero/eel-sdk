@@ -6,7 +6,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.Predicate
 import io.eels.component.parquet.util.ParquetLogMute
-import io.eels.schema.{PartitionConstraint, StructType}
+import io.eels.schema.{PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{FilePattern, Part, Source}
 import org.apache.hadoop.fs.permission.FsPermission
@@ -104,6 +104,21 @@ case class HiveSource(dbName: String,
     paths(includePartitionDirs, includeTableDir).foreach(fs.setPermission(_, permission))
   }
 
+  def showDdl(ifNotExists: Boolean = true): String = {
+    val _spec = spec()
+    val partitions = ops.partitionKeyNames(dbName, tableName)
+    HiveDDL.showDDL(
+      tableName,
+      schema.fields,
+      tableType = _spec.tableType,
+      location = _spec.location.some,
+      serde = _spec.serde,
+      partitions = partitions.map(PartitionColumn(_, StringType)),
+      outputFormat = _spec.outputFormat,
+      inputFormat = _spec.inputFormat,
+      ifNotExists = ifNotExists)
+  }
+
   /**
     * Sets the acl for all files of this hive source.
     * Even if the files are not located inside the table directory, this function will find them
@@ -162,7 +177,7 @@ case class HiveSource(dbName: String,
    *
    * 2) Any partitions set. These should be included in the schema columns.
    */
-  override def schema(): StructType = {
+  override def schema: StructType = {
     login()
     // if no field names were specified, then we will return the schema as is from the hive database,
     // otherwise we will keep only the requested fields
@@ -213,14 +228,14 @@ case class HiveSource(dbName: String,
     if (isPartitionOnlyProjection() && predicate.isEmpty) {
       logger.info("Requested projection only uses partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
-      List(new HivePartitionPart(dbName, tableName, schema(), partitionKeys, dialect))
+      List(new HivePartitionPart(dbName, tableName, schema, partitionKeys, dialect))
     } else {
       val files = HiveFilesFn(table, partitionKeys.map(_.field.name), partitionConstraint)
       logger.debug(s"Found ${files.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema
       files.map { case (file, spec) =>
-        new HiveFilePart(dialect, file, metastoreSchema, schema(), predicate, spec.parts.toList)
+        new HiveFilePart(dialect, file, metastoreSchema, schema, predicate, spec.parts.toList)
       }
     }
   }
