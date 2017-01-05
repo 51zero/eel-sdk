@@ -1,16 +1,19 @@
 package io.eels
 
-import io.eels.schema.StructType
-
-import scala.collection.immutable.Vector
+import io.eels.schema.{Field, StructType}
 
 class RowBuilder(schema: StructType) {
-  private var values = Vector.newBuilder[Any]
-  def add(value: Any) = values.+=(value)
-  def reset() = {
-    values = Vector.newBuilder[Any]
-  }
+
+  private val map = new scala.collection.mutable.HashMap[Field, Any]()
+
+  def put(index: Int, value: Any) = map.put(schema.field(index), value)
+
+  def reset() = map.clear()
+
   def build(): Row = {
-    Row(schema, values.result)
+    val values = schema.fields.map { field =>
+      map.getOrElse(field, field.default)
+    }
+    Row(schema, values)
   }
 }

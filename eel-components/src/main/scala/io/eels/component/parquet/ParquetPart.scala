@@ -15,9 +15,8 @@ class ParquetPart(path: Path,
                   projection: Seq[String])
                  (implicit conf: Configuration) extends Part with Logging with Using {
 
-  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
-
-    val projectionSchema = if (projection.isEmpty)
+  def projectionSchema = {
+    if (projection.isEmpty)
       None
     else {
       val messageType = ParquetFileReader.open(conf, path).getFileMetaData.getSchema
@@ -25,6 +24,10 @@ class ParquetPart(path: Path,
       val projected = StructType(structType.fields.filter(field => projection.contains(field.name)))
       ParquetSchemaFns.toParquetSchema(projected).some
     }
+  }
+
+  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
+
     val reader = ParquetReaderFn(path, predicate, projectionSchema)
 
     override def close(): Unit = {
@@ -32,7 +35,6 @@ class ParquetPart(path: Path,
       reader.close()
     }
 
-    override val iterator: Iterator[Seq[Row]] =
-      ParquetIterator(reader).grouped(1000).withPartial(true)
+    override val iterator: Iterator[Seq[Row]] = ParquetIterator(reader).grouped(1000).withPartial(true)
   }
 }

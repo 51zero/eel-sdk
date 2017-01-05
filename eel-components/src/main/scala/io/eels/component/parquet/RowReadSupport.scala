@@ -27,9 +27,9 @@ class RowReadSupport extends ReadSupport[Row] {
   override def init(configuration: Configuration,
                     keyValueMetaData: java.util.Map[String, String],
                     fileSchema: MessageType): ReadSupport.ReadContext = {
-    val partialSchemaString = configuration.get(ReadSupport.PARQUET_READ_SCHEMA)
-    val requestedProjection = ReadSupport.getSchemaForRead(fileSchema, partialSchemaString)
-    new ReadSupport.ReadContext(requestedProjection)
+    val projectionSchemaString = configuration.get(ReadSupport.PARQUET_READ_SCHEMA)
+    val requestedSchema = ReadSupport.getSchemaForRead(fileSchema, projectionSchemaString)
+    new ReadSupport.ReadContext(requestedSchema)
   }
 }
 
@@ -50,17 +50,17 @@ class RowRecordMaterializer(fileSchema: MessageType,
     override def getConverter(fieldIndex: Int): Converter = {
       val field = schema.fields(fieldIndex)
       field.dataType match {
-        case BinaryType => new DefaultPrimitiveConverter(builder)
-        case BooleanType => new DefaultPrimitiveConverter(builder)
-        case DateType => new DateConverter(builder)
-        case DecimalType(precision, scale) => new DecimalConverter(builder, precision, scale)
-        case DoubleType => new DefaultPrimitiveConverter(builder)
-        case FloatType => new DefaultPrimitiveConverter(builder)
-        case _: IntType => new DefaultPrimitiveConverter(builder)
-        case _: LongType => new DefaultPrimitiveConverter(builder)
-        case _: ShortType => new DefaultPrimitiveConverter(builder)
-        case StringType => new StringConverter(builder)
-        case TimestampType => new TimestampConverter(builder)
+        case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case DateType => new DateConverter(fieldIndex, builder)
+        case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
+        case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
+        case StringType => new StringConverter(fieldIndex, builder)
+        case TimestampType => new TimestampConverter(fieldIndex, builder)
         case other => sys.error("Unsupported type " + other)
       }
     }
@@ -68,25 +68,28 @@ class RowRecordMaterializer(fileSchema: MessageType,
     override def start(): Unit = builder.reset()
   }
 
+  override def skipCurrentRecord(): Unit = builder.reset()
   override def getCurrentRecord: Row = row
 }
 
 // just adds the parquet type directly into the builder
 // for types that are not pass through, create an instance of a more specialized converter
-class DefaultPrimitiveConverter(builder: RowBuilder) extends PrimitiveConverter {
-  override def addBinary(value: Binary): Unit = builder.add(value.getBytes)
-  override def addDouble(value: Double): Unit = builder.add(value)
-  override def addLong(value: Long): Unit = builder.add(value)
-  override def addBoolean(value: Boolean): Unit = builder.add(value)
-  override def addInt(value: Int): Unit = builder.add(value)
-  override def addFloat(value: Float): Unit = builder.add(value)
+// we need the index so that we know which fields were present in the file as they will be skipped if null
+class DefaultPrimitiveConverter(index: Int, builder: RowBuilder) extends PrimitiveConverter {
+  override def addBinary(value: Binary): Unit = builder.put(index, value.getBytes)
+  override def addDouble(value: Double): Unit = builder.put(index, value)
+  override def addLong(value: Long): Unit = builder.put(index, value)
+  override def addBoolean(value: Boolean): Unit = builder.put(index, value)
+  override def addInt(value: Int): Unit = builder.put(index, value)
+  override def addFloat(value: Float): Unit = builder.put(index, value)
 }
 
-class StringConverter(builder: RowBuilder) extends PrimitiveConverter {
+class StringConverter(index: Int,
+                      builder: RowBuilder) extends PrimitiveConverter {
 
   private var dict: Array[String] = null
 
-  override def addBinary(value: Binary): Unit = builder.add(value.toStringUsingUTF8)
+  override def addBinary(value: Binary): Unit = builder.put(index, value.toStringUsingUTF8)
   
   override def hasDictionarySupport: Boolean = true
 
@@ -98,23 +101,24 @@ class StringConverter(builder: RowBuilder) extends PrimitiveConverter {
   }
 
   override def addValueFromDictionary(dictionaryId: Int): Unit = {
-    builder.add(dict(dictionaryId))
+    builder.put(index, dict(dictionaryId))
   }
 }
 
 // we must use the precision and scale to build the value back from the bytes
-class DecimalConverter(builder: RowBuilder,
+class DecimalConverter(index: Int,
+                       builder: RowBuilder,
                        precision: Precision,
                        scale: Scale) extends PrimitiveConverter {
   override def addBinary(value: Binary): Unit = {
     val bi = new BigInteger(value.getBytes)
     val bd = BigDecimal.apply(bi, scale.value, new MathContext(precision.value))
-    builder.add(bd)
+    builder.put(index, bd)
   }
 }
 
 // https://github.com/Parquet/parquet-mr/issues/218
-class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
+class TimestampConverter(index: Int, builder: RowBuilder) extends PrimitiveConverter {
 
   val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
@@ -125,15 +129,18 @@ class TimestampConverter(builder: RowBuilder) extends PrimitiveConverter {
     val days = ByteBuffer.wrap(value.getBytes.slice(8, 12)).order(ByteOrder.LITTLE_ENDIAN).getInt()
     val dt = JulianEpochInGregorian.plusDays(days).plusNanos(nanos)
     val millis = dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
-    builder.add(new Timestamp(millis))
+    builder.put(index, new Timestamp(millis))
   }
 }
 
-class DateConverter(builder: RowBuilder) extends PrimitiveConverter {
-  val UnixEpoch = LocalDateTime.of(1970, 1, 1, 0, 0, 0)
+class DateConverter(index: Int,
+                    builder: RowBuilder) extends PrimitiveConverter {
+
+  private val UnixEpoch = LocalDateTime.of(1970, 1, 1, 0, 0, 0)
+
   override def addInt(value: Int): Unit = {
     val dt = UnixEpoch.plusDays(value)
     val millis = dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
-    builder.add(new Date(millis))
+    builder.put(index, new Date(millis))
   }
 }

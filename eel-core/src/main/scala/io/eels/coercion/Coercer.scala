@@ -1,7 +1,5 @@
 package io.eels.coercion
 
-import io.eels.schema.{DataType, LongType}
-
 /**
   * A Coercer will coerce input values into an output value of type T.
   * The types of coercion supported depends on the implementation but for example,
@@ -9,12 +7,6 @@ import io.eels.schema.{DataType, LongType}
   */
 trait Coercer[T] {
   def coerce(input: Any): T
-}
-
-object Coercer {
-  def apply(datatype: DataType) = datatype match {
-    case _: LongType => LongCoercer
-  }
 }
 
 object LongCoercer extends Coercer[Long] {

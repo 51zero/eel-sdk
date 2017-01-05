@@ -8,6 +8,10 @@ case class Field(name: String,
                  comment: Option[String] = None,
                  metadata: Map[String, String] = Map.empty) {
 
+  // returns the default value for this field or throws an exception
+  // if the field has no default and is not nullable
+  def default: Any = if (nullable) null else sys.error(s"Not nullable field $this")
+
   // Creates a lowercase copy of this field
   def toLowerCase(): Field = copy(name = name.toLowerCase())
 
