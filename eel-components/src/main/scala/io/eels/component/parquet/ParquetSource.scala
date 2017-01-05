@@ -47,8 +47,12 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   lazy val schema: StructType = {
-    val messageType = ParquetFileReader.open(conf, paths.head).getFileMetaData.getSchema
-    ParquetSchemaFns.fromParquetGroupType(messageType)
+    using(ParquetReaderFn(paths.head, None, None)) { reader =>
+      val row = Option(reader.read).getOrElse {
+        sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
+      }
+      row.schema
+    }
   }
 
   // returns the count of all records in this source, predicate is ignored

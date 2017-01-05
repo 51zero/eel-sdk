@@ -37,6 +37,8 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
 
   val path = new Path("spark_parquet.parquet")
 
+  fs.delete(path, true)
+
   // some types default to null in spark, others don't
   val schema = StructType(
     Field("myString", StringType, true),
