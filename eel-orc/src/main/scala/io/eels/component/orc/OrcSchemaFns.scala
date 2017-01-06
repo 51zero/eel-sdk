@@ -17,7 +17,7 @@ object OrcSchemaFns {
         case ByteType(_) => TypeDescription.createByte()
         case CharType(size) => TypeDescription.createChar().withMaxLength(size)
         case DateType => TypeDescription.createDate()
-        case DecimalType(p, s) => TypeDescription.createDecimal().withPrecision(p.value).withScale(s.value)
+        case DecimalType(p, s) => TypeDescription.createDecimal().withScale(s.value).withPrecision(p.value)
         case DoubleType => TypeDescription.createDouble()
         case FloatType => TypeDescription.createFloat()
         case IntType(_) => TypeDescription.createInt()

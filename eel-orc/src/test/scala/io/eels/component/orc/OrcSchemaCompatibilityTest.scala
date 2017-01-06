@@ -15,6 +15,7 @@ class OrcSchemaCompatibilityTest extends FunSuite with Matchers {
       .addField("byte", TypeDescription.createByte())
       .addField("char", TypeDescription.createChar().withMaxLength(8))
       .addField("date", TypeDescription.createDate())
+      .addField("decimal", TypeDescription.createDecimal().withScale(2).withPrecision(4))
       .addField("double", TypeDescription.createDouble())
       .addField("float", TypeDescription.createFloat())
       .addField("int", TypeDescription.createInt())
@@ -28,6 +29,7 @@ class OrcSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("byte", ByteType.Signed, true),
       Field("char", CharType(8), true),
       Field("date", DateType, true),
+      Field("decimal", DecimalType(4, 2), true),
       Field("double", DoubleType, true),
       Field("float", FloatType, true),
       Field("int", IntType.Signed, true),

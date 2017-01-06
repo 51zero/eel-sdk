@@ -7,6 +7,8 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import io.eels.schema.StructType
 
+import scala.util.control.NonFatal
+
 object SourceFrame {
   private val Poison = List(Row.Sentinel)
   private val executor = Executors.newCachedThreadPool()
@@ -26,9 +28,14 @@ class SourceFrame(source: Source, listener: Listener = NoopListener) extends Fra
     logger.debug(s"Submitting ${parts.size} parts to executor")
     parts.foreach { part =>
       SourceFrame.executor.submit {
-        part.iterator().foreach { rows =>
-          queue.put(rows)
-          rows.foreach(listener.onNext)
+        try {
+          part.iterator().foreach { rows =>
+            queue.put(rows)
+            rows.foreach(listener.onNext)
+          }
+        } catch {
+          case NonFatal(e) =>
+            logger.error("Error while reading from source", e)
         }
         // once all the reading tasks are complete we need to indicate that we
         // are finished with the queue, so we add a sentinel for the reading thread to pick up

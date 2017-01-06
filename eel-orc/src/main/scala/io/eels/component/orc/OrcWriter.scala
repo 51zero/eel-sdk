@@ -6,15 +6,16 @@ import io.eels.Row
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector
+import org.apache.hadoop.hive.ql.exec.vector.ColumnVector
 import org.apache.orc.{OrcFile, TypeDescription}
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class OrcWriter(path: Path, schema: StructType)(implicit conf: Configuration) extends Logging {
+class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration) extends Logging {
 
-  private val orcSchema: TypeDescription = OrcFns.writeSchema(schema)
-  logger.debug(s"Creating orc writer $orcSchema")
+  private val schema: TypeDescription = OrcSchemaFns.toOrcSchema(structType)
+  logger.debug(s"Creating orc writer for schema $schema")
 
   private val config = ConfigFactory.load()
   private val batchSize = {
@@ -23,13 +24,11 @@ class OrcWriter(path: Path, schema: StructType)(implicit conf: Configuration) ex
   }
   logger.info(s"Orc writer will use batchsize=$batchSize")
 
-  private val batch = orcSchema.createRowBatch(batchSize)
-  // todo support other column types
-  private val cols = batch.cols.map(_.asInstanceOf[BytesColumnVector])
-  private val colRange = cols.indices
   private val buffer = new ArrayBuffer[Row](batchSize)
+  private val serializers = schema.getChildren.asScala.map(OrcSerializer.forType).toArray
 
-  private lazy val writer = OrcFile.createWriter(path, OrcFile.writerOptions(conf).setSchema(orcSchema))
+  private val batch = schema.createRowBatch(batchSize)
+  private lazy val writer = OrcFile.createWriter(path, OrcFile.writerOptions(conf).setSchema(schema))
 
   def write(row: Row): Unit = {
     buffer.append(row)
@@ -38,17 +37,22 @@ class OrcWriter(path: Path, schema: StructType)(implicit conf: Configuration) ex
   }
 
   def flush(): Unit = {
-    // todo extract this into some orc serializer so its easier to read
+
+    def writecol[T <: ColumnVector](rowIndex: Int, colIndex: Int, row: Row): Unit = {
+      val serializer = serializers(colIndex).asInstanceOf[OrcSerializer[T]]
+      val vector = batch.cols(colIndex).asInstanceOf[T]
+      val value = row.values(colIndex)
+      serializer.writeToVector(rowIndex, vector, value)
+    }
+
     // don't use foreach here, using old school for loops for perf
-    for (k <- buffer.indices) {
-      val row = buffer(k)
-      for (j <- colRange) {
-        val value = row.values(j)
-        val col = cols(j)
-        val bytes = if (value == null) Array.emptyByteArray else value.toString.getBytes("UTF8")
-        col.setRef(k, bytes, 0, bytes.length)
+    for (rowIndex <- buffer.indices) {
+      val row = buffer(rowIndex)
+      for (colIndex <- batch.cols.indices) {
+        writecol(rowIndex, colIndex, row)
       }
     }
+
     batch.size = buffer.size
     writer.addRowBatch(batch)
     buffer.clear()

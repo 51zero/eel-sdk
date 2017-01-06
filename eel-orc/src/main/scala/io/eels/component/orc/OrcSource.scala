@@ -14,7 +14,11 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
 
   override def parts(): List[Part] = List(new OrcPart(path))
 
-  override def schema(): StructType = OrcFns.readSchema(path)
+  override def schema: StructType = {
+    val reader = OrcFile.createReader(path, new ReaderOptions(conf).maxLength(1))
+    val schema = reader.getSchema()
+    OrcSchemaFns.fromOrcSchema(schema)
+  }
 
   private def reader() = OrcFile.createReader(path, new ReaderOptions(conf))
 
