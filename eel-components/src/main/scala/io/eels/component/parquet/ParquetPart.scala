@@ -15,7 +15,7 @@ class ParquetPart(path: Path,
                   projection: Seq[String])
                  (implicit conf: Configuration) extends Part with Logging with Using {
 
-  def projectionSchema = {
+  lazy val projectionSchema = {
     if (projection.isEmpty)
       None
     else {
@@ -35,6 +35,6 @@ class ParquetPart(path: Path,
       reader.close()
     }
 
-    override val iterator: Iterator[Seq[Row]] = ParquetIterator(reader).grouped(1000).withPartial(true)
+    override val iterator: Iterator[Seq[Row]] = ParquetIterator(reader).grouped(100).withPartial(true)
   }
 }

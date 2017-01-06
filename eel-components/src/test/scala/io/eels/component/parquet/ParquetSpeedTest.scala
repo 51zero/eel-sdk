@@ -30,13 +30,14 @@ import scala.util.Random
   * // switched to size only operation, to measure speed of parquet only and not overhead of gc
   *
   * v.1.1-snapshot-4th jan, native parquet reader
-  * 2m rows string of length 4; writing=; reading parquet=1695; reading avro=2426
-  *
+  * 2m rows string of length 4; reading parquet=1695; reading avro=2426
+  * v1.1.0-M2 6th jan
+  * 2m rows string of length 4; reading parquet=381; reading avro=486
   */
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()
 
-  val size = 5000000
+  val size = 2000000
   val schema = StructType("a", "b", "c", "d", "e")
   val createRow = Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4))
   val frame = Frame.fromIterator(schema, Iterator.continually(createRow).take(size))
