@@ -9,15 +9,8 @@ import org.apache.hadoop.fs.Path
 case class OrcSink(path: Path)(implicit conf: Configuration) extends Sink with Logging {
 
   override def writer(schema: StructType): SinkWriter = new SinkWriter {
-
     val writer = new OrcWriter(path, schema)
-
-    override def write(row: Row): Unit = {
-      this.synchronized {
-        writer.write(row)
-      }
-    }
-
+    override def write(row: Row): Unit = writer.write(row)
     override def close(): Unit = writer.close()
   }
 }

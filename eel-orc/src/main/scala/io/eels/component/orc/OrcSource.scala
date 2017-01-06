@@ -20,7 +20,10 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
     OrcSchemaFns.fromOrcSchema(schema)
   }
 
-  private def reader() = OrcFile.createReader(path, new ReaderOptions(conf))
+  private def reader() = {
+    val options = new ReaderOptions(conf)
+    OrcFile.createReader(path, options)
+  }
 
   def count(): Long = reader().getNumberOfRows
   def statistics(): Seq[ColumnStatistics] = reader().getStatistics.toVector
