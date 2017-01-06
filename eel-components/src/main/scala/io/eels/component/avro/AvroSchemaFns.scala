@@ -2,7 +2,8 @@ package io.eels.component.avro
 
 import com.sksamuel.exts.Logging
 import io.eels.schema._
-import org.apache.avro.{Schema, SchemaBuilder}
+import org.apache.avro.LogicalTypes.{Decimal, TimestampMillis}
+import org.apache.avro.{LogicalTypes, Schema, SchemaBuilder}
 import org.codehaus.jackson.node.NullNode
 
 import scala.collection.JavaConverters._
@@ -17,9 +18,13 @@ object AvroSchemaFns extends Logging {
     def toAvroSchema(dataType: DataType): org.apache.avro.Schema = dataType match {
       case ArrayType(elementType) => SchemaBuilder.array().items(toAvroSchema(elementType))
       case BigIntType => SchemaBuilder.builder().longType()
+      case BinaryType => Schema.create(Schema.Type.BYTES)
       case BooleanType => SchemaBuilder.builder().booleanType()
       case DateType => SchemaBuilder.builder().stringType()
-      case DecimalType(precision, scale) => SchemaBuilder.builder().doubleType()
+      case DecimalType(precision, scale) =>
+        val decimal = Schema.create(Schema.Type.BYTES)
+        LogicalTypes.decimal(precision.value, scale.value).addToSchema(decimal)
+        decimal
       case DoubleType => SchemaBuilder.builder().doubleType()
       case FloatType => SchemaBuilder.builder().floatType()
       case i: IntType => SchemaBuilder.builder().intType()
@@ -27,7 +32,10 @@ object AvroSchemaFns extends Logging {
       case s: ShortType => SchemaBuilder.builder().intType()
       case StringType => SchemaBuilder.builder().stringType()
       case struct: StructType => toAvroSchema(struct)
-      case TimestampType => SchemaBuilder.builder().longType()
+      case TimestampType =>
+        val schema = Schema.create(Schema.Type.LONG)
+        LogicalTypes.timestampMillis().addToSchema(schema)
+        schema
     }
 
     def toAvroField(field: Field, caseSensitive: Boolean = true): org.apache.avro.Schema.Field = {
@@ -62,13 +70,19 @@ object AvroSchemaFns extends Logging {
     def toDataType(schema: Schema): DataType = schema.getType match {
       case org.apache.avro.Schema.Type.ARRAY => ArrayType.cached(toDataType(schema.getElementType))
       case org.apache.avro.Schema.Type.BOOLEAN => BooleanType
-      case org.apache.avro.Schema.Type.BYTES => BinaryType
+      case org.apache.avro.Schema.Type.BYTES => schema.getLogicalType match {
+        case decimal: Decimal => DecimalType(Precision(decimal.getPrecision), Scale(decimal.getScale))
+        case _ => BinaryType
+      }
       case org.apache.avro.Schema.Type.DOUBLE => DoubleType
       case org.apache.avro.Schema.Type.ENUM => StringType
       case org.apache.avro.Schema.Type.FIXED => StringType
       case org.apache.avro.Schema.Type.FLOAT => FloatType
       case org.apache.avro.Schema.Type.INT => IntType.Signed
-      case org.apache.avro.Schema.Type.LONG => LongType.Signed
+      case org.apache.avro.Schema.Type.LONG => schema.getLogicalType match {
+        case millis: TimestampMillis => TimestampType
+        case _ => LongType.Signed
+      }
       case org.apache.avro.Schema.Type.RECORD => StructType(schema.getFields.asScala.map(fromAvroField).toList)
       case org.apache.avro.Schema.Type.STRING => StringType
       case org.apache.avro.Schema.Type.UNION =>
