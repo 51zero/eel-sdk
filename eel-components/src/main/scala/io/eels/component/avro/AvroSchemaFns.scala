@@ -2,7 +2,7 @@ package io.eels.component.avro
 
 import com.sksamuel.exts.Logging
 import io.eels.schema._
-import org.apache.avro.LogicalTypes.{Decimal, TimestampMillis}
+import org.apache.avro.LogicalTypes._
 import org.apache.avro.{LogicalTypes, Schema, SchemaBuilder}
 import org.codehaus.jackson.node.NullNode
 
@@ -20,11 +20,14 @@ object AvroSchemaFns extends Logging {
       case BigIntType => SchemaBuilder.builder().longType()
       case BinaryType => Schema.create(Schema.Type.BYTES)
       case BooleanType => SchemaBuilder.builder().booleanType()
-      case DateType => SchemaBuilder.builder().stringType()
+      case DateType =>
+        val schema = Schema.create(Schema.Type.INT)
+        LogicalTypes.date().addToSchema(schema)
+        schema
       case DecimalType(precision, scale) =>
-        val decimal = Schema.create(Schema.Type.BYTES)
-        LogicalTypes.decimal(precision.value, scale.value).addToSchema(decimal)
-        decimal
+        val schema = Schema.create(Schema.Type.BYTES)
+        LogicalTypes.decimal(precision.value, scale.value).addToSchema(schema)
+        schema
       case DoubleType => SchemaBuilder.builder().doubleType()
       case FloatType => SchemaBuilder.builder().floatType()
       case i: IntType => SchemaBuilder.builder().intType()
@@ -32,9 +35,21 @@ object AvroSchemaFns extends Logging {
       case s: ShortType => SchemaBuilder.builder().intType()
       case StringType => SchemaBuilder.builder().stringType()
       case struct: StructType => toAvroSchema(struct)
+      case TimeType =>
+        val schema = Schema.create(Schema.Type.INT)
+        LogicalTypes.timeMillis().addToSchema(schema)
+        schema
+      case TimeMicrosType =>
+        val schema = Schema.create(Schema.Type.LONG)
+        LogicalTypes.timeMicros().addToSchema(schema)
+        schema
       case TimestampType =>
         val schema = Schema.create(Schema.Type.LONG)
         LogicalTypes.timestampMillis().addToSchema(schema)
+        schema
+      case TimestampMicrosType =>
+        val schema = Schema.create(Schema.Type.LONG)
+        LogicalTypes.timestampMicros().addToSchema(schema)
         schema
     }
 
@@ -78,9 +93,16 @@ object AvroSchemaFns extends Logging {
       case org.apache.avro.Schema.Type.ENUM => StringType
       case org.apache.avro.Schema.Type.FIXED => StringType
       case org.apache.avro.Schema.Type.FLOAT => FloatType
-      case org.apache.avro.Schema.Type.INT => IntType.Signed
+      case org.apache.avro.Schema.Type.INT =>
+        schema.getLogicalType match {
+          case _: Date => DateType
+          case _: TimeMillis => TimeType
+          case _ => IntType.Signed
+        }
       case org.apache.avro.Schema.Type.LONG => schema.getLogicalType match {
-        case millis: TimestampMillis => TimestampType
+        case _: TimeMicros => TimeMicrosType
+        case _: TimestampMillis => TimestampType
+        case _: TimestampMicros => TimestampMicrosType
         case _ => LongType.Signed
       }
       case org.apache.avro.Schema.Type.RECORD => StructType(schema.getFields.asScala.map(fromAvroField).toList)

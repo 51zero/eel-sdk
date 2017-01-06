@@ -15,6 +15,18 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
     val timestampMillis = Schema.create(Schema.Type.LONG)
     LogicalTypes.timestampMillis().addToSchema(timestampMillis)
 
+    val timestampMicros = Schema.create(Schema.Type.LONG)
+    LogicalTypes.timestampMicros().addToSchema(timestampMicros)
+
+    val timeMillis = Schema.create(Schema.Type.INT)
+    LogicalTypes.timeMillis().addToSchema(timeMillis)
+
+    val timeMicros = Schema.create(Schema.Type.LONG)
+    LogicalTypes.timeMicros().addToSchema(timeMicros)
+
+    val date = Schema.create(Schema.Type.INT)
+    LogicalTypes.date().addToSchema(date)
+
     val schema = SchemaBuilder.record("row").namespace("namespace").fields()
       .optionalBoolean("optbool")
       .optionalBytes("optbytes")
@@ -31,7 +43,11 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
       .requiredLong("reqlong")
       .requiredString("reqstring")
       .name("reqdecimal").`type`(decimal).noDefault()
-      .name("reqtimestamp").`type`(timestampMillis).noDefault()
+      .name("requiredDate").`type`(date).noDefault()
+      .name("requiredTimeMillis").`type`(timeMillis).noDefault()
+      .name("requiredTimeMicros").`type`(timeMicros).noDefault()
+      .name("requiredTimestampMillis").`type`(timestampMillis).noDefault()
+      .name("requiredTimestampMicros").`type`(timestampMicros).noDefault()
       .endRecord()
 
     val structType = StructType(Vector(
@@ -50,7 +66,11 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("reqlong", LongType(true), false, false, None, Map()),
       Field("reqstring", StringType, false, false, None, Map()),
       Field("reqdecimal", DecimalType(14, 7), false, false, None, Map()),
-      Field("reqtimestamp", TimestampType, false, false, None, Map())
+      Field("requiredDate", DateType, false, false, None, Map()),
+      Field("requiredTimeMillis", TimeType, false, false, None, Map()),
+      Field("requiredTimeMicros", TimeMicrosType, false, false, None, Map()),
+      Field("requiredTimestampMillis", TimestampType, false, false, None, Map()),
+      Field("requiredTimestampMicros", TimestampMicrosType, false, false, None, Map())
     ))
 
     AvroSchemaFns.fromAvroSchema(schema) shouldBe structType
