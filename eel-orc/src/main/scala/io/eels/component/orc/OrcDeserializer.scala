@@ -22,7 +22,7 @@ object OrcDeserializer {
 
 object DecimalDeserializer extends OrcDeserializer[DecimalColumnVector] {
   override def readFromVector(rowIndex: Int, vector: DecimalColumnVector): BigDecimal = {
-    vector.vector(rowIndex).getHiveDecimal.bigDecimalValue()
+    BigDecimal(vector.vector(rowIndex).getHiveDecimal.bigDecimalValue)
   }
 }
 

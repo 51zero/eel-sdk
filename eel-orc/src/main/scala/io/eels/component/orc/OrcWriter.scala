@@ -7,7 +7,9 @@ import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector
-import org.apache.orc.{OrcFile, TypeDescription}
+import org.apache.orc.OrcFile.CompressionStrategy
+import org.apache.orc.OrcProto.CompressionKind
+import org.apache.orc.{OrcConf, OrcFile, TypeDescription}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -26,9 +28,12 @@ class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration
 
   private val buffer = new ArrayBuffer[Row](batchSize)
   private val serializers = schema.getChildren.asScala.map(OrcSerializer.forType).toArray
-
   private val batch = schema.createRowBatch(batchSize)
-  private lazy val writer = OrcFile.createWriter(path, OrcFile.writerOptions(conf).setSchema(schema))
+
+  OrcConf.COMPRESSION_STRATEGY.setString(conf, CompressionStrategy.COMPRESSION.name)
+  OrcConf.COMPRESS.setString(conf, CompressionKind.SNAPPY.name)
+  private val options = OrcFile.writerOptions(conf).setSchema(schema)
+  private lazy val writer = OrcFile.createWriter(path, options)
 
   def write(row: Row): Unit = {
     buffer.append(row)
@@ -37,7 +42,6 @@ class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration
   }
 
   def flush(): Unit = {
-
     def writecol[T <: ColumnVector](rowIndex: Int, colIndex: Int, row: Row): Unit = {
       val serializer = serializers(colIndex).asInstanceOf[OrcSerializer[T]]
       val vector = batch.cols(colIndex).asInstanceOf[T]

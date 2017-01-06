@@ -1,35 +1,38 @@
 package io.eels.component.orc
 
 import io.eels.Row
+import io.eels.schema.StructType
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector
 import org.apache.orc.Reader
 
 object OrcBatchIterator {
 
-  def apply(reader: Reader): Iterator[List[Row]] = new Iterator[List[Row]] {
+  def apply(reader: Reader, fileSchema: StructType): Iterator[Seq[Row]] = new Iterator[Seq[Row]] {
 
     val batch = reader.getSchema().createRowBatch()
-    val structType = OrcSchemaFns.fromOrcSchema(reader.getSchema)
     val rows = reader.rows()
+    val deserializers = fileSchema.fields.map(_.dataType).map(OrcDeserializer.apply).toArray
 
     override def hasNext(): Boolean = rows.nextBatch(batch)
 
-    override def next(): List[Row] = {
+    override def next(): Seq[Row] = {
 
       def readcol[T <: ColumnVector](rowIndex: Int, colIndex: Int): Any = {
-        val field = structType.fields(colIndex)
-        val deser = OrcDeserializer(field.dataType).asInstanceOf[OrcDeserializer[T]]
+        val deser = deserializers(colIndex).asInstanceOf[OrcDeserializer[T]]
         val vector = batch.cols(colIndex).asInstanceOf[T]
         deser.readFromVector(rowIndex, vector)
       }
 
-      val rows = for (rowIndex <- 0 until batch.size) yield {
-        val values = for (colIndex <- structType.fields.indices) yield {
-          readcol(rowIndex, colIndex)
+      val rows = Vector.newBuilder[Row]
+      for (rowIndex <- 0 until batch.size) {
+        val builder = Vector.newBuilder[Any]
+        for (colIndex <- fileSchema.fields.indices) {
+          builder += readcol(rowIndex, colIndex)
         }
-        Row(structType, values.toVector)
+        val row = Row(fileSchema, builder.result)
+        rows += row
       }
-      rows.toList
+      rows.result()
     }
   }
 }

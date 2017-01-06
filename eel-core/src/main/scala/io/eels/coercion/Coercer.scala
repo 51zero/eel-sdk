@@ -31,7 +31,7 @@ object DoubleCoercer extends Coercer[Double] {
 
 object BigDecimalCoercer extends Coercer[BigDecimal] {
   override def coerce(input: Any): BigDecimal = input match {
-    case d: Double => BigDecimal(d)
+    case d: Double => BigDecimal.decimal(d)
     case f: Float => BigDecimal(f)
     case i: Int => BigDecimal(i)
     case l: Long => BigDecimal(l)

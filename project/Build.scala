@@ -149,5 +149,5 @@ object Build extends Build {
     .settings(componentsSettings: _*)
     .settings(hiveSettings: _*)
     .settings(name := "eel-hive")
-    .dependsOn(core, components)
+    .dependsOn(core, components, orc)
 }
