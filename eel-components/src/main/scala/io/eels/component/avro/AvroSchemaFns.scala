@@ -29,6 +29,7 @@ object AvroSchemaFns extends Logging {
         LogicalTypes.decimal(precision.value, scale.value).addToSchema(schema)
         schema
       case DoubleType => SchemaBuilder.builder().doubleType()
+      case EnumType(name, values) => SchemaBuilder.enumeration(name).symbols(values: _*)
       case FloatType => SchemaBuilder.builder().floatType()
       case i: IntType => SchemaBuilder.builder().intType()
       case l: LongType => SchemaBuilder.builder().longType()
@@ -90,7 +91,7 @@ object AvroSchemaFns extends Logging {
         case _ => BinaryType
       }
       case org.apache.avro.Schema.Type.DOUBLE => DoubleType
-      case org.apache.avro.Schema.Type.ENUM => StringType
+      case org.apache.avro.Schema.Type.ENUM => EnumType(schema.getName, schema.getEnumSymbols.asScala)
       case org.apache.avro.Schema.Type.FIXED => StringType
       case org.apache.avro.Schema.Type.FLOAT => FloatType
       case org.apache.avro.Schema.Type.INT =>

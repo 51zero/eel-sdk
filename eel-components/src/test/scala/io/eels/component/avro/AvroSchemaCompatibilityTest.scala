@@ -1,5 +1,7 @@
 package io.eels.component.avro
 
+import java.util
+
 import io.eels.schema._
 import org.apache.avro.{LogicalTypes, Schema, SchemaBuilder}
 import org.scalatest.{FunSuite, Matchers}
@@ -27,6 +29,8 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
     val date = Schema.create(Schema.Type.INT)
     LogicalTypes.date().addToSchema(date)
 
+    val enum = Schema.createEnum("suits", null, null, util.Arrays.asList("spades", "hearts"))
+
     val schema = SchemaBuilder.record("row").namespace("namespace").fields()
       .optionalBoolean("optbool")
       .optionalBytes("optbytes")
@@ -42,6 +46,7 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
       .requiredInt("reqint")
       .requiredLong("reqlong")
       .requiredString("reqstring")
+      .name("reqenum").`type`(enum).noDefault()
       .name("reqdecimal").`type`(decimal).noDefault()
       .name("requiredDate").`type`(date).noDefault()
       .name("requiredTimeMillis").`type`(timeMillis).noDefault()
@@ -65,6 +70,7 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("reqint", IntType(true), false, false, None, Map()),
       Field("reqlong", LongType(true), false, false, None, Map()),
       Field("reqstring", StringType, false, false, None, Map()),
+      Field("reqenum", EnumType("suits", "spades", "hearts"), false),
       Field("reqdecimal", DecimalType(14, 7), false, false, None, Map()),
       Field("requiredDate", DateType, false, false, None, Map()),
       Field("requiredTimeMillis", TimeMillisType, false, false, None, Map()),

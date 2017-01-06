@@ -27,6 +27,11 @@ object TimestampMillisType extends DataType
 // number of micros since the unix epoch for UTC
 object TimestampMicrosType extends DataType
 
+case class EnumType(name: String, values: Seq[String]) extends DataType
+object EnumType {
+  def apply(name: String, first: String, rest: String*): EnumType = new EnumType(name, first +: rest)
+}
+
 case class ShortType(signed: Boolean = true) extends DataType
 
 object ShortType {
