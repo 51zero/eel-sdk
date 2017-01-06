@@ -13,8 +13,12 @@ object ParquetSchemaFns {
 
   def fromParquetPrimitiveType(`type`: PrimitiveType): DataType = {
     `type`.getPrimitiveTypeName match {
-      case PrimitiveTypeName.BINARY if `type`.getOriginalType == OriginalType.UTF8 => StringType
-      case PrimitiveTypeName.BINARY => BinaryType
+      case PrimitiveTypeName.BINARY =>
+        `type`.getOriginalType match {
+          case OriginalType.ENUM => EnumType(`type`.getName, Nil)
+          case OriginalType.UTF8 => StringType
+          case _ => BinaryType
+        }
       case PrimitiveTypeName.BOOLEAN => BooleanType
       case PrimitiveTypeName.DOUBLE => DoubleType
       case PrimitiveTypeName.FLOAT => FloatType
@@ -97,6 +101,7 @@ object ParquetSchemaFns {
           new Type.ID(1)
         )
       case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, field.name)
+      case EnumType(name, values) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.ENUM)
       case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, field.name)
       case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name)
       case IntType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.UINT_32)
