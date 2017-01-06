@@ -60,7 +60,7 @@ class RowRecordMaterializer(fileSchema: MessageType,
         case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
         case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
         case StringType => new StringConverter(fieldIndex, builder)
-        case TimestampType => new TimestampConverter(fieldIndex, builder)
+        case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
         case other => sys.error("Unsupported type " + other)
       }
     }

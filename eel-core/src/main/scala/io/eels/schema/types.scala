@@ -16,13 +16,13 @@ object FloatType extends DataType
 object StringType extends DataType
 
 // a time without a date; number of milliseconds after midnight
-object TimeType extends DataType
+object TimeMillisType extends DataType
 
 // a time without a date; number of micros after midnight
 object TimeMicrosType extends DataType
 
 // number of millis since the unix epoch for UTC
-object TimestampType extends DataType
+object TimestampMillisType extends DataType
 
 // number of micros since the unix epoch for UTC
 object TimestampMicrosType extends DataType

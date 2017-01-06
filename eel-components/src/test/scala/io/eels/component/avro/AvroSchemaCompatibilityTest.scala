@@ -67,9 +67,9 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("reqstring", StringType, false, false, None, Map()),
       Field("reqdecimal", DecimalType(14, 7), false, false, None, Map()),
       Field("requiredDate", DateType, false, false, None, Map()),
-      Field("requiredTimeMillis", TimeType, false, false, None, Map()),
+      Field("requiredTimeMillis", TimeMillisType, false, false, None, Map()),
       Field("requiredTimeMicros", TimeMicrosType, false, false, None, Map()),
-      Field("requiredTimestampMillis", TimestampType, false, false, None, Map()),
+      Field("requiredTimestampMillis", TimestampMillisType, false, false, None, Map()),
       Field("requiredTimestampMicros", TimestampMicrosType, false, false, None, Map())
     ))
 

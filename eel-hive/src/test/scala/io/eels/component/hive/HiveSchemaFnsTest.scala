@@ -22,7 +22,7 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
       HiveSchemaFns.toHiveField(Field("a", dataType = FloatType)) shouldBe new FieldSchema("a", "float", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = IntType(true))) shouldBe new FieldSchema("a", "int", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = LongType(true))) shouldBe new FieldSchema("a", "bigint", null)
-      HiveSchemaFns.toHiveField(Field("a", dataType = TimestampType)) shouldBe new FieldSchema("a", "timestamp", null)
+      HiveSchemaFns.toHiveField(Field("a", dataType = TimestampMillisType)) shouldBe new FieldSchema("a", "timestamp", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = StringType)) shouldBe new FieldSchema("a", "string", null)
     }
 

@@ -22,7 +22,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case BooleanType => "boolean"
     case DecimalType(precision, scale) => s"decimal(${precision.value}, ${scale.value})"
     case StringType => "text"
-    case TimestampType => "timestamp"
+    case TimestampMillisType => "timestamp"
     case VarcharType(size) =>
       if (size > 0) s"varchar($size)"
       else "varchar(255)"
@@ -72,8 +72,8 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.SMALLINT => ShortType.Signed
     case Types.SQLXML => StringType
     case Types.STRUCT => StringType
-    case Types.TIME => TimeType
-    case Types.TIMESTAMP => TimestampType
+    case Types.TIME => TimeMillisType
+    case Types.TIMESTAMP => TimestampMillisType
     case Types.TINYINT => ShortType.Signed
     case Types.VARBINARY => BinaryType
     case Types.VARCHAR => VarcharType(metadata.getPrecision(column))

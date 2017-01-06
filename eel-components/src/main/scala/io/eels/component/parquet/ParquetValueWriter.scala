@@ -28,8 +28,8 @@ object ParquetValueWriter {
       case _: LongType => LongParquetValueWriter
       case _: ShortType => ShortParquetWriter
       case StringType => StringParquetValueWriter
-      case TimeType => TimeParquetValueWriter
-      case TimestampType => TimestampParquetValueWriter
+      case TimeMillisType => TimeParquetValueWriter
+      case TimestampMillisType => TimestampParquetValueWriter
     }
   }
 }

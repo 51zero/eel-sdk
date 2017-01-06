@@ -35,7 +35,7 @@ object AvroSchemaFns extends Logging {
       case s: ShortType => SchemaBuilder.builder().intType()
       case StringType => SchemaBuilder.builder().stringType()
       case struct: StructType => toAvroSchema(struct)
-      case TimeType =>
+      case TimeMillisType =>
         val schema = Schema.create(Schema.Type.INT)
         LogicalTypes.timeMillis().addToSchema(schema)
         schema
@@ -43,7 +43,7 @@ object AvroSchemaFns extends Logging {
         val schema = Schema.create(Schema.Type.LONG)
         LogicalTypes.timeMicros().addToSchema(schema)
         schema
-      case TimestampType =>
+      case TimestampMillisType =>
         val schema = Schema.create(Schema.Type.LONG)
         LogicalTypes.timestampMillis().addToSchema(schema)
         schema
@@ -96,12 +96,12 @@ object AvroSchemaFns extends Logging {
       case org.apache.avro.Schema.Type.INT =>
         schema.getLogicalType match {
           case _: Date => DateType
-          case _: TimeMillis => TimeType
+          case _: TimeMillis => TimeMillisType
           case _ => IntType.Signed
         }
       case org.apache.avro.Schema.Type.LONG => schema.getLogicalType match {
         case _: TimeMicros => TimeMicrosType
-        case _: TimestampMillis => TimestampType
+        case _: TimestampMillis => TimestampMillisType
         case _: TimestampMicros => TimestampMicrosType
         case _ => LongType.Signed
       }

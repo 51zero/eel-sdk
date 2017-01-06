@@ -51,7 +51,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     Field("myDecimal", DecimalType(Precision(38), Scale(18)), true),
     Field("myBytes", BinaryType, true),
     Field("myDate", DateType, true),
-    Field("myTimestamp", TimestampType, true)
+    Field("myTimestamp", TimestampMillisType, true)
   )
 
   // create a parquet file using spark local for all supported types and then

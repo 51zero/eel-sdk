@@ -18,29 +18,35 @@ object ParquetSchemaFns {
       case PrimitiveTypeName.BOOLEAN => BooleanType
       case PrimitiveTypeName.DOUBLE => DoubleType
       case PrimitiveTypeName.FLOAT => FloatType
-      case PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY if `type`.getOriginalType == OriginalType.DECIMAL =>
-        val meta = `type`.getDecimalMetadata
-        DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
-      case PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY => BinaryType
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.UINT_32 => IntType.Unsigned
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.UINT_16 => ShortType.Unsigned
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.UINT_8 => ShortType.Unsigned
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.INT_16 => ShortType.Signed
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.INT_8 => ShortType.Signed
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.TIME_MILLIS => TimeType
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.TIME_MICROS => TimeType
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DATE => DateType
-      case PrimitiveTypeName.INT32 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(9), Scale(2))
-      case PrimitiveTypeName.INT32 => IntType.Signed
+      case PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY =>
+        `type`.getOriginalType match {
+          case OriginalType.DECIMAL =>
+            val meta = `type`.getDecimalMetadata
+            DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
+          case _ => BinaryType
+        }
+      case PrimitiveTypeName.INT32 =>
+        `type`.getOriginalType match {
+          case OriginalType.UINT_32 => IntType.Unsigned
+          case OriginalType.UINT_16 => ShortType.Unsigned
+          case OriginalType.UINT_8 => ShortType.Unsigned
+          case OriginalType.INT_16 => ShortType.Signed
+          case OriginalType.INT_8 => ShortType.Signed
+          case OriginalType.TIME_MILLIS => TimeMillisType
+          case OriginalType.DATE => DateType
+          case OriginalType.DECIMAL =>
+            val meta = `type`.getDecimalMetadata
+            DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
+          case _ => IntType.Signed
+        }
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.UINT_64 => IntType.Unsigned
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIME_MILLIS => TimeType
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIME_MICROS => TimeType
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampType
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampType
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIME_MICROS => TimeMicrosType
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampMillisType
+      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampMicrosType
       case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
       case PrimitiveTypeName.INT64 => LongType.Signed
       // https://github.com/Parquet/parquet-mr/issues/218
-      case PrimitiveTypeName.INT96 => TimestampType
+      case PrimitiveTypeName.INT96 => TimestampMillisType
       case other => sys.error("Unsupported type " + other)
     }
   }
@@ -100,9 +106,11 @@ object ParquetSchemaFns {
       case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.UINT_16)
       case StructType(fields) => new GroupType(repetition, field.name, fields.map(toParquetType): _*)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
-      case TimeType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.TIME_MILLIS)
+      case TimeMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.TIME_MILLIS)
+      case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name, OriginalType.TIME_MICROS)
       // spark doesn't annotate timestamps, just uses int96, so same here
-      case TimestampType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, field.name)
+      case TimestampMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, field.name)
+      case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name, OriginalType.TIMESTAMP_MICROS)
       case VarcharType(size) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
     }
   }

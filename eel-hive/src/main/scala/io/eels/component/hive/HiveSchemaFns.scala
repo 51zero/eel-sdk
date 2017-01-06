@@ -41,7 +41,7 @@ object HiveSchemaFns extends Logging {
       case "char" => Field(name, StringType, nullable)
       case "string" => Field(name, StringType, nullable)
       case "date" => Field(name, DateType, nullable)
-      case "timestamp" => Field(name, TimestampType, nullable)
+      case "timestamp" => Field(name, TimestampMillisType, nullable)
       case DecimalRegex(precision, scale) =>
         Field(name, DecimalType(Precision(precision.toInt), Scale(scale.toInt)), nullable)
       case VarcharRegex(precision) =>
@@ -73,7 +73,7 @@ object HiveSchemaFns extends Logging {
     case l: LongType => "bigint"
     case s: ShortType => "smallint"
     case StringType => "string"
-    case TimestampType => "timestamp"
+    case TimestampMillisType => "timestamp"
     case StructType(fields) => toStructDDL(fields)
     case _ =>
       logger.warn(s"No conversion from eel type [${field.dataType}] to hive type; defaulting to string")

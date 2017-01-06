@@ -9,7 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class ParquetSchemaFnsTest extends FlatSpec with Matchers {
 
   "ParquetSchemaFns.toParquetSchema" should "store timestamps as INT96" in {
-    val schema = StructType(Field("a", TimestampType))
+    val schema = StructType(Field("a", TimestampMillisType))
     ParquetSchemaFns.toParquetSchema(schema) shouldBe
       new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT96, "a"))
   }
@@ -45,7 +45,7 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
   }
 
   it should "store times as INT32 with original type tag TIME_MILLIS" in {
-    val schema = StructType(Field("a", TimeType))
+    val schema = StructType(Field("a", TimeMillisType))
     ParquetSchemaFns.toParquetSchema(schema) shouldBe
       new MessageType("row", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT32, "a", OriginalType.TIME_MILLIS))
   }
