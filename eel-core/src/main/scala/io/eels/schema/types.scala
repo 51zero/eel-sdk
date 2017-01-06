@@ -32,6 +32,13 @@ object EnumType {
   def apply(name: String, first: String, rest: String*): EnumType = new EnumType(name, first +: rest)
 }
 
+case class ByteType(signed: Boolean = true) extends DataType
+
+object ByteType {
+  val Signed = ByteType(true)
+  val Unsigned = ByteType(false)
+}
+
 case class ShortType(signed: Boolean = true) extends DataType
 
 object ShortType {
