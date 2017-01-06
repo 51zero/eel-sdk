@@ -20,6 +20,7 @@ object AvroSchemaFns extends Logging {
       case BigIntType => SchemaBuilder.builder().longType()
       case BinaryType => Schema.create(Schema.Type.BYTES)
       case BooleanType => SchemaBuilder.builder().booleanType()
+      case CharType(size) => Schema.createFixed("char", null, "", size)
       case DateType =>
         val schema = Schema.create(Schema.Type.INT)
         LogicalTypes.date().addToSchema(schema)
@@ -52,6 +53,7 @@ object AvroSchemaFns extends Logging {
         val schema = Schema.create(Schema.Type.LONG)
         LogicalTypes.timestampMicros().addToSchema(schema)
         schema
+      case VarcharType(_) => SchemaBuilder.builder().stringType()
     }
 
     def toAvroField(field: Field, caseSensitive: Boolean = true): org.apache.avro.Schema.Field = {
@@ -92,7 +94,7 @@ object AvroSchemaFns extends Logging {
       }
       case org.apache.avro.Schema.Type.DOUBLE => DoubleType
       case org.apache.avro.Schema.Type.ENUM => EnumType(schema.getName, schema.getEnumSymbols.asScala)
-      case org.apache.avro.Schema.Type.FIXED => StringType
+      case org.apache.avro.Schema.Type.FIXED => CharType(schema.getFixedSize)
       case org.apache.avro.Schema.Type.FLOAT => FloatType
       case org.apache.avro.Schema.Type.INT =>
         schema.getLogicalType match {

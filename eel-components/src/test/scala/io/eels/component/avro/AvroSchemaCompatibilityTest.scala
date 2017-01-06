@@ -82,4 +82,25 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
     AvroSchemaFns.fromAvroSchema(schema) shouldBe structType
     AvroSchemaFns.toAvroSchema(structType) shouldBe schema
   }
+
+  test("parquet schema fns should convert varchar to strings and keep char") {
+
+    val schema = SchemaBuilder.record("row").namespace("namespace").fields()
+      .name("varchar").`type`(Schema.create(Schema.Type.STRING)).noDefault()
+      .name("char").`type`(Schema.createFixed("char", null, null, 15)).noDefault()
+      .endRecord()
+
+    val outputStruct = StructType(Vector(
+      Field("varchar", StringType, false),
+      Field("char", CharType(15), false)
+    ))
+
+    val inputStruct = StructType(Vector(
+      Field("varchar", VarcharType(244), false),
+      Field("char", CharType(15), false)
+    ))
+
+    AvroSchemaFns.fromAvroSchema(schema) shouldBe outputStruct
+    AvroSchemaFns.toAvroSchema(inputStruct) shouldBe schema
+  }
 }
