@@ -1,5 +1,7 @@
 package io.eels.component.orc
 
+import java.sql.Timestamp
+
 import io.eels.Frame
 import io.eels.Row
 import io.eels.schema._
@@ -17,18 +19,19 @@ class OrcComponentTest extends WordSpec with Matchers {
     "read and write orc files" in {
 
       val schema = StructType(
-        Field("name", StringType),
-        Field("age", IntType.Signed),
-        Field("height", DoubleType),
-        Field("amazing", BooleanType),
-        Field("fans", LongType.Signed),
-        Field("rating", DecimalType(4, 2))
+        Field("string", StringType),
+        Field("int", IntType.Signed),
+        Field("double", DoubleType),
+        Field("boolean", BooleanType),
+        Field("long", LongType.Signed),
+        Field("decimal", DecimalType(4, 2)),
+        Field("timestamp", TimestampMillisType)
       )
 
       val frame = Frame(
         schema,
-        Row(schema, Vector("clint eastwood", 85, 1.9, true, 3256269123123L, 9.99)),
-        Row(schema, Vector("david bowie", 65, 1.7, true, 1950173241323L, 9.9))
+        Row(schema, Vector("a", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L)),
+        Row(schema, Vector("b", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L))
       )
 
       val path = new Path("test.orc")
@@ -42,8 +45,8 @@ class OrcComponentTest extends WordSpec with Matchers {
       rows.head.schema shouldBe frame.schema
 
       rows shouldBe Set(
-        Row(schema, Vector("clint eastwood", 85, 1.9, true, 3256269123123L, 9.99)),
-        Row(schema, Vector("david bowie", 65, 1.7, true, 1950173241323L, 9.9))
+        Row(schema, Vector("a", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L))),
+        Row(schema, Vector("b", 65, 1.7, true, 1950173241323L, 3.9, new Timestamp(1483726291000L)))
       )
 
       fs.delete(path, false)

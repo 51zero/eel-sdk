@@ -1,5 +1,7 @@
 package io.eels.coercion
 
+import java.sql.Timestamp
+
 /**
   * A Coercer will coerce input values into an output value of type T.
   * The types of coercion supported depends on the implementation but for example,
@@ -7,6 +9,13 @@ package io.eels.coercion
   */
 trait Coercer[T] {
   def coerce(input: Any): T
+}
+
+object TimestampCoercer extends Coercer[java.sql.Timestamp] {
+  override def coerce(input: Any): Timestamp = input match {
+    case t: Timestamp => t
+    case l: Long => new Timestamp(l)
+  }
 }
 
 object LongCoercer extends Coercer[Long] {

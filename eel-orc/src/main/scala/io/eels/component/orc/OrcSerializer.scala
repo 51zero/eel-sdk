@@ -1,6 +1,6 @@
 package io.eels.component.orc
 
-import io.eels.coercion.BigDecimalCoercer
+import io.eels.coercion.{BigDecimalCoercer, TimestampCoercer}
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
@@ -26,9 +26,15 @@ object OrcSerializer {
       case Category.LONG => LongColumnSerializer
       case Category.SHORT => LongColumnSerializer
       case Category.STRING => BytesColumnSerializer
-      case Category.TIMESTAMP => LongColumnSerializer
+      case Category.TIMESTAMP => TimestampColumnSerializer
       case Category.VARCHAR => BytesColumnSerializer
     }
+  }
+}
+
+object TimestampColumnSerializer extends OrcSerializer[TimestampColumnVector] {
+  override def writeToVector(k: Int, vector: TimestampColumnVector, value: Any): Unit = {
+    vector.set(k, TimestampCoercer.coerce(value))
   }
 }
 

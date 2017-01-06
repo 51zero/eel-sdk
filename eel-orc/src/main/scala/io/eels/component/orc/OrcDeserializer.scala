@@ -17,6 +17,13 @@ object OrcDeserializer {
     case ShortType(_) => IntDeserializer
     case LongType(_) => LongDeserializer
     case StringType => StringDeserializer
+    case TimestampMillisType => TimestampDeserializer
+  }
+}
+
+object TimestampDeserializer extends OrcDeserializer[TimestampColumnVector] {
+  override def readFromVector(rowIndex: Int, vector: TimestampColumnVector): java.sql.Timestamp = {
+    new java.sql.Timestamp(vector.getTime(rowIndex))
   }
 }
 
