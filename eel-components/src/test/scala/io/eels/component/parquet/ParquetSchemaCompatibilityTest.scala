@@ -27,7 +27,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "timestampMicros", OriginalType.TIMESTAMP_MICROS)
     )
 
-    val structType = StructType(Vector(
+    val struct = StructType(Vector(
       Field("requiredBinary", BinaryType, false, false, None, Map()),
       Field("requiredBoolean", BooleanType, false, false, None, Map()),
       Field("requiredDouble", DoubleType, false, false, None, Map()),
@@ -43,7 +43,29 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("timestampMicros", TimestampMicrosType, false, false, None, Map())
     ))
 
-    ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe structType
-    ParquetSchemaFns.toParquetSchema(structType) shouldBe messageType
+    ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe struct
+    ParquetSchemaFns.toParquetSchema(struct) shouldBe messageType
+  }
+
+  test("parquet schema fns should convert char and varchar to strings") {
+
+    val messageType = new MessageType(
+      "row",
+      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "varchar", OriginalType.UTF8),
+      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "char", OriginalType.UTF8)
+    )
+
+    val outputStruct = StructType(Vector(
+      Field("varchar", StringType, false),
+      Field("char", StringType, false)
+    ))
+
+    val inputStruct = StructType(Vector(
+      Field("varchar", VarcharType(244), false),
+      Field("char", CharType(15), false)
+    ))
+
+    ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe outputStruct
+    ParquetSchemaFns.toParquetSchema(inputStruct) shouldBe messageType
   }
 }

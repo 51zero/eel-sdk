@@ -20,6 +20,7 @@ object ParquetValueWriter {
       case BinaryType => BinaryParquetWriter
       case BigIntType => BigIntParquetValueWriter
       case BooleanType => BooleanParquetValueWriter
+      case CharType(_) => StringParquetValueWriter
       case DateType => DateParquetValueWriter
       case DecimalType(precision, scale) => new DecimalWriter(precision, scale)
       case DoubleType => DoubleParquetValueWriter
@@ -30,6 +31,7 @@ object ParquetValueWriter {
       case StringType => StringParquetValueWriter
       case TimeMillisType => TimeParquetValueWriter
       case TimestampMillisType => TimestampParquetValueWriter
+      case VarcharType(_) => StringParquetValueWriter
     }
   }
 }
