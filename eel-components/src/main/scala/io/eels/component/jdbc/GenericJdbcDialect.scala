@@ -33,8 +33,13 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
 
   // http://stackoverflow.com/questions/593197/what-is-the-default-precision-and-scale-for-a-number-in-oracle
   private def decimalType(column: Int, metadata: ResultSetMetaData): DataType = {
+    // if scale == -127 then it means "any scale" and that can't be supported by hive, so we
+    // need to throw it back to the developer to decide what to do (perhaps cast in the sql)
     val precision = metadata.getPrecision(column)
     val scale = metadata.getScale(column)
+    if (scale == -127)
+      sys.error("Scale is undefined which is not supported, specify a scale in the SQL select by casting to the appropriate type")
+    require(scale <= precision, "Scale must be less than precision")
     DecimalType(
       if (precision <= 0) config.defaultPrecision else precision,
       if (scale < 0) config.defaultScale else scale
