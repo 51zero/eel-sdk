@@ -26,6 +26,7 @@ object Build extends Build {
   val Slf4jVersion = "1.7.12"
   val UnivocityVersion = "2.2.3"
   val ConfigVersion = "1.3.0"
+  val KafkaVersion = "0.10.1.1"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -57,6 +58,13 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "org.apache.orc"                          % "orc-core"                % OrcVersion,
       "org.apache.orc"                          % "orc-mapreduce"           % OrcVersion
+    )
+  )
+
+  val kafkaSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
+      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.11.0"     % "test"
     )
   )
 
@@ -125,7 +133,7 @@ object Build extends Build {
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(name := "eel")
-    .aggregate(core, components, orc, hive)
+    .aggregate(core, components, orc, hive, kafka)
    
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -150,4 +158,11 @@ object Build extends Build {
     .settings(hiveSettings: _*)
     .settings(name := "eel-hive")
     .dependsOn(core, components, orc)
+
+  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
+    .settings(rootSettings: _*)
+    .settings(componentsSettings: _*)
+    .settings(kafkaSettings: _*)
+    .settings(name := "eel-kafka")
+    .dependsOn(core)
 }
