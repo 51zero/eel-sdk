@@ -8,76 +8,82 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends Logging {
 
+  val CharRegex = "char\\((.*?)\\)".r
   val VarcharRegex = "varchar\\((.*?)\\)".r
   val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".r
   val StructRegex = "struct<(.*?)>".r
+  val ArrayRegex = "array<(.*?)>".r
+
+  def fromHiveField(fieldSchema: FieldSchema): Field =
+    fromHive(fieldSchema.getName, fieldSchema.getType, fieldSchema.getComment)
+
+  def fromHive(name: String, typeInfo: String, comment: String): Field = {
+    val dataType = fromHiveType(typeInfo)
+    Field(name, dataType, true).withComment(comment)
+  }
+
+  // converts a hive type string into an eel DataType.
+  def fromHiveType(descriptor: String): DataType = descriptor match {
+    case ArrayRegex(element) =>
+      val elementType = fromHiveType(element)
+      ArrayType(elementType)
+    case "bigint" => BigIntType
+    case "binary" => BinaryType
+    case "boolean" => BooleanType
+    case CharRegex(size) => CharType(size.toInt)
+    case DecimalRegex(precision, scale) => DecimalType(Precision(precision.toInt), Scale(scale.toInt))
+    case "date" => DateType
+    case "double" => DoubleType
+    case "float" => FloatType
+    case "int" => IntType.Signed
+    case "smallint" => ShortType.Signed
+    case "string" => StringType
+    case "timestamp" => TimestampMillisType
+    case "tinyint" => ByteType.Signed
+    case StructRegex(struct) =>
+      val fields = struct.split(",").map(_.split(":")).collect {
+        case Array(fieldName, typeInfo) =>
+          val dataType = fromHiveType(typeInfo)
+          Field(fieldName, dataType, true)
+      }
+      StructType(fields)
+    case VarcharRegex(size) => VarcharType(size.toInt)
+    case _ => sys.error(s"Unsupported hive type [$descriptor]")
+  }
+
+  // converts an eel Schema into a seq of hive FieldSchema's
+  def toHiveFields(schema: StructType): Vector[FieldSchema] = schema.fields.map(toHiveField)
 
   // converts an eel field into a hive FieldSchema
   def toHiveField(field: Field): FieldSchema = new FieldSchema(field.name.toLowerCase(), toHiveType(field), field.comment.orNull)
 
-  // converts an eel Schema into a list of hive FieldSchema's
-  def toHiveFields(schema: StructType): Vector[FieldSchema] = toHiveFields(schema.fields)
-
-  // converts a seq of eel fields into a list of hive FieldSchema's
-  def toHiveFields(fields: Vector[Field]): Vector[FieldSchema] = fields.map(toHiveField)
-
   /**
-    * Converts a hive FieldSchema into an eel Column type, with the given nullability.
-    * Nullability has to be specified manually, since all hive fields are always nullable, but eel supports non nulls too
+    * Returns the hive field (the type) for the given eel field
     */
-  def fromHiveField(fieldSchema: FieldSchema, nullable: Boolean): Field =
-    fromHive(fieldSchema.getName, fieldSchema.getType, nullable, fieldSchema.getComment)
+  def toHiveType(field: Field): String = toHiveType(field.dataType)
 
-  def fromHive(name: String, datatype: String, nullable: Boolean, comment: String): Field = {
-    val field = datatype match {
-      case "bigint" => Field(name, BigIntType, nullable)
-      case "binary" => Field(name, BinaryType, nullable)
-      case "boolean" => Field(name, BooleanType, nullable)
-      case "double" => Field(name, DoubleType, nullable)
-      case "float" => Field(name, FloatType, nullable)
-      case "int" => Field(name, IntType.Signed, nullable)
-      case "smallint" => Field(name, ShortType.Signed, nullable)
-      case "tinyint" => Field(name, ShortType.Signed, nullable)
-      case "char" => Field(name, StringType, nullable)
-      case "string" => Field(name, StringType, nullable)
-      case "date" => Field(name, DateType, nullable)
-      case "timestamp" => Field(name, TimestampMillisType, nullable)
-      case DecimalRegex(precision, scale) =>
-        Field(name, DecimalType(Precision(precision.toInt), Scale(scale.toInt)), nullable)
-      case VarcharRegex(precision) =>
-        Field(name, VarcharType(precision.toInt), nullable)
-      case StructRegex(structType) =>
-        val fields = structType.split(",").map { it =>
-          val parts = it.split(":")
-          fromHive(parts(0), parts(1), nullable, null)
-        }
-        Field.createStructField(name, fields).withNullable(nullable)
-      case _ =>
-        logger.warn(s"Unknown hive type $datatype; defaulting to string")
-        Field(name, StringType, nullable)
-    }
-    field.withComment(comment)
-  }
-
-  /**
-    * Returns the hive type for the given field
-    */
-  def toHiveType(field: Field): String = field.dataType match {
+  def toHiveType(dataType: DataType): String = dataType match {
+    case ArrayType(elementType) => "array<" + toHiveType(elementType) + ">"
     case BigIntType => "bigint"
+    case BinaryType => "binary"
+    case _: ByteType => "tinyint"
     case BooleanType => "boolean"
+    case CharType(size) => s"varchar($size)"
     case DateType => "date"
     case DecimalType(precision, scale) => s"decimal(${precision.value},${scale.value})"
     case DoubleType => "double"
+    case EnumType(name, values) =>
+      logger.warn("Hive does not support enum types; this field will be written as a varchar(255)")
+      "varchar(255)"
     case FloatType => "float"
-    case i: IntType => "int"
-    case l: LongType => "bigint"
-    case s: ShortType => "smallint"
+    case _: IntType => "int"
+    case _: LongType => "bigint"
+    case _: ShortType => "smallint"
     case StringType => "string"
     case TimestampMillisType => "timestamp"
-    case StructType(fields) => toStructDDL(fields)
-    case _ =>
-      logger.warn(s"No conversion from eel type [${field.dataType}] to hive type; defaulting to string")
-      "string"
+    case TimestampMillisType => "timestamp"
+    case VarcharType(size) => s"varchar($size)"
+    case _ => sys.error(s"No conversion from eel type [$dataType] to hive type")
   }
 
   def toStructDDL(fields: Vector[Field]): String = {

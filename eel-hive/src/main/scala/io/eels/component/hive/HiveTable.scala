@@ -21,7 +21,7 @@ case class HiveTable(dbName: String,
   def partitionKeys(): List[PartitionKey] = {
     val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
     keys.map { schema =>
-      val field = HiveSchemaFns.fromHiveField(schema, false).withPartition(true)
+      val field = HiveSchemaFns.fromHiveField(schema).withNullable(false).withPartition(true)
       PartitionKey(field)
     }.toList
   }

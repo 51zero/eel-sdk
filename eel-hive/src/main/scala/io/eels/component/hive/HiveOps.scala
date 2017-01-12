@@ -121,9 +121,9 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
 
     // hive columns are always nullable, and hive partitions are never nullable so we can set
     // the nullable fields appropriately
-    val columns = table.getSd.getCols.asScala.map { it => HiveSchemaFns.fromHiveField(it, true) }
+    val columns = table.getSd.getCols.asScala.map { it => HiveSchemaFns.fromHiveField(it) }
     val partitions = table.getPartitionKeys.asScala
-      .map { it => HiveSchemaFns.fromHiveField(it, false) }
+      .map { it => HiveSchemaFns.fromHiveField(it).withNullable(false) }
       .map(_.withPartition(true))
 
     val fields = columns ++ partitions
