@@ -75,7 +75,7 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Row(structType, "elton john", "pinner")
       )
     }
-    "support arrays of strings" in {
+    "support collections of strings" in {
 
       val structType = StructType(
         Field("system", StringType),
@@ -97,6 +97,32 @@ class ParquetComponentTest extends WordSpec with Matchers {
       rows shouldBe Vector(
         Row(structType, sol),
         Row(structType, algeron)
+      )
+
+      fs.delete(path, false)
+    }
+    "support collections of doubles" in {
+
+      val structType = StructType(
+        Field("name", StringType),
+        Field("doubles", ArrayType(DoubleType))
+      )
+
+      val values1 = Vector("a", Vector(0.1, 0.2, 0.3))
+      val values2 = Vector("b", Vector(0.3, 0.4, 0.5))
+      val frame = Frame.fromValues(structType, values1, values2)
+
+      val path = new Path("array.pq")
+      if (fs.exists(path))
+        fs.delete(path, false)
+
+      frame.to(ParquetSink(path))
+
+      val rows = ParquetSource(path).toFrame().collect()
+      rows.head.schema shouldBe structType
+      rows shouldBe Vector(
+        Row(structType, values1),
+        Row(structType, values2)
       )
 
       fs.delete(path, false)

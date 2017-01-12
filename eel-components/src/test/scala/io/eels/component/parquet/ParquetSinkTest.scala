@@ -36,5 +36,7 @@ class ParquetSinkTest extends FlatSpec with Matchers {
       Row(schema, Vector("clint eastwood", "actor", null)),
       Row(schema, Vector("elton john", null, "pinner"))
     )
+
+    fs.delete(path, false)
   }
 }
