@@ -10,6 +10,7 @@ sealed trait OrcDeserializer[T <: ColumnVector] {
 object OrcDeserializer {
   def apply(dataType: DataType): OrcDeserializer[_ <: ColumnVector] = dataType match {
     case BooleanType => BooleanDeserializer
+    case DateType => LongDeserializer
     case DecimalType(p, s) => DecimalDeserializer
     case DoubleType => DoubleDeserializer
     case FloatType => FloatDeserializer
@@ -23,37 +24,55 @@ object OrcDeserializer {
 
 object TimestampDeserializer extends OrcDeserializer[TimestampColumnVector] {
   override def readFromVector(rowIndex: Int, vector: TimestampColumnVector): java.sql.Timestamp = {
-    new java.sql.Timestamp(vector.getTime(rowIndex))
+    if (vector.isNull(rowIndex)) null
+    else new java.sql.Timestamp(vector.getTime(rowIndex))
   }
 }
 
 object DecimalDeserializer extends OrcDeserializer[DecimalColumnVector] {
   override def readFromVector(rowIndex: Int, vector: DecimalColumnVector): BigDecimal = {
-    BigDecimal(vector.vector(rowIndex).getHiveDecimal.bigDecimalValue)
+    if (vector.isNull(rowIndex)) null
+    else BigDecimal(vector.vector(rowIndex).getHiveDecimal.bigDecimalValue)
   }
 }
 
 object StringDeserializer extends OrcDeserializer[BytesColumnVector] {
   override def readFromVector(rowIndex: Int, vector: BytesColumnVector): Any = {
-    val bytes = vector.vector.head.slice(vector.start(rowIndex), vector.start(rowIndex) + vector.length(rowIndex))
-    new String(bytes, "UTF8")
+    if (vector.isNull(rowIndex)) {
+      null
+    } else {
+      val bytes = vector.vector.head.slice(vector.start(rowIndex), vector.start(rowIndex) + vector.length(rowIndex))
+      new String(bytes, "UTF8")
+    }
   }
 }
 
 object IntDeserializer extends OrcDeserializer[LongColumnVector] {
-  override def readFromVector(rowIndex: Int, vector: LongColumnVector): Int = vector.vector(rowIndex).toInt
+  override def readFromVector(rowIndex: Int, vector: LongColumnVector): Any = {
+    if (vector.isNull(rowIndex)) null
+    else vector.vector(rowIndex).toInt
+  }
 }
 
 object DoubleDeserializer extends OrcDeserializer[DoubleColumnVector] {
-  override def readFromVector(rowIndex: Int, vector: DoubleColumnVector): Double = vector.vector(rowIndex)
+  override def readFromVector(rowIndex: Int, vector: DoubleColumnVector): Any = {
+    if (vector.isNull(rowIndex)) null
+    else vector.vector(rowIndex)
+  }
 }
 
 object FloatDeserializer extends OrcDeserializer[DoubleColumnVector] {
-  override def readFromVector(rowIndex: Int, vector: DoubleColumnVector): Double = vector.vector(rowIndex).toFloat
+  override def readFromVector(rowIndex: Int, vector: DoubleColumnVector): Any = {
+    if (vector.isNull(rowIndex)) null
+    else vector.vector(rowIndex).toFloat
+  }
 }
 
 object LongDeserializer extends OrcDeserializer[LongColumnVector] {
-  override def readFromVector(rowIndex: Int, vector: LongColumnVector): Long = vector.vector(rowIndex)
+  override def readFromVector(rowIndex: Int, vector: LongColumnVector): Any = {
+    if (vector.isNull(rowIndex)) null
+    else vector.vector(rowIndex)
+  }
 }
 
 object BooleanDeserializer extends OrcDeserializer[LongColumnVector] {

@@ -42,10 +42,11 @@ class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration
   }
 
   def flush(): Unit = {
+
     def writecol[T <: ColumnVector](rowIndex: Int, colIndex: Int, row: Row): Unit = {
-      val serializer = serializers(colIndex).asInstanceOf[OrcSerializer[T]]
-      val vector = batch.cols(colIndex).asInstanceOf[T]
       val value = row.values(colIndex)
+      val vector = batch.cols(colIndex).asInstanceOf[T]
+      val serializer = serializers(colIndex).asInstanceOf[OrcSerializer[T]]
       serializer.writeToVector(rowIndex, vector, value)
     }
 

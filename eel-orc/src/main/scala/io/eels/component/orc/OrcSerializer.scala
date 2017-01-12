@@ -34,27 +34,46 @@ object OrcSerializer {
 
 object TimestampColumnSerializer extends OrcSerializer[TimestampColumnVector] {
   override def writeToVector(k: Int, vector: TimestampColumnVector, value: Any): Unit = {
-    vector.set(k, TimestampCoercer.coerce(value))
+    if (value == null) {
+      vector.setNullValue(k)
+      vector.isNull(k) = true
+      vector.noNulls = false
+    } else {
+      vector.set(k, TimestampCoercer.coerce(value))
+    }
   }
 }
 
 object DecimalSerializer extends OrcSerializer[DecimalColumnVector] {
   override def writeToVector(k: Int, vector: DecimalColumnVector, value: Any): Unit = {
-    val bd = BigDecimalCoercer.coerce(value).underlying()
-    vector.vector(k) = new HiveDecimalWritable(HiveDecimal.create(bd))
+    if (value == null) {
+      vector.isNull(k) = true
+      vector.noNulls = false
+    } else {
+      val bd = BigDecimalCoercer.coerce(value).underlying()
+      vector.vector(k) = new HiveDecimalWritable(HiveDecimal.create(bd))
+    }
   }
 }
 
 object BytesColumnSerializer extends OrcSerializer[BytesColumnVector] {
   override def writeToVector(k: Int, vector: BytesColumnVector, value: Any): Unit = {
-    val bytes = if (value == null) Array.emptyByteArray else value.toString.getBytes("UTF8")
-    vector.setRef(k, bytes, 0, bytes.length)
+    if (value == null) {
+      vector.isNull(k) = true
+      vector.noNulls = false
+    } else {
+      val bytes = value.toString.getBytes("UTF8")
+      vector.setRef(k, bytes, 0, bytes.length)
+    }
   }
 }
 
 object LongColumnSerializer extends OrcSerializer[LongColumnVector] {
   override def writeToVector(k: Int, vector: LongColumnVector, value: Any): Unit = {
     value match {
+      case null =>
+        vector.isNull(k) = true
+        vector.noNulls = false
       case b:Boolean => vector.vector(k) = if (b) 1 else 0
       case l: Long => vector.vector(k) = l
       case i: Int => vector.vector(k) = i
@@ -67,6 +86,9 @@ object LongColumnSerializer extends OrcSerializer[LongColumnVector] {
 object DoubleColumnSerializer extends OrcSerializer[DoubleColumnVector] {
   override def writeToVector(k: Int, vector: DoubleColumnVector, value: Any): Unit = {
     value match {
+      case null =>
+        vector.isNull(k) = true
+        vector.noNulls = false
       case d: Double => vector.vector(k) = d
       case f: Float => vector.vector(k) = f
     }
