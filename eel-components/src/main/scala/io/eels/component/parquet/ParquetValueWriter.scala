@@ -18,6 +18,7 @@ trait ParquetValueWriter {
 object ParquetValueWriter {
   def apply(dataType: DataType): ParquetValueWriter = {
     dataType match {
+      case ArrayType(elementType) => new ArrayParquetWriter(ParquetValueWriter(elementType))
       case BinaryType => BinaryParquetWriter
       case BigIntType => BigIntParquetValueWriter
       case BooleanType => BooleanParquetValueWriter
@@ -35,6 +36,19 @@ object ParquetValueWriter {
       case TimestampMillisType => TimestampParquetValueWriter
       case VarcharType(_) => StringParquetValueWriter
     }
+  }
+}
+
+import scala.collection.JavaConverters._
+
+class ArrayParquetWriter(nested: ParquetValueWriter) extends ParquetValueWriter with Logging {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    val values: Iterable[Any] = value match {
+      case array: Array[_] => array
+      case seq: Seq[_] => seq
+      case col: java.util.Collection[_] => col.asScala
+    }
+    values.foreach(nested.write(record, _))
   }
 }
 

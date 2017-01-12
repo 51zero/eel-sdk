@@ -75,6 +75,32 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Row(structType, "elton john", "pinner")
       )
     }
+    "support arrays of strings" in {
+
+      val structType = StructType(
+        Field("system", StringType),
+        Field("planets", ArrayType(StringType))
+      )
+
+      val sol = Vector("sol", Vector("earth", "mars", "saturn"))
+      val algeron = Vector("algeron", Vector("algeron-i", "algeron-ii", "algeron-iii"))
+      val frame = Frame.fromValues(structType, sol, algeron)
+
+      val path = new Path("array.pq")
+      if (fs.exists(path))
+        fs.delete(path, false)
+
+      frame.to(ParquetSink(path))
+
+      val rows = ParquetSource(path).toFrame().collect()
+      rows.head.schema shouldBe structType
+      rows shouldBe Vector(
+        Row(structType, sol),
+        Row(structType, algeron)
+      )
+
+      fs.delete(path, false)
+    }
     "support nested structs" in {
 
       val structType = StructType(
@@ -104,6 +130,8 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Row(structType, Vector("federation", Vector("sol", 0, 0, 0))),
         Row(structType, Vector("empire", Vector("andromeda", 914, 735, 132)))
       )
+
+      fs.delete(path, false)
     }
   }
 }

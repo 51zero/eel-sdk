@@ -56,20 +56,25 @@ class RowGroupConverter(schema: StructType, index: Int, parent: Option[RowBuilde
 
   val builder = new RowBuilder(schema)
 
+  def converter(dataType: DataType, fieldIndex: Int): Converter = dataType match {
+    case ArrayType(elementType) => converter(elementType, fieldIndex)
+    case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case DateType => new DateConverter(fieldIndex, builder)
+    case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
+    case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case StringType => new StringConverter(fieldIndex, builder)
+    case struct: StructType => new RowGroupConverter(struct, fieldIndex, Option(builder))
+    case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
+    case other => sys.error("Unsupported type " + other)
+  }
+
   val converters = schema.fields.map(_.dataType).zipWithIndex.map {
-    case (BinaryType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (BooleanType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (DateType, fieldIndex) => new DateConverter(fieldIndex, builder)
-    case (DecimalType(precision, scale), fieldIndex) => new DecimalConverter(fieldIndex, builder, precision, scale)
-    case (DoubleType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (FloatType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (_: IntType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (_: LongType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (_: ShortType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case (StringType, fieldIndex) => new StringConverter(fieldIndex, builder)
-    case (struct: StructType, fieldIndex) => new RowGroupConverter(struct, fieldIndex, Option(builder))
-    case (TimestampMillisType, fieldIndex) => new TimestampConverter(fieldIndex, builder)
-    case (other, fieldIndex) => sys.error("Unsupported type " + other)
+    case (dataType, fieldIndex) => converter(dataType, fieldIndex)
   }
 
   override def getConverter(fieldIndex: Int): Converter = converters(fieldIndex)

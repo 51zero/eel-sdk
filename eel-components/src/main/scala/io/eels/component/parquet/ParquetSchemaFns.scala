@@ -4,6 +4,7 @@ import io.eels.schema._
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
 import org.apache.parquet.schema.Type.Repetition
 import org.apache.parquet.schema._
+
 import scala.collection.JavaConverters._
 
 /**
@@ -57,11 +58,14 @@ object ParquetSchemaFns {
 
   def fromParquetGroupType(gt: GroupType): StructType = {
     val fields = gt.getFields.asScala.map { field =>
-      val datatype = if (field.isPrimitive)
-        fromParquetPrimitiveType(field.asPrimitiveType())
-      else
-        fromParquetGroupType(field.asGroupType)
-      Field(field.getName, datatype, field.getRepetition == Repetition.OPTIONAL)
+      val datatype = field.isPrimitive match {
+        case true => fromParquetPrimitiveType(field.asPrimitiveType())
+        case false => fromParquetGroupType(field.asGroupType)
+      }
+      field.getRepetition match {
+        case Repetition.REPEATED => Field(field.getName, ArrayType(datatype), true)
+        case _ => Field(field.getName, datatype, field.getRepetition == Repetition.OPTIONAL)
+      }
     }
     StructType(fields)
   }
@@ -76,47 +80,50 @@ object ParquetSchemaFns {
     fixedArrayLength
   }
 
-  def toParquetType(field: Field): Type = {
-    val repetition = if (field.nullable) Repetition.OPTIONAL else Repetition.REQUIRED
-    field.dataType match {
+  def toParquetType(field: Field): Type = toParquetType(
+    field.dataType,
+    field.name,
+    if (field.nullable) Repetition.OPTIONAL else Repetition.REQUIRED
+  )
+
+  def toParquetType(dataType: DataType, name: String, repetition: Repetition): Type = {
+    dataType match {
+      case StructType(fields) => new GroupType(repetition, name, fields.map(toParquetType): _*)
+      case ArrayType(elementType) => toParquetType(elementType, name, Repetition.REPEATED)
       case BigIntType =>
+        val id = new Type.ID(1)
         val metadata = new DecimalMetadata(38, 0)
-        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY,
-          20,
-          field.name, OriginalType.DECIMAL, metadata, new Type.ID(1))
-      case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name)
-      case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, field.name)
-      case CharType(size) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
-      case DateType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.DATE)
+        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 20, name, OriginalType.DECIMAL, metadata, id)
+      case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name)
+      case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, name)
+      case CharType(size)
+      => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
+      case DateType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.DATE)
       // https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md#decimal
       // The scale stores the number of digits of that value that are to the right of the decimal point,
       // and the precision stores the maximum number of digits supported in the unscaled value.
       case DecimalType(precision, scale) =>
         val metadata = new DecimalMetadata(precision.value, scale.value)
-        new PrimitiveType(repetition,
-          PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY,
-          byteSizeForPrecision(precision),
-          field.name,
-          OriginalType.DECIMAL, metadata,
-          new Type.ID(1)
-        )
-      case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, field.name)
-      case EnumType(name, values) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.ENUM)
-      case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, field.name)
-      case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name)
-      case IntType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.UINT_32)
-      case LongType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name)
-      case LongType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name, OriginalType.UINT_64)
-      case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.INT_16)
-      case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.UINT_16)
-      case StructType(fields) => new GroupType(repetition, field.name, fields.map(toParquetType): _*)
-      case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
-      case TimeMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, field.name, OriginalType.TIME_MILLIS)
-      case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name, OriginalType.TIME_MICROS)
+        val byteSize = byteSizeForPrecision(precision)
+        val id = new Type.ID(1)
+        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, byteSize, name, OriginalType.DECIMAL, metadata, id)
+      case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, name)
+      case EnumType(enumName, values) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, enumName, OriginalType.ENUM)
+      case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, name)
+      case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name)
+      case IntType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_32)
+      case LongType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name)
+      case LongType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.UINT_64)
+      case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_16)
+      case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_16)
+      case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
+      case TimeMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.TIME_MILLIS)
+      case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIME_MICROS)
       // spark doesn't annotate timestamps, just uses int96, so same here
-      case TimestampMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, field.name)
-      case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, field.name, OriginalType.TIMESTAMP_MICROS)
-      case VarcharType(size) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, field.name, OriginalType.UTF8)
+      case TimestampMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, name)
+      case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
+      case VarcharType(size)
+      => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
     }
   }
 
