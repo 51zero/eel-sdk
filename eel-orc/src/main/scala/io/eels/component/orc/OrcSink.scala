@@ -6,7 +6,8 @@ import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
-case class OrcSink(path: Path)(implicit conf: Configuration) extends Sink with Logging {
+case class OrcSink(path: Path)
+                  (implicit conf: Configuration) extends Sink with Logging {
 
   override def writer(schema: StructType): SinkWriter = new SinkWriter {
     val writer = new OrcWriter(path, schema)

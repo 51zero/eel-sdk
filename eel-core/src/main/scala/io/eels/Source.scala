@@ -21,7 +21,7 @@ trait Source extends Logging {
 
   def schema: StructType
 
-  def parts(): List[Part] = Nil
+  def parts(): List[Part]
 
   def toFrame(): Frame = toFrame(NoopListener)
 
