@@ -16,7 +16,7 @@ class AvroParquetRowWriter(path: Path,
   private val skipCrc = config.getBoolean("eel.parquet.skipCrc")
   logger.info(s"Parquet writer will skipCrc = $skipCrc")
 
-  private val writer = AvroParquetWriterFn.apply(path, avroSchema)
+  private val writer = AvroParquetWriterFn(path, avroSchema)
 
   def write(record: GenericRecord): Unit = {
     writer.write(record)

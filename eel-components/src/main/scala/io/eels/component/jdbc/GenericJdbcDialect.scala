@@ -1,10 +1,10 @@
 package io.eels.component.jdbc
 
-import io.eels.Row
-import io.eels.schema._
 import java.sql.{ResultSetMetaData, Types}
 
 import com.sksamuel.exts.Logging
+import io.eels.Row
+import io.eels.schema._
 
 class GenericJdbcDialect extends JdbcDialect with Logging {
 
@@ -12,24 +12,28 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
 
   override def toJdbcType(field: Field): String = field.dataType match {
     case BigIntType => "int"
+    case BinaryType => "binary"
+    case BooleanType => "boolean"
     case CharType(size) => s"char($size)"
     case DateType => "date"
-    case LongType(_) => "int"
-    case IntType(_) => "int"
+    case DecimalType(precision, scale) => s"decimal(${precision.value}, ${scale.value})"
     case DoubleType => "double"
     case FloatType => "float"
+    case EnumType(_, _) => "varchar(255)"
+    case IntType(_) => "int"
+    case LongType(_) => "int"
     case ShortType(_) => "smallint"
-    case BooleanType => "boolean"
-    case DecimalType(precision, scale) => s"decimal(${precision.value}, ${scale.value})"
     case StringType => "text"
     case TimestampMillisType => "timestamp"
+    case TimestampMicrosType => sys.error("Not supported by JDBC")
     case VarcharType(size) =>
       if (size > 0) s"varchar($size)"
-      else "varchar(255)"
-    case _ =>
-      logger.warn(s"Unknown data type ${field.dataType}; defaulting to varchar(255)")
-      "varchar(255)"
-    }
+      else {
+        logger.warn(s"Invalid size $size specified for varchar; defaulting to 255")
+        "varchar(255)"
+      }
+    case _ => sys.error(s"Unsupported data type with JDBC Sink: ${field.dataType}")
+  }
 
   // http://stackoverflow.com/questions/593197/what-is-the-default-precision-and-scale-for-a-number-in-oracle
   private def decimalType(column: Int, metadata: ResultSetMetaData): DataType = {
@@ -38,7 +42,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     val precision = metadata.getPrecision(column)
     val scale = metadata.getScale(column)
     if (scale == -127)
-      sys.error("Scale is undefined which is not supported, specify a scale in the SQL select by casting to the appropriate type")
+      sys.error("Scale is -127 which means 'variable scale' which is not supported, specify a scale in SQL by casting to the appropriate type")
     require(scale <= precision, "Scale must be less than precision")
     DecimalType(
       if (precision <= 0) config.defaultPrecision else precision,
@@ -68,7 +72,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case Types.NCHAR => StringType
     case Types.NCLOB => StringType
     case Types.NULL => StringType
-    case Types.NUMERIC =>  decimalType(column, metadata)
+    case Types.NUMERIC => decimalType(column, metadata)
     case Types.NVARCHAR => StringType
     case Types.OTHER => StringType
     case Types.REAL => DoubleType
