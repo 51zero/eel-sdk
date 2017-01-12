@@ -11,5 +11,5 @@ class RowBuilder(schema: StructType) {
 
   def reset() = values = Array.ofDim[Any](schema.size)
 
-  def build(): Row = Row(schema, values)
+  def build(): Row = Row(schema, values.toVector)
 }

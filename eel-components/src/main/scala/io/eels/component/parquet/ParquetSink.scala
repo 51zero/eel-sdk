@@ -16,9 +16,7 @@ case class ParquetSink(path: Path,
     private val writer = ParquetWriterFn(path, schema, metadata)
 
     override def write(row: Row): Unit = {
-      this.synchronized {
-        writer.write(row)
-      }
+      writer.write(row)
     }
 
     override def close(): Unit = {

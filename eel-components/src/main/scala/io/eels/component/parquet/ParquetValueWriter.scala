@@ -4,6 +4,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.time._
 import java.time.temporal.ChronoUnit
 
+import com.sksamuel.exts.Logging
 import io.eels.coercion.{BigDecimalCoercer, DoubleCoercer}
 import io.eels.schema._
 import org.apache.parquet.io.api.{Binary, RecordConsumer}
@@ -37,10 +38,12 @@ object ParquetValueWriter {
   }
 }
 
-class StructWriter(structType: StructType, group: Boolean) extends ParquetValueWriter {
+class StructWriter(structType: StructType,
+                   nested: Boolean // nested groups, ie not the outer record, must be handled differently
+                  ) extends ParquetValueWriter with Logging {
   override def write(record: RecordConsumer, value: Any): Unit = {
     require(record != null)
-    if (group)
+    if (nested)
       record.startGroup()
     val values = value.asInstanceOf[Seq[Any]]
     for (k <- structType.fields.indices) {
@@ -54,7 +57,7 @@ class StructWriter(structType: StructType, group: Boolean) extends ParquetValueW
         record.endField(field.name, k)
       }
     }
-    if (group)
+    if (nested)
       record.endGroup()
   }
 }

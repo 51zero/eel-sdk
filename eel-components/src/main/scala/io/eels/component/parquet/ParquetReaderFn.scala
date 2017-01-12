@@ -1,5 +1,6 @@
 package io.eels.component.parquet
 
+import com.sksamuel.exts.Logging
 import io.eels.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -13,7 +14,7 @@ import org.apache.parquet.schema.Type
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */
-object ParquetReaderFn {
+object ParquetReaderFn extends Logging {
 
   private val config = ParquetReaderConfig()
 
@@ -26,6 +27,7 @@ object ParquetReaderFn {
   def apply(path: Path,
             predicate: Option[Predicate],
             projectionSchema: Option[Type]): ParquetReader[Row] = {
+    logger.debug(s"Opening parquet reader for $path")
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {

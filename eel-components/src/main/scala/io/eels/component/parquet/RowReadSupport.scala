@@ -5,6 +5,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 import java.sql.{Date, Timestamp}
 import java.time.{LocalDateTime, ZoneId}
 
+import com.sksamuel.exts.Logging
 import io.eels.schema._
 import io.eels.{Row, RowBuilder}
 import org.apache.hadoop.conf.Configuration
@@ -15,7 +16,7 @@ import org.apache.parquet.io.api._
 import org.apache.parquet.schema.MessageType
 
 // required by the parquet reader builder, and returns a record materializer for rows
-class RowReadSupport extends ReadSupport[Row] {
+class RowReadSupport extends ReadSupport[Row] with Logging {
 
   override def prepareForRead(configuration: Configuration,
                               keyValueMetaData: java.util.Map[String, String],
@@ -29,6 +30,7 @@ class RowReadSupport extends ReadSupport[Row] {
                     fileSchema: MessageType): ReadSupport.ReadContext = {
     val projectionSchemaString = configuration.get(ReadSupport.PARQUET_READ_SCHEMA)
     val requestedSchema = ReadSupport.getSchemaForRead(fileSchema, projectionSchemaString)
+    logger.debug("Parquet requested schema: " + requestedSchema)
     new ReadSupport.ReadContext(requestedSchema)
   }
 }
@@ -39,55 +41,46 @@ class RowReadSupport extends ReadSupport[Row] {
 // The converter must know what to do with the basic value so where basic values
 // overlap, eg byte arrays, you must have different converters
 class RowRecordMaterializer(fileSchema: MessageType,
-                            readContext: ReadContext) extends RecordMaterializer[Row] {
+                            readContext: ReadContext) extends RecordMaterializer[Row] with Logging {
 
   val schema = ParquetSchemaFns.fromParquetGroupType(readContext.getRequestedSchema)
-  println(schema)
+  logger.debug(s"Record materializer will create row with schema $schema")
 
-  val builder = new RowBuilder(schema)
-  var row: Row = null
-
-  override val getRootConverter: DefaultGroupConverter = new DefaultGroupConverter(schema, 0, builder)
-  override def skipCurrentRecord(): Unit = builder.reset()
-  override def getCurrentRecord: Row = row
+  override val getRootConverter: RowGroupConverter = new RowGroupConverter(schema, -1, None)
+  override def skipCurrentRecord(): Unit = getRootConverter.builder.reset()
+  override def getCurrentRecord: Row = getRootConverter.builder.build()
 }
 
-class DefaultGroupConverter(schema: StructType, fieldIndex: Int, parent: RowBuilder) extends GroupConverter {
+class RowGroupConverter(schema: StructType, index: Int, parent: Option[RowBuilder]) extends GroupConverter with Logging {
+  logger.debug(s"Creating group converter for $schema")
 
   val builder = new RowBuilder(schema)
-  var row: Row = null
 
-  override def getConverter(fieldIndex: Int): Converter = {
-    val field = schema.fields(fieldIndex)
-    field.dataType match {
-      case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case DateType => new DateConverter(fieldIndex, builder)
-      case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
-      case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case StringType => new StringConverter(fieldIndex, builder)
-      case struct: StructType => new DefaultGroupConverter(struct, fieldIndex, builder)
-      case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
-      case other => sys.error("Unsupported type " + other)
-    }
+  val converters = schema.fields.map(_.dataType).zipWithIndex.map {
+    case (BinaryType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (BooleanType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (DateType, fieldIndex) => new DateConverter(fieldIndex, builder)
+    case (DecimalType(precision, scale), fieldIndex) => new DecimalConverter(fieldIndex, builder, precision, scale)
+    case (DoubleType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (FloatType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (_: IntType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (_: LongType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (_: ShortType, fieldIndex) => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case (StringType, fieldIndex) => new StringConverter(fieldIndex, builder)
+    case (struct: StructType, fieldIndex) => new RowGroupConverter(struct, fieldIndex, Option(builder))
+    case (TimestampMillisType, fieldIndex) => new TimestampConverter(fieldIndex, builder)
+    case (other, fieldIndex) => sys.error("Unsupported type " + other)
   }
 
-  override def end(): Unit = {
-    row = builder.build()
-    parent.put(fieldIndex, row)
-  }
-
+  override def getConverter(fieldIndex: Int): Converter = converters(fieldIndex)
+  override def end(): Unit = parent.foreach(_.put(index, builder.build.values))
   override def start(): Unit = builder.reset()
 }
 
 // just adds the parquet type directly into the builder
 // for types that are not pass through, create an instance of a more specialized converter
 // we need the index so that we know which fields were present in the file as they will be skipped if null
-class DefaultPrimitiveConverter(index: Int, builder: RowBuilder) extends PrimitiveConverter {
+class DefaultPrimitiveConverter(index: Int, builder: RowBuilder) extends PrimitiveConverter with Logging {
   override def addBinary(value: Binary): Unit = builder.put(index, value.getBytes)
   override def addDouble(value: Double): Unit = builder.put(index, value)
   override def addLong(value: Long): Unit = builder.put(index, value)
@@ -97,12 +90,12 @@ class DefaultPrimitiveConverter(index: Int, builder: RowBuilder) extends Primiti
 }
 
 class StringConverter(index: Int,
-                      builder: RowBuilder) extends PrimitiveConverter {
+                      builder: RowBuilder) extends PrimitiveConverter with Logging {
 
   private var dict: Array[String] = null
 
   override def addBinary(value: Binary): Unit = builder.put(index, value.toStringUsingUTF8)
-  
+
   override def hasDictionarySupport: Boolean = true
 
   override def setDictionary(dictionary: Dictionary): Unit = {
@@ -112,9 +105,7 @@ class StringConverter(index: Int,
     }
   }
 
-  override def addValueFromDictionary(dictionaryId: Int): Unit = {
-    builder.put(index, dict(dictionaryId))
-  }
+  override def addValueFromDictionary(dictionaryId: Int): Unit = builder.put(index, dict(dictionaryId))
 }
 
 // we must use the precision and scale to build the value back from the bytes

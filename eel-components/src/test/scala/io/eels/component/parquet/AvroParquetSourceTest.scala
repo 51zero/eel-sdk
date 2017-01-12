@@ -1,30 +1,29 @@
 package io.eels.component.parquet
 
-import io.eels.schema._
-import org.apache.avro.SchemaBuilder
-import org.apache.avro.generic.GenericData
-import org.apache.avro.generic.GenericRecord
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
-import org.apache.parquet.avro.AvroParquetWriter
 import java.nio.file.Paths
 
+import io.eels.component.parquet.avro.AvroParquetSource
 import io.eels.component.parquet.util.ParquetLogMute
+import io.eels.schema._
+import org.apache.avro.SchemaBuilder
+import org.apache.avro.generic.{GenericData, GenericRecord}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.avro.AvroParquetWriter
 import org.scalatest.{Matchers, WordSpec}
 
-class ParquetSourceTest extends WordSpec with Matchers {
+class AvroParquetSourceTest extends WordSpec with Matchers {
   ParquetLogMute()
 
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.get(conf)
 
-  val personFile = Paths.get(getClass.getResource("/parquet/person.pq").getFile)
+  val personFile = Paths.get(getClass.getResource("/parquet/person.avro.pq").getFile)
   val resourcesDir = personFile.getParent
 
-  "ParquetSource" should {
+  "AvroParquetSource" should {
     "read schema" in {
-      val people = ParquetSource(personFile)
+      val people = AvroParquetSource(personFile)
       people.schema shouldBe StructType(
         Field("name", StringType, nullable = false),
         Field("job", StringType, nullable = false),
@@ -32,18 +31,14 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.toAbsolutePath()).toFrame().toSet().map {
-        _.values
-      }
+      val people = AvroParquetSource(personFile.toAbsolutePath()).toFrame().toSet().map(_.values)
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir.resolve("*")).toFrame().toSet().map {
-        _.values
-      }
+      val people = AvroParquetSource(resourcesDir.resolve("*")).toFrame().toSet().map(_.values)
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),
