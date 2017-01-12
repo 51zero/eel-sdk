@@ -7,6 +7,7 @@ import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.hadoop.api.WriteSupport.FinalizedWriteContext
 import org.apache.parquet.io.api.RecordConsumer
 import org.apache.parquet.schema.MessageType
+
 import scala.collection.JavaConverters._
 
 class RowWriteSupport(schema: MessageType,
@@ -34,20 +35,8 @@ class RowWriter(record: RecordConsumer) {
 
   def write(row: Row): Unit = {
     record.startMessage()
-    writeRow(row)
+    val writer = new StructWriter(row.schema, false)
+    writer.write(record, row.values)
     record.endMessage()
-  }
-
-  private def writeRow(row: Row): Unit = {
-    row.schema.fields.zipWithIndex.foreach { case (field, pos) =>
-      val value = row.get(pos)
-      // if a value is null then parquet requires us to completely skip the field
-      if (value != null) {
-        record.startField(field.name, pos)
-        val writer = ParquetValueWriter(field.dataType)
-        writer.write(record, row.get(pos))
-        record.endField(field.name, pos)
-      }
-    }
   }
 }

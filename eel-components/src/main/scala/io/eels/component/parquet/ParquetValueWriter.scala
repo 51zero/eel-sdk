@@ -29,10 +29,33 @@ object ParquetValueWriter {
       case _: LongType => LongParquetValueWriter
       case _: ShortType => ShortParquetWriter
       case StringType => StringParquetValueWriter
+      case struct: StructType => new StructWriter(struct, true)
       case TimeMillisType => TimeParquetValueWriter
       case TimestampMillisType => TimestampParquetValueWriter
       case VarcharType(_) => StringParquetValueWriter
     }
+  }
+}
+
+class StructWriter(structType: StructType, group: Boolean) extends ParquetValueWriter {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    require(record != null)
+    if (group)
+      record.startGroup()
+    val values = value.asInstanceOf[Seq[Any]]
+    for (k <- structType.fields.indices) {
+      val value = values(k)
+      // if a value is null then parquet requires us to completely skip the field
+      if (value != null) {
+        val field = structType.field(k)
+        record.startField(field.name, k)
+        val writer = ParquetValueWriter(field.dataType)
+        writer.write(record, value)
+        record.endField(field.name, k)
+      }
+    }
+    if (group)
+      record.endGroup()
   }
 }
 

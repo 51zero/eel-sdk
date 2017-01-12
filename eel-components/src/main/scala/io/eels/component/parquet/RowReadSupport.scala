@@ -43,33 +43,45 @@ class RowRecordMaterializer(fileSchema: MessageType,
 
   val schema = ParquetSchemaFns.fromParquetGroupType(readContext.getRequestedSchema)
   println(schema)
+
   val builder = new RowBuilder(schema)
   var row: Row = null
 
-  override def getRootConverter: GroupConverter = new GroupConverter {
-    override def getConverter(fieldIndex: Int): Converter = {
-      val field = schema.fields(fieldIndex)
-      field.dataType match {
-        case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case DateType => new DateConverter(fieldIndex, builder)
-        case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
-        case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
-        case StringType => new StringConverter(fieldIndex, builder)
-        case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
-        case other => sys.error("Unsupported type " + other)
-      }
-    }
-    override def end(): Unit = row = builder.build()
-    override def start(): Unit = builder.reset()
-  }
-
+  override val getRootConverter: DefaultGroupConverter = new DefaultGroupConverter(schema, 0, builder)
   override def skipCurrentRecord(): Unit = builder.reset()
   override def getCurrentRecord: Row = row
+}
+
+class DefaultGroupConverter(schema: StructType, fieldIndex: Int, parent: RowBuilder) extends GroupConverter {
+
+  val builder = new RowBuilder(schema)
+  var row: Row = null
+
+  override def getConverter(fieldIndex: Int): Converter = {
+    val field = schema.fields(fieldIndex)
+    field.dataType match {
+      case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case DateType => new DateConverter(fieldIndex, builder)
+      case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
+      case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case StringType => new StringConverter(fieldIndex, builder)
+      case struct: StructType => new DefaultGroupConverter(struct, fieldIndex, builder)
+      case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
+      case other => sys.error("Unsupported type " + other)
+    }
+  }
+
+  override def end(): Unit = {
+    row = builder.build()
+    parent.put(fieldIndex, row)
+  }
+
+  override def start(): Unit = builder.reset()
 }
 
 // just adds the parquet type directly into the builder
