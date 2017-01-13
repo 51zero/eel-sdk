@@ -30,13 +30,19 @@ object AvroSchemaFns extends Logging {
         LogicalTypes.decimal(precision.value, scale.value).addToSchema(schema)
         schema
       case DoubleType => SchemaBuilder.builder().doubleType()
-      case EnumType(name, values) => SchemaBuilder.enumeration(name).symbols(values: _*)
+      case EnumType(enumName, values) => SchemaBuilder.enumeration(enumName).symbols(values: _*)
       case FloatType => SchemaBuilder.builder().floatType()
       case i: IntType => SchemaBuilder.builder().intType()
       case l: LongType => SchemaBuilder.builder().longType()
       case s: ShortType => SchemaBuilder.builder().intType()
       case StringType => SchemaBuilder.builder().stringType()
-      case struct: StructType => toAvroSchema(struct)
+      case StructType(structFields) =>
+        val record = SchemaBuilder.record("record").fields()
+        structFields.map { field =>
+          val avro = toAvroSchema(field.dataType)
+          record.name(field.name).`type`(avro).noDefault()
+        }
+        record.endRecord()
       case TimeMillisType =>
         val schema = Schema.create(Schema.Type.INT)
         LogicalTypes.timeMillis().addToSchema(schema)

@@ -60,8 +60,7 @@ class RecordSerializer(schema: Schema) extends AvroSerializer {
 
   private def explode(value: Any): Seq[Any] = value match {
     // row must be first as it IS a product also
-    case row: Row =>
-      row.values
+    case row: Row => row.values
     // must force a non stream
     case product: Product => product.productIterator.toList
     case iter: Iterable[_] => iter.toList
@@ -89,6 +88,7 @@ class RecordSerializer(schema: Schema) extends AvroSerializer {
       case row: Row => writeRow(row)
       case product: Product => writeValues(product.productIterator.toList)
       case iter: Iterator[_] => writeValues(iter.toList)
+      case seq: Seq[Any] => writeValues(seq)
     }
   }
 }
