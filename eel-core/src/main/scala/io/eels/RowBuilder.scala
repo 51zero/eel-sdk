@@ -12,14 +12,17 @@ class RowBuilder(schema: StructType) {
     if (values(index) == null) {
       values(index) = value
     } else {
-      values(index) match {
-        case vector: Vector[Any] => values(index) = vector :+ value
-        case single => values(index) = Vector(single, value)
+      val current = values(index)
+      current match {
+        case vector: Vector[_] => values(index) = vector :+ value
+        case single => values(index) = Vector(current, value)
       }
     }
   }
 
-  def reset() = values = Array.ofDim[Any](schema.size)
+  def reset() = {
+    values = Array.ofDim[Any](schema.size)
+  }
 
-  def build(): Row = Row(schema, values.toVector)
+  def build(): Row = Row(schema, values)
 }
