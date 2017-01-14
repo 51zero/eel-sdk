@@ -16,16 +16,30 @@ case class KuduSink(tableName: String)(implicit client: KuduClient) extends Sink
     if (client.tableExists(tableName))
       client.deleteTable(tableName)
 
-    if (!client.tableExists(tableName)) {
+    val table = if (!client.tableExists(tableName)) {
       logger.debug(s"Creating table $tableName")
       val options = new CreateTableOptions()
         .setNumReplicas(1)
         .setRangePartitionColumns(structType.fields.filter(_.key).map(_.name).asJava)
       client.createTable(tableName, schema, options)
+    } else {
+      client.openTable(tableName)
     }
 
-    override def write(row: Row): Unit = ()
-    override def close(): Unit = ()
+    val session = client.newSession()
+
+    override def write(row: Row): Unit = {
+      val insert = table.newInsert()
+      val partial = insert.getRow
+      for ((field, index) <- row.schema.fields.zipWithIndex) {
+        partial.addString(index, row.values(index).toString)
+      }
+      session.apply(insert)
+    }
+
+    override def close(): Unit = {
+      session.close()
+    }
   }
 }
 
