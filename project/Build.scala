@@ -27,6 +27,7 @@ object Build extends Build {
   val UnivocityVersion = "2.2.3"
   val ConfigVersion = "1.3.0"
   val KafkaVersion = "0.10.1.1"
+  val KuduVersion = "1.1.0"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -65,6 +66,12 @@ object Build extends Build {
     libraryDependencies ++= Seq(
       "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
       "net.manub"                   %% "scalatest-embedded-kafka"       % "0.11.0"     % "test"
+    )
+  )
+
+  val kuduSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.kudu" % "kudu-client" % KuduVersion
     )
   )
 
@@ -133,7 +140,7 @@ object Build extends Build {
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(name := "eel")
-    .aggregate(core, components, orc, hive, kafka)
+    .aggregate(core, components, orc, hive, kafka, kudu)
    
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -164,5 +171,12 @@ object Build extends Build {
     .settings(componentsSettings: _*)
     .settings(kafkaSettings: _*)
     .settings(name := "eel-kafka")
+    .dependsOn(core)
+
+  lazy val kudu = Project("eel-kudu", file("eel-kudu"))
+    .settings(rootSettings: _*)
+    .settings(componentsSettings: _*)
+    .settings(kuduSettings: _*)
+    .settings(name := "eel-kudu")
     .dependsOn(core)
 }
