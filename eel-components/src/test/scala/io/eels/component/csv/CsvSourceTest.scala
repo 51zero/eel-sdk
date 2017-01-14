@@ -52,7 +52,7 @@ class CsvSourceTest extends WordSpec with Matchers {
     "support reading header" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withHeader(Header.FirstRow).toFrame().toList().map(_.values).toSet shouldBe
+      CsvSource(path).withHeader(Header.FirstRow).toFrame().collect().map(_.values).toSet shouldBe
         Set(Vector("e", "f", "g"), Vector("1", "2", "3"), Vector("4", "5", "6"))
     }
     "support skipping header" in {
@@ -64,7 +64,7 @@ class CsvSourceTest extends WordSpec with Matchers {
     "support delimiters" in {
       val file = getClass.getResource("/io/eels/component/csv/psv.psv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withDelimiter('|').toFrame().toList().map(_.values).toSet shouldBe
+      CsvSource(path).withDelimiter('|').toFrame().collect().map(_.values).toSet shouldBe
         Set(Vector("e", "f", "g"))
       CsvSource(path).withDelimiter('|').withHeader(Header.None).toFrame().toSet().map(_.values) shouldBe
         Set(Vector("a", "b", "c"), Vector("e", "f", "g"))

@@ -56,27 +56,27 @@ class AvroSchemaCompatibilityTest extends FunSuite with Matchers {
       .endRecord()
 
     val structType = StructType(Vector(
-      Field("optbool", BooleanType, true, false, None, Map()),
-      Field("optbytes", BinaryType, true, false, None, Map()),
-      Field("optdouble", DoubleType, true, false, None, Map()),
-      Field("optfloat", FloatType, true, false, None, Map()),
-      Field("optint", IntType(true), true, false, None, Map()),
-      Field("optlong", LongType(true), true, false, None, Map()),
-      Field("optstring", StringType, true, false, None, Map()),
-      Field("reqbool", BooleanType, false, false, None, Map()),
-      Field("reqbytes", BinaryType, false, false, None, Map()),
-      Field("reqdouble", DoubleType, false, false, None, Map()),
-      Field("reqfloat", FloatType, false, false, None, Map()),
-      Field("reqint", IntType(true), false, false, None, Map()),
-      Field("reqlong", LongType(true), false, false, None, Map()),
-      Field("reqstring", StringType, false, false, None, Map()),
+      Field("optbool", BooleanType, true, false),
+      Field("optbytes", BinaryType, true, false),
+      Field("optdouble", DoubleType, true, false),
+      Field("optfloat", FloatType, true, false),
+      Field("optint", IntType(true), true, false),
+      Field("optlong", LongType(true), true, false),
+      Field("optstring", StringType, true, false),
+      Field("reqbool", BooleanType, false, false),
+      Field("reqbytes", BinaryType, false, false),
+      Field("reqdouble", DoubleType, false, false),
+      Field("reqfloat", FloatType, false, false),
+      Field("reqint", IntType(true), false, false),
+      Field("reqlong", LongType(true), false, false),
+      Field("reqstring", StringType, false, false),
       Field("reqenum", EnumType("suits", "spades", "hearts"), false),
-      Field("reqdecimal", DecimalType(14, 7), false, false, None, Map()),
-      Field("requiredDate", DateType, false, false, None, Map()),
-      Field("requiredTimeMillis", TimeMillisType, false, false, None, Map()),
-      Field("requiredTimeMicros", TimeMicrosType, false, false, None, Map()),
-      Field("requiredTimestampMillis", TimestampMillisType, false, false, None, Map()),
-      Field("requiredTimestampMicros", TimestampMicrosType, false, false, None, Map())
+      Field("reqdecimal", DecimalType(14, 7), false, false),
+      Field("requiredDate", DateType, false, false),
+      Field("requiredTimeMillis", TimeMillisType, false, false),
+      Field("requiredTimeMicros", TimeMicrosType, false, false),
+      Field("requiredTimestampMillis", TimestampMillisType, false, false),
+      Field("requiredTimestampMicros", TimestampMicrosType, false, false)
     ))
 
     AvroSchemaFns.fromAvroSchema(schema) shouldBe structType

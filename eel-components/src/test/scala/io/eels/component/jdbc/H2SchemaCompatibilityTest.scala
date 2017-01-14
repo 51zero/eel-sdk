@@ -30,20 +30,20 @@ class H2SchemaCompatibilityTest extends FlatSpec with Matchers {
     JdbcSource(() => conn, "select * from t").schema shouldBe
       StructType(
         Vector(
-          Field("A", IntType(true), true, false, None, Map()),
-          Field("B", io.eels.schema.BooleanType, true, false, None, Map()),
-          Field("C", io.eels.schema.BigIntType, true, false, None, Map()),
-          Field("D", io.eels.schema.DoubleType, true, false, None, Map()),
-          Field("E", io.eels.schema.TimeMillisType, true, false, None, Map()),
-          Field("F", io.eels.schema.DateType, true, false, None, Map()),
-          Field("G", io.eels.schema.TimestampMillisType, true, false, None, Map()),
-          Field("H", DecimalType(Precision(14), Scale(5)), true, false, None, Map()),
-          Field("I", io.eels.schema.StringType, true, false, None, Map()),
-          Field("J", io.eels.schema.ShortType(true), true, false, None, Map()),
-          Field("K", io.eels.schema.ShortType(true), true, false, None, Map()),
-          Field("L", io.eels.schema.VarcharType(55), true, false, None, Map()),
-          Field("M", io.eels.schema.CharType(15), true, false, None, Map()),
-          Field("N", DecimalType(Precision(66), Scale(5)), true, false, None, Map())
+          Field("A", IntType(true), true, false),
+          Field("B", io.eels.schema.BooleanType, true, false),
+          Field("C", io.eels.schema.BigIntType, true, false),
+          Field("D", io.eels.schema.DoubleType, true, false),
+          Field("E", io.eels.schema.TimeMillisType, true, false),
+          Field("F", io.eels.schema.DateType, true, false),
+          Field("G", io.eels.schema.TimestampMillisType, true, false),
+          Field("H", DecimalType(Precision(14), Scale(5)), true, false),
+          Field("I", io.eels.schema.StringType, true, false),
+          Field("J", io.eels.schema.ShortType(true), true, false),
+          Field("K", io.eels.schema.ShortType(true), true, false),
+          Field("L", io.eels.schema.VarcharType(55), true, false),
+          Field("M", io.eels.schema.CharType(15), true, false),
+          Field("N", DecimalType(Precision(66), Scale(5)), true, false)
         )
       )
   }

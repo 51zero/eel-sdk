@@ -7,6 +7,25 @@ import scala.collection.JavaConverters._
 
 object KuduSchemaFns {
 
+  def fromKuduSchema(schema: Schema): StructType = {
+    val fields = schema.getColumns.asScala.map { col =>
+      val datatype = col.getType match {
+        case Type.BINARY => BinaryType
+        case Type.BOOL => BooleanType
+        case Type.DOUBLE => DoubleType
+        case Type.FLOAT => FloatType
+        case Type.INT8 => ByteType.Signed
+        case Type.INT16 => ShortType.Signed
+        case Type.INT32 => IntType.Signed
+        case Type.INT64 => LongType.Signed
+        case Type.STRING => StringType
+        case Type.UNIXTIME_MICROS => TimestampMicrosType
+      }
+      Field(col.getName, datatype, nullable = col.isNullable, key = col.isKey)
+    }
+    StructType(fields)
+  }
+
   def toKuduColumn(field: Field): ColumnSchema = {
     val tpe = field.dataType match {
       case BinaryType => Type.BINARY

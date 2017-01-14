@@ -28,19 +28,19 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
     )
 
     val struct = StructType(Vector(
-      Field("requiredBinary", BinaryType, false, false, None, Map()),
-      Field("requiredBoolean", BooleanType, false, false, None, Map()),
-      Field("requiredDouble", DoubleType, false, false, None, Map()),
-      Field("requiredFloat", FloatType, false, false, None, Map()),
-      Field("requiredInt", IntType(true), false, false, None, Map()),
-      Field("requiredLong", LongType(true), false, false, None, Map()),
-      Field("requiredString", StringType, false, false, None, Map()),
-      Field("reqEnum", EnumType("reqEnum", Nil), false, false, None, Map()),
-      Field("requiredDecimal", DecimalType(14, 6), false, false, None, Map()),
-      Field("timeMillis", TimeMillisType, false, false, None, Map()),
-      Field("timeMicros", TimeMicrosType, false, false, None, Map()),
-      Field("timestampMillis", TimestampMillisType, false, false, None, Map()),
-      Field("timestampMicros", TimestampMicrosType, false, false, None, Map())
+      Field("requiredBinary", BinaryType, false, false),
+      Field("requiredBoolean", BooleanType, false, false),
+      Field("requiredDouble", DoubleType, false, false),
+      Field("requiredFloat", FloatType, false, false),
+      Field("requiredInt", IntType(true), false, false),
+      Field("requiredLong", LongType(true), false, false),
+      Field("requiredString", StringType, false, false),
+      Field("reqEnum", EnumType("reqEnum", Nil), false, false),
+      Field("requiredDecimal", DecimalType(14, 6), false, false),
+      Field("timeMillis", TimeMillisType, false, false),
+      Field("timeMicros", TimeMicrosType, false, false),
+      Field("timestampMillis", TimestampMillisType, false, false),
+      Field("timestampMicros", TimestampMicrosType, false, false)
     ))
 
     ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe struct

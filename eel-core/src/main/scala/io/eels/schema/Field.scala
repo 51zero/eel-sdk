@@ -5,8 +5,8 @@ case class Field(name: String,
                  dataType: DataType = StringType,
                  nullable: Boolean = true,
                  partition: Boolean = false,
-                 key: Boolean = false, // for schemas that support a primary key,
                  comment: Option[String] = None,
+                 key: Boolean = false, // for schemas that support a primary key,
                  metadata: Map[String, String] = Map.empty) {
 
   // returns the default value for this field or throws an exception

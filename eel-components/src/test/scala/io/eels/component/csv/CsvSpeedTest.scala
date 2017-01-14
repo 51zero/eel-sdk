@@ -28,7 +28,7 @@ object CsvSpeedTest extends App with Timed {
     }
 
     timed("Reading") {
-      val in = CsvSource(path).toFrame().toList()
+      val in = CsvSource(path).toFrame().collect()
       assert(in.size == rows.size, in.size)
     }
 

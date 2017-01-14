@@ -1,6 +1,6 @@
 package io.eels.component.kudu
 
-import io.eels.Frame
+import io.eels.{Frame, Row}
 import io.eels.schema.{Field, StringType, StructType}
 import org.scalatest.{Matchers, WordSpec}
 
@@ -19,4 +19,10 @@ class KuduSinkTest extends WordSpec with Matchers {
 
   val master = "localhost:7051"
   frame.to(KuduSink(master, "mytable"))
+
+  val rows = KuduSource(master, "mytable").toFrame.collect()
+  rows shouldBe Seq(
+    Row(schema, Vector("earth", "3")),
+    Row(schema, Vector("saturn", "6"))
+  )
 }
