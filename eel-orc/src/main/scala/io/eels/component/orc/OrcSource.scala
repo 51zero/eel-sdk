@@ -29,12 +29,12 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
   def statistics(): Seq[ColumnStatistics] = reader().getStatistics.toVector
   def stripes(): Seq[StripeInformation] = reader().getStripes.asScala
   def stripeStatistics(): Seq[StripeStatistics] = reader().getStripeStatistics.asScala
+}
 
-  class OrcPart(path: Path) extends Part {
-    override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
-      val reader = OrcFile.createReader(path, new ReaderOptions(conf))
-      val fileSchema = OrcSchemaFns.fromOrcSchema(reader.getSchema)
-      override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema)
-    }
+class OrcPart(path: Path)(implicit conf: Configuration) extends Part {
+  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
+    val reader = OrcFile.createReader(path, new ReaderOptions(conf))
+    val fileSchema = OrcSchemaFns.fromOrcSchema(reader.getSchema)
+    override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema)
   }
 }
