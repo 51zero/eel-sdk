@@ -18,8 +18,18 @@ object TimestampCoercer extends Coercer[java.sql.Timestamp] {
   }
 }
 
+object IntCoercer extends Coercer[Int] {
+  override def coerce(input: Any): Int = input match {
+    case b: Byte => b
+    case i: Int => i
+    case s: Short => s
+    case s: String => s.toInt
+  }
+}
+
 object LongCoercer extends Coercer[Long] {
   override def coerce(input: Any): Long = input match {
+    case b: Byte => b
     case i: Int => i
     case l: Long => l
     case s: Short => s
@@ -27,8 +37,20 @@ object LongCoercer extends Coercer[Long] {
   }
 }
 
+object FloatCoercer extends Coercer[Float] {
+  override def coerce(input: Any): Float = input match {
+    case b: Byte => b
+    case f: Float => f
+    case i: Int => i
+    case l: Long => l
+    case s: Short => s
+    case s: String => s.toFloat
+  }
+}
+
 object DoubleCoercer extends Coercer[Double] {
   override def coerce(input: Any): Double = input match {
+    case b: Byte => b
     case d: Double => d
     case f: Float => f
     case i: Int => i

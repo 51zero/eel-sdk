@@ -1,7 +1,7 @@
 package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
-import io.eels.schema.StructType
+import io.eels.schema._
 import io.eels.{CloseableIterator, Part, Row, Source}
 import org.apache.kudu.client.{KuduClient, RowResultIterator}
 
@@ -49,11 +49,24 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
 object ResultsIterator {
   def apply(schema: StructType, iter: RowResultIterator) = new Iterator[Row] {
+
+    val zipped = schema.fields.zipWithIndex
+
     override def hasNext: Boolean = iter.hasNext
     override def next(): Row = {
       val next = iter.next()
-      val values = schema.fieldNames.map { fieldName =>
-        next.getString(fieldName)
+      val values = zipped.map { case (field, index) =>
+        field.dataType match {
+          case BinaryType => BinaryValueReader.read(next, index)
+          case BooleanType => BooleanValueReader.read(next, index)
+          case _: ByteType => ByteValueReader.read(next, index)
+          case DoubleType => DoubleValueReader.read(next, index)
+          case FloatType => FloatValueReader.read(next, index)
+          case _: IntType => IntValueReader.read(next, index)
+          case _: LongType => LongValueReader.read(next, index)
+          case _: ShortType => ShortValueReader.read(next, index)
+          case StringType => StringValueReader.read(next, index)
+        }
       }
       Row(schema, values)
     }
