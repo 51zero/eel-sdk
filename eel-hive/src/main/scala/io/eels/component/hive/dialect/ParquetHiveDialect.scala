@@ -1,5 +1,7 @@
 package io.eels.component.hive.dialect
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.{HiveDialect, HiveWriter}
@@ -42,11 +44,13 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                      (implicit fs: FileSystem, conf: Configuration): HiveWriter = new HiveWriter {
     ParquetLogMute()
 
-    val writer = ParquetWriterFn(path, schema, metadata)
+    private val _records = new AtomicInteger(0)
+    private val writer = ParquetWriterFn(path, schema, metadata)
 
     override def write(row: Row) {
       require(row.values.nonEmpty, "Attempting to write an empty row")
       writer.write(row)
+      _records.incrementAndGet()
     }
 
     override def close() = {
@@ -55,5 +59,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
       // all the files we create to stay consistent
       permission.foreach(fs.setPermission(path, _))
     }
+
+    override def records: Int = _records.get()
   }
 }

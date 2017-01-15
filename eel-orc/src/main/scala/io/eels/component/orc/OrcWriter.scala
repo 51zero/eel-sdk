@@ -1,5 +1,8 @@
 package io.eels.component.orc
 
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.IntUnaryOperator
+
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.Row
@@ -35,11 +38,15 @@ class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration
   private val options = OrcFile.writerOptions(conf).setSchema(schema)
   private lazy val writer = OrcFile.createWriter(path, options)
 
+  private val _records = new AtomicInteger(0)
+
   def write(row: Row): Unit = {
     buffer.append(row)
     if (buffer.size == batchSize)
       flush()
   }
+
+  def records = _records.get()
 
   def flush(): Unit = {
 
@@ -60,8 +67,12 @@ class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration
 
     batch.size = buffer.size
     writer.addRowBatch(batch)
+    _records.updateAndGet(new IntUnaryOperator {
+      override def applyAsInt(operand: Int): Int = operand + batch.size
+    })
     buffer.clear()
     batch.reset()
+
   }
 
   def close(): Long = {

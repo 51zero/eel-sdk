@@ -40,5 +40,7 @@ object AvroHiveDialect extends HiveDialect with Logging {
       writer.close()
       out.close()
     }
+
+    override def records: Int = writer.records
   }
 }

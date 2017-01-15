@@ -138,7 +138,7 @@ case class StructType(fields: Vector[Field]) extends DataType {
     }
   }
 
-  def partitions: List[Field] = fields.filter(_.partition)
+  def partitions: Seq[Field] = fields.filter(_.partition)
 
   def projection(fieldNames: Seq[String]): StructType = StructType(
     fieldNames.flatMap { name =>

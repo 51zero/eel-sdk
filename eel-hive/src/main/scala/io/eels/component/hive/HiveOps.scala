@@ -197,7 +197,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   def createTable(databaseName: String,
                   tableName: String,
                   schema: StructType,
-                  partitionKeys: List[String],
+                  partitionKeys: Seq[String],
                   format: HiveFormat = HiveFormat.Text,
                   props: Map[String, String] = Map.empty,
                   tableType: TableType = TableType.MANAGED_TABLE,

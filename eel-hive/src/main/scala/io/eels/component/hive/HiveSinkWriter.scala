@@ -98,6 +98,13 @@ class HiveSinkWriter(sourceSchema: StructType,
   }
   writerPool.shutdown()
 
+  case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
+
+  // returns a Map consisting of each path written, the size of the file, and the number of records in that file
+  def writeStats(): Seq[WriteStatus] = {
+    writers.map { case (_, ph) => WriteStatus(ph._1, fs.getFileStatus(ph._1).getLen, ph._2.records) }
+  }.toVector
+
   override def write(row: Row): Unit = buffer.put(row)
 
   override def close(): Unit = {

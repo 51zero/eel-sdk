@@ -38,6 +38,8 @@ object OrcHiveDialect extends HiveDialect with Logging {
         writer.close()
         permission.foreach(fs.setPermission(path, _))
       }
+
+      override def records: Int = writer.records
     }
   }
 }
