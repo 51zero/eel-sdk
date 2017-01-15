@@ -5,7 +5,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
+import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
 import com.sksamuel.exts.OptionImplicits._
 import io.eels.schema.StructType
@@ -76,6 +76,12 @@ case class HiveSink(dbName: String,
         sys.error(HiveSink.CaseErrorMsg)
       else
         logger.warn(HiveSink.CaseErrorMsg)
+    }
+
+    if (createTable) {
+      if (!ops.tableExists(dbName, tableName)) {
+        ops.createTable(dbName, tableName, schema, schema.partitions.map(_.name.toLowerCase), HiveFormat.Parquet, Map.empty, TableType.MANAGED_TABLE)
+      }
     }
 
     if (schemaEvolution.contains(true) || schemaEvolutionDefault) {
