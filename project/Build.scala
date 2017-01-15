@@ -89,6 +89,7 @@ object Build extends Build {
     javaOptions in test ++= Seq("-Xms256M", "-Xmx2G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC"),
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "kudu"),
     libraryDependencies ++= Seq(
       "org.scala-lang"              % "scala-reflect"           % scalaVersion.value,
       "com.typesafe"                % "config"                  % ConfigVersion,
