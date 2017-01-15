@@ -9,17 +9,17 @@ import io.eels.schema.StructType
 
 case class AvroSource(path: Path) extends Source with Using {
 
-  override def schema(): StructType = {
+  override lazy val schema: StructType = {
     using(AvroReaderFns.createAvroReader(path)) { reader =>
       val record = reader.next()
       AvroSchemaFns.fromAvroSchema(record.getSchema)
     }
   }
 
-  override def parts(): List[Part] = List(new AvroSourcePart(path, schema()))
+  override def parts(): List[Part] = List(AvroSourcePart(path))
 }
 
-class AvroSourcePart(val path: Path, val schema: StructType) extends Part with Logging {
+case class AvroSourcePart(path: Path) extends Part with Logging {
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 

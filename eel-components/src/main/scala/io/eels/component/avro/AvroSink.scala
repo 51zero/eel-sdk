@@ -3,37 +3,14 @@ package io.eels.component.avro
 import java.io.{File, OutputStream}
 import java.nio.file.{Files, Path}
 
-import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema.StructType
 import io.eels.{Row, Sink, SinkWriter}
-import org.apache.avro.file.DataFileWriter
-import org.apache.avro.generic
-import org.apache.avro.generic.GenericRecord
 
 case class AvroSink(out: OutputStream) extends Sink {
-  private val config = ConfigFactory.load()
-  override def writer(schema: StructType): SinkWriter = new AvroSinkWriter(schema, out, config)
-}
-
-class AvroSinkWriter(schema: StructType, out: OutputStream, config: Config) extends SinkWriter {
-
-  private val caseSensitive = config.getBoolean("eel.avro.caseSensitive")
-
-  val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = caseSensitive)
-  val datumWriter = new generic.GenericDatumWriter[GenericRecord](avroSchema)
-  val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
-  dataFileWriter.create(avroSchema, out)
-
-  private val serializer = new RecordSerializer(avroSchema)
-
-  override def write(row: Row): Unit = {
-    val record = serializer.serialize(row)
-    dataFileWriter.append(record)
-  }
-
-  override def close(): Unit = {
-    dataFileWriter.flush()
-    dataFileWriter.close()
+  override def writer(schema: StructType): SinkWriter = new SinkWriter {
+    private val writer = new AvroWriter(schema, out)
+    override def write(row: Row): Unit = writer.write(row)
+    override def close(): Unit = writer.close()
   }
 }
 
