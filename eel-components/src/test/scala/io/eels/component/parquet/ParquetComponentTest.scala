@@ -74,6 +74,9 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Row(structType, "clint eastwood", "carmel"),
         Row(structType, "elton john", "pinner")
       )
+
+      fs.delete(path1, false)
+      fs.delete(path2, false)
     }
     "support collections of strings" in {
 
