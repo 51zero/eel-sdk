@@ -35,6 +35,8 @@ object AvroSchemaFns extends Logging {
       case i: IntType => SchemaBuilder.builder().intType()
       case l: LongType => SchemaBuilder.builder().longType()
       case s: ShortType => SchemaBuilder.builder().intType()
+      case MapType(StringType, valueType) => SchemaBuilder.map().values(toAvroSchema(valueType))
+      case MapType(other, valueType) => sys.error("Avro only supports maps with String keys")
       case StringType => SchemaBuilder.builder().stringType()
       case StructType(structFields) =>
         val record = SchemaBuilder.record("record").fields()
@@ -114,6 +116,7 @@ object AvroSchemaFns extends Logging {
         case _: TimestampMicros => TimestampMicrosType
         case _ => LongType.Signed
       }
+      case org.apache.avro.Schema.Type.MAP => MapType(StringType, toDataType(schema.getValueType))
       case org.apache.avro.Schema.Type.RECORD => StructType(schema.getFields.asScala.map(fromAvroField).toList)
       case org.apache.avro.Schema.Type.STRING => StringType
       case org.apache.avro.Schema.Type.UNION =>

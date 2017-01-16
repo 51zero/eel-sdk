@@ -159,5 +159,25 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
 
       fs.delete(path, false)
     }
+    "support maps" in {
+
+      val structType = StructType(
+        Field("name", StringType),
+        Field("map", MapType(StringType, BooleanType))
+      )
+
+      val frame = Frame.fromValues(structType, Vector("abc", Map("a" -> true, "b" -> false)))
+
+      val path = new Path("maps.pq")
+      if (fs.exists(path))
+        fs.delete(path, false)
+
+      frame.to(AvroParquetSink(path))
+
+      val rows = AvroParquetSource(path).toFrame().collect()
+      rows shouldBe Seq(Row(structType, Vector("abc", Map("a" -> true, "b" -> false))))
+
+      fs.delete(path, false)
+    }
   }
 }

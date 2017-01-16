@@ -26,6 +26,7 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
       case record: GenericRecord => toValues(record)
       case utf8: Utf8 if useJavaString => value.asInstanceOf[Utf8].toString
       case col: java.util.Collection[Any] => col.asScala.toVector.map(toScala)
+      case map: java.util.Map[_, _] => map.asScala.toMap.map { case (k, v) => toScala(k) -> toScala(v) }
       case other => other
     }
   }

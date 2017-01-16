@@ -34,7 +34,7 @@ object AvroSerializer extends Logging {
       case Schema.Type.FLOAT => FloatSerializer
       case Schema.Type.INT => IntSerializer
       case Schema.Type.LONG => LongSerializer
-      case Schema.Type.MAP => MapSerializer
+      case Schema.Type.MAP => new MapSerializer(AvroSerializer(schema.getValueType))
       case Schema.Type.RECORD => new RecordSerializer(schema)
       case Schema.Type.STRING => StringSerializer
       case Schema.Type.UNION =>
@@ -102,10 +102,10 @@ class OptionSerializer(serializer: AvroSerializer) extends AvroSerializer {
   }
 }
 
-object MapSerializer extends AvroSerializer {
-  override def serialize(value: Any): Map[_, _] = value match {
-    case map: Map[_, _] => map
-    case map: java.util.Map[_, _] => map.asScala.toMap
+class MapSerializer(valueSerializer: AvroSerializer) extends AvroSerializer {
+  override def serialize(value: Any): java.util.Map[_, _] = value match {
+    case map: Map[_, _] => map.mapValues(valueSerializer.serialize).asJava
+    case map: java.util.Map[_, _] => serialize(map.asScala)
   }
 }
 

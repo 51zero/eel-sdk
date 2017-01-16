@@ -257,3 +257,5 @@ object StructType {
     StructType(fields.toList)
   }
 }
+
+case class MapType(keyType: DataType, valueType: DataType) extends DataType
