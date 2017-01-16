@@ -56,16 +56,33 @@ object ParquetSchemaFns {
     }
   }
 
+  def fromParquetType(tpe: Type): DataType = {
+    if (tpe.isPrimitive) fromParquetPrimitiveType(tpe.asPrimitiveType)
+    else fromParquetGroupType(tpe.asGroupType())
+  }
+
+  // if the parquet group has just two fields, key and value, then we assume its a map
+  def fromParquetMapType(gt: GroupType): MapType = {
+    val keyType = fromParquetType(gt.getFields.get(0))
+    val valueType = fromParquetType(gt.getFields.get(1))
+    MapType(keyType, valueType)
+  }
+
   def fromParquetGroupType(gt: GroupType): StructType = {
     val fields = gt.getFields.asScala.map { field =>
       val datatype = field.isPrimitive match {
-        case true => fromParquetPrimitiveType(field.asPrimitiveType())
-        case false => fromParquetGroupType(field.asGroupType)
+        case true =>
+          val tpe = fromParquetPrimitiveType(field.asPrimitiveType())
+          if (field.getRepetition == Repetition.REPEATED) ArrayType(tpe) else tpe
+        case false
+          if field.asGroupType().getFieldCount == 2 &&
+            field.asGroupType().containsField("key") &&
+            field.asGroupType().containsField("value") => fromParquetMapType(field.asGroupType)
+        case false =>
+          val tpe = fromParquetGroupType(field.asGroupType)
+          if (field.getRepetition == Repetition.REPEATED) ArrayType(tpe) else tpe
       }
-      field.getRepetition match {
-        case Repetition.REPEATED => Field(field.getName, ArrayType(datatype), true)
-        case _ => Field(field.getName, datatype, field.getRepetition == Repetition.OPTIONAL)
-      }
+      Field(field.getName, datatype, field.getRepetition != Repetition.REQUIRED)
     }
     StructType(fields)
   }
@@ -113,6 +130,10 @@ object ParquetSchemaFns {
       case IntType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_32)
       case LongType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name)
       case LongType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.UINT_64)
+      case MapType(keyType, valueType) =>
+        val key = toParquetType(keyType, "key", Repetition.REQUIRED)
+        val value = toParquetType(valueType, "value", Repetition.REQUIRED)
+        new GroupType(Repetition.REPEATED, name, OriginalType.MAP, key, value)
       case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_16)
       case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_16)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)

@@ -30,6 +30,7 @@ object ParquetValueWriter {
       case _: IntType => IntParquetValueWriter
       case _: LongType => LongParquetValueWriter
       case _: ShortType => ShortParquetWriter
+      case mapType@MapType(keyType, valueType) => new MapParquetWriter(mapType, apply(keyType), apply(valueType))
       case StringType => StringParquetValueWriter
       case struct: StructType => new StructWriter(struct, true)
       case TimeMillisType => TimeParquetValueWriter
@@ -40,6 +41,29 @@ object ParquetValueWriter {
 }
 
 import scala.collection.JavaConverters._
+
+class MapParquetWriter(mapType: MapType,
+                       keyWriter: ParquetValueWriter,
+                       valueWriter: ParquetValueWriter) extends ParquetValueWriter {
+  override def write(record: RecordConsumer, value: Any): Unit = {
+    value match {
+      case map: java.util.Map[_, _] => write(record, map.asScala.toMap)
+      case map: Map[_, _] => map.foreach { case (key, value) =>
+        record.startGroup()
+
+        record.startField("key", 0)
+        keyWriter.write(record, key)
+        record.endField("key", 0)
+
+        record.startField("value", 1)
+        valueWriter.write(record, value)
+        record.endField("value", 1)
+
+        record.endGroup()
+      }
+    }
+  }
+}
 
 class ArrayParquetWriter(nested: ParquetValueWriter) extends ParquetValueWriter with Logging {
   override def write(record: RecordConsumer, value: Any): Unit = {

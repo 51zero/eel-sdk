@@ -155,5 +155,26 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       fs.delete(path, false)
     }
+    "support maps" in {
+
+      val structType = StructType(
+        Field("name", StringType),
+        Field("map", MapType(StringType, BooleanType))
+      )
+
+      val frame = Frame.fromValues(structType, Vector("abc", Map("a" -> true, "b" -> false)))
+
+      val path = new Path("maps.pq")
+      if (fs.exists(path))
+        fs.delete(path, false)
+
+      frame.to(ParquetSink(path))
+
+      val rows = ParquetSource(path).toFrame().collect()
+      structType shouldBe rows.head.schema
+      rows shouldBe Seq(Row(structType, Vector("abc", Map("a" -> true, "b" -> false))))
+
+      fs.delete(path, false)
+    }
   }
 }

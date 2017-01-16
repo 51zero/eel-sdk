@@ -51,13 +51,9 @@ class RowRecordMaterializer(fileSchema: MessageType,
   override def getCurrentRecord: Row = getRootConverter.builder.build()
 }
 
-class RowGroupConverter(schema: StructType, index: Int, parent: Option[RowBuilder]) extends GroupConverter with Logging {
-  logger.debug(s"Creating group converter for $schema")
-
-  val builder = new RowBuilder(schema)
-
-  def converter(dataType: DataType, fieldIndex: Int): Converter = dataType match {
-    case ArrayType(elementType) => converter(elementType, fieldIndex)
+object Converter {
+  def apply(dataType: DataType, fieldIndex: Int, builder: RowBuilder): Converter = dataType match {
+    case ArrayType(elementType) => apply(elementType, fieldIndex, builder)
     case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
     case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
     case DateType => new DateConverter(fieldIndex, builder)
@@ -67,19 +63,45 @@ class RowGroupConverter(schema: StructType, index: Int, parent: Option[RowBuilde
     case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
     case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
     case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
+    case mapType@MapType(keyType, valueType) => new MapConverter(fieldIndex, builder, mapType)
     case StringType => new StringConverter(fieldIndex, builder)
     case struct: StructType => new RowGroupConverter(struct, fieldIndex, Option(builder))
     case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
     case other => sys.error("Unsupported type " + other)
   }
+}
 
-  val converters = schema.fields.map(_.dataType).zipWithIndex.map {
-    case (dataType, fieldIndex) => converter(dataType, fieldIndex)
+class RowGroupConverter(schema: StructType, index: Int, parent: Option[RowBuilder]) extends GroupConverter with Logging {
+  logger.debug(s"Creating group converter for $schema")
+
+  val builder = new RowBuilder(schema)
+
+  private val converters = schema.fields.map(_.dataType).zipWithIndex.map {
+    case (dataType, fieldIndex) => Converter(dataType, fieldIndex, builder)
   }
 
   override def getConverter(fieldIndex: Int): Converter = converters(fieldIndex)
   override def end(): Unit = parent.foreach(_.put(index, builder.build.values))
   override def start(): Unit = builder.reset()
+}
+
+class MapConverter(index: Int,
+                   parent: RowBuilder,
+                   mapType: MapType) extends GroupConverter {
+
+  val builder = new RowBuilder(StructType(Field("key", mapType.keyType), Field("value", mapType.valueType)))
+
+  override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
+    case 0 => Converter(mapType.keyType, 0, builder)
+    case 1 => Converter(mapType.valueType, 1, builder)
+  }
+  override def start(): Unit = builder.reset
+
+  override def end(): Unit = {
+    val row = builder.build
+    val map = Map(row.values.head -> row.values.last)
+    parent.put(index, map)
+  }
 }
 
 // just adds the parquet type directly into the builder

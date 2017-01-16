@@ -15,6 +15,7 @@ class RowBuilder(schema: StructType) {
       val current = values(index)
       current match {
         case vector: Vector[_] => values(index) = vector :+ value
+        case map: Map[_, _] => values(index) = map ++ value.asInstanceOf[Map[_, _]]
         case single => values(index) = Vector(current, value)
       }
     }
