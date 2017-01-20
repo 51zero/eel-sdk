@@ -1,11 +1,13 @@
 package io.eels.component.orc
 
-import io.eels.coercion.{BigDecimalCoercer, TimestampCoercer}
+import io.eels.coercion.{BigDecimalCoercer, SequenceCoercer, TimestampCoercer}
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
 import org.apache.orc.TypeDescription
 import org.apache.orc.TypeDescription.Category
+
+import scala.collection.JavaConverters._
 
 sealed trait OrcSerializer[T <: ColumnVector] {
   def writeToVector(k: Int, vector: T, value: Any)
@@ -26,8 +28,26 @@ object OrcSerializer {
       case Category.LONG => LongColumnSerializer
       case Category.SHORT => LongColumnSerializer
       case Category.STRING => BytesColumnSerializer
+      case Category.STRUCT =>
+        val serializers = desc.getChildren.asScala.map(forType)
+        new StructSerializer(serializers)
       case Category.TIMESTAMP => TimestampColumnSerializer
       case Category.VARCHAR => BytesColumnSerializer
+    }
+  }
+}
+
+class StructSerializer(serializers: Seq[OrcSerializer[_]]) extends OrcSerializer[StructColumnVector] {
+
+  def writeField[T <: ColumnVector](k: Int, vector: T, serializer: OrcSerializer[T], value: Any): Unit = {
+    serializer.writeToVector(k, vector, value)
+  }
+
+  override def writeToVector(k: Int, vector: StructColumnVector, value: Any): Unit = {
+    SequenceCoercer.coerce(value).zipWithIndex.foreach { case (value, index) =>
+      val s = serializers(index).asInstanceOf[OrcSerializer[ColumnVector]]
+      val subvector = vector.fields(index)
+      writeField[ColumnVector](k, subvector, s, value)
     }
   }
 }

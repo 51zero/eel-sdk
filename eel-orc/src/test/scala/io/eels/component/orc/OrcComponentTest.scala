@@ -79,5 +79,33 @@ class OrcComponentTest extends WordSpec with Matchers {
 
       fs.delete(path, false)
     }
+    "support structs" in {
+      fs.delete(path, false)
+
+      val schema = StructType(
+        Field("a", StringType),
+        Field("b", StructType(
+          Field("c", StringType)
+        ))
+      )
+
+      val frame = Frame(
+        schema,
+        Row(schema, Vector("a1", Vector("c1"))),
+        Row(schema, Vector("a2", Vector("c2")))
+      )
+
+      frame.to(OrcSink(path))
+
+      val rows = OrcSource(path).toFrame().toSet()
+      rows.size shouldBe 2
+      rows.head.schema shouldBe frame.schema
+      rows shouldBe Set(
+        Row(schema, Vector("a1", null, null)),
+        Row(schema, Vector("a2", "b2", null))
+      )
+
+      fs.delete(path, false)
+    }
   }
 }

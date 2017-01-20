@@ -17,7 +17,7 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
   override def schema: StructType = {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf).maxLength(1))
     val schema = reader.getSchema()
-    OrcSchemaFns.fromOrcSchema(schema)
+    OrcSchemaFns.fromOrcType(schema).asInstanceOf[StructType]
   }
 
   private def reader() = {
@@ -34,7 +34,7 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
 class OrcPart(path: Path)(implicit conf: Configuration) extends Part {
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf))
-    val fileSchema = OrcSchemaFns.fromOrcSchema(reader.getSchema)
+    val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
     override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema)
   }
 }

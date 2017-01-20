@@ -85,3 +85,13 @@ object BigIntegerCoercer extends Coercer[BigInt] {
     case s: String => BigInt(s)
   }
 }
+
+object SequenceCoercer extends Coercer[Seq[Any]] {
+
+  import scala.collection.JavaConverters._
+
+  override def coerce(input: Any): Seq[Any] = input match {
+    case seq: Seq[Any] => seq
+    case col: java.util.Collection[Any] => col.asScala.toSeq
+  }
+}

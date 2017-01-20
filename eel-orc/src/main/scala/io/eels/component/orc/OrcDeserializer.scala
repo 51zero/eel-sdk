@@ -15,8 +15,8 @@ object OrcDeserializer {
     case DoubleType => DoubleDeserializer
     case FloatType => FloatDeserializer
     case IntType(_) => IntDeserializer
-    case ShortType(_) => IntDeserializer
     case LongType(_) => LongDeserializer
+    case ShortType(_) => IntDeserializer
     case StringType => StringDeserializer
     case TimestampMillisType => TimestampDeserializer
   }

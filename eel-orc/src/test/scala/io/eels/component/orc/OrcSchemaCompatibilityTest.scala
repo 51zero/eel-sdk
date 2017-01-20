@@ -38,7 +38,7 @@ class OrcSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("varchar", VarcharType(222), true)
     ))
 
-    OrcSchemaFns.fromOrcSchema(schema) shouldBe structType
+    OrcSchemaFns.fromOrcType(schema) shouldBe structType
     OrcSchemaFns.toOrcSchema(structType) shouldBe schema
   }
 }
