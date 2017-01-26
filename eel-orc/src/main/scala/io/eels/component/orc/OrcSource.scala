@@ -10,9 +10,17 @@ import org.apache.orc.{ColumnStatistics, OrcFile, StripeInformation, StripeStati
 
 import scala.collection.JavaConverters._
 
-case class OrcSource(path: Path)(implicit conf: Configuration) extends Source with Using {
+case class OrcSource(path: Path,
+                     projection: Seq[String] = Nil)(implicit conf: Configuration) extends Source with Using {
 
-  override def parts(): List[Part] = List(new OrcPart(path))
+  override def parts(): List[Part] = List(new OrcPart(path, projection))
+
+  //def withPredicate(pred: Predicate): OrcSource = copy(predicate = pred.some)
+  def withProjection(first: String, rest: String*): OrcSource = withProjection(first +: rest)
+  def withProjection(fields: Seq[String]): OrcSource = {
+    require(fields.nonEmpty)
+    copy(projection = fields.toList)
+  }
 
   override def schema: StructType = {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf).maxLength(1))
@@ -31,10 +39,12 @@ case class OrcSource(path: Path)(implicit conf: Configuration) extends Source wi
   def stripeStatistics(): Seq[StripeStatistics] = reader().getStripeStatistics.asScala
 }
 
-class OrcPart(path: Path)(implicit conf: Configuration) extends Part {
+class OrcPart(path: Path,
+              projection: Seq[String])(implicit conf: Configuration) extends Part {
+
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf))
     val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
-    override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema)
+    override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema, projection)
   }
 }

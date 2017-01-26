@@ -18,7 +18,30 @@ object OrcDeserializer {
     case LongType(_) => LongDeserializer
     case ShortType(_) => IntDeserializer
     case StringType => StringDeserializer
+    case StructType(fields) => new StructDeserializer(fields, fields.zipWithIndex.map(_._2))
     case TimestampMillisType => TimestampDeserializer
+  }
+}
+
+class StructDeserializer(fields: Seq[Field], projectionColumns: Seq[Int]) extends OrcDeserializer[StructColumnVector] {
+  require(fields.size == projectionColumns.size, "Struct should receive the fields that match the projection")
+
+  private val deserializers = fields.map(_.dataType).map(OrcDeserializer.apply).toArray
+
+  def readFromColumn[T <: ColumnVector](rowIndex: Int, k: Int, struct: StructColumnVector): Any = {
+    val deser = deserializers(k).asInstanceOf[OrcDeserializer[T]]
+    val colIndex = projectionColumns(k)
+    val vector = struct.fields(colIndex).asInstanceOf[T]
+    deser.readFromVector(rowIndex, vector)
+  }
+
+  override def readFromVector(rowIndex: Int, vector: StructColumnVector): Vector[Any] = {
+    val builder = Vector.newBuilder[Any]
+    builder.sizeHint(projectionColumns.length)
+    for (k <- projectionColumns.indices) {
+      builder += readFromColumn(rowIndex, k, vector)
+    }
+    builder.result
   }
 }
 
