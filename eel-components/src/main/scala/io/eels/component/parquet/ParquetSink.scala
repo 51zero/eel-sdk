@@ -32,7 +32,7 @@ case class ParquetSink(path: Path,
     override def close(): Unit = {
       writer.close()
       permission match {
-        case Some(permission) => fs.setPermission(path, permission)
+        case Some(perm) => fs.setPermission(path, perm)
         case None =>
           if (inheritPermissions.getOrElse(false)) {
             val permission = fs.getFileStatus(path.getParent).getPermission
