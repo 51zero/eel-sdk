@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import java.io.File
 
-import io.eels.Frame
+import io.eels.{Frame, Predicate}
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}

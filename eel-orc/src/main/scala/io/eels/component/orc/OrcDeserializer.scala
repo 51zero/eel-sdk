@@ -32,7 +32,7 @@ class StructDeserializer(fields: Seq[Field], projectionColumns: Seq[Int]) extend
     val deser = deserializers(k).asInstanceOf[OrcDeserializer[T]]
     val colIndex = projectionColumns(k)
     val vector = struct.fields(colIndex).asInstanceOf[T]
-    deser.readFromVector(rowIndex, vector)
+    deser.readFromVector(if (vector.isRepeating) 0 else rowIndex, vector)
   }
 
   override def readFromVector(rowIndex: Int, vector: StructColumnVector): Vector[Any] = {

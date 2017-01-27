@@ -2,9 +2,8 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
-import io.eels.component.parquet.Predicate
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Row}
+import io.eels.{CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}

@@ -1,7 +1,6 @@
 package io.eels.component.hive
 
-import io.eels._
-import io.eels.component.parquet.Predicate
+import io.eels.{Predicate, _}
 import io.eels.schema.{PartitionPart, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}

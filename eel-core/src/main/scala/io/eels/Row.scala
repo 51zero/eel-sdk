@@ -6,7 +6,6 @@ object Row {
   val Sentinel = new Row(StructType(Field("a", StringType)), Array(null))
   def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
   def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
-  def fromSeq(schema: StructType, values: Seq[Any]) = new Row(schema, values)
 }
 
 case class Row(schema: StructType, values: Seq[Any]) {

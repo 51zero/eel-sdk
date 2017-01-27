@@ -17,7 +17,10 @@ import org.apache.orc.{OrcConf, OrcFile, TypeDescription}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration) extends Logging {
+class OrcWriter(path: Path,
+                structType: StructType,
+                bloomFilterColumns: Seq[String],
+                rowIndexStride: Option[Int])(implicit conf: Configuration) extends Logging {
 
   private val schema: TypeDescription = OrcSchemaFns.toOrcSchema(structType)
   logger.debug(s"Creating orc writer for schema $schema")
@@ -36,6 +39,17 @@ class OrcWriter(path: Path, structType: StructType)(implicit conf: Configuration
   OrcConf.COMPRESSION_STRATEGY.setString(conf, CompressionStrategy.COMPRESSION.name)
   OrcConf.COMPRESS.setString(conf, CompressionKind.SNAPPY.name)
   private val options = OrcFile.writerOptions(conf).setSchema(schema)
+
+  rowIndexStride.foreach { size =>
+    options.rowIndexStride(size)
+    logger.info(s"Using stripe size = $size")
+  }
+
+  if (bloomFilterColumns.nonEmpty) {
+    options.bloomFilterColumns(bloomFilterColumns.mkString(","))
+    logger.info(s"Using bloomFilterColumns = $bloomFilterColumns")
+  }
+
   private lazy val writer = OrcFile.createWriter(path, options)
 
   private val _records = new AtomicInteger(0)

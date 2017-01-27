@@ -1,6 +1,7 @@
 package io.eels.component.parquet.avro
 
-import io.eels.component.parquet.{ParquetReaderConfig, Predicate}
+import io.eels.Predicate
+import io.eels.component.parquet.{ParquetPredicateBuilder, ParquetReaderConfig}
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.hadoop.conf.Configuration
@@ -41,7 +42,9 @@ object AvroParquetReaderFn {
     }
 
     // a filter is set when we have a predicate for the read
-    def filter(): FilterCompat.Filter = predicate.map(_.parquet).map(FilterCompat.get).getOrElse(FilterCompat.NOOP)
+    def filter(): FilterCompat.Filter = predicate.map(ParquetPredicateBuilder.build)
+      .map(FilterCompat.get)
+      .getOrElse(FilterCompat.NOOP)
 
     AvroParquetReader.builder[GenericRecord](path)
       .withCompatibility(false)

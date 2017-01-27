@@ -4,7 +4,7 @@ import java.sql.Date
 import java.util.Properties
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.component.parquet.Predicate
+import io.eels.Predicate
 import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}

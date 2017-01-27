@@ -1,21 +1,23 @@
 package io.eels.component.orc
 
+import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels._
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.orc.OrcFile.ReaderOptions
-import org.apache.orc.{ColumnStatistics, OrcFile, StripeInformation, StripeStatistics}
+import org.apache.orc._
 
 import scala.collection.JavaConverters._
 
 case class OrcSource(path: Path,
-                     projection: Seq[String] = Nil)(implicit conf: Configuration) extends Source with Using {
+                     projection: Seq[String] = Nil,
+                     predicate: Option[Predicate] = None)(implicit conf: Configuration) extends Source with Using {
 
-  override def parts(): List[Part] = List(new OrcPart(path, projection))
+  override def parts(): List[Part] = List(new OrcPart(path, projection, predicate))
 
-  //def withPredicate(pred: Predicate): OrcSource = copy(predicate = pred.some)
+  def withPredicate(predicate: Predicate): OrcSource = copy(predicate = predicate.some)
   def withProjection(first: String, rest: String*): OrcSource = withProjection(first +: rest)
   def withProjection(fields: Seq[String]): OrcSource = {
     require(fields.nonEmpty)
@@ -40,11 +42,13 @@ case class OrcSource(path: Path,
 }
 
 class OrcPart(path: Path,
-              projection: Seq[String])(implicit conf: Configuration) extends Part {
+              projection: Seq[String],
+              predicate: Option[Predicate])(implicit conf: Configuration) extends Part {
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf))
     val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
-    override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema, projection)
+    override val iterator: Iterator[Seq[Row]] = OrcBatchIterator(reader, fileSchema, projection, predicate)
   }
 }
+

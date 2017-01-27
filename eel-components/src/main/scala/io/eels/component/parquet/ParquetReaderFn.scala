@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
-import io.eels.Row
+import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
@@ -41,7 +41,9 @@ object ParquetReaderFn extends Logging {
     }
 
     // a filter is set when we have a predicate for the read
-    def filter(): FilterCompat.Filter = predicate.map(_.parquet).map(FilterCompat.get).getOrElse(FilterCompat.NOOP)
+    def filter(): FilterCompat.Filter = predicate.map(ParquetPredicateBuilder.build)
+      .map(FilterCompat.get)
+      .getOrElse(FilterCompat.NOOP)
 
     ParquetReader.builder(new RowReadSupport, path)
       .withConf(configuration())

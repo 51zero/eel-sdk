@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
-import io.eels._
+import io.eels.{Predicate, _}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -31,7 +31,7 @@ case class ParquetSource(pattern: FilePattern,
 
   lazy val paths = pattern.toPaths()
 
-  def withPredicate(pred: Predicate): ParquetSource = copy(predicate = pred.some)
+  def withPredicate(pred: => Predicate): ParquetSource = copy(predicate = pred.some)
   def withProjection(first: String, rest: String*): ParquetSource = withProjection(first +: rest)
   def withProjection(fields: Seq[String]): ParquetSource = {
     require(fields.nonEmpty)

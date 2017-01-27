@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Part, Row}
+import io.eels.{CloseableIterator, Part, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.ParquetFileReader

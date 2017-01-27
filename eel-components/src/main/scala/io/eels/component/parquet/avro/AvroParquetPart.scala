@@ -2,9 +2,8 @@ package io.eels.component.parquet.avro
 
 import com.sksamuel.exts.Logging
 import io.eels.component.avro.AvroDeserializer
-import io.eels.component.parquet.Predicate
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.{CloseableIterator, Part, Row}
+import io.eels.{CloseableIterator, Part, Predicate, Row}
 import org.apache.hadoop.fs.Path
 
 class AvroParquetPart(path: Path,

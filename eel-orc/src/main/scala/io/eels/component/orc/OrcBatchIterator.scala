@@ -1,8 +1,9 @@
 package io.eels.component.orc
 
 import com.sksamuel.exts.Logging
-import io.eels.Row
+import io.eels.{Predicate, Row}
 import io.eels.schema.StructType
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hive.ql.exec.vector.StructColumnVector
 import org.apache.orc.Reader
 
@@ -10,7 +11,9 @@ object OrcBatchIterator extends Logging {
 
   def apply(reader: Reader,
             fileSchema: StructType,
-            projection: Seq[String] = Nil): Iterator[Seq[Row]] = new Iterator[Seq[Row]] {
+            projection: Seq[String],
+            predicate: Option[Predicate])
+           (implicit conf: Configuration): Iterator[Seq[Row]] = new Iterator[Seq[Row]] {
 
     val options = new Reader.Options()
 
@@ -31,6 +34,18 @@ object OrcBatchIterator extends Logging {
       options.include(includes.toArray)
     }
 
+    val searchArg = predicate.foreach { predicate =>
+      val searchArg = OrcPredicateBuilder.build(predicate)
+      options.searchArgument(searchArg, predicate.fields.toArray)
+      logger.info(s"Setting predicate=$searchArg")
+    }
+
+    // if true then the predicate is applied to rows as well as being pushed down into the stripes,
+    // this is because orc will either skip a stripe or return the whole stripe.
+    // it is useful to disable for unit testing
+    val rowLevelFilter = conf.get("eel.orc.predicate.row.filter", "true") != "false"
+    logger.debug(s"Row level filtering = $rowLevelFilter")
+
     val batch = reader.getSchema().createRowBatch()
     val rows = reader.rows(options)
     val vector = new StructColumnVector(batch.numCols, batch.cols: _*)
@@ -38,15 +53,22 @@ object OrcBatchIterator extends Logging {
     val projectionIndices = schema.fields.map(fileSchema.indexOf)
     val deserializer = new StructDeserializer(schema.fields, projectionIndices)
 
-    override def hasNext(): Boolean = rows.nextBatch(batch)
+    override def hasNext(): Boolean = rows.nextBatch(batch) && !batch.endOfFile && batch.size > 0
 
     override def next(): Seq[Row] = {
       val rows = Vector.newBuilder[Row]
       for (rowIndex <- 0 until batch.size) {
         val values = deserializer.readFromVector(rowIndex, vector)
-        val row = Row.fromSeq(schema, values)
-        rows += row
+        val row = Row(schema, values)
+        if (rowLevelFilter && predicate.isDefined) {
+          if (predicate.get.apply(row)) {
+            rows += row
+          }
+        } else {
+          rows += row
+        }
       }
+      batch.reset()
       rows.result()
     }
   }
