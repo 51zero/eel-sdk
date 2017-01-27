@@ -1,13 +1,15 @@
 package io.eels.component.avro
 
-import java.io.ByteArrayOutputStream
-import java.nio.file.Files
-
 import io.eels.Frame
 import io.eels.schema.StructType
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
+
+  implicit val conf = new Configuration()
+  implicit val fs = FileSystem.get(new Configuration())
 
   val frame = Frame.fromValues(
     StructType("name", "job", "location"),
@@ -18,14 +20,17 @@ class AvroSinkTest extends WordSpec with Matchers {
 
   "AvroSink" should {
     "write to avro" in {
-      val baos = new ByteArrayOutputStream()
-      frame.to(AvroSink(baos))
+      val path = new Path("avro.test")
+      fs.delete(path, false)
+      frame.to(AvroSink(path))
+      fs.delete(path, false)
     }
     "support overwrite option" in {
-      val path = Files.createTempFile("overwrite_test", ".avro")
+      val path = new Path("overwrite_test", ".avro")
+      fs.delete(path, false)
       frame.to(AvroSink(path))
-      frame.to(AvroSink(path, true))
-      path.toFile.delete()
+      frame.to(AvroSink(path).withOverwrite(true))
+      fs.delete(path, false)
     }
   }
 }

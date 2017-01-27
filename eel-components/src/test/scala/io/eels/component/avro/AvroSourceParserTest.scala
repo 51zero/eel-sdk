@@ -1,3 +1,4 @@
+
 //package io.eels.component.avro
 //
 //import org.scalatest.{Matchers, WordSpec}
