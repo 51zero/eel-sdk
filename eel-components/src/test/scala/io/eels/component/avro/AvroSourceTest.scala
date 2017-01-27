@@ -5,9 +5,14 @@ import java.nio.file.Paths
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.{Field, StructType}
 import org.apache.avro.util.Utf8
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.FileSystem
 import org.scalatest.{Matchers, WordSpec}
 
 class AvroSourceTest extends WordSpec with Matchers {
+
+  implicit val conf = new Configuration()
+  implicit val fs = FileSystem.get(new Configuration())
 
   "AvroSource" should {
     "read schema" in {

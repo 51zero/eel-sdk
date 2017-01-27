@@ -1,13 +1,16 @@
 package io.eels.component.avro
 
-import java.nio.file.Path
+import java.io.File
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
 import io.eels.schema.StructType
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Path}
 
-case class AvroSource(path: Path) extends Source with Using {
+case class AvroSource(path: Path)
+                     (implicit conf: Configuration, fs: FileSystem) extends Source with Using {
 
   override lazy val schema: StructType = {
     using(AvroReaderFns.createAvroReader(path)) { reader =>
@@ -19,7 +22,8 @@ case class AvroSource(path: Path) extends Source with Using {
   override def parts(): List[Part] = List(AvroSourcePart(path))
 }
 
-case class AvroSourcePart(path: Path) extends Part with Logging {
+case class AvroSourcePart(path: Path)
+                         (implicit conf: Configuration, fs: FileSystem) extends Part with Logging {
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
@@ -35,4 +39,9 @@ case class AvroSourcePart(path: Path) extends Part with Logging {
       deserializer.toRow(record)
     }.grouped(1000).withPartial(true)
   }
+}
+
+object AvroSource {
+  def apply(file: File)(implicit conf: Configuration, fs: FileSystem): AvroSource = AvroSource(new Path(file.getAbsoluteFile.toString))
+  def apply(path: java.nio.file.Path)(implicit conf: Configuration, fs: FileSystem): AvroSource = apply(path.toFile)
 }

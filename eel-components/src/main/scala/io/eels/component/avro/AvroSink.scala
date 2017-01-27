@@ -1,5 +1,7 @@
 package io.eels.component.avro
 
+import java.io.File
+
 import io.eels.schema.StructType
 import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
@@ -34,4 +36,9 @@ case class AvroSink(path: Path,
       }
     }
   }
+}
+
+object AvroSink {
+  def apply(file: File)(implicit conf: Configuration, fs: FileSystem): AvroSink = AvroSink(new Path(file.getAbsoluteFile.toString))
+  def apply(path: java.nio.file.Path)(implicit conf: Configuration, fs: FileSystem): AvroSink = apply(path.toFile)
 }

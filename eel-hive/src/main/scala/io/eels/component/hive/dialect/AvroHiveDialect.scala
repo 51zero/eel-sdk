@@ -1,7 +1,5 @@
 package io.eels.component.hive.dialect
 
-import java.nio.file.Files
-
 import com.sksamuel.exts.Logging
 import io.eels.component.avro.{AvroSourcePart, AvroWriter}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
@@ -18,10 +16,7 @@ object AvroHiveDialect extends HiveDialect with Logging {
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
                    (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]] = {
-    val dest = Files.createTempFile("avro", ".avro")
-    dest.toFile.deleteOnExit()
-    fs.copyToLocalFile(path, new Path(dest.toAbsolutePath.toString))
-    AvroSourcePart(dest).iterator()
+    AvroSourcePart(path).iterator()
   }
 
   override def writer(schema: StructType,
