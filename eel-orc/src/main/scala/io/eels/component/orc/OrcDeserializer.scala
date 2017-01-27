@@ -10,6 +10,7 @@ sealed trait OrcDeserializer[T <: ColumnVector] {
 object OrcDeserializer {
   def apply(dataType: DataType): OrcDeserializer[_ <: ColumnVector] = dataType match {
     case BooleanType => BooleanDeserializer
+    case CharType(size) => StringDeserializer
     case DateType => LongDeserializer
     case DecimalType(p, s) => DecimalDeserializer
     case DoubleType => DoubleDeserializer
@@ -20,6 +21,7 @@ object OrcDeserializer {
     case StringType => StringDeserializer
     case StructType(fields) => new StructDeserializer(fields, fields.zipWithIndex.map(_._2))
     case TimestampMillisType => TimestampDeserializer
+    case VarcharType(size) => StringDeserializer
   }
 }
 

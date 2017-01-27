@@ -24,7 +24,7 @@ object OrcHiveDialect extends HiveDialect with Logging {
                       permission: Option[FsPermission],
                       metadata: Map[String, String])(implicit fs: FileSystem, conf: Configuration): HiveWriter = {
 
-    val writer = new OrcWriter(path, schema)
+    val writer = new OrcWriter(path, schema, Nil, None)
 
     new HiveWriter {
 

@@ -25,22 +25,24 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
   }
 
   "OrcComponent" should {
-    "read and write orc files" in {
+    "read and write orc files for all supported types" in {
 
       val schema = StructType(
         Field("string", StringType),
+        Field("char", CharType(2)),
         Field("int", IntType.Signed),
         Field("double", DoubleType),
         Field("boolean", BooleanType),
         Field("long", LongType.Signed),
         Field("decimal", DecimalType(4, 2)),
-        Field("timestamp", TimestampMillisType)
+        Field("timestamp", TimestampMillisType),
+        Field("varchar", VarcharType(100))
       )
 
       val frame = Frame(
         schema,
-        Row(schema, Vector("a", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L)),
-        Row(schema, Vector("b", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef")),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty"))
       )
 
       fs.delete(path, false)
@@ -53,8 +55,8 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       rows.head.schema shouldBe frame.schema
 
       rows shouldBe Set(
-        Row(schema, Vector("a", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L))),
-        Row(schema, Vector("b", 65, 1.7, true, 1950173241323L, 3.9, new Timestamp(1483726291000L)))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L), "abcdef")),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, new Timestamp(1483726291000L), "qwerty"))
       )
     }
     "handle null values" in {
