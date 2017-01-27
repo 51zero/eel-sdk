@@ -1,6 +1,6 @@
 package io.eels.component.csv
 
-import io.eels.schema.{Field, StructType}
+import io.eels.schema.{Field, StringType, StructType}
 import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -64,6 +64,21 @@ class CsvSinkTest extends WordSpec with Matchers {
       frame.to(CsvSink(temp))
       val result = Source.fromInputStream(fs.open(temp)).mkString
       result shouldBe "name,job,location\nclint eastwood,,carmel\nelton john,,pinner\n"
+    }
+    "support overwrite" in {
+
+      val path = new Path("overwrite_test.csv")
+      fs.delete(path, false)
+
+      val schema = StructType(Field("a", StringType))
+      val frame = Frame(schema,
+        Row(schema, Vector("x")),
+        Row(schema, Vector("y"))
+      )
+
+      frame.to(CsvSink(path))
+      frame.to(CsvSink(path).withOverwrite(true))
+      fs.delete(path, false)
     }
   }
 }

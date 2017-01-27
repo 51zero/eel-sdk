@@ -11,12 +11,17 @@ object AvroParquetSink {
   def apply(path: String)(implicit fs: FileSystem): AvroParquetSink = AvroParquetSink(new Path(path))
 }
 
-case class AvroParquetSink(path: Path)(implicit fs: FileSystem) extends Sink with Logging {
+case class AvroParquetSink(path: Path, overwrite: Boolean = false)(implicit fs: FileSystem) extends Sink with Logging {
+
+  def withOverwrite(overwrite: Boolean) = copy(overwrite = overwrite)
 
   override def writer(schema: StructType): SinkWriter = new SinkWriter {
 
     private val config = ConfigFactory.load()
     private val caseSensitive = config.getBoolean("eel.parquet.caseSensitive")
+
+    if (overwrite && fs.exists(path))
+      fs.delete(path, false)
 
     private val avroSchema = AvroSchemaFns.toAvroSchema(schema, caseSensitive = caseSensitive)
     private val writer = new AvroParquetRowWriter(path, avroSchema)

@@ -15,6 +15,7 @@ case class OrcSink(path: Path,
 
   def withBloomFilterColumns(bloomFilterColumns: Seq[String]): OrcSink = copy(bloomFilterColumns = bloomFilterColumns)
   def withRowIndexStride(stride: Int): OrcSink = copy(rowIndexStride = stride.some)
+  def withOverwrite(overwrite: Boolean): OrcSink = copy(overwrite = overwrite)
 
   override def writer(schema: StructType): SinkWriter = new SinkWriter {
 

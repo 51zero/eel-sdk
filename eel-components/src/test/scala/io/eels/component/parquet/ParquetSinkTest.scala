@@ -36,7 +36,22 @@ class ParquetSinkTest extends FlatSpec with Matchers {
       Row(schema, Vector("clint eastwood", "actor", null)),
       Row(schema, Vector("elton john", null, "pinner"))
     )
+    fs.delete(path, false)
+  }
 
+  it should "support overwrite" in {
+
+    val path = new Path("overwrite_test.pq")
+    fs.delete(path, false)
+
+    val schema = StructType(Field("a", StringType))
+    val frame = Frame(schema,
+      Row(schema, Vector("x")),
+      Row(schema, Vector("y"))
+    )
+
+    frame.to(ParquetSink(path))
+    frame.to(ParquetSink(path).withOverwrite(true))
     fs.delete(path, false)
   }
 }

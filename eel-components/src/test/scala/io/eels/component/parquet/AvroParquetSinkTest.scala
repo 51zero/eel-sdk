@@ -1,7 +1,8 @@
 package io.eels.component.parquet
 
-import io.eels.Frame
-import io.eels.component.parquet.avro.AvroParquetSink
+import io.eels.component.csv.CsvSink
+import io.eels.{Frame, Row}
+import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
@@ -43,11 +44,26 @@ class AvroParquetSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, false)
       frame.to(AvroParquetSink(path))
-      ParquetSource(path).toFrame().toSet().map(_.values) shouldBe
+      AvroParquetSource(path).toFrame().toSet().map(_.values) shouldBe
         Set(
           Vector("clint eastwood", "actor", "carmel"),
           Vector("elton john", "musician", "pinner")
         )
+      fs.delete(path, false)
+    }
+    "support overwrite" in {
+
+      val path = new Path("overwrite_test.pq")
+      fs.delete(path, false)
+
+      val schema = StructType(Field("a", StringType))
+      val frame = Frame(schema,
+        Row(schema, Vector("x")),
+        Row(schema, Vector("y"))
+      )
+
+      frame.to(AvroParquetSink(path))
+      frame.to(AvroParquetSink(path).withOverwrite(true))
       fs.delete(path, false)
     }
   }
