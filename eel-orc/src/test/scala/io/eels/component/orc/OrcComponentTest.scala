@@ -7,6 +7,7 @@ import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.permission.FsPermission
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
 
 class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
@@ -135,6 +136,20 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       val path = new Path("overwrite_test.orc")
       frame.to(OrcSink(path))
       frame.to(OrcSink(path, true))
+      fs.delete(path, false)
+    }
+    "support permissions" in {
+
+      val path = new Path("permissions.pq")
+
+      val schema = StructType(Field("a", StringType))
+      val frame = Frame(schema,
+        Row(schema, Vector("x")),
+        Row(schema, Vector("y"))
+      )
+
+      frame.to(OrcSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
+      fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
       fs.delete(path, false)
     }
   }

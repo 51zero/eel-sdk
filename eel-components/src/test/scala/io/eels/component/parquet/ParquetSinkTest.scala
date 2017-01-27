@@ -3,6 +3,7 @@ package io.eels.component.parquet
 import io.eels.{Frame, Row}
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -52,6 +53,21 @@ class ParquetSinkTest extends FlatSpec with Matchers {
 
     frame.to(ParquetSink(path))
     frame.to(ParquetSink(path).withOverwrite(true))
+    fs.delete(path, false)
+  }
+
+  it should "support permissions" in {
+
+    val path = new Path("permissions.pq")
+
+    val schema = StructType(Field("a", StringType))
+    val frame = Frame(schema,
+      Row(schema, Vector("x")),
+      Row(schema, Vector("y"))
+    )
+
+    frame.to(ParquetSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
+    fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
     fs.delete(path, false)
   }
 }
