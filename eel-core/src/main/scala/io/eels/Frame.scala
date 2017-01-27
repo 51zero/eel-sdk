@@ -340,6 +340,8 @@ trait Frame {
 
   def head(): Row = rows().head
 
+  // alias for to
+  def save(sink: Sink, listener: Listener = NoopListener): Long = to(sink, listener)
   def to(sink: Sink, listener: Listener = NoopListener): Long = SinkAction.execute(sink, this, listener)
   def size(): Long = CountAction.execute(this)
 
