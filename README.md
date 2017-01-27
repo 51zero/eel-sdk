@@ -16,6 +16,45 @@ Eel is a toolkit for manipulating data in the hadoop ecosystem. By hadoop ecosys
 * Retrieving statistics on existing tables or datasets
 * Reading schemas for existing datasets
 
+## Comparison with Sqoop
+
+*Sqoop* is a popular Hadoop ETL tool and API used for loading foreign data (e.g. JDBC) into Hive/Hadoop 
+
+Sqoop executes N configurable Hadoop mappers jobs which are executed in parallel. Each mapper job makes a separate JDBC connection and adapts their queries to retrieve parts of the data.  
+
+To support the parallelism of mapper jobs you must specify a **split by** column key and Hive partitioning key columns if applicable.
+
+- With this approach you can end up with several small part files (one for each mapper task) in HDFS which is not the most optimal way of storing data in Hadoop.
+- To reduce the number of part files you must reduce the number of mappers hence reducing the parallelism 
+- At the time of this writing Oracle **Number** and **Timestamp** types aren't properly supported from Oracle to Hive with a Parquet dialect
+- **Sqoop** depends on **YARN** to allocate resources for each mapper task
+- Both the **Sqoop** CLI and API has a steep learning curve 
+
+## Comparison with Flume
+
+*Flume* supports streaming data from a plethora of out-of-the-box Sources and Sinks.  
+
+Flume supports the notion of a channel which is like a persistent queue and glues together sources and sinks.  
+
+The channel is an attractive feature as it can buffer up transactions/events under heavy load conditions – channel types can be File, Kafka or JDBC.
+
+- The Flume Hive sink is *limited* to streaming events containing delimited text or JSON data directly into a Hive table or partition - it’s possible to write a Custom EEL source and sink and therefore supporting all source/sink types such as Parquet, Orc, Hive, etc...
+- Flume requires an additional maintenance of a Flume Agent topology - separate processes.
+
+## Comparison with Kite
+
+The Kite API and CLI are very similar in functionality to EEL but there are some subtle differences:
+
+- Datasets in *Kite* require AVRO schemas
+- A dataset is essentially a Hive table - the upcoming *EEL 1.2* release you will be able to create Hive tables from the CLI - at the moment it’s possible generate the Hive DDL with EEL API using *io.eels.component.hive.HiveDDL$#showDDL*.
+- For writing directly to **AVRO** or **Parquet** storage formats you must provide an **AVRO** schema – EEL dynamically infers a schema from the underlying source, for example a JDBC Query or CSV headers.
+- Support for ingesting from storage formats (other than **AVRO** and **Parquet**) is be achieved by *transforming* each record/row with another module named **Kite Morphlines** - it uses another intermediate record format and is another **API** to learn.
+- EEL supports transformations using regular Scala functions by invoking the *map* method on the Source’s underlying *Frame*, e.g. *source.toFrame.map(f: (Row) => Row)* – the *map* function returns a new row object.
+- Kite has direct support for *HBase* but EEL doesn’t – will do with the upcoming *EEL 1.2* release
+- Kite currently **doesn’t** support Kudo – EEL does.
+- Kite stores additional metadata on disk (**HDFS**) to be deemed a valid Kite dataset – if you externally change the Schema outside of Kite, i.e. through *DDL* then it can cause a dataset to be *out-of-synch* and potentially *malfunction* - EEL functions normally in this scenario as there is no additional metadata required.
+- Kite handles Hive partitioning by specifying a partition strategies – there are a few *out-of-the-box* strategies derived from the current payload – with **EEL** this works auto-magically by virture of providing the same column on the source row, alternatively you can add a partition key column with  **addField** on the fly on the source’s frame or use **map** transformation function.
+
 ## Frames
 
 The core data structure in Eel is the Frame. A frame consists of a schema, and rows which contain values for each field. A frame is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. Frames are constructed from sources such as hive tables, jdbc databases, delimited files, kafka queues, or even programatically from Scala or Java collections.
