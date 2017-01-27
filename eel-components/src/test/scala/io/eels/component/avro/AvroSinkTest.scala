@@ -1,6 +1,7 @@
 package io.eels.component.avro
 
 import java.io.ByteArrayOutputStream
+import java.nio.file.Files
 
 import io.eels.Frame
 import io.eels.schema.StructType
@@ -19,6 +20,12 @@ class AvroSinkTest extends WordSpec with Matchers {
     "write to avro" in {
       val baos = new ByteArrayOutputStream()
       frame.to(AvroSink(baos))
+    }
+    "support overwrite option" in {
+      val path = Files.createTempFile("overwrite_test", ".avro")
+      frame.to(AvroSink(path))
+      frame.to(AvroSink(path, true))
+      path.toFile.delete()
     }
   }
 }

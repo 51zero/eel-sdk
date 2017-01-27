@@ -124,5 +124,18 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(projectedSchema, Vector("y", 2))
       )
     }
+    "support overwrite option" in {
+
+      val schema = StructType(Field("a", StringType))
+      val frame = Frame(schema,
+        Row(schema, Vector("x")),
+        Row(schema, Vector("y"))
+      )
+
+      val path = new Path("overwrite_test.orc")
+      frame.to(OrcSink(path))
+      frame.to(OrcSink(path, true))
+      fs.delete(path, false)
+    }
   }
 }
