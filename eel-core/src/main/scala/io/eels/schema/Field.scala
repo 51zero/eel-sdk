@@ -7,11 +7,16 @@ case class Field(name: String,
                  partition: Boolean = false,
                  comment: Option[String] = None,
                  key: Boolean = false, // for schemas that support a primary key,
+                 defaultValue: Any = null, // the default value, null can only be a default if nullable is also set to true
                  metadata: Map[String, String] = Map.empty) {
 
   // returns the default value for this field or throws an exception
   // if the field has no default and is not nullable
-  def default: Any = if (nullable) null else sys.error(s"Not nullable field $this")
+  def default: Any = {
+    if (defaultValue != null) defaultValue
+    else if (defaultValue == null && nullable) null
+    else sys.error("Default value is null, but field is not nullable")
+  }
 
   // Creates a lowercase copy of this field
   def toLowerCase(): Field = copy(name = name.toLowerCase())
