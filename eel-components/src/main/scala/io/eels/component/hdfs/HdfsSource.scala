@@ -1,8 +1,9 @@
 package io.eels.component.hdfs
 
 import io.eels.FilePattern
-import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.fs.permission.{AclEntryScope, AclEntryType, FsAction, FsPermission, AclEntry => HdfsAclEntry}
+import org.apache.hadoop.fs.{BlockLocation, FileSystem, Path}
+
 import scala.collection.JavaConverters._
 
 case class HdfsSource(pattern: FilePattern)(implicit fs: FileSystem) {
@@ -13,6 +14,10 @@ case class HdfsSource(pattern: FilePattern)(implicit fs: FileSystem) {
   def setPermissions(permission: FsPermission): Unit = {
     pattern.toPaths().foreach(fs.setPermission(_, permission))
   }
+
+  def blocks(): Map[Path, Seq[BlockLocation]] = pattern.toPaths().map { path =>
+    path -> fs.getFileBlockLocations(path, 0, fs.getFileLinkStatus(path).getLen).toSeq
+  }.toMap
 
   def setAcl(spec: AclSpec): Unit = {
     pattern.toPaths().foreach { path =>
