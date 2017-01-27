@@ -143,5 +143,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     // and spark will use java big decimal
     dfvalues.update(7, dfvalues(7).asInstanceOf[java.math.BigDecimal]: BigDecimal)
     dfvalues.toVector shouldBe row.values.toVector
+
+    fs.delete(path, true)
   }
 }

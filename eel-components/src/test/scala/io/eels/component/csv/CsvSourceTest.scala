@@ -9,7 +9,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class CsvSourceTest extends WordSpec with Matchers {
 
-  implicit val fs = FileSystem.getLocal(new Configuration())
+  implicit val conf = new Configuration()
+  implicit val fs = FileSystem.getLocal(conf)
 
   "CsvSource" should {
     "read schema" in {

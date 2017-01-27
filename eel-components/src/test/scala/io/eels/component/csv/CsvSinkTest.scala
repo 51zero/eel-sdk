@@ -10,7 +10,8 @@ import scala.io.Source
 
 class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
 
-  implicit val fs = FileSystem.getLocal(new Configuration())
+  implicit val conf = new Configuration()
+  implicit val fs = FileSystem.getLocal(conf)
 
   val temp = new Path("temp.csv")
 
