@@ -24,3 +24,5 @@ big.csv
 metastore_db
 
 parquettest
+*.pq
+*.pq.crc

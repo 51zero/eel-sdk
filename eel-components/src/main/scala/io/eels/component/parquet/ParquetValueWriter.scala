@@ -5,7 +5,7 @@ import java.time._
 import java.time.temporal.ChronoUnit
 
 import com.sksamuel.exts.Logging
-import io.eels.coercion.{BigDecimalCoercer, DoubleCoercer}
+import io.eels.coercion.{BigDecimalCoercer, DoubleCoercer, MapCoercer, SequenceCoercer}
 import io.eels.schema._
 import org.apache.parquet.io.api.{Binary, RecordConsumer}
 
@@ -40,39 +40,50 @@ object ParquetValueWriter {
   }
 }
 
-import scala.collection.JavaConverters._
-
 class MapParquetWriter(mapType: MapType,
                        keyWriter: ParquetValueWriter,
                        valueWriter: ParquetValueWriter) extends ParquetValueWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    value match {
-      case map: java.util.Map[_, _] => write(record, map.asScala.toMap)
-      case map: Map[_, _] => map.foreach { case (key, value) =>
-        record.startGroup()
+    val map = MapCoercer.coerce(value)
 
-        record.startField("key", 0)
-        keyWriter.write(record, key)
-        record.endField("key", 0)
+    record.startGroup()
+    record.startField("key_value", 0)
 
-        record.startField("value", 1)
-        valueWriter.write(record, value)
-        record.endField("value", 1)
+    map.foreach { case (key, v) =>
+      record.startGroup()
+      record.startField("key", 0)
+      keyWriter.write(record, key)
+      record.endField("key", 0)
 
-        record.endGroup()
-      }
+      record.startField("value", 1)
+      valueWriter.write(record, v)
+      record.endField("value", 1)
+      record.endGroup()
     }
+
+    record.endField("key_value", 0)
+    record.endGroup()
   }
 }
 
 class ArrayParquetWriter(nested: ParquetValueWriter) extends ParquetValueWriter with Logging {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    val values: Iterable[Any] = value match {
-      case array: Array[_] => array
-      case seq: Seq[_] => seq
-      case col: java.util.Collection[_] => col.asScala
+
+    val seq = SequenceCoercer.coerce(value)
+
+    record.startGroup()
+    record.startField("list", 0)
+
+    seq.foreach { x =>
+      record.startGroup()
+      record.startField("element", 0)
+      nested.write(record, x)
+      record.endField("element", 0)
+      record.endGroup()
     }
-    values.foreach(nested.write(record, _))
+
+    record.endField("list", 0)
+    record.endGroup()
   }
 }
 

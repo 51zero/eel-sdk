@@ -55,12 +55,7 @@ object Converter {
   def apply(dataType: DataType, nullable: Boolean, fieldIndex: Int, builder: ValuesBuilder): Converter = {
     require(builder != null)
     dataType match {
-      // a nullable array is stored as an optional group of a repeated group of a required type
-      case ArrayType(elementType) if nullable =>
-        new NullableArrayConverter(elementType, fieldIndex, builder)
-      // non null arrays are stored as repeated groups
-      case ArrayType(elementType) =>
-        new ArrayConverter(dataType, fieldIndex, builder)
+      case ArrayType(elementType) => new ArrayConverter(elementType, fieldIndex, builder)
       case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
       case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
       case DateType => new DateConverter(fieldIndex, builder)
@@ -94,17 +89,9 @@ class StructConverter(schema: StructType, index: Int, parent: Option[ValuesBuild
   override def start(): Unit = builder.reset()
 }
 
-class ArrayConverter(elementType: DataType, index: Int, parent: ValuesBuilder) extends GroupConverter {
-  private val builder = new VectorBuilder()
-  private val converter = Converter(elementType, false, -1, builder)
-  override def getConverter(fieldIndex: Int): Converter = converter
-  override def end(): Unit = parent.put(index, builder.result)
-  override def start(): Unit = builder.reset()
-}
-
-class NullableArrayConverter(elementType: DataType,
-                             index: Int,
-                             parent: ValuesBuilder) extends GroupConverter with Logging {
+class ArrayConverter(elementType: DataType,
+                     index: Int,
+                     parent: ValuesBuilder) extends GroupConverter with Logging {
 
   private val builder = new VectorBuilder()
 
@@ -112,27 +99,35 @@ class NullableArrayConverter(elementType: DataType,
   override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
     override def getConverter(fieldIndex: Int): Converter = Converter(elementType, false, -1, builder)
     override def start(): Unit = ()
-    override def end(): Unit = () // a no-op as each nested group only contains a single required element
+    override def end(): Unit = () // a no-op as each nested group only contains a single element and we want to handle the finished list
   }
   override def start(): Unit = builder.reset()
   override def end(): Unit = parent.put(index, builder.result)
-
 }
 
 class MapConverter(index: Int,
                    parent: ValuesBuilder,
                    mapType: MapType) extends GroupConverter {
 
-  private val builder: ArrayBuilder = new ArrayBuilder(2)
+  private val keys = new VectorBuilder()
+  private val values = new VectorBuilder()
 
-  override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
-    case 0 => Converter(mapType.keyType, false, 0, builder)
-    case 1 => Converter(mapType.valueType, false, 1, builder)
+  override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
+    override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
+      case 0 => Converter(mapType.keyType, false, -1, keys)
+      case 1 => Converter(mapType.valueType, false, -1, values)
+    }
+    override def start(): Unit = ()
+    override def end(): Unit = () // a no-op as each nested group only contains a single element and we want to handle the finished list
   }
-  override def start(): Unit = builder.reset()
+
+  override def start(): Unit = {
+    keys.reset()
+    values.reset()
+  }
 
   override def end(): Unit = {
-    val map = Map(builder.result.head -> builder.result(1))
+    val map = keys.result.zip(values.result).toMap
     parent.put(index, map)
   }
 }
@@ -184,7 +179,7 @@ class DecimalConverter(index: Int,
 // https://github.com/Parquet/parquet-mr/issues/218
 class TimestampConverter(index: Int, builder: ValuesBuilder) extends PrimitiveConverter {
 
-  val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
+  private val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
   override def addBinary(value: Binary): Unit = {
     // first 8 bytes is the nanoseconds
@@ -221,7 +216,6 @@ class VectorBuilder extends ValuesBuilder with Logging {
 
   override def reset(): Unit = vector = Vector.newBuilder[Any]
   override def put(pos: Int, value: Any): Unit = {
-    logger.info(s"Putting $value into vector")
     vector.+=(value)
   }
   override def result: Seq[Any] = vector.result()

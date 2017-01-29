@@ -1,6 +1,7 @@
 package io.eels.coercion
 
 import java.sql.Timestamp
+import scala.collection.JavaConverters._
 
 /**
   * A Coercer will coerce input values into an output value of type T.
@@ -9,6 +10,14 @@ import java.sql.Timestamp
   */
 trait Coercer[T] {
   def coerce(input: Any): T
+}
+
+object MapCoercer extends Coercer[Map[Any, Any]] {
+  override def coerce(input: Any): Map[Any, Any] = input match {
+    case map: scala.collection.immutable.Map[_, _] => map.toMap
+    case map: scala.collection.mutable.Map[_, _] => map.toMap
+    case map: java.util.Map[_, _] => map.asScala.toMap
+  }
 }
 
 object TimestampCoercer extends Coercer[java.sql.Timestamp] {
@@ -88,9 +97,10 @@ object BigIntegerCoercer extends Coercer[BigInt] {
 
 object SequenceCoercer extends Coercer[Seq[Any]] {
 
-  import scala.collection.JavaConverters._
-
   override def coerce(input: Any): Seq[Any] = input match {
+    case iter: Iterable[Any] => iter.toSeq
+    case array: Array[_] => array
+    case seq: Seq[_] => seq
     case seq: Seq[Any] => seq
     case col: java.util.Collection[Any] => col.asScala.toSeq
   }

@@ -11,7 +11,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
   test("parquet schema should be compatible with eel struct types") {
 
     val messageType = new MessageType(
-      "row",
+      "eel_schema",
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "requiredBinary"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BOOLEAN, "requiredBoolean"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.DOUBLE, "requiredDouble"),
@@ -43,14 +43,14 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("timestampMicros", TimestampMicrosType, false, false)
     ))
 
-    ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe struct
+    ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe struct
     ParquetSchemaFns.toParquetMessageType(struct) shouldBe messageType
   }
 
   test("parquet schema fns should convert char and varchar to strings") {
 
     val messageType = new MessageType(
-      "row",
+      "eel_schema",
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "varchar", OriginalType.UTF8),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "char", OriginalType.UTF8)
     )
@@ -65,7 +65,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("char", CharType(15), false)
     ))
 
-    ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe outputStruct
+    ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe outputStruct
     ParquetSchemaFns.toParquetMessageType(inputStruct) shouldBe messageType
   }
 }

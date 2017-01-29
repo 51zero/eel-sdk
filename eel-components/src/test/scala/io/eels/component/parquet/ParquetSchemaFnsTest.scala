@@ -116,23 +116,35 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
       new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a", OriginalType.UTF8))
   }
 
-  it should "read optional group with LISTs as nullable arrays" in {
+  it should "read optional LIST types as nullable arrays" in {
     val messageType = new MessageType(
       "eel_schema",
-      new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BINARY, "word", OriginalType.UTF8),
-      new GroupType(Repetition.OPTIONAL, "vector", OriginalType.LIST,
+      new GroupType(Repetition.OPTIONAL, "a", OriginalType.LIST,
         new GroupType(Repetition.REPEATED, "list",
           new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.DOUBLE, "element")
         )
       )
     )
     ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe StructType(
-      Field("word", StringType, nullable = true),
-      Field("vector", ArrayType(DoubleType), nullable = true)
+      Field("a", ArrayType(DoubleType), nullable = true)
     )
   }
 
-  it should "read repeated LISTs as non-nullable array" in {
+  it should "read required LIST types as non-null arrays" in {
+    val messageType = new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.REQUIRED, "a", OriginalType.LIST,
+        new GroupType(Repetition.REPEATED, "list",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.DOUBLE, "element")
+        )
+      )
+    )
+    ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe StructType(
+      Field("a", ArrayType(DoubleType), nullable = false)
+    )
+  }
+
+  it should "read repeated groups as non-nullable array" in {
     val messageType = new MessageType(
       "eel_schema",
       new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "word", OriginalType.UTF8),
@@ -144,17 +156,31 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
     )
   }
 
-  it should "store non-nullable array as optional group of a repeated group of a required 'element'" in {
+  it should "store nullable array type as a 3-level optional LIST type" in {
 
     val structType = StructType(
-      Field("a", StringType, nullable = true),
       Field("b", ArrayType(BooleanType), nullable = true)
     )
 
     ParquetSchemaFns.toParquetMessageType(structType, "eel_schema") shouldBe new MessageType(
       "eel_schema",
-      new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BINARY, "a", OriginalType.UTF8),
       new GroupType(Repetition.OPTIONAL, "b", OriginalType.LIST,
+        new GroupType(Repetition.REPEATED, "list",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BOOLEAN, "element")
+        )
+      )
+    )
+  }
+
+  it should "store non-null array type as a 3-level required LIST type" in {
+
+    val structType = StructType(
+      Field("b", ArrayType(BooleanType), nullable = false)
+    )
+
+    ParquetSchemaFns.toParquetMessageType(structType, "eel_schema") shouldBe new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.REQUIRED, "b", OriginalType.LIST,
         new GroupType(Repetition.REPEATED, "list",
           new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BOOLEAN, "element")
         )
@@ -165,11 +191,9 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
   it should "read repeated primitive as non-nullable array" in {
     val messageType = new MessageType(
       "eel_schema",
-      new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "bool"),
       new PrimitiveType(Repetition.REPEATED, PrimitiveType.PrimitiveTypeName.DOUBLE, "doubles")
     )
     ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe StructType(
-      Field("bool", BooleanType, nullable = true),
       Field("doubles", ArrayType(DoubleType), nullable = false)
     )
   }
@@ -177,15 +201,97 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
   it should "read repeated group as non-nullable array of structs" in {
     val messageType = new MessageType(
       "eel_schema",
-      new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "bool"),
       new GroupType(Repetition.REPEATED, "structs",
         new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.FLOAT, "a"),
         new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.DOUBLE, "b")
       )
     )
     ParquetSchemaFns.fromParquetType(messageType) shouldBe StructType(
-      Field("bool", BooleanType, nullable = true),
       Field("structs", ArrayType(StructType(Field("a", FloatType, true), Field("b", DoubleType, false))), nullable = false)
+    )
+  }
+
+  it should "store nullable map type as a required 3-level structure annotated with MAP" in {
+
+    val structType = StructType(
+      Field("abc", MapType(IntType.Signed, BooleanType), nullable = true)
+    )
+
+    ParquetSchemaFns.toParquetMessageType(structType, "eel_schema") shouldBe new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.OPTIONAL, "abc", OriginalType.MAP,
+        new GroupType(Repetition.REPEATED, "key_value",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "key"),
+          new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "value")
+        )
+      )
+    )
+  }
+
+  it should "store non-null map type as an required 3-level structure annotated with MAP" in {
+
+    val structType = StructType(
+      Field("abc", MapType(IntType.Signed, BooleanType), nullable = false)
+    )
+
+    ParquetSchemaFns.toParquetMessageType(structType, "eel_schema") shouldBe new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.REQUIRED, "abc", OriginalType.MAP,
+        new GroupType(Repetition.REPEATED, "key_value",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "key"),
+          new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "value")
+        )
+      )
+    )
+  }
+
+  it should "read optional group annotated with MAP" in {
+
+    val messageType = new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.OPTIONAL, "abc", OriginalType.MAP,
+        new GroupType(Repetition.REPEATED, "key_value",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.FLOAT, "key"),
+          new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, "value")
+        )
+      )
+    )
+
+    ParquetSchemaFns.fromParquetType(messageType) shouldBe StructType(
+      Field("abc", MapType(FloatType, DoubleType), nullable = true)
+    )
+  }
+
+  it should "read required group annotated with MAP" in {
+
+    val messageType = new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.REQUIRED, "abc", OriginalType.MAP,
+        new GroupType(Repetition.REPEATED, "key_value",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.FLOAT, "key"),
+          new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, "value")
+        )
+      )
+    )
+
+    ParquetSchemaFns.fromParquetType(messageType) shouldBe StructType(
+      Field("abc", MapType(FloatType, DoubleType), nullable = false)
+    )
+  }
+
+  it should "support map types that don't follow the naming convention" in {
+    val messageType = new MessageType(
+      "eel_schema",
+      new GroupType(Repetition.REQUIRED, "a", OriginalType.MAP,
+        new GroupType(Repetition.REPEATED, "b",
+          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.FLOAT, "c"),
+          new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, "d")
+        )
+      )
+    )
+
+    ParquetSchemaFns.fromParquetType(messageType) shouldBe StructType(
+      Field("a", MapType(FloatType, DoubleType), nullable = false)
     )
   }
 

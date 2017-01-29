@@ -22,7 +22,9 @@ case class Foo(
                 myDecimal: BigDecimal,
                 myBytes: Array[Byte],
                 myDate: Date,
-                myTimestamp: Timestamp
+                myTimestamp: Timestamp,
+                array: Array[String],
+                map: Map[String, Boolean]
               )
 
 // a suite of tests designed to ensure that eel parquet support matches the specs, and also that
@@ -34,6 +36,8 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
 
   val spark = new SparkContext(new SparkConf().setMaster("local").setAppName("sammy"))
   val session = SparkSession.builder().appName("test").master("local").getOrCreate()
+
+  import session.sqlContext.implicits._
 
   val path = new Path("spark_parquet.parquet")
 
@@ -51,7 +55,9 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     Field("myDecimal", DecimalType(Precision(38), Scale(18)), true),
     Field("myBytes", BinaryType, true),
     Field("myDate", DateType, true),
-    Field("myTimestamp", TimestampMillisType, true)
+    Field("myTimestamp", TimestampMillisType, true),
+    Field("array", ArrayType(StringType), true),
+    Field("map", MapType(StringType, BooleanType), true)
   )
 
   // create a parquet file using spark local for all supported types and then
@@ -71,7 +77,9 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
         72.72, // big decimal
         Array[Byte](1, 2, 3), // bytes
         new Date(79, 8, 10), // util date
-        new Timestamp(1483492808000L) // sql timestamp
+        new Timestamp(1483492808000L), // sql timestamp
+        Array("green", "ham", "eggs"),
+        Map("a" -> true, "b" -> false)
       )
     ))
 
@@ -94,7 +102,9 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
       BigDecimal(72.72),
       List[Byte](1, 2, 3),
       new Date(79, 8, 10),
-      new Timestamp(1483492808000L)
+      new Timestamp(1483492808000L),
+      Vector("green", "ham", "eggs"),
+      Map("a" -> true, "b" -> false)
     )
 
     fs.delete(path, true)
@@ -115,7 +125,9 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
       BigDecimal(95.36),
       List[Byte](3, 1, 3),
       new Date(89, 8, 10),
-      new Timestamp(1483492406000L)
+      new Timestamp(1483492406000L),
+      Vector("green", "ham", "eggs"),
+      Map("a" -> true, "b" -> false)
     )
 
     ParquetSink(path).write(Seq(row))
@@ -133,7 +145,9 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
         StructField("myDecimal", org.apache.spark.sql.types.DecimalType(38, 18), true),
         StructField("myBytes", org.apache.spark.sql.types.BinaryType, true),
         StructField("myDate", org.apache.spark.sql.types.DateType, true),
-        StructField("myTimestamp", org.apache.spark.sql.types.TimestampType, true)
+        StructField("myTimestamp", org.apache.spark.sql.types.TimestampType, true),
+        StructField("array", org.apache.spark.sql.types.ArrayType(org.apache.spark.sql.types.StringType), true),
+        StructField("map", org.apache.spark.sql.types.MapType(org.apache.spark.sql.types.StringType, org.apache.spark.sql.types.BooleanType), true)
       )
     )
 
@@ -142,8 +156,47 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     dfvalues.update(8, dfvalues(8).asInstanceOf[Array[Byte]].toList)
     // and spark will use java big decimal
     dfvalues.update(7, dfvalues(7).asInstanceOf[java.math.BigDecimal]: BigDecimal)
+    dfvalues.update(11, dfvalues(11).asInstanceOf[Seq[String]].toList)
     dfvalues.toVector shouldBe row.values.toVector
 
     fs.delete(path, true)
   }
+
+  "parquet source" should "support nullable maps created in spark" in {
+    Seq(Maps(Map("a" -> true, "b" -> false))).toDF.write.mode(SaveMode.Overwrite).save("/tmp/a")
+    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
+  }
+
+  it should "support non-null maps created in spark" in {
+    val df1 = Seq(Maps(Map("a" -> true, "b" -> false))).toDF
+    val schema = org.apache.spark.sql.types.StructType(df1.schema.map(_.copy(nullable = false)))
+    val df2 = df1.sqlContext.createDataFrame(df1.rdd, schema)
+    df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
+    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
+  }
+
+  it should "support nullable arrays created in spark" in {
+
+    Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(Array(1.0, 2.0))).toDF.write.mode(SaveMode.Overwrite).save("/tmp/a")
+    Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(Array(1.0))).toDF.write.mode(SaveMode.Overwrite).save("/tmp/b")
+    Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(Array())).toDF.write.mode(SaveMode.Overwrite).save("/tmp/c")
+    Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(null)).toDF.write.mode(SaveMode.Overwrite).save("/tmp/d")
+
+    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+    ParquetSource(new Path("/tmp/b")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0)))
+    ParquetSource(new Path("/tmp/c")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector()))
+    ParquetSource(new Path("/tmp/d")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(null))
+  }
+
+  it should "support non-null arrays created in spark" in {
+    val df1 = Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(Array(1.0, 2.0))).toDF
+    val schema = org.apache.spark.sql.types.StructType(df1.schema.map(_.copy(nullable = false)))
+    val df2 = df1.sqlContext.createDataFrame(df1.rdd, schema)
+    df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
+
+    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+  }
 }
+
+case class ArrayTest(vector: Array[Double])
+case class Maps(map: Map[String, Boolean])

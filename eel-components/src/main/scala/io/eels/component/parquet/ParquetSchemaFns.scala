@@ -12,6 +12,10 @@ import scala.collection.JavaConverters._
   */
 object ParquetSchemaFns {
 
+  implicit class RichType(tpe: Type) {
+    def isGroupType: Boolean = !tpe.isPrimitive
+  }
+
   def fromParquetPrimitiveType(tpe: PrimitiveType): DataType = {
     val baseType = tpe.getPrimitiveTypeName match {
       case PrimitiveTypeName.BINARY =>
@@ -71,21 +75,25 @@ object ParquetSchemaFns {
       // a map must be a group, with key/value fields or tagged as map
     } else if (tpe.isInstanceOf[MessageType]) {
       fromParquetMessageType(tpe.asInstanceOf[MessageType])
-    } else if (isMap(tpe)) {
+    } else if (tpe.getOriginalType == OriginalType.MAP) {
       fromParquetMapType(tpe.asGroupType)
-      // could be a nullable list - which is an optional group of a repeated group of a required element
-    } else if (isNullableList(tpe)) {
-      val elementType = fromParquetType(tpe.asGroupType().getFields.get(0).asGroupType().getFields.get(0))
-      ArrayType(elementType)
+    } else if (tpe.getOriginalType == OriginalType.LIST) {
+      fromParquetArrayType(tpe.asGroupType)
     } else {
       fromParquetGroupType(tpe.asGroupType)
     }
   }
 
+  def fromParquetArrayType(gt: GroupType): ArrayType = {
+    val elementType = fromParquetType(gt.getFields.get(0).asGroupType().getFields.get(0))
+    ArrayType(elementType)
+  }
+
   // if the parquet group has just two fields, key and value, then we assume its a map
   def fromParquetMapType(gt: GroupType): MapType = {
-    val keyType = fromParquetType(gt.getFields.get(0))
-    val valueType = fromParquetType(gt.getFields.get(1))
+    val key_value = gt.getFields.get(0).asGroupType()
+    val keyType = fromParquetType(key_value.getFields.get(0))
+    val valueType = fromParquetType(key_value.getFields.get(1))
     MapType(keyType, valueType)
   }
 
@@ -96,19 +104,6 @@ object ParquetSchemaFns {
     }
     val struct = StructType(fields)
     if (gt.isRepetition(Repetition.REPEATED)) ArrayType(struct) else struct
-  }
-
-  def isArray(pt: PrimitiveType): Boolean = pt.isRepetition(Repetition.REPEATED)
-  def isArray(gt: GroupType): Boolean = gt.getOriginalType == OriginalType.LIST || gt.isRepetition(Repetition.REPEATED)
-
-  def isMap(tpe: Type): Boolean = !tpe.isPrimitive && isMap(tpe.asGroupType)
-  def isMap(gt: GroupType): Boolean = {
-    gt.getOriginalType == OriginalType.MAP ||
-      gt.getFieldCount == 2 && gt.containsField("key") && gt.containsField("value")
-  }
-
-  implicit class RichType(tpe: Type) {
-    def isGroupType: Boolean = !tpe.isPrimitive
   }
 
   // spark style nullable list - which is an optional group of a repeated element
@@ -148,12 +143,11 @@ object ParquetSchemaFns {
     val repetition = if (nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     dataType match {
       case StructType(fields) => new GroupType(repetition, name, fields.map(toParquetType): _*)
-      // nullable arrays should be written as spark style nested groups
-      case ArrayType(elementType) if nullable =>
-        new GroupType(Repetition.OPTIONAL, name, OriginalType.LIST, new GroupType(Repetition.REPEATED, "list", toParquetType(elementType, "element", false)))
-      // non-nullable arrays can be written as repeated lists of required elements
+      // nullable arrays should be written as 3-level nested groups
       case ArrayType(elementType) =>
-        toParquetType(elementType, name, false)
+        new GroupType(repetition, name, OriginalType.LIST,
+          new GroupType(Repetition.REPEATED, "list", toParquetType(elementType, "element", false))
+        )
       case BigIntType =>
         val id = new Type.ID(1)
         val metadata = new DecimalMetadata(38, 0)
@@ -179,8 +173,10 @@ object ParquetSchemaFns {
       case LongType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.UINT_64)
       case MapType(keyType, valueType) =>
         val key = toParquetType(keyType, "key", false)
-        val value = toParquetType(valueType, "value", false)
-        new GroupType(Repetition.REPEATED, name, OriginalType.MAP, key, value)
+        val value = toParquetType(valueType, "value", true)
+        new GroupType(repetition, name, OriginalType.MAP,
+          new GroupType(Repetition.REPEATED, "key_value", key, value)
+        )
       case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_16)
       case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_16)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
