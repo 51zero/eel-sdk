@@ -22,8 +22,13 @@ class OrcSchemaCompatibilityTest extends FunSuite with Matchers {
       .addField("long", TypeDescription.createLong())
       .addField("timestamp", TypeDescription.createTimestamp())
       .addField("varchar", TypeDescription.createVarchar().withMaxLength(222))
+      .addField("map", TypeDescription.createMap(TypeDescription.createString(), TypeDescription.createBoolean()))
+      .addField("array", TypeDescription.createList(TypeDescription.createString()))
+      .addField("struct", TypeDescription.createStruct()
+        .addField("a", TypeDescription.createString)
+        .addField("b", TypeDescription.createBoolean()))
 
-    val structType = StructType(Vector(
+    val structType = StructType(
       Field("binary", BinaryType, true),
       Field("boolean", BooleanType, true),
       Field("byte", ByteType.Signed, true),
@@ -35,8 +40,11 @@ class OrcSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("int", IntType.Signed, true),
       Field("long", LongType.Signed, true),
       Field("timestamp", TimestampMillisType, true),
-      Field("varchar", VarcharType(222), true)
-    ))
+      Field("varchar", VarcharType(222), true),
+      Field("map", MapType(StringType, BooleanType), true),
+      Field("array", ArrayType(StringType), true),
+      Field("struct", StructType(Field("a", StringType), Field("b", BooleanType)), true)
+    )
 
     OrcSchemaFns.fromOrcType(schema) shouldBe structType
     OrcSchemaFns.toOrcSchema(structType) shouldBe schema

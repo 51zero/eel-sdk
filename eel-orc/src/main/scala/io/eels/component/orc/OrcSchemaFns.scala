@@ -10,6 +10,7 @@ object OrcSchemaFns {
 
   def toOrcSchema(dataType: DataType): TypeDescription = {
     dataType match {
+      case ArrayType(elementType) => TypeDescription.createList(toOrcSchema(elementType))
       case BinaryType => TypeDescription.createBinary()
       case BooleanType => TypeDescription.createBoolean()
       case ByteType(_) => TypeDescription.createByte()
@@ -20,6 +21,7 @@ object OrcSchemaFns {
       case FloatType => TypeDescription.createFloat()
       case IntType(_) => TypeDescription.createInt()
       case LongType(_) => TypeDescription.createLong()
+      case MapType(keyType, valueType) => TypeDescription.createMap(toOrcSchema(keyType), toOrcSchema(valueType))
       case ShortType(_) => TypeDescription.createShort()
       case StringType => TypeDescription.createString()
       case StructType(fields) =>
@@ -42,7 +44,9 @@ object OrcSchemaFns {
       case Category.DOUBLE => DoubleType
       case Category.FLOAT => FloatType
       case Category.INT => IntType.Signed
+      case Category.LIST => ArrayType(fromOrcType(tpe.getChildren.get(0)))
       case Category.LONG => LongType.Signed
+      case Category.MAP => MapType(fromOrcType(tpe.getChildren().get(0)), fromOrcType(tpe.getChildren.get(1)))
       case Category.SHORT => ShortType.Signed
       case Category.STRING => StringType
       case Category.STRUCT =>
