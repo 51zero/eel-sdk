@@ -44,7 +44,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
     ))
 
     ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe struct
-    ParquetSchemaFns.toParquetSchema(struct) shouldBe messageType
+    ParquetSchemaFns.toParquetMessageType(struct) shouldBe messageType
   }
 
   test("parquet schema fns should convert char and varchar to strings") {
@@ -66,6 +66,6 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
     ))
 
     ParquetSchemaFns.fromParquetGroupType(messageType) shouldBe outputStruct
-    ParquetSchemaFns.toParquetSchema(inputStruct) shouldBe messageType
+    ParquetSchemaFns.toParquetMessageType(inputStruct) shouldBe messageType
   }
 }

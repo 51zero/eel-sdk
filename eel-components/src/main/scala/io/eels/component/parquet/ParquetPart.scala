@@ -20,9 +20,9 @@ class ParquetPart(path: Path,
       None
     else {
       val messageType = ParquetFileReader.open(conf, path).getFileMetaData.getSchema
-      val structType = ParquetSchemaFns.fromParquetGroupType(messageType)
+      val structType = ParquetSchemaFns.fromParquetMessageType(messageType)
       val projected = StructType(structType.fields.filter(field => projection.contains(field.name)))
-      ParquetSchemaFns.toParquetSchema(projected).some
+      ParquetSchemaFns.toParquetMessageType(projected).some
     }
   }
 

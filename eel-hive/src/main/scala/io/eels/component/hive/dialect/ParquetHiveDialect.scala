@@ -25,7 +25,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                    (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]] =
     new CloseableIterator[Seq[Row]] {
 
-      val parquetProjectionSchema = ParquetSchemaFns.toParquetSchema(projectionSchema)
+      val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
       val reader = ParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
 
       override def close(): Unit = {

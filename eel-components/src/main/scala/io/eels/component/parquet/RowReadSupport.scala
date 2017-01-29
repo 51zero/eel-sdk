@@ -6,8 +6,8 @@ import java.sql.{Date, Timestamp}
 import java.time.{LocalDateTime, ZoneId}
 
 import com.sksamuel.exts.Logging
+import io.eels.Row
 import io.eels.schema._
-import io.eels.{Row, RowBuilder}
 import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.column.Dictionary
 import org.apache.parquet.hadoop.api.ReadSupport
@@ -43,63 +43,96 @@ class RowReadSupport extends ReadSupport[Row] with Logging {
 class RowRecordMaterializer(fileSchema: MessageType,
                             readContext: ReadContext) extends RecordMaterializer[Row] with Logging {
 
-  val schema = ParquetSchemaFns.fromParquetGroupType(readContext.getRequestedSchema)
+  val schema = ParquetSchemaFns.fromParquetMessageType(readContext.getRequestedSchema)
   logger.debug(s"Record materializer will create row with schema $schema")
 
-  override val getRootConverter: RowGroupConverter = new RowGroupConverter(schema, -1, None)
-  override def skipCurrentRecord(): Unit = getRootConverter.builder.reset()
-  override def getCurrentRecord: Row = getRootConverter.builder.build()
+  override val getRootConverter: StructConverter = new StructConverter(schema, -1, None)
+  override def skipCurrentRecord(): Unit = getRootConverter.start()
+  override def getCurrentRecord: Row = Row(schema, getRootConverter.builder.result)
 }
 
 object Converter {
-  def apply(dataType: DataType, fieldIndex: Int, builder: RowBuilder): Converter = dataType match {
-    case ArrayType(elementType) => apply(elementType, fieldIndex, builder)
-    case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case DateType => new DateConverter(fieldIndex, builder)
-    case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
-    case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
-    case mapType@MapType(keyType, valueType) => new MapConverter(fieldIndex, builder, mapType)
-    case StringType => new StringConverter(fieldIndex, builder)
-    case struct: StructType => new RowGroupConverter(struct, fieldIndex, Option(builder))
-    case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
-    case other => sys.error("Unsupported type " + other)
+  def apply(dataType: DataType, nullable: Boolean, fieldIndex: Int, builder: ValuesBuilder): Converter = {
+    require(builder != null)
+    dataType match {
+      // a nullable array is stored as an optional group of a repeated group of a required type
+      case ArrayType(elementType) if nullable =>
+        new NullableArrayConverter(elementType, fieldIndex, builder)
+      // non null arrays are stored as repeated groups
+      case ArrayType(elementType) =>
+        new ArrayConverter(dataType, fieldIndex, builder)
+      case BinaryType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case BooleanType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case DateType => new DateConverter(fieldIndex, builder)
+      case DecimalType(precision, scale) => new DecimalConverter(fieldIndex, builder, precision, scale)
+      case DoubleType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case FloatType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
+      case mapType@MapType(keyType, valueType) => new MapConverter(fieldIndex, builder, mapType)
+      case StringType => new StringConverter(fieldIndex, builder)
+      case struct: StructType => new StructConverter(struct, fieldIndex, Option(builder))
+      case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
+      case other => sys.error("Unsupported type " + other)
+    }
   }
 }
 
-class RowGroupConverter(schema: StructType, index: Int, parent: Option[RowBuilder]) extends GroupConverter with Logging {
+class StructConverter(schema: StructType, index: Int, parent: Option[ValuesBuilder]) extends GroupConverter with Logging {
   logger.debug(s"Creating group converter for $schema")
 
-  val builder = new RowBuilder(schema)
+  // nested array for this group/struct
+  val builder: ValuesBuilder = new ArrayBuilder(schema.size)
 
-  private val converters = schema.fields.map(_.dataType).zipWithIndex.map {
-    case (dataType, fieldIndex) => Converter(dataType, fieldIndex, builder)
+  private val converters = schema.fields.zipWithIndex.map {
+    case (field, fieldIndex) => Converter(field.dataType, field.nullable, fieldIndex, builder)
   }
 
   override def getConverter(fieldIndex: Int): Converter = converters(fieldIndex)
-  override def end(): Unit = parent.foreach(_.put(index, builder.build.values))
+  override def end(): Unit = parent.foreach(_.put(index, builder.result))
   override def start(): Unit = builder.reset()
 }
 
+class ArrayConverter(elementType: DataType, index: Int, parent: ValuesBuilder) extends GroupConverter {
+  private val builder = new VectorBuilder()
+  private val converter = Converter(elementType, false, -1, builder)
+  override def getConverter(fieldIndex: Int): Converter = converter
+  override def end(): Unit = parent.put(index, builder.result)
+  override def start(): Unit = builder.reset()
+}
+
+class NullableArrayConverter(elementType: DataType,
+                             index: Int,
+                             parent: ValuesBuilder) extends GroupConverter with Logging {
+
+  private val builder = new VectorBuilder()
+
+  // the outer converter is just a pass through to the list converter
+  override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
+    override def getConverter(fieldIndex: Int): Converter = Converter(elementType, false, -1, builder)
+    override def start(): Unit = ()
+    override def end(): Unit = () // a no-op as each nested group only contains a single required element
+  }
+  override def start(): Unit = builder.reset()
+  override def end(): Unit = parent.put(index, builder.result)
+
+}
+
 class MapConverter(index: Int,
-                   parent: RowBuilder,
+                   parent: ValuesBuilder,
                    mapType: MapType) extends GroupConverter {
 
-  val builder = new RowBuilder(StructType(Field("key", mapType.keyType), Field("value", mapType.valueType)))
+  private val builder: ArrayBuilder = new ArrayBuilder(2)
 
   override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
-    case 0 => Converter(mapType.keyType, 0, builder)
-    case 1 => Converter(mapType.valueType, 1, builder)
+    case 0 => Converter(mapType.keyType, false, 0, builder)
+    case 1 => Converter(mapType.valueType, false, 1, builder)
   }
-  override def start(): Unit = builder.reset
+  override def start(): Unit = builder.reset()
 
   override def end(): Unit = {
-    val row = builder.build
-    val map = Map(row.values.head -> row.values.last)
+    val map = Map(builder.result.head -> builder.result(1))
     parent.put(index, map)
   }
 }
@@ -107,7 +140,7 @@ class MapConverter(index: Int,
 // just adds the parquet type directly into the builder
 // for types that are not pass through, create an instance of a more specialized converter
 // we need the index so that we know which fields were present in the file as they will be skipped if null
-class DefaultPrimitiveConverter(index: Int, builder: RowBuilder) extends PrimitiveConverter with Logging {
+class DefaultPrimitiveConverter(index: Int, builder: ValuesBuilder) extends PrimitiveConverter with Logging {
   override def addBinary(value: Binary): Unit = builder.put(index, value.getBytes)
   override def addDouble(value: Double): Unit = builder.put(index, value)
   override def addLong(value: Long): Unit = builder.put(index, value)
@@ -117,7 +150,8 @@ class DefaultPrimitiveConverter(index: Int, builder: RowBuilder) extends Primiti
 }
 
 class StringConverter(index: Int,
-                      builder: RowBuilder) extends PrimitiveConverter with Logging {
+                      builder: ValuesBuilder) extends PrimitiveConverter with Logging {
+  require(builder != null)
 
   private var dict: Array[String] = null
 
@@ -137,7 +171,7 @@ class StringConverter(index: Int,
 
 // we must use the precision and scale to build the value back from the bytes
 class DecimalConverter(index: Int,
-                       builder: RowBuilder,
+                       builder: ValuesBuilder,
                        precision: Precision,
                        scale: Scale) extends PrimitiveConverter {
   override def addBinary(value: Binary): Unit = {
@@ -148,7 +182,7 @@ class DecimalConverter(index: Int,
 }
 
 // https://github.com/Parquet/parquet-mr/issues/218
-class TimestampConverter(index: Int, builder: RowBuilder) extends PrimitiveConverter {
+class TimestampConverter(index: Int, builder: ValuesBuilder) extends PrimitiveConverter {
 
   val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
@@ -164,7 +198,7 @@ class TimestampConverter(index: Int, builder: RowBuilder) extends PrimitiveConve
 }
 
 class DateConverter(index: Int,
-                    builder: RowBuilder) extends PrimitiveConverter {
+                    builder: ValuesBuilder) extends PrimitiveConverter {
 
   private val UnixEpoch = LocalDateTime.of(1970, 1, 1, 0, 0, 0)
 
@@ -173,4 +207,33 @@ class DateConverter(index: Int,
     val millis = dt.atZone(ZoneId.systemDefault).toInstant.toEpochMilli
     builder.put(index, new Date(millis))
   }
+}
+
+trait ValuesBuilder {
+  def reset(): Unit
+  def put(pos: Int, value: Any): Unit
+  def result: Seq[Any]
+}
+
+class VectorBuilder extends ValuesBuilder with Logging {
+
+  private var vector = Vector.newBuilder[Any]
+
+  override def reset(): Unit = vector = Vector.newBuilder[Any]
+  override def put(pos: Int, value: Any): Unit = {
+    logger.info(s"Putting $value into vector")
+    vector.+=(value)
+  }
+  override def result: Seq[Any] = vector.result()
+}
+
+class ArrayBuilder(size: Int) extends ValuesBuilder {
+
+  private var array: Array[Any] = _
+  reset()
+
+  def result: Seq[Any] = array
+
+  def reset() = array = Array.ofDim(size)
+  def put(pos: Int, value: Any): Unit = array(pos) = value
 }

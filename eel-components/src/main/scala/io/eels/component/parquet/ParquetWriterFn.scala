@@ -27,8 +27,8 @@ object ParquetWriterFn {
 
   def apply(path: Path, schema: StructType, metadata: Map[String, String]): ParquetWriter[Row] = {
     val config = ParquetWriterConfig()
-    val parquetSchema = ParquetSchemaFns.toParquetSchema(schema)
-    new RowParquetWriterBuilder(path, parquetSchema, metadata)
+    val messageType = ParquetSchemaFns.toParquetMessageType(schema)
+    new RowParquetWriterBuilder(path, messageType, metadata)
       .withCompressionCodec(config.compressionCodec)
       .withDictionaryEncoding(config.enableDictionary)
       .withRowGroupSize(config.blockSize)

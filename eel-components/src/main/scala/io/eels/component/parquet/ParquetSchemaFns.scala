@@ -1,6 +1,6 @@
 package io.eels.component.parquet
 
-import io.eels.schema._
+import io.eels.schema.{StructType, _}
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
 import org.apache.parquet.schema.Type.Repetition
 import org.apache.parquet.schema._
@@ -12,11 +12,11 @@ import scala.collection.JavaConverters._
   */
 object ParquetSchemaFns {
 
-  def fromParquetPrimitiveType(`type`: PrimitiveType): DataType = {
-    `type`.getPrimitiveTypeName match {
+  def fromParquetPrimitiveType(tpe: PrimitiveType): DataType = {
+    val baseType = tpe.getPrimitiveTypeName match {
       case PrimitiveTypeName.BINARY =>
-        `type`.getOriginalType match {
-          case OriginalType.ENUM => EnumType(`type`.getName, Nil)
+        tpe.getOriginalType match {
+          case OriginalType.ENUM => EnumType(tpe.getName, Nil)
           case OriginalType.UTF8 => StringType
           case _ => BinaryType
         }
@@ -24,14 +24,14 @@ object ParquetSchemaFns {
       case PrimitiveTypeName.DOUBLE => DoubleType
       case PrimitiveTypeName.FLOAT => FloatType
       case PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY =>
-        `type`.getOriginalType match {
+        tpe.getOriginalType match {
           case OriginalType.DECIMAL =>
-            val meta = `type`.getDecimalMetadata
+            val meta = tpe.getDecimalMetadata
             DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
           case _ => BinaryType
         }
       case PrimitiveTypeName.INT32 =>
-        `type`.getOriginalType match {
+        tpe.getOriginalType match {
           case OriginalType.UINT_32 => IntType.Unsigned
           case OriginalType.UINT_16 => ShortType.Unsigned
           case OriginalType.UINT_8 => ShortType.Unsigned
@@ -40,25 +40,46 @@ object ParquetSchemaFns {
           case OriginalType.TIME_MILLIS => TimeMillisType
           case OriginalType.DATE => DateType
           case OriginalType.DECIMAL =>
-            val meta = `type`.getDecimalMetadata
+            val meta = tpe.getDecimalMetadata
             DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
           case _ => IntType.Signed
         }
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.UINT_64 => IntType.Unsigned
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIME_MICROS => TimeMicrosType
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampMillisType
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampMicrosType
-      case PrimitiveTypeName.INT64 if `type`.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
+      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.UINT_64 => IntType.Unsigned
+      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIME_MICROS => TimeMicrosType
+      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampMillisType
+      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampMicrosType
+      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
       case PrimitiveTypeName.INT64 => LongType.Signed
       // https://github.com/Parquet/parquet-mr/issues/218
       case PrimitiveTypeName.INT96 => TimestampMillisType
       case other => sys.error("Unsupported type " + other)
     }
+    if (tpe.isRepetition(Repetition.REPEATED)) ArrayType(baseType) else baseType
+  }
+
+  def fromParquetMessageType(messageType: MessageType): StructType = {
+    val fields = messageType.getFields.asScala.map { tpe =>
+      val dataType = fromParquetType(tpe)
+      Field(tpe.getName, dataType, tpe.getRepetition == Repetition.OPTIONAL)
+    }
+    StructType(fields)
   }
 
   def fromParquetType(tpe: Type): DataType = {
-    if (tpe.isPrimitive) fromParquetPrimitiveType(tpe.asPrimitiveType)
-    else fromParquetGroupType(tpe.asGroupType())
+    if (tpe.isPrimitive) {
+      fromParquetPrimitiveType(tpe.asPrimitiveType)
+      // a map must be a group, with key/value fields or tagged as map
+    } else if (tpe.isInstanceOf[MessageType]) {
+      fromParquetMessageType(tpe.asInstanceOf[MessageType])
+    } else if (isMap(tpe)) {
+      fromParquetMapType(tpe.asGroupType)
+      // could be a nullable list - which is an optional group of a repeated group of a required element
+    } else if (isNullableList(tpe)) {
+      val elementType = fromParquetType(tpe.asGroupType().getFields.get(0).asGroupType().getFields.get(0))
+      ArrayType(elementType)
+    } else {
+      fromParquetGroupType(tpe.asGroupType)
+    }
   }
 
   // if the parquet group has just two fields, key and value, then we assume its a map
@@ -68,23 +89,42 @@ object ParquetSchemaFns {
     MapType(keyType, valueType)
   }
 
-  def fromParquetGroupType(gt: GroupType): StructType = {
-    val fields = gt.getFields.asScala.map { field =>
-      val datatype = field.isPrimitive match {
-        case true =>
-          val tpe = fromParquetPrimitiveType(field.asPrimitiveType())
-          if (field.getRepetition == Repetition.REPEATED) ArrayType(tpe) else tpe
-        case false
-          if field.asGroupType().getFieldCount == 2 &&
-            field.asGroupType().containsField("key") &&
-            field.asGroupType().containsField("value") => fromParquetMapType(field.asGroupType)
-        case false =>
-          val tpe = fromParquetGroupType(field.asGroupType)
-          if (field.getRepetition == Repetition.REPEATED) ArrayType(tpe) else tpe
-      }
-      Field(field.getName, datatype, field.getRepetition != Repetition.REQUIRED)
+  def fromParquetGroupType(gt: GroupType): DataType = {
+    val fields = gt.getFields.asScala.map { tpe =>
+      val dataType = fromParquetType(tpe)
+      Field(tpe.getName, dataType, tpe.getRepetition == Repetition.OPTIONAL)
     }
-    StructType(fields)
+    val struct = StructType(fields)
+    if (gt.isRepetition(Repetition.REPEATED)) ArrayType(struct) else struct
+  }
+
+  def isArray(pt: PrimitiveType): Boolean = pt.isRepetition(Repetition.REPEATED)
+  def isArray(gt: GroupType): Boolean = gt.getOriginalType == OriginalType.LIST || gt.isRepetition(Repetition.REPEATED)
+
+  def isMap(tpe: Type): Boolean = !tpe.isPrimitive && isMap(tpe.asGroupType)
+  def isMap(gt: GroupType): Boolean = {
+    gt.getOriginalType == OriginalType.MAP ||
+      gt.getFieldCount == 2 && gt.containsField("key") && gt.containsField("value")
+  }
+
+  implicit class RichType(tpe: Type) {
+    def isGroupType: Boolean = !tpe.isPrimitive
+  }
+
+  // spark style nullable list - which is an optional group of a repeated element
+  def isNullableList(tpe: Type): Boolean = {
+    tpe.getOriginalType == OriginalType.LIST && tpe.isGroupType && {
+      val gt = tpe.asGroupType()
+      gt.getFieldCount == 1 &&
+        gt.getFields.get(0).isRepetition(Repetition.REPEATED) &&
+        gt.getFields.get(0).getName == "list" &&
+        gt.getFields.get(0).isGroupType && {
+        val gt2 = gt.getFields.get(0).asGroupType()
+        gt2.getFieldCount == 1 &&
+          gt2.getFields.get(0).getName == "element" &&
+          gt2.getFields.get(0).isRepetition(Repetition.REQUIRED)
+      }
+    }
   }
 
   def byteSizeForPrecision(precision: Precision): Int = {
@@ -97,16 +137,23 @@ object ParquetSchemaFns {
     fixedArrayLength
   }
 
-  def toParquetType(field: Field): Type = toParquetType(
-    field.dataType,
-    field.name,
-    if (field.nullable) Repetition.OPTIONAL else Repetition.REQUIRED
-  )
 
-  def toParquetType(dataType: DataType, name: String, repetition: Repetition): Type = {
+  def toParquetMessageType(structType: StructType, name: String = "eel_schema"): MessageType = {
+    val types = structType.fields.map(toParquetType)
+    new MessageType(name, types: _*)
+  }
+
+  def toParquetType(field: Field): Type = toParquetType(field.dataType, field.name, field.nullable)
+  def toParquetType(dataType: DataType, name: String, nullable: Boolean): Type = {
+    val repetition = if (nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     dataType match {
       case StructType(fields) => new GroupType(repetition, name, fields.map(toParquetType): _*)
-      case ArrayType(elementType) => toParquetType(elementType, name, Repetition.REPEATED)
+      // nullable arrays should be written as spark style nested groups
+      case ArrayType(elementType) if nullable =>
+        new GroupType(Repetition.OPTIONAL, name, OriginalType.LIST, new GroupType(Repetition.REPEATED, "list", toParquetType(elementType, "element", false)))
+      // non-nullable arrays can be written as repeated lists of required elements
+      case ArrayType(elementType) =>
+        toParquetType(elementType, name, false)
       case BigIntType =>
         val id = new Type.ID(1)
         val metadata = new DecimalMetadata(38, 0)
@@ -131,8 +178,8 @@ object ParquetSchemaFns {
       case LongType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name)
       case LongType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.UINT_64)
       case MapType(keyType, valueType) =>
-        val key = toParquetType(keyType, "key", Repetition.REQUIRED)
-        val value = toParquetType(valueType, "value", Repetition.REQUIRED)
+        val key = toParquetType(keyType, "key", false)
+        val value = toParquetType(valueType, "value", false)
         new GroupType(Repetition.REPEATED, name, OriginalType.MAP, key, value)
       case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_16)
       case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_16)
@@ -144,10 +191,5 @@ object ParquetSchemaFns {
       case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
       case VarcharType(size) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
     }
-  }
-
-  def toParquetSchema(schema: StructType, name: String = "row"): MessageType = {
-    val types = schema.fields.map(toParquetType)
-    new MessageType(name, types: _*)
   }
 }
