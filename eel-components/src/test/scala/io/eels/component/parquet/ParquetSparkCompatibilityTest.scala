@@ -34,7 +34,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
 
-  val spark = new SparkContext(new SparkConf().setMaster("local").setAppName("sammy"))
+  val spark = new SparkContext(new SparkConf().setMaster("local").setAppName("sammy").set("spark.driver.allowMultipleContexts", "true"))
   val session = SparkSession.builder().appName("test").master("local").getOrCreate()
 
   import session.sqlContext.implicits._
