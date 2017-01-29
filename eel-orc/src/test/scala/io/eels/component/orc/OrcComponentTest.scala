@@ -8,6 +8,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.permission.FsPermission
+import org.apache.orc.TypeDescription
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
 
 class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
@@ -28,6 +29,11 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
   "OrcComponent" should {
     "read and write orc files for all supported types" in {
 
+      val desc = TypeDescription.createStruct()
+        .addField("maps", TypeDescription.createMap(TypeDescription.createString, TypeDescription.createBoolean))
+        .addField("lists", TypeDescription.createList(TypeDescription.createString))
+      val batch = desc.createRowBatch(1000)
+
       val schema = StructType(
         Field("string", StringType),
         Field("char", CharType(2)),
@@ -37,13 +43,17 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Field("long", LongType.Signed),
         Field("decimal", DecimalType(4, 2)),
         Field("timestamp", TimestampMillisType),
-        Field("varchar", VarcharType(100))
+        Field("varchar", VarcharType(100)),
+        Field("list", ArrayType(StringType)),
+        Field("map", MapType(StringType, BooleanType))
       )
+
+      val batch2 = desc.createRowBatch(3332)
 
       val frame = Frame(
         schema,
-        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef")),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty"))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
 
       fs.delete(path, false)
@@ -56,8 +66,8 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       rows.head.schema shouldBe frame.schema
 
       rows shouldBe Set(
-        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L), "abcdef")),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, new Timestamp(1483726291000L), "qwerty"))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
     }
     "handle null values" in {

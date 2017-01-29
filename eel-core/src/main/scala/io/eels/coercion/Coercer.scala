@@ -12,6 +12,17 @@ trait Coercer[T] {
   def coerce(input: Any): T
 }
 
+object BooleanCoercer extends Coercer[Boolean] {
+  override def coerce(input: Any): Boolean = input match {
+    case b: Boolean => b
+    case l: Long => l == 1
+    case i: Int => i == 1
+    case s: Short => s == 1
+    case b: Byte => b == 1
+    case s: String => s == "true"
+  }
+}
+
 object MapCoercer extends Coercer[Map[Any, Any]] {
   override def coerce(input: Any): Map[Any, Any] = input match {
     case map: scala.collection.immutable.Map[_, _] => map.toMap

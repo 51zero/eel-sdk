@@ -9,6 +9,7 @@ sealed trait OrcDeserializer[T <: ColumnVector] {
 
 object OrcDeserializer {
   def apply(dataType: DataType): OrcDeserializer[_ <: ColumnVector] = dataType match {
+    case ArrayType(elementType) => new ListDeserializer(apply(elementType))
     case BooleanType => BooleanDeserializer
     case CharType(size) => StringDeserializer
     case DateType => LongDeserializer
@@ -17,11 +18,48 @@ object OrcDeserializer {
     case FloatType => FloatDeserializer
     case IntType(_) => IntDeserializer
     case LongType(_) => LongDeserializer
+    case MapType(keyType, valueType) => new MapDeserializer(apply(keyType), apply(valueType))
     case ShortType(_) => IntDeserializer
     case StringType => StringDeserializer
     case StructType(fields) => new StructDeserializer(fields, fields.zipWithIndex.map(_._2))
     case TimestampMillisType => TimestampDeserializer
     case VarcharType(size) => StringDeserializer
+  }
+}
+
+class ListDeserializer[T <: ColumnVector](nested: OrcDeserializer[T]) extends OrcDeserializer[ListColumnVector] {
+  override def readFromVector(rowIndex: Int, vector: ListColumnVector): Any = {
+    // the row index is just a pointer into the list column vector offsets array to get the real pointer
+    // the lengths will tell us how many to read from that point
+    val offset = vector.offsets(rowIndex).toInt
+    val length = vector.lengths(rowIndex).toInt
+    val values = for (k <- offset until offset + length) yield {
+      if (!vector.noNulls && vector.isNull(k)) null
+      else if (!vector.noNulls && vector.isRepeating && vector.isNull(0)) null
+      else nested.readFromVector(k, vector.child.asInstanceOf[T])
+    }
+    values.toVector
+  }
+}
+
+class MapDeserializer[T <: ColumnVector, U <: ColumnVector](kdeser: OrcDeserializer[T],
+                                                            vdeser: OrcDeserializer[U]) extends OrcDeserializer[MapColumnVector] {
+
+  override def readFromVector(rowIndex: Int, vector: MapColumnVector): Map[Any, Any] = {
+
+    // the row index is just a pointer into the list column vector offsets array to get the real pointer
+    // the lengths will tell us how many to read from that point
+
+    val offset = vector.offsets(rowIndex).toInt
+    val length = vector.lengths(rowIndex).toInt
+
+    val values = for (i <- offset until offset + length) yield {
+      val key = kdeser.readFromVector(i, vector.keys.asInstanceOf[T])
+      val value = vdeser.readFromVector(i, vector.values.asInstanceOf[U])
+      key -> value
+    }
+
+    values.toMap
   }
 }
 
@@ -66,8 +104,15 @@ object StringDeserializer extends OrcDeserializer[BytesColumnVector] {
     if (vector.isNull(rowIndex)) {
       null
     } else {
-      val bytes = vector.vector.head.slice(vector.start(rowIndex), vector.start(rowIndex) + vector.length(rowIndex))
-      new String(bytes, "UTF8")
+      try {
+        val bytes = vector.vector.head.slice(vector.start(rowIndex), vector.start(rowIndex) + vector.length(rowIndex))
+        new String(bytes, "UTF8")
+      } catch {
+        case e: Exception =>
+          println(e)
+
+          throw e
+      }
     }
   }
 }

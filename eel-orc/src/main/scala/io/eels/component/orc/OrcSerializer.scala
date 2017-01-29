@@ -1,6 +1,6 @@
 package io.eels.component.orc
 
-import io.eels.coercion.{BigDecimalCoercer, SequenceCoercer, TimestampCoercer}
+import io.eels.coercion._
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
 import org.apache.hadoop.hive.ql.exec.vector._
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable
@@ -17,22 +17,65 @@ object OrcSerializer {
   def forType(desc: TypeDescription): OrcSerializer[_ <: ColumnVector] = {
     desc.getCategory match {
       case Category.BINARY => BytesColumnSerializer
-      case Category.BOOLEAN => LongColumnSerializer
+      case Category.BOOLEAN => BooleanSerializer
       case Category.BYTE => LongColumnSerializer
-      case Category.CHAR => BytesColumnSerializer
+      case Category.CHAR => StringColumnSerializer
       case Category.DATE => LongColumnSerializer
       case Category.DECIMAL => DecimalSerializer
       case Category.DOUBLE => DoubleColumnSerializer
       case Category.FLOAT => DoubleColumnSerializer
       case Category.INT => LongColumnSerializer
+      case Category.LIST => new ListSerializer(forType(desc.getChildren.get(0)))
       case Category.LONG => LongColumnSerializer
+      case Category.MAP => new MapSerializer(forType(desc.getChildren.get(0)), forType(desc.getChildren.get(1)))
       case Category.SHORT => LongColumnSerializer
-      case Category.STRING => BytesColumnSerializer
+      case Category.STRING => StringColumnSerializer
       case Category.STRUCT =>
         val serializers = desc.getChildren.asScala.map(forType)
         new StructSerializer(serializers)
       case Category.TIMESTAMP => TimestampColumnSerializer
-      case Category.VARCHAR => BytesColumnSerializer
+      case Category.VARCHAR => StringColumnSerializer
+    }
+  }
+}
+
+class MapSerializer[T <: ColumnVector, U <: ColumnVector](keySer: OrcSerializer[T],
+                                                          valSer: OrcSerializer[U])
+  extends OrcSerializer[MapColumnVector] {
+  override def writeToVector(k: Int, vector: MapColumnVector, any: Any): Unit = {
+
+    // the index k is used to index into the vector offsets
+
+    val map = MapCoercer.coerce(any)
+
+    if (k > 0)
+      vector.offsets(k) = vector.offsets(k - 1) + vector.lengths(k - 1)
+    vector.lengths(k) = map.size
+
+    var i = vector.offsets(k).toInt
+
+    map.foreach { case (key, value) =>
+      keySer.writeToVector(i, vector.keys.asInstanceOf[T], key)
+      valSer.writeToVector(i, vector.values.asInstanceOf[U], value)
+      i = i + 1
+    }
+  }
+}
+
+class ListSerializer[T <: ColumnVector](nested: OrcSerializer[T]) extends OrcSerializer[ListColumnVector] {
+  override def writeToVector(k: Int, vector: ListColumnVector, value: Any): Unit = {
+
+    val xs = SequenceCoercer.coerce(value)
+
+    if (k > 0)
+      vector.offsets(k) = vector.offsets(k - 1) + vector.lengths(k - 1)
+    vector.lengths(k) = xs.size
+
+    var i = vector.offsets(k).toInt
+
+    xs.foreach { x =>
+      nested.writeToVector(i, vector.child.asInstanceOf[T], x)
+      i = i + 1
     }
   }
 }
@@ -44,10 +87,10 @@ class StructSerializer(serializers: Seq[OrcSerializer[_]]) extends OrcSerializer
   }
 
   override def writeToVector(k: Int, vector: StructColumnVector, value: Any): Unit = {
-    SequenceCoercer.coerce(value).zipWithIndex.foreach { case (value, index) =>
+    SequenceCoercer.coerce(value).zipWithIndex.foreach { case (v, index) =>
       val s = serializers(index).asInstanceOf[OrcSerializer[ColumnVector]]
       val subvector = vector.fields(index)
-      writeField[ColumnVector](k, subvector, s, value)
+      writeField[ColumnVector](k, subvector, s, v)
     }
   }
 }
@@ -76,7 +119,7 @@ object DecimalSerializer extends OrcSerializer[DecimalColumnVector] {
   }
 }
 
-object BytesColumnSerializer extends OrcSerializer[BytesColumnVector] {
+object StringColumnSerializer extends OrcSerializer[BytesColumnVector] {
   override def writeToVector(k: Int, vector: BytesColumnVector, value: Any): Unit = {
     if (value == null) {
       vector.isNull(k) = true
@@ -84,6 +127,29 @@ object BytesColumnSerializer extends OrcSerializer[BytesColumnVector] {
     } else {
       val bytes = value.toString.getBytes("UTF8")
       vector.setRef(k, bytes, 0, bytes.length)
+    }
+  }
+}
+
+object BytesColumnSerializer extends OrcSerializer[BytesColumnVector] {
+  override def writeToVector(k: Int, vector: BytesColumnVector, value: Any): Unit = {
+    if (value == null) {
+      vector.isNull(k) = true
+      vector.noNulls = false
+    } else {
+      val bytes = SequenceCoercer.coerce(value).asInstanceOf[Seq[Byte]].toArray
+      vector.setRef(k, bytes, 0, bytes.length)
+    }
+  }
+}
+
+object BooleanSerializer extends OrcSerializer[LongColumnVector] {
+  override def writeToVector(k: Int, vector: LongColumnVector, value: Any): Unit = {
+    if (value == null) {
+      vector.isNull(k) = true
+      vector.noNulls = false
+    } else {
+      vector.vector(k) = if (BooleanCoercer.coerce(value)) 1 else 0
     }
   }
 }
