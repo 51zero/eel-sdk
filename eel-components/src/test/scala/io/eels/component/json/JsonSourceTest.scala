@@ -20,6 +20,13 @@ class JsonSourceTest extends WordSpec with Matchers {
           Row(schema, "ant", "greece")
         )
     }
+    "support all primitives" in {
+      val schema = StructType(Field("int"), Field("double"), Field("long"), Field("boolean"))
+      JsonSource(new Path(getClass.getResource("/io/eels/component/json/prims.json").getFile)).toFrame().toSet() shouldBe
+        Set(
+          Row(schema, Vector(145342, 369.235195, 10151589328923L, true))
+        )
+    }
     "support maps" in {
       val schema = StructType(Field("name"), Field("location"), Field("skills"))
       JsonSource(new Path(getClass.getResource("/io/eels/component/json/maps.json").getFile)).toFrame().toSet() shouldBe
