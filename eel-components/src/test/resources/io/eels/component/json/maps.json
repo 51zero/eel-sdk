@@ -1,0 +1,9 @@
+{
+  "name": "sammy",
+  "location": "aylesbury",
+  "skills": {
+    "karate": "black belt",
+    "chess": "grandmaster",
+    "100m": 9.23
+  }
+}

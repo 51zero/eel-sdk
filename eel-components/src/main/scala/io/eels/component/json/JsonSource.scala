@@ -16,7 +16,7 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
 
   private def createInputStream(path: Path): FSDataInputStream = fs.open(path)
 
-  override def schema(): StructType = using(createInputStream(path)) { in =>
+  lazy val schema: StructType = using(createInputStream(path)) { in =>
     val roots = reader.readValues[JsonNode](in)
     assert(roots.hasNext, "Cannot read schema, no data in file")
     val node = roots.next()
@@ -28,19 +28,42 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
 
   class JsonPart(val path: Path) extends Part {
 
-    val _schema = schema()
+    def nodeToValue(node: JsonNode): Any = {
+      if (node.isArray) {
+        node.getElements.asScala.map(nodeToValue).toVector
+      } else if (node.isObject) {
+        node.getFields.asScala.map { entry =>
+          entry.getKey -> nodeToValue(entry.getValue)
+        }.toMap
+      } else if (node.isBinary) {
+        node.getBinaryValue
+      } else if (node.isBigInteger) {
+        node.getBigIntegerValue
+      } else if (node.isBoolean) {
+        node.getBooleanValue
+      } else if (node.isTextual) {
+        node.getTextValue
+      } else if (node.isLong) {
+        node.getLongValue
+      } else if (node.isInt) {
+        node.getIntValue
+      } else if (node.isDouble) {
+        node.getDoubleValue
+      }
+    }
 
     def nodeToRow(node: JsonNode): Row = {
-      val values = node.getElements.asScala.map { it => it.getTextValue }.toList
-      Row(_schema, values)
+      val values = node.getElements.asScala.map(nodeToValue).toArray
+      Row(schema, values)
     }
+
     /**
       * Returns the data contained in this part in the form of an iterator. This function should return a new
       * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
       */
     override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
-      val input = createInputStream(path)
+      private val input = createInputStream(path)
 
       override def close(): Unit = {
         super.close()
