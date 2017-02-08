@@ -11,8 +11,8 @@ case class JsonSink(path: Path)(implicit fs: FileSystem) extends Sink {
 
   override def writer(schema: StructType): SinkWriter = new SinkWriter {
 
-    val lock = new AnyRef()
-    val out = fs.create(path)
+    private val lock = new AnyRef()
+    private val out = fs.create(path)
 
     val mapper = new ObjectMapper with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
