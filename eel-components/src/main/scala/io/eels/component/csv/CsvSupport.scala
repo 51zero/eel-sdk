@@ -11,7 +11,9 @@ object CsvSupport {
                    ignoreTrailingWhitespaces: Boolean = true,
                    skipEmptyLines: Boolean = true,
                    emptyCellValue: String = null,
-                   nullValue: String = null): CsvParser = {
+                   nullValue: String = null,
+                   skipRows: Option[Long] = None,
+                   selectedColumns: Seq[String] = Seq.empty): CsvParser = {
     val settings = new CsvParserSettings()
     settings.getFormat.setDelimiter(format.delimiter)
     settings.getFormat.setQuote(format.quoteChar)
@@ -25,6 +27,8 @@ object CsvSupport {
     settings.setCommentCollectionEnabled(true)
     settings.setEmptyValue(emptyCellValue)
     settings.setNullValue(nullValue)
+    skipRows.foreach(settings.setNumberOfRowsToSkip)
+    selectedColumns.headOption.foreach(_ => settings.selectFields(selectedColumns: _*))
     new com.univocity.parsers.csv.CsvParser(settings)
   }
 

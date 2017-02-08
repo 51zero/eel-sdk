@@ -18,7 +18,9 @@ case class CsvSource(path: Path,
                      emptyCellValue: String = null,
                      nullValue: String = null,
                      skipBadRows: Option[Boolean] = None,
-                     header: Header = Header.FirstRow)
+                     header: Header = Header.FirstRow,
+                     skipRows:Option[Long] = None,
+                     selectedColumns:Seq[String] = Seq.empty)
                     (implicit fs: FileSystem) extends Source with Using {
 
   val config: Config = ConfigFactory.load()
@@ -44,9 +46,19 @@ case class CsvSource(path: Path,
   def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
   def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
   def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
+  def withSkipRows(count:Long):CsvSource = copy(skipRows=Some(count))
 
   private def createParser() =
-    CsvSupport.createParser(format, ignoreLeadingWhitespaces, ignoreTrailingWhitespaces, skipEmptyLines, emptyCellValue, nullValue)
+    {
+      CsvSupport.createParser(format,
+        ignoreLeadingWhitespaces,
+        ignoreTrailingWhitespaces,
+        skipEmptyLines,
+        emptyCellValue,
+        nullValue,
+        skipRows,
+        selectedColumns)
+    }
 
   override def schema(): StructType = overrideSchema.getOrElse {
     val parser = createParser()
