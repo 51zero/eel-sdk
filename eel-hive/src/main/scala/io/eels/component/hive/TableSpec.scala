@@ -1,6 +1,7 @@
 package io.eels.component.hive
 
 import org.apache.hadoop.hive.metastore.TableType
+import org.apache.hadoop.hive.metastore.api.FieldSchema
 
 //package io.eels.component.hive
 //
@@ -61,6 +62,7 @@ import org.apache.hadoop.hive.metastore.TableType
 case class TableSpec(tableName: String,
                      tableType: TableType,
                      location: String,
+                     cols: Seq[FieldSchema],
                      numBuckets: Int,
                      bucketNames: List[String],
                      params: Map[String, String],
