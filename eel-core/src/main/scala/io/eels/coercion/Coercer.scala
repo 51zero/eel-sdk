@@ -14,7 +14,7 @@ trait Coercer[T] {
 
 object BooleanCoercer extends Coercer[Boolean] {
   override def coerce(input: Any): Boolean = input match {
-    case b: Boolean => b
+    case b: Boolean => b // passthrough
     case l: Long => l == 1
     case i: Int => i == 1
     case s: Short => s == 1
@@ -33,15 +33,15 @@ object MapCoercer extends Coercer[Map[Any, Any]] {
 
 object TimestampCoercer extends Coercer[java.sql.Timestamp] {
   override def coerce(input: Any): Timestamp = input match {
-    case t: Timestamp => t
+    case t: Timestamp => t // passthrough
     case l: Long => new Timestamp(l)
   }
 }
 
 object IntCoercer extends Coercer[Int] {
   override def coerce(input: Any): Int = input match {
+    case i: Int => i // passthrough
     case b: Byte => b
-    case i: Int => i
     case s: Short => s
     case s: String => s.toInt
   }
@@ -49,9 +49,9 @@ object IntCoercer extends Coercer[Int] {
 
 object LongCoercer extends Coercer[Long] {
   override def coerce(input: Any): Long = input match {
+    case l: Long => l // passthrough
     case b: Byte => b
     case i: Int => i
-    case l: Long => l
     case s: Short => s
     case s: String => s.toLong
   }
@@ -59,9 +59,9 @@ object LongCoercer extends Coercer[Long] {
 
 object FloatCoercer extends Coercer[Float] {
   override def coerce(input: Any): Float = input match {
-    case b: Byte => b
-    case f: Float => f
+    case f: Float => f // passthrough
     case i: Int => i
+    case b: Byte => b
     case l: Long => l
     case s: Short => s
     case s: String => s.toFloat
@@ -70,8 +70,8 @@ object FloatCoercer extends Coercer[Float] {
 
 object DoubleCoercer extends Coercer[Double] {
   override def coerce(input: Any): Double = input match {
+    case d: Double => d // passthrough
     case b: Byte => b
-    case d: Double => d
     case f: Float => f
     case i: Int => i
     case l: Long => l
@@ -82,13 +82,13 @@ object DoubleCoercer extends Coercer[Double] {
 
 object BigDecimalCoercer extends Coercer[BigDecimal] {
   override def coerce(input: Any): BigDecimal = input match {
+    case b: BigDecimal => b // pass through
     case d: Double => BigDecimal.decimal(d)
     case f: Float => BigDecimal(f)
     case i: Int => BigDecimal(i)
     case l: Long => BigDecimal(l)
     case s: Short => BigDecimal(s)
     case b: BigInt => BigDecimal(b)
-    case b: BigDecimal => b // pass through
     case b: java.math.BigDecimal => b // implicit
     case b: java.math.BigInteger => BigDecimal(b)
     case s: String => BigDecimal(s)
@@ -97,10 +97,10 @@ object BigDecimalCoercer extends Coercer[BigDecimal] {
 
 object BigIntegerCoercer extends Coercer[BigInt] {
   override def coerce(input: Any): BigInt = input match {
+    case b: BigInt => b // pass through
     case i: Int => BigInt(i)
     case l: Long => BigInt(l)
     case s: Short => BigInt(s)
-    case b: BigInt => b // pass through
     case b: java.math.BigInteger => b // implicit
     case s: String => BigInt(s)
   }
