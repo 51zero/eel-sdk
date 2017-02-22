@@ -1,31 +1,50 @@
 package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
+import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema._
 import io.eels.{Row, Sink, SinkWriter}
 import org.apache.kudu.client.{CreateTableOptions, KuduClient}
 
 import scala.collection.JavaConverters._
 
-case class KuduSink(tableName: String)(implicit client: KuduClient) extends Sink with Logging {
+object KuduSinkConfig {
+  def apply(): KuduSinkConfig = apply(ConfigFactory.load())
+  def apply(config: Config): KuduSinkConfig = KuduSinkConfig(
+    WriteMode.valueOf(config.getString("eel.kudu.write-mode"))
+  )
+}
+case class KuduSinkConfig(writeMode: WriteMode)
+
+case class KuduSink(tableName: String,
+                    config: KuduSinkConfig)(implicit client: KuduClient) extends Sink with Logging {
 
   override def writer(structType: StructType): SinkWriter = new SinkWriter {
 
     val schema = KuduSchemaFns.toKuduSchema(structType)
 
-    if (client.tableExists(tableName))
-      client.deleteTable(tableName)
-
-    val table = if (!client.tableExists(tableName)) {
-      logger.debug(s"Creating table $tableName")
-      val options = new CreateTableOptions()
-        .setNumReplicas(1)
-        .setRangePartitionColumns(structType.fields.filter(_.key).map(_.name).asJava)
-      client.createTable(tableName, schema, options)
-    } else {
-      client.openTable(tableName)
+    private def deleteTable(): Unit = if (client.tableExists(tableName)) client.deleteTable(tableName)
+    private def createTable(): Unit = {
+      if (!client.tableExists(tableName)) {
+        logger.debug(s"Creating table $tableName")
+        val options = new CreateTableOptions()
+          .setNumReplicas(1)
+          .setRangePartitionColumns(structType.fields.filter(_.key).map(_.name).asJava)
+        client.createTable(tableName, schema, options)
+      }
     }
 
+
+    config.writeMode match {
+      case WriteMode.OVERWRITE =>
+        deleteTable()
+        createTable()
+      case WriteMode.CREATE =>
+        createTable()
+      case _ =>
+    }
+
+    val table = client.openTable(tableName)
     val session = client.newSession()
 
     override def write(row: Row): Unit = {
@@ -59,8 +78,8 @@ case class KuduSink(tableName: String)(implicit client: KuduClient) extends Sink
 }
 
 object KuduSink {
-  def apply(master: String, table: String): KuduSink = {
+  def apply(master: String, table: String, config: KuduSinkConfig = KuduSinkConfig()): KuduSink = {
     implicit val client = new KuduClient.KuduClientBuilder(master).build()
-    KuduSink(table)
+    KuduSink(table, config)
   }
 }

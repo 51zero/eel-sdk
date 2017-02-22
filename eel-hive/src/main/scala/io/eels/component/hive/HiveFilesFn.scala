@@ -26,7 +26,7 @@ object HiveFilesFn extends Logging {
             partitionConstraint: Option[PartitionConstraint])
            (implicit fs: FileSystem, client: IMetaStoreClient): List[(LocatedFileStatus, PartitionSpec)] = {
 
-    def rootScan(): List[Pair[LocatedFileStatus, PartitionSpec]] = {
+    def rootScan(): List[(LocatedFileStatus, PartitionSpec)] = {
       logger.debug(s"No partitions for ${table.getTableName}; performing root scan")
       val location = new Path(table.getSd.getLocation)
       HiveFileScanner(location).map { it =>
