@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{LinkedBlockingQueue, _}
 
 import com.sksamuel.exts.Logging
@@ -31,23 +32,23 @@ class HiveSinkWriter(sourceSchema: StructType,
                      conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
 
-  val config = ConfigFactory.load()
-  val sinkConfig = HiveSinkConfig()
-  val writeToTempDirectory = config.getBoolean("eel.hive.sink.writeToTempFiles")
-  val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
+  private val config = ConfigFactory.load()
+  private val sinkConfig = HiveSinkConfig()
+  private val writeToTempDirectory = config.getBoolean("eel.hive.sink.writeToTempFiles")
+  private val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
-  val hiveOps = new HiveOps(client)
-  val tablePath = hiveOps.tablePath(dbName, tableName)
-  val lock = new AnyRef()
+  private val hiveOps = new HiveOps(client)
+  private val tablePath = hiveOps.tablePath(dbName, tableName)
+  private val lock = new AnyRef()
 
   // these will be in lower case
-  val partitionKeyNames = hiveOps.partitionKeyNames(dbName, tableName)
+  private val partitionKeyNames = hiveOps.partitionKeyNames(dbName, tableName)
 
   // the file schema is the metastore schema with the partition columns removed. This is because the
   // partition columns are not written to the file (they are taken from the partition itself)
   // this can be overriden with the includePartitionsInData option in which case the partitions will
   // be kept in the file
-  val fileSchema = {
+  private val fileSchema = {
     if (sinkConfig.includePartitionsInData || partitionKeyNames.isEmpty)
       metastoreSchema
     else
@@ -57,42 +58,47 @@ class HiveSinkWriter(sourceSchema: StructType,
   }
 
   // the normalizer takes care of making sure the row is aligned with the file schema
-  val normalizer = new RowNormalizerFn(fileSchema)
+  private val normalizer = new RowNormalizerFn(fileSchema)
 
   // Since the data can come in unordered, we need to keep open a stream per partition path otherwise we'd
   // be opening and closing streams frequently.
   // We also can't share a writer amongst threads for obvious reasons otherwise we'd just have a single
   // writer being used for all data. So the solution is a hive writer per thread per partition, each
   // writing to their own files.
-  val writers = new TrieMap[String, (Path, HiveWriter)]
+  private val writers = new TrieMap[String, (Path, HiveWriter)]
 
   // this contains all the partitions we've checked.
   // No need for multiple threads to keep hitting the meta store to check on the same partition paths
-  val createdPartitions = new ConcurrentSkipListSet[String]
+  private val createdPartitions = new ConcurrentSkipListSet[String]
 
   // we buffer incoming data into this queue, so that slow writing doesn't unncessarily
   // block threads feeding this sink
-  val buffer = new LinkedBlockingQueue[Row](bufferSize)
+  private val buffer = new LinkedBlockingQueue[Row](bufferSize)
 
   // the io threads will run in their own threads inside this executor
-  val writerPool = Executors.newFixedThreadPool(ioThreads)
+  private val writerPool = Executors.newFixedThreadPool(ioThreads)
 
   logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads")
 
   import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
+  private val running = new AtomicBoolean(true)
+  private var throwable: Throwable = null
+
   logger.debug(s"Creating $ioThreads hive writers")
   for (k <- 0 until ioThreads) {
     writerPool.submit {
       try {
-        BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
+        BlockingQueueConcurrentIterator(buffer, Row.Sentinel).takeWhile(_ => running.get).foreach { row =>
           val writer = getOrCreateHiveWriter(row, k)._2
           // need to strip out any partition information from the written data and possibly pad
           writer.write(normalizer(row))
         }
       } catch {
         case NonFatal(e) =>
-          logger.error("Could not perform write", e)
+          logger.error("Error during write; aborting all writing threads", e)
+          running.set(false)
+          throwable = e
       }
     }
   }
@@ -105,14 +111,17 @@ class HiveSinkWriter(sourceSchema: StructType,
     writers.map { case (_, ph) => WriteStatus(ph._1, fs.getFileStatus(ph._1).getLen, ph._2.records) }
   }.toVector
 
-  override def write(row: Row): Unit = buffer.put(row)
+  override def write(row: Row): Unit = {
+    if (throwable != null)
+      throw throwable
+    buffer.put(row)
+  }
 
   override def close(): Unit = {
-    logger.debug("Request to close hive sink writer")
-    buffer.put(Row.Sentinel)
+    logger.debug("Closing hive writer once buffer is empty...")
 
-    logger.debug("Hive writer is waiting for writing threads to complete")
-    writerPool.awaitTermination(1, TimeUnit.DAYS)
+    buffer.put(Row.Sentinel)
+    writerPool.awaitTermination(100, TimeUnit.DAYS)
     writers.values.foreach(_._2.close)
     logger.debug(s"All hive writer threads have completed; usedTempDir=$writeToTempDirectory")
 
