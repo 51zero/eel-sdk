@@ -13,6 +13,10 @@ abstract class NamedPredicate(name: String) extends Predicate {
   override def fields(): Seq[String] = Seq(name)
 }
 
+case class NotPredicate(predicate: Predicate) extends Predicate {
+  override def fields(): Seq[String] = predicate.fields()
+}
+
 case class OrPredicate(predicates: Seq[Predicate]) extends Predicate {
   override def fields(): Seq[String] = predicates.flatMap(_.fields)
   override def apply(row: Row): Boolean = predicates.exists(_.apply(row))
@@ -24,6 +28,10 @@ case class AndPredicate(predicates: Seq[Predicate]) extends Predicate {
 }
 
 case class EqualsPredicate(name: String, value: Any) extends NamedPredicate(name) {
+  override def apply(row: Row): Boolean = row.get(name) == value
+}
+
+case class NotEqualsPredicate(name: String, value: Any) extends NamedPredicate(name) {
   override def apply(row: Row): Boolean = row.get(name) == value
 }
 

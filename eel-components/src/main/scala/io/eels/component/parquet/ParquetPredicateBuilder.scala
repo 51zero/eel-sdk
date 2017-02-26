@@ -12,6 +12,15 @@ object ParquetPredicateBuilder extends PredicateBuilder[FilterPredicate] {
       case OrPredicate(predicates) => predicates.map(build).reduceLeft((a, b) => FilterApi.or(a, b))
       case AndPredicate(predicates) => predicates.map(build).reduceLeft((a, b) => FilterApi.and(a, b))
 
+      case NotPredicate(inner) => FilterApi.not(build(inner))
+
+      case NotEqualsPredicate(name: String, value: String) => FilterApi.notEq(FilterApi.binaryColumn(name), Binary.fromConstantByteArray(value.toString().getBytes))
+      case NotEqualsPredicate(name: String, value: Long) => FilterApi.notEq(FilterApi.longColumn(name), java.lang.Long.valueOf(value))
+      case NotEqualsPredicate(name: String, value: Boolean) => FilterApi.notEq(FilterApi.booleanColumn(name), java.lang.Boolean.valueOf(value))
+      case NotEqualsPredicate(name: String, value: Float) => FilterApi.notEq(FilterApi.floatColumn(name), java.lang.Float.valueOf(value))
+      case NotEqualsPredicate(name: String, value: Int) => FilterApi.notEq(FilterApi.intColumn(name), java.lang.Integer.valueOf(value))
+      case NotEqualsPredicate(name: String, value: Double) => FilterApi.notEq(FilterApi.doubleColumn(name), java.lang.Double.valueOf(value))
+
       case EqualsPredicate(name: String, value: String) => FilterApi.eq(FilterApi.binaryColumn(name), Binary.fromConstantByteArray(value.toString().getBytes))
       case EqualsPredicate(name: String, value: Long) => FilterApi.eq(FilterApi.longColumn(name), java.lang.Long.valueOf(value))
       case EqualsPredicate(name: String, value: Boolean) => FilterApi.eq(FilterApi.booleanColumn(name), java.lang.Boolean.valueOf(value))
