@@ -13,7 +13,7 @@ abstract class NamedPredicate(name: String) extends Predicate {
   override def fields(): Seq[String] = Seq(name)
 }
 
-case class NotPredicate(predicate: Predicate) extends Predicate {
+abstract case class NotPredicate(predicate: Predicate) extends Predicate {
   override def fields(): Seq[String] = predicate.fields()
 }
 

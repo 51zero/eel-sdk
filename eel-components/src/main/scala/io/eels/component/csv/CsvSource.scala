@@ -1,10 +1,10 @@
 package io.eels.component.csv
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import io.eels.schema.StructType
-import io.eels._
 import com.sksamuel.exts.io.Using
+import com.typesafe.config.{Config, ConfigFactory}
+import io.eels._
+import io.eels.component.csv.CsvPredef._
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -19,8 +19,9 @@ case class CsvSource(path: Path,
                      nullValue: String = null,
                      skipBadRows: Option[Boolean] = None,
                      header: Header = Header.FirstRow,
-                     skipRows:Option[Long] = None,
-                     selectedColumns:Seq[String] = Seq.empty)
+                     skipRows: Option[Long] = None,
+                     selectedColumns: Seq[String] = Seq.empty,
+                     skipRowCallback: Option[SkipRowCallback] = None)
                     (implicit fs: FileSystem) extends Source with Using {
 
   val config: Config = ConfigFactory.load()
@@ -32,9 +33,13 @@ case class CsvSource(path: Path,
   def withHeader(header: Header): CsvSource = copy(header = header)
 
   def withSchema(schema: StructType): CsvSource = copy(overrideSchema = Some(schema))
+
   def withDelimiter(c: Char): CsvSource = copy(format = format.copy(delimiter = c))
+
   def withQuoteChar(c: Char): CsvSource = copy(format = format.copy(quoteChar = c))
+
   def withQuoteEscape(c: Char): CsvSource = copy(format = format.copy(quoteEscape = c))
+
   def withFormat(format: CsvFormat): CsvSource = copy(format = format)
 
   // use this value when the cell/record is empty quotes in the source data
@@ -44,21 +49,27 @@ case class CsvSource(path: Path,
   def withNullValue(nullValue: String): CsvSource = copy(nullValue = nullValue)
 
   def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
-  def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
-  def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
-  def withSkipRows(count:Long):CsvSource = copy(skipRows=Some(count))
 
-  private def createParser() =
-    {
-      CsvSupport.createParser(format,
-        ignoreLeadingWhitespaces,
-        ignoreTrailingWhitespaces,
-        skipEmptyLines,
-        emptyCellValue,
-        nullValue,
-        skipRows,
-        selectedColumns)
-    }
+  def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
+
+  def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
+
+  def withSkipRows(count: Long): CsvSource = copy(skipRows = Some(count))
+
+  def withSkipBadRows(skipBadRows: Option[Boolean]): CsvSource = copy(skipBadRows = skipBadRows)
+
+  def withSkipRowCallback(callback: Option[SkipRowCallback]):CsvSource = copy( skipRowCallback = callback)
+
+  private def createParser() = {
+    CsvSupport.createParser(format,
+      ignoreLeadingWhitespaces,
+      ignoreTrailingWhitespaces,
+      skipEmptyLines,
+      emptyCellValue,
+      nullValue,
+      skipRows,
+      selectedColumns)
+  }
 
   override def schema(): StructType = overrideSchema.getOrElse {
     val parser = createParser()
@@ -82,7 +93,7 @@ case class CsvSource(path: Path,
   }
 
   override def parts(): List[Part] = {
-    val part = new CsvPart(() => createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema())
+    val part = new CsvPart(() => createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema(), skipRowCallback)
     List(part)
   }
 }
