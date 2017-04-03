@@ -1,6 +1,6 @@
 # Eel
 
-[![Build Status](https://travis-ci.org/sksamuel/eel-sdk.svg?branch=master)](https://travis-ci.org/sksamuel/eel-sdk)
+[![Build Status](https://travis-ci.org/51zero/eel-sdk.svg?branch=master)](https://travis-ci.org/51zero/eel-sdk)
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.11*.svg?label=latest%20release%20for%202.11"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.11%22)
 [<img src="https://img.shields.io/maven-central/v/io.eels/eel-core_2.12*.svg?label=latest%20release%20for%202.12"/>](http://search.maven.org/#search%7Cga%7C1%7Ca%3A%22eel-core_2.12%22)
 
