@@ -7,6 +7,8 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.scalatest.{Matchers, WordSpec}
 
+import scala.collection.mutable.ArrayBuffer
+
 class CsvSourceTest extends WordSpec with Matchers {
 
   implicit val conf = new Configuration()
@@ -88,11 +90,30 @@ class CsvSourceTest extends WordSpec with Matchers {
         Field("", StringType, true)
       )
     }
-    "support skipping corrupt rows" ignore {
+    "support skipping corrupt rows and call the callback" in {
       val file = getClass.getResource("/io/eels/component/csv/corrupt.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withHeader(Header.FirstRow).toFrame().toList().map(_.values) shouldBe
-        Seq(Vector("1", "2", "3"))
+
+      var errorCount = 0
+      var errors = ArrayBuffer[String]()
+      CsvSource(path)
+        .withHeader(Header.FirstRow)
+        .withSkipBadRows(Some(true))
+        .withSkipRowCallback(Some { (index, schema, row) =>
+          if (schema.fields.size != row.length) {
+            errorCount += 1
+            errors += row.mkString
+            true
+          }
+          else false
+        })
+        .toFrame().toList().map(_.values) shouldBe
+        Seq(
+          Vector("1", "2", "3"),
+          Vector("3", "4", "5"))
+
+      errorCount shouldBe 2
+      errors shouldBe ArrayBuffer("aaaaaaa", "xxxyyy")
     }
   }
 }
