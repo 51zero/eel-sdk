@@ -13,8 +13,9 @@ abstract class NamedPredicate(name: String) extends Predicate {
   override def fields(): Seq[String] = Seq(name)
 }
 
-case class NotPredicate(predicate: Predicate) extends Predicate {
-  override def fields(): Seq[String] = predicate.fields()
+case class NotPredicate(inner: Predicate) extends Predicate {
+  override def fields(): Seq[String] = inner.fields()
+  override def apply(row: Row): Boolean = !inner.apply(row)
 }
 
 case class OrPredicate(predicates: Seq[Predicate]) extends Predicate {
