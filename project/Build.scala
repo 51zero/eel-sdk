@@ -15,7 +15,7 @@ object Build extends Build {
   val H2Version = "1.4.192"
   val HadoopVersion = "2.6.4"
   val HiveVersion = "1.2.1"
-  val JacksonVersion = "2.8.4"
+  val JacksonVersion = "2.8.6"
   val Log4jVersion = "1.2.17"
   val MetricsVersion = "3.1.2"
   val MysqlVersion = "5.1.39"
@@ -41,7 +41,6 @@ object Build extends Build {
 
   val componentsSettings = Seq(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.module"            %% "jackson-module-scala"               % JacksonVersion,
       "org.apache.hadoop"                       % "hadoop-hdfs"                         % HadoopVersion,
       "org.apache.hadoop"                       % "hadoop-mapreduce"                    % HadoopVersion,
       "org.apache.hadoop"                       % "hadoop-mapreduce-client"             % HadoopVersion,
@@ -100,6 +99,7 @@ object Build extends Build {
       "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
+      "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
       "org.apache.logging.log4j"    % "log4j-api"               % "2.7"             % "test",
       "org.apache.logging.log4j"    % "log4j-core"              % "2.7"             % "test",
       "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % "2.7"             % "test",

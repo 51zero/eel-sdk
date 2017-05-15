@@ -20,6 +20,13 @@ case class Row(schema: StructType, values: Seq[Any]) {
     }.mkString("[", ",", "]")
   }
 
+  // returns the data in this row as a Map
+  def map(): Map[String, Any] = {
+    values.zip(schema.fieldNames).map { case (value, name) =>
+      name -> value
+    }.toMap
+  }
+
   def replaceSchema(newSchema: StructType): Row = Row(newSchema, values)
 
   def apply(k: Int): Any = get(k)

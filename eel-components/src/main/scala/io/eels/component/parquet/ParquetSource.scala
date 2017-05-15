@@ -29,7 +29,7 @@ case class ParquetSource(pattern: FilePattern,
                          projection: Seq[String] = Nil)
                         (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
-  lazy val paths = pattern.toPaths()
+  lazy val paths: List[Path] = pattern.toPaths()
 
   def withPredicate(pred: => Predicate): ParquetSource = copy(predicate = pred.some)
   def withProjection(first: String, rest: String*): ParquetSource = withProjection(first +: rest)

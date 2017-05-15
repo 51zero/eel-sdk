@@ -2,6 +2,7 @@ package io.eels
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
+import io.eels.util.JacksonSupport
 
 /**
   * A Source is a provider of data.
@@ -22,6 +23,13 @@ trait Source extends Logging {
   def schema: StructType
 
   def parts(): Seq[Part]
+
+  def load[T: Manifest](): Seq[T] = {
+    toFrame().toSeq().map { row =>
+      val node = JsonRow(row)
+      JacksonSupport.mapper.readerFor[T].readValue(node)
+    }
+  }
 
   def toFrame(): Frame = toFrame(NoopListener)
 

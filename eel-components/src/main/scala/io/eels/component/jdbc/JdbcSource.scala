@@ -23,7 +23,7 @@ case class JdbcSource(connFn: () => Connection,
 
   override lazy val schema: StructType = providedSchema.getOrElse(fetchSchema())
 
-  def withBind(bind: (PreparedStatement) => Unit) = copy(bind = bind)
+  def withBind(bind: (PreparedStatement) => Unit): JdbcSource = copy(bind = bind)
   def withFetchSize(fetchSize: Int): JdbcSource = copy(fetchSize = fetchSize)
   def withProvidedSchema(schema: StructType): JdbcSource = copy(providedSchema = Option(schema))
   def withProvidedDialect(dialect: JdbcDialect): JdbcSource = copy(providedDialect = Option(dialect))
@@ -67,16 +67,16 @@ class JdbcPart(connFn: () => Connection,
     */
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
-    val conn = connFn()
-    val stmt = conn.prepareStatement(query)
+    private val conn = connFn()
+    private val stmt = conn.prepareStatement(query)
     stmt.setFetchSize(fetchSize)
     bind(stmt)
 
-    val rs = timed(s"Executing query $query") {
+    private val rs = timed(s"Executing query $query") {
       stmt.executeQuery()
     }
 
-    val schema = schemaFor(dialect, rs)
+    private val schema = schemaFor(dialect, rs)
 
     override def close(): Unit = {
       super.close()
