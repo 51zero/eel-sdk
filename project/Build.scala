@@ -11,7 +11,7 @@ object Build extends Build {
 
   val AvroVersion = "1.8.1"
   val DerbyVersion = "10.13.1.1"
-  val ExtsVersion = "1.37.0"
+  val ExtsVersion = "1.44.1"
   val H2Version = "1.4.192"
   val HadoopVersion = "2.6.4"
   val HiveVersion = "1.2.1"
