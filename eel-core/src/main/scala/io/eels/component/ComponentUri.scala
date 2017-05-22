@@ -5,11 +5,11 @@ import io.eels.Source
 
 case class ComponentUri(namespace: String, path: String, params: Map[String, String]) {
   // strip the prefix and look it up in the component map
-  def source: Source = {
+  def source(registry: EelRegistry = new EelRegistry): Source = {
     val spec = ComponentSpec.all.find(_.namespace == namespace).getOrError(s"No component matching $namespace could be found")
     val clazz = Class.forName(spec.impl)
     val component = clazz.newInstance().asInstanceOf[Component]
-    component.source(params)
+    component.source(path, params, registry)
   }
 }
 

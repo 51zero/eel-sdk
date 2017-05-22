@@ -4,5 +4,5 @@ import io.eels.Source
 
 trait Component {
   // Creates a new Source using the parameter map to set parameters
-  def source(path: String, params: Map[String, String]): Source
+  def source(path: String, params: Map[String, String], registry: EelRegistry): Source
 }
