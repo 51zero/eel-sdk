@@ -26,18 +26,18 @@ object ParquetReaderFn extends Logging {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[Type]): ParquetReader[Row] = {
+            projectionSchema: Option[Type])(implicit conf: Configuration): ParquetReader[Row] = {
     logger.debug(s"Opening parquet reader for $path")
 
-    // The parquet reader can use a projection by setting a projected schema onto a conf object
+    // The parquet reader can use a projection by setting a projected schema onto the supplied conf object
     def configuration(): Configuration = {
-      val conf = new Configuration()
+      val newconf = new Configuration(conf)
       projectionSchema.foreach { it =>
-        conf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
+        newconf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
-      conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
-      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
-      conf
+      newconf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
+      newconf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
+      newconf
     }
 
     // a filter is set when we have a predicate for the read
