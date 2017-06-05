@@ -6,10 +6,10 @@ import io.eels.Part
 
 case class BucketPartitionStrategy(columnName: String,
                                    numberOfPartitions: Int,
-                                   min: Int,
-                                   max: Int) extends JdbcPartitionStrategy {
+                                   min: Long,
+                                   max: Long) extends JdbcPartitionStrategy {
 
-  def ranges: Seq[Range] = {
+  def ranges: Seq[(Long, Long)] = {
 
     // distribute surplus as evenly as possible across buckets
     // min max + 1 because the min-max range is inclusive
@@ -19,7 +19,7 @@ case class BucketPartitionStrategy(columnName: String,
     List.tabulate(numberOfPartitions) { k =>
       val start = min + k * gap + Math.min(k, surplus)
       val end = min + ((k + 1) * gap) + Math.min(k + 1, surplus)
-      Range(start, end)
+      (start, end - 1)
     }
   }
 
@@ -29,7 +29,7 @@ case class BucketPartitionStrategy(columnName: String,
                      fetchSize: Int,
                      dialect: JdbcDialect): Seq[Part] = {
 
-    ranges.map { range =>
+    ranges.map { case (start, end) =>
 
       val partitionedQuery =
         s"""|SELECT *
@@ -37,7 +37,7 @@ case class BucketPartitionStrategy(columnName: String,
             |  SELECT *
             |  FROM ( $query )
             |)
-            |WHERE ${range.start} <= $columnName AND $columnName <= ${range.end}
+            |WHERE $start <= $columnName AND $columnName <= $end
             |""".stripMargin
 
       new JdbcPart(connFn, partitionedQuery, bindFn, fetchSize, dialect)
