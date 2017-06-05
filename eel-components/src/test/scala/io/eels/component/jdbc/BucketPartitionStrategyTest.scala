@@ -6,7 +6,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.util.Random
 
-class BucketPartitionTest extends WordSpec with Matchers {
+class BucketPartitionStrategyTest extends WordSpec with Matchers {
 
   private val conn = DriverManager.getConnection("jdbc:h2:mem:bucket_test")
   conn.createStatement().executeUpdate("create table mytable (a integer)")
