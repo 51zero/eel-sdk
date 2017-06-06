@@ -27,18 +27,18 @@ object AvroParquetReaderFn {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[Schema]): ParquetReader[GenericRecord] = {
+            projectionSchema: Option[Schema])(implicit conf: Configuration): ParquetReader[GenericRecord] = {
 
     // The parquet reader can use a projection by setting a projected schema onto a conf object
     def configuration(): Configuration = {
-      val conf = new Configuration()
+      val newconf = new Configuration(conf)
       projectionSchema.foreach { it =>
-        AvroReadSupport.setAvroReadSchema(conf, it)
-        AvroReadSupport.setRequestedProjection(conf, it)
+        AvroReadSupport.setAvroReadSchema(newconf, it)
+        AvroReadSupport.setRequestedProjection(newconf, it)
       }
       //conf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
-      conf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
-      conf
+      newconf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
+      newconf
     }
 
     // a filter is set when we have a predicate for the read
