@@ -8,10 +8,10 @@ import org.scalatest.{Matchers, WordSpec}
 
 class AvroSinkTest extends WordSpec with Matchers {
 
-  implicit val conf = new Configuration()
-  implicit val fs = FileSystem.get(new Configuration())
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(new Configuration())
 
-  val frame = Frame.fromValues(
+  private val frame = Frame.fromValues(
     StructType("name", "job", "location"),
     List("clint eastwood", "actor", "carmel"),
     List("elton john", "musician", "pinner"),

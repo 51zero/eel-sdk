@@ -7,10 +7,11 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{FlatSpec, Matchers}
 
+// tests that avro source/sink and avro parquet source/sink can write/read each others files
 class AvroAndParquetCrossCompatibilityTest extends FlatSpec with Matchers {
 
-  implicit val conf = new Configuration()
-  implicit val fs = FileSystem.get(new Configuration())
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(new Configuration())
 
   "AvroParquetSource and ParquetSource" should "be compatible" in {
 

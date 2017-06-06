@@ -12,8 +12,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class AvroParquetComponentTest extends WordSpec with Matchers {
 
-  implicit val conf = new Configuration()
-  implicit val fs = FileSystem.get(new Configuration())
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(new Configuration())
 
   "AvroParquet" should {
     "write and read parquet files" in {

@@ -10,12 +10,12 @@ import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
 
   Class.forName("org.h2.Driver")
-  val url = "jdbc:h2:mem:" + UUID.randomUUID.toString.replace("-", "")
-  val conn = DriverManager.getConnection(url)
+  private val url = "jdbc:h2:mem:" + UUID.randomUUID.toString.replace("-", "")
+  private val conn = DriverManager.getConnection(url)
   conn.createStatement().executeUpdate("create table mytab (a integer, b integer, c integer)")
 
-  val schema = StructType(Field("a"), Field("b"), Field("c"))
-  val frame = io.eels.Frame(schema, Row(schema, Vector("1", "2", "3")), Row(schema, Vector("4", "5", "6")))
+  private val schema = StructType(Field("a"), Field("b"), Field("c"))
+  private val frame = io.eels.Frame(schema, Row(schema, Vector("1", "2", "3")), Row(schema, Vector("4", "5", "6")))
 
   "JdbcSink" should {
     "write frame to table" in {

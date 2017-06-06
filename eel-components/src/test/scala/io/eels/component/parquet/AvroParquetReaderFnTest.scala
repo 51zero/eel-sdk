@@ -15,21 +15,21 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
-  val path = new Path(UUID.randomUUID().toString())
+  private val path = new Path(UUID.randomUUID().toString())
 
   override def afterAll(): Unit = {
     val fs = FileSystem.get(new Configuration())
     fs.delete(path, false)
   }
 
-  val avroSchema = SchemaBuilder.record("com.chuckle").fields()
+  private val avroSchema = SchemaBuilder.record("com.chuckle").fields()
     .requiredString("str").requiredLong("looong").requiredDouble("dooble").endRecord()
 
-  val writer = AvroParquetWriter.builder[GenericRecord](path)
+  private val writer = AvroParquetWriter.builder[GenericRecord](path)
     .withSchema(avroSchema)
     .build()
 
-  val record = new GenericData.Record(avroSchema)
+  private val record = new GenericData.Record(avroSchema)
   record.put("str", "wibble")
   record.put("looong", 999L)
   record.put("dooble", 12.34)

@@ -14,11 +14,11 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSourceTest extends WordSpec with Matchers {
   ParquetLogMute()
 
-  implicit val conf = new Configuration()
-  implicit val fs = FileSystem.get(conf)
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(conf)
 
-  val personFile = Paths.get(getClass.getResource("/parquet/person.avro.pq").getFile)
-  val resourcesDir = personFile.getParent
+  private val personFile = Paths.get(getClass.getResource("/parquet/person.avro.pq").getFile)
+  private val resourcesDir = personFile.getParent
 
   "ParquetSource" should {
     "read schema" in {

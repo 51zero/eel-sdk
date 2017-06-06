@@ -29,7 +29,7 @@ case class AvroParquetSource(pattern: FilePattern,
                              predicate: Option[Predicate] = None)
                             (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
 
-  lazy val paths = pattern.toPaths()
+  private lazy val paths = pattern.toPaths()
 
   def withPredicate(pred: Predicate): AvroParquetSource = copy(predicate = pred.some)
 

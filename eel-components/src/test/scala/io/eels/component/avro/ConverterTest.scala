@@ -1,6 +1,6 @@
 package io.eels.component.avro
 
-import org.apache.avro.{Schema, SchemaBuilder}
+import org.apache.avro.SchemaBuilder
 import org.scalatest.{Matchers, WordSpec}
 
 class ConverterTest extends WordSpec with Matchers {

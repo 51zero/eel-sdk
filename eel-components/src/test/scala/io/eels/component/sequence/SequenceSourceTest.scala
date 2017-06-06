@@ -8,10 +8,10 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSourceTest extends WordSpec with Matchers {
 
-  implicit val conf = new Configuration()
+  private implicit val conf = new Configuration()
 
-  val schema = StructType(Field("name"), Field("location"))
-  val frame = io.eels.Frame.fromValues(
+  private val schema = StructType(Field("name"), Field("location"))
+  private val frame = io.eels.Frame.fromValues(
     schema,
     Vector("name", "location"),
     Vector("sam", "aylesbury"),

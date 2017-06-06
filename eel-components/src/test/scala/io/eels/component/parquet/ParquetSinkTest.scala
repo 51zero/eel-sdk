@@ -9,8 +9,8 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class ParquetSinkTest extends FlatSpec with Matchers {
 
-  implicit val conf = new Configuration()
-  implicit val fs = FileSystem.get(conf)
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(conf)
 
   "ParquetSink" should "handle nulls" in {
 

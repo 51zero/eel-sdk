@@ -1,23 +1,18 @@
 package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.config.ConfigSupport
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
-case class ParquetWriterConfig(
-                                blockSize: Int,
-                                pageSize: Int,
-                                compressionCodec: CompressionCodecName,
-                                enableDictionary: Boolean,
-                                validating: Boolean
-                              )
+case class ParquetWriterConfig(blockSize: Int,
+                               pageSize: Int,
+                               compressionCodec: CompressionCodecName,
+                               enableDictionary: Boolean,
+                               validating: Boolean)
 
-object ParquetWriterConfig extends Logging {
-
-  implicit class RichConfig(config: Config) {
-    def getIntOrElse(key: String, default: Int): Int = if (config.hasPath(key)) config.getInt(key) else default
-  }
+object ParquetWriterConfig extends Logging with ConfigSupport {
 
   def apply(): ParquetWriterConfig = apply(ConfigFactory.load())
   def apply(config: Config): ParquetWriterConfig = {

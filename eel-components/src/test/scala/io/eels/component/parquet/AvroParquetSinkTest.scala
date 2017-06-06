@@ -1,10 +1,9 @@
 package io.eels.component.parquet
 
-import io.eels.component.csv.CsvSink
-import io.eels.{Frame, Row}
 import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{Field, StringType, StructType}
+import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
@@ -12,20 +11,20 @@ import org.scalatest.{Matchers, WordSpec}
 class AvroParquetSinkTest extends WordSpec with Matchers {
   ParquetLogMute()
 
-  val schema = StructType(
+  private val schema = StructType(
     Field("name", StringType, nullable = false),
     Field("job", StringType, nullable = false),
     Field("location", StringType, nullable = false)
   )
-  val frame = Frame.fromValues(
+  private val frame = Frame.fromValues(
     schema,
     Vector("clint eastwood", "actor", "carmel"),
     Vector("elton john", "musician", "pinner")
   )
 
-  implicit val conf = new Configuration()
-  implicit val fs = FileSystem.get(new Configuration())
-  val path = new Path("test.pq")
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(new Configuration())
+  private val path = new Path("test.pq")
 
   "ParquetSink" should {
     "write schema" in {

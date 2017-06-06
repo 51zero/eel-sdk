@@ -7,8 +7,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class AvroSerializerTest extends WordSpec with Matchers {
 
-  val avroSchema = SchemaBuilder.record("row").fields().requiredString("s").requiredLong("l").requiredBoolean("b").endRecord()
-  val serializer = new RecordSerializer(avroSchema)
+  private val avroSchema = SchemaBuilder.record("row").fields().requiredString("s").requiredLong("l").requiredBoolean("b").endRecord()
+  private val serializer = new RecordSerializer(avroSchema)
 
   "AvroRecordMarshaller" should {
     "createReader field from values in row" in {
