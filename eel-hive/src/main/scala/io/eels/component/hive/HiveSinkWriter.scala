@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{LinkedBlockingQueue, _}
 
@@ -174,7 +175,7 @@ class HiveSinkWriter(sourceSchema: StructType,
 
       val filename = "eel_" + System.nanoTime() + "_" + writerId
       val filePath = if (writeToTempDirectory) {
-        val temp = new Path(partPath, ".eeltemp")
+        val temp = new Path(partPath, ".eeltemp_" + UUID.randomUUID.toString)
         new Path(temp, filename)
       } else {
         new Path(partPath, filename)

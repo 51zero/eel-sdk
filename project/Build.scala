@@ -26,7 +26,7 @@ object Build extends Build {
   val Slf4jVersion = "1.7.12"
   val UnivocityVersion = "2.2.3"
   val ConfigVersion = "1.3.0"
-  val KafkaVersion = "0.10.1.1"
+  val KafkaVersion = "0.10.2.1"
   val KuduVersion = "1.1.0"
 
   val hiveSettings = Seq(
@@ -50,7 +50,9 @@ object Build extends Build {
       "org.apache.parquet"                      % "parquet-avro"                        % ParquetVersion,
       "org.apache.derby"                        % "derby"                               % DerbyVersion,
       "com.h2database"                          % "h2"                                  % H2Version,
-      "org.apache.spark"                        %% "spark-sql"                          % "2.1.0"           % "test"
+      "org.apache.spark"                        %% "spark-sql"                          % "2.1.0"           % "test",
+      "org.apache.twill"  % "twill-api"         % "0.11.0",
+      "org.apache.twill"  % "twill-yarn"        % "0.11.0"
     )
   )
 
@@ -64,7 +66,7 @@ object Build extends Build {
   val kafkaSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
-      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.11.0"     % "test"
+      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.13.1"     % "test"
     )
   )
 
@@ -141,7 +143,12 @@ object Build extends Build {
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(name := "eel")
-    .aggregate(core, components, orc, hive, kafka, kudu)
+    .aggregate(core,
+      components,
+      orc,
+      hive,
+//      kafka,
+      kudu)
    
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -167,12 +174,12 @@ object Build extends Build {
     .settings(name := "eel-hive")
     .dependsOn(core, components, orc)
 
-  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
-    .settings(rootSettings: _*)
-    .settings(componentsSettings: _*)
-    .settings(kafkaSettings: _*)
-    .settings(name := "eel-kafka")
-    .dependsOn(core)
+//  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
+//    .settings(rootSettings: _*)
+//    .settings(componentsSettings: _*)
+//    .settings(kafkaSettings: _*)
+//    .settings(name := "eel-kafka")
+//    .dependsOn(core)
 
   lazy val kudu = Project("eel-kudu", file("eel-kudu"))
     .settings(rootSettings: _*)
