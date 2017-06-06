@@ -9,9 +9,9 @@ object Build extends Build {
 
   val org = "io.eels"
 
-  val AvroVersion = "1.8.1"
+  val AvroVersion = "1.8.2"
   val DerbyVersion = "10.13.1.1"
-  val ExtsVersion = "1.44.1"
+  val ExtsVersion = "1.48.0"
   val H2Version = "1.4.192"
   val HadoopVersion = "2.6.4"
   val HiveVersion = "1.2.1"
@@ -19,7 +19,7 @@ object Build extends Build {
   val Log4jVersion = "1.2.17"
   val MetricsVersion = "3.1.2"
   val MysqlVersion = "5.1.39"
-  val OrcVersion = "1.3.0"
+  val OrcVersion = "1.4.0"
   val ParquetVersion = "1.9.0"
   val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
