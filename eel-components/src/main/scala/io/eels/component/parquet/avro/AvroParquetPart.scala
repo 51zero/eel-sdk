@@ -4,10 +4,11 @@ import com.sksamuel.exts.Logging
 import io.eels.component.avro.AvroDeserializer
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.{CloseableIterator, Part, Predicate, Row}
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
 class AvroParquetPart(path: Path,
-                      predicate: Option[Predicate]) extends Part with Logging {
+                      predicate: Option[Predicate])(implicit conf: Configuration) extends Part with Logging {
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 

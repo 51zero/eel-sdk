@@ -15,6 +15,9 @@ import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
 class AvroParquetReaderFnTest extends WordSpec with Matchers with BeforeAndAfterAll {
 
+  private implicit val conf = new Configuration()
+  private implicit val fs = FileSystem.get(new Configuration())
+
   private val path = new Path(UUID.randomUUID().toString())
 
   override def afterAll(): Unit = {
