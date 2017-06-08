@@ -17,7 +17,7 @@ import org.apache.parquet.schema.MessageType
   *                 of the schema set in the data.
   * @param metadata extra metadata to add to the parquet file when it is closed
   */
-object ParquetRowWriterFn {
+object RowParquetWriterFn {
 
   class RowParquetWriterBuilder(path: Path, schema: MessageType, metadata: Map[String, String])
     extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {

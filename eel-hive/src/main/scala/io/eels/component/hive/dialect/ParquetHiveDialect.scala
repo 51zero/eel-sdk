@@ -26,7 +26,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
     new CloseableIterator[Seq[Row]] {
 
       val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
-      val reader = ParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
+      val reader = RowParquetReaderFn(path, predicate, Option(parquetProjectionSchema))
 
       override def close(): Unit = {
         super.close()
@@ -45,7 +45,7 @@ object ParquetHiveDialect extends HiveDialect with Logging {
     ParquetLogMute()
 
     private val _records = new AtomicInteger(0)
-    private val writer = ParquetRowWriterFn(path, schema, metadata)
+    private val writer = RowParquetWriterFn(path, schema, metadata)
 
     override def write(row: Row) {
       require(row.values.nonEmpty, "Attempting to write an empty row")

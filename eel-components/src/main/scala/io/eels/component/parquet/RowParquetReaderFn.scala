@@ -14,7 +14,7 @@ import org.apache.parquet.schema.Type
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */
-object ParquetReaderFn extends Logging {
+object RowParquetReaderFn extends Logging {
 
   private val config = ParquetReaderConfig()
 

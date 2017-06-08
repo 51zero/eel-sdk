@@ -4,6 +4,7 @@ import io.eels._
 import org.apache.parquet.filter2.predicate.{FilterApi, FilterPredicate}
 import org.apache.parquet.io.api.Binary
 
+// builds parquet predicates from eel predicates
 object ParquetPredicateBuilder extends PredicateBuilder[FilterPredicate] {
 
   override def build(predicate: Predicate): FilterPredicate = {

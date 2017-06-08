@@ -28,7 +28,7 @@ class ParquetPart(path: Path,
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 
-    val reader = ParquetReaderFn(path, predicate, projectionSchema)
+    val reader = RowParquetReaderFn(path, predicate, projectionSchema)
 
     override def close(): Unit = {
       super.close()

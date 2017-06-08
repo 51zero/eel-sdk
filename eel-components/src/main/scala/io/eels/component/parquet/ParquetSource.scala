@@ -47,7 +47,7 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   lazy val schema: StructType = {
-    using(ParquetReaderFn(paths.head, None, None)) { reader =>
+    using(RowParquetReaderFn(paths.head, None, None)) { reader =>
       val row = Option(reader.read).getOrElse {
         sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
       }
