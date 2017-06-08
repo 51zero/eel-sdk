@@ -35,7 +35,7 @@ class RowReadSupport extends ReadSupport[Row] with Logging {
   }
 }
 
-// a row materializer retrns a group converter which is invoked for each
+// a row materializer returns a group converter which is invoked for each
 // field in a group to get a converter for that field, and then each of those
 // converts is in turn called with the basic value.
 // The converter must know what to do with the basic value so where basic values
@@ -43,7 +43,7 @@ class RowReadSupport extends ReadSupport[Row] with Logging {
 class RowRecordMaterializer(fileSchema: MessageType,
                             readContext: ReadContext) extends RecordMaterializer[Row] with Logging {
 
-  val schema = ParquetSchemaFns.fromParquetMessageType(readContext.getRequestedSchema)
+  private val schema = ParquetSchemaFns.fromParquetMessageType(readContext.getRequestedSchema)
   logger.debug(s"Record materializer will create row with schema $schema")
 
   override val getRootConverter: StructConverter = new StructConverter(schema, -1, None)
@@ -148,7 +148,7 @@ class StringConverter(index: Int,
                       builder: ValuesBuilder) extends PrimitiveConverter with Logging {
   require(builder != null)
 
-  private var dict: Array[String] = null
+  private var dict: Array[String] = _
 
   override def addBinary(value: Binary): Unit = builder.put(index, value.toStringUsingUTF8)
 
@@ -228,6 +228,6 @@ class ArrayBuilder(size: Int) extends ValuesBuilder {
 
   def result: Seq[Any] = array
 
-  def reset() = array = Array.ofDim(size)
+  def reset(): Unit = array = Array.ofDim(size)
   def put(pos: Int, value: Any): Unit = array(pos) = value
 }

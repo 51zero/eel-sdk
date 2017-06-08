@@ -10,7 +10,7 @@ import org.apache.parquet.hadoop.api.ReadSupport
 import org.apache.parquet.schema.Type
 
 /**
-  * Helper function to create a parquet reader, using the apache parquet library.
+  * Helper function to create a native parquet reader for Row objects, using the apache parquet library.
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */

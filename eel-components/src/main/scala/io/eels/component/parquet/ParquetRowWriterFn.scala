@@ -9,7 +9,7 @@ import org.apache.parquet.hadoop.{ParquetFileWriter, ParquetWriter}
 import org.apache.parquet.schema.MessageType
 
 /**
-  * Helper function for create a native ParquetWriter using the apache parquet library.
+  * Helper function to create a native ParquetWriter for Row objects using the apache parquet library.
   * Uses config keys to support compression codec, page size, and block size.
   *
   * @param path     the path to save the file at
@@ -17,7 +17,7 @@ import org.apache.parquet.schema.MessageType
   *                 of the schema set in the data.
   * @param metadata extra metadata to add to the parquet file when it is closed
   */
-object ParquetWriterFn {
+object ParquetRowWriterFn {
 
   class RowParquetWriterBuilder(path: Path, schema: MessageType, metadata: Map[String, String])
     extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {

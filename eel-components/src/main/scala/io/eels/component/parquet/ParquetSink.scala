@@ -23,7 +23,7 @@ case class ParquetSink(path: Path,
     if (overwrite && fs.exists(path))
       fs.delete(path, false)
 
-    private val writer = ParquetWriterFn(path, schema, metadata)
+    private val writer = ParquetRowWriterFn(path, schema, metadata)
 
     override def write(row: Row): Unit = {
       writer.write(row)
