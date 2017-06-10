@@ -1,6 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
+import io.eels.dataframe.{DataStream, ExecutionManager, Partition}
 import io.eels.schema.StructType
 import io.eels.util.JacksonSupport
 
@@ -32,6 +33,15 @@ trait Source extends Logging {
   }
 
   def toFrame(): Frame = toFrame(NoopListener)
-
   def toFrame(_listener: Listener): Frame = new SourceFrame(this, _listener)
+
+  def toDataStream(): DataStream = toDataStream(NoopListener)
+  def toDataStream(listener: Listener): DataStream = new DataStream {
+    override def schema: StructType = outer.schema
+    override private[eels] def partitions(implicit em: ExecutionManager) = outer.parts().map { part =>
+      val values = part.iterator.toVector.flatMap(_.map(_.values))
+      Partition(values)
+    }
+  }
+
 }

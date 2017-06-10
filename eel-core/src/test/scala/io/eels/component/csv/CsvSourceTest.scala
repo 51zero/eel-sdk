@@ -16,7 +16,7 @@ class CsvSourceTest extends WordSpec with Matchers {
     "read schema" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).schema() shouldBe StructType(
+      CsvSource(path).schema shouldBe StructType(
         Field("a", StringType, true),
         Field("b", StringType, true),
         Field("c", StringType, true)
@@ -73,7 +73,7 @@ class CsvSourceTest extends WordSpec with Matchers {
     "support comments for headers" in {
       val file = getClass.getResource("/io/eels/component/csv/comments.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withHeader(Header.FirstComment).schema() shouldBe StructType(
+      CsvSource(path).withHeader(Header.FirstComment).schema shouldBe StructType(
         Field("a", StringType, true),
         Field("b", StringType, true),
         Field("c", StringType, true)
@@ -84,7 +84,7 @@ class CsvSourceTest extends WordSpec with Matchers {
     "terminate if asking for first comment but no comments" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
-      CsvSource(path).withHeader(Header.FirstComment).schema() shouldBe StructType(
+      CsvSource(path).withHeader(Header.FirstComment).schema shouldBe StructType(
         Field("", StringType, true)
       )
     }

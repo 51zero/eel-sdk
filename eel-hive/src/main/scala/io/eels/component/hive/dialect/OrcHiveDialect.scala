@@ -2,7 +2,7 @@ package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.{HiveDialect, HiveWriter}
-import io.eels.component.orc.{OrcPart, OrcWriter}
+import io.eels.component.orc.{OrcPart, OrcSinkConfig, OrcWriter}
 import io.eels.schema.StructType
 import io.eels.{CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -24,7 +24,7 @@ object OrcHiveDialect extends HiveDialect with Logging {
                       permission: Option[FsPermission],
                       metadata: Map[String, String])(implicit fs: FileSystem, conf: Configuration): HiveWriter = {
 
-    val writer = new OrcWriter(path, schema, Nil, None)
+    val writer = new OrcWriter(path, schema, Nil, None, OrcSinkConfig())
 
     new HiveWriter {
 

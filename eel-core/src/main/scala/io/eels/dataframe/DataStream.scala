@@ -42,7 +42,7 @@ trait DataStream {
     // we can keep each partition as is, and just filter individually
     override def partitions(implicit em: ExecutionManager): Seq[Partition] = {
       val p1: Seq[Any] => Boolean = values => p(Row(schema, values))
-      partitions.map(_.filter(p1))
+      outer.partitions.map(_.filter(p1))
     }
   }
 
@@ -136,6 +136,16 @@ trait ExecutionManager {
   def collapse(partitions: Seq[Partition]): Partition
 
   def reshuffle(partitions: Seq[Partition], numOfPartitions: Int): Seq[Partition]
+}
+
+object ExecutionManager {
+  def local = new ExecutionManager {
+    override def collapse(partitions: Seq[Partition]): Partition = Partition(partitions.flatMap(_.rows))
+    override def reshuffle(partitions: Seq[Partition], numOfPartitions: Int): Seq[Partition] = {
+      val single = collapse(partitions).rows
+      single.grouped(Math.ceil(single.size / numOfPartitions.toDouble).toInt).map { values => Partition(values) }.toSeq
+    }
+  }
 }
 
 trait Action[T] {

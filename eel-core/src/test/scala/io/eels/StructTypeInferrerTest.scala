@@ -14,7 +14,7 @@ class StructTypeInferrerTest extends WordSpec with Matchers {
   "SchemaInferrer" should {
     "use rules to infer column types" in {
       val inferrer = SchemaInferrer(StringType, DataTypeRule("a", IntType(true), false), DataTypeRule("b", BooleanType))
-      CsvSource(path).withHeader(Header.FirstRow).withSchemaInferrer(inferrer).schema() shouldBe StructType(
+      CsvSource(path).withHeader(Header.FirstRow).withSchemaInferrer(inferrer).schema shouldBe StructType(
         Field("a", IntType(true), false),
         Field("b", BooleanType, true),
         Field("c", StringType, true)
