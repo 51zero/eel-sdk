@@ -2,6 +2,10 @@ package io.eels.dataframe
 
 import io.eels.Row
 import io.eels.schema.StructType
+import io.reactivex.Flowable
+import io.reactivex.functions.{Function, Predicate}
+
+import scala.language.implicitConversions
 
 /**
   * A DataStream is kind of like a table of data. It has fields (like columns) and rows of data. Each row
@@ -23,6 +27,10 @@ import io.eels.schema.StructType
 trait DataStream {
   outer =>
 
+  private implicit def reactiveToScala[T, R](f: T => R): Function[T, R] = new io.reactivex.functions.Function[T, R] {
+    override def apply(t: T): R = f(t)
+  }
+
   /**
     * Returns the Schema for this stream. This call will not cause a full evaluation, but only
     * the operations required to retrieve a schema will occur. For example, on a stream backed
@@ -31,18 +39,36 @@ trait DataStream {
     */
   def schema: StructType
 
-  private[eels] def partitions(implicit em: ExecutionManager): Seq[Partition]
+  private[eels] def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]]
+
+  def map(f: Row => Row): DataStream = new DataStream {
+    override def schema: StructType = outer.schema
+    override private[eels] def partitions(implicit em: ExecutionManager) = {
+      outer.partitions.map { part =>
+        part.map(f): Flowable[Row]
+      }
+    }
+  }
 
   /**
     * For each row in the steam, filter drop any rows which do not match the predicate.
     * EXAMPLE OF A 1-1 operation
     */
-  def filter(p: (Row) => Boolean): DataStream = new DataStream {
+  def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
-    override def partitions(implicit em: ExecutionManager): Seq[Partition] = {
-      val p1: Seq[Any] => Boolean = values => p(Row(schema, values))
-      outer.partitions.map(_.filter(p1))
+    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+      outer.partitions.map(_.filter(new Predicate[Row] {
+        override def test(row: Row): Boolean = p(row)
+      }))
+    }
+  }
+
+  def take(k: Int): DataStream = new DataStream {
+    override def schema: StructType = outer.schema
+    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+      val merged = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
+      Seq(merged.take(k))
     }
   }
 
@@ -52,15 +78,16 @@ trait DataStream {
     */
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions(implicit em: ExecutionManager): Seq[Partition] = {
-      Seq(em.collapse(outer.partitions).drop(k))
+    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+      val merged = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
+      Seq(merged.skip(k))
     }
   }
 
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def partitions(implicit em: ExecutionManager): Seq[Partition] = outer.partitions
+    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = outer.partitions
   }
 
   /**
@@ -73,13 +100,13 @@ trait DataStream {
     */
   def join(other: DataStream): DataStream = new DataStream {
     override def schema: StructType = outer.schema.join(other.schema)
-    override def partitions(implicit em: ExecutionManager): Seq[Partition] = {
+    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
       // we must collapse each stream into a single partition, because otherwise each partition
       // may have differing numbers of rows and then they wouldn't match up properly
       val a = em.collapse(partitions)
       val b = em.collapse(other.partitions)
       // with two partitions we can now join together
-      Seq(Partition(a.rows ++ b.rows))
+      Nil
     }
   }
 
@@ -115,16 +142,13 @@ object DataStream {
     * Create an in memory DataStream from the given Seq of values, and schema.
     * This will result in a single partitioned DataStream.
     */
-  def apply(_schema: StructType, rows: Seq[Seq[Any]]): DataStream = new DataStream {
+  def apply(_schema: StructType, values: Seq[Seq[Any]]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions(implicit em: ExecutionManager) = Seq(Partition(rows))
+    override private[eels] def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+      val rows = values.map(Row(schema, _))
+      Seq(Flowable.fromArray(rows: _*))
+    }
   }
-}
-
-case class Partition(rows: Seq[Seq[Any]]) {
-  def filter(p: (Seq[Any]) => Boolean): Partition = Partition(rows.filter(p))
-  def join(other: Partition): Partition = Partition(rows.zip(other.rows).map { case (t, u) => t ++ u })
-  def drop(k: Int): Partition = Partition(rows.drop(k))
 }
 
 trait ExecutionManager {
@@ -133,18 +157,15 @@ trait ExecutionManager {
     * Returns a new Partition which is the result of flattening all given
     * partitions into a single partition.
     */
-  def collapse(partitions: Seq[Partition]): Partition
+  def collapse(partitions: Seq[Flowable[Row]]): Flowable[Row]
 
-  def reshuffle(partitions: Seq[Partition], numOfPartitions: Int): Seq[Partition]
+  def reshuffle(partitions: Seq[Flowable[Row]], numOfPartitions: Int): Seq[Flowable[Row]]
 }
 
 object ExecutionManager {
   def local = new ExecutionManager {
-    override def collapse(partitions: Seq[Partition]): Partition = Partition(partitions.flatMap(_.rows))
-    override def reshuffle(partitions: Seq[Partition], numOfPartitions: Int): Seq[Partition] = {
-      val single = collapse(partitions).rows
-      single.grouped(Math.ceil(single.size / numOfPartitions.toDouble).toInt).map { values => Partition(values) }.toSeq
-    }
+    override def collapse(partitions: Seq[Flowable[Row]]): Flowable[Row] = ???
+    override def reshuffle(partitions: Seq[Flowable[Row]], numOfPartitions: Int): Seq[Flowable[Row]] = ???
   }
 }
 
@@ -153,8 +174,12 @@ trait Action[T] {
 }
 
 case class VectorAction(ds: DataStream) extends Action[Vector[Row]] {
+
+  import scala.collection.JavaConverters._
+
   def execute(em: ExecutionManager): Vector[Row] = {
-    val schema = ds.schema
-    ds.partitions(em).flatMap(_.rows).map(Row(schema, _)).toVector
+    ds.partitions(em).flatMap { flowable =>
+      flowable.blockingIterable().asScala
+    }.toVector
   }
 }

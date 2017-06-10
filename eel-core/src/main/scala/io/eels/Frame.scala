@@ -299,6 +299,7 @@ trait Frame {
     override def rows(): CloseableIterator[Row] = outer.rows().drop(k)
   }
 
+  @deprecated("use datastream", "1.2.0")
   def map(f: (Row) => Row): Frame = new Frame {
     override def rows(): CloseableIterator[Row] = outer.rows().map(f)
     override def schema: StructType = outer.schema

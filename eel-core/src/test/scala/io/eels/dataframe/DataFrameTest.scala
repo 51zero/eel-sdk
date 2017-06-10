@@ -17,9 +17,21 @@ class DataFrameTest extends WordSpec with Matchers {
     }
   }
 
+  "DataFrame.map" should {
+    "transform each row" in {
+      source.toDataStream().map(row => row.add("foo", "moo")).take(1).collect.flatMap(_.values) should contain("moo")
+    }
+  }
+
+  "DataFrame.take" should {
+    "keep only the required number of rows" in {
+      source.toDataStream().take(3).collect.size shouldBe 3
+    }
+  }
+
   "DataFrame.drop" should {
     "drop required number of rows" in {
-      source.toDataStream().drop(66).collect.size shouldBe 434
+      source.toDataStream().drop(32).collect.size shouldBe 468
     }
   }
 }
