@@ -39,23 +39,6 @@ object Build extends Build {
     )
   )
 
-  val componentsSettings = Seq(
-    libraryDependencies ++= Seq(
-      "org.apache.hadoop"                       % "hadoop-hdfs"                         % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-mapreduce"                    % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-mapreduce-client"             % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-mapreduce-client-core"        % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-yarn-client"                  % HadoopVersion,
-      "org.apache.hadoop"                       % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
-      "org.apache.parquet"                      % "parquet-avro"                        % ParquetVersion,
-      "org.apache.derby"                        % "derby"                               % DerbyVersion,
-      "com.h2database"                          % "h2"                                  % H2Version,
-      "org.apache.spark"                        %% "spark-sql"                          % "2.1.0"           % "test",
-      "org.apache.twill"  % "twill-api"         % "0.11.0",
-      "org.apache.twill"  % "twill-yarn"        % "0.11.0"
-    )
-  )
-
   val orcSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.orc"                          % "orc-core"                % OrcVersion,
@@ -98,10 +81,20 @@ object Build extends Build {
       "com.univocity"               % "univocity-parsers"       % UnivocityVersion,
       "org.apache.avro"             % "avro"                    % AvroVersion,
       "org.apache.hadoop"           % "hadoop-common"           % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
+      "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce-client"             % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
+      "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion,
+      "org.apache.derby"            % "derby"                               % DerbyVersion,
+      "com.h2database"              % "h2"                                  % H2Version,
       "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
+      "org.apache.spark"            %% "spark-sql"              % "2.1.0"           % "test",
       "org.apache.logging.log4j"    % "log4j-api"               % "2.7"             % "test",
       "org.apache.logging.log4j"    % "log4j-core"              % "2.7"             % "test",
       "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % "2.7"             % "test",
@@ -144,7 +137,6 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel")
     .aggregate(core,
-      components,
       orc,
       hive,
 //      kafka,
@@ -154,25 +146,17 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel-core")
 
-  lazy val components = Project("eel-components", file("eel-components"))
-    .settings(rootSettings: _*)
-    .settings(componentsSettings: _*)
-    .settings(name := "eel-components")
-    .dependsOn(core)
-
   lazy val orc = Project("eel-orc", file("eel-orc"))
     .settings(rootSettings: _*)
-    .settings(componentsSettings: _*)
     .settings(orcSettings: _*)
     .settings(name := "eel-orc")
     .dependsOn(core)
 
   lazy val hive = Project("eel-hive", file("eel-hive"))
     .settings(rootSettings: _*)
-    .settings(componentsSettings: _*)
     .settings(hiveSettings: _*)
     .settings(name := "eel-hive")
-    .dependsOn(core, components, orc)
+    .dependsOn(core, orc)
 
 //  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
 //    .settings(rootSettings: _*)
@@ -183,7 +167,6 @@ object Build extends Build {
 
   lazy val kudu = Project("eel-kudu", file("eel-kudu"))
     .settings(rootSettings: _*)
-    .settings(componentsSettings: _*)
     .settings(kuduSettings: _*)
     .settings(name := "eel-kudu")
     .dependsOn(core)

@@ -15,7 +15,7 @@ trait CloseableIterator[+T] {
   final def isClosed(): Boolean = closed
   def close(): Unit = closed = true
 
-  def foreach[U](f: T => U) = iter.foreach(f)
+  def foreach[U](f: T => U): Unit = iter.foreach(f)
 
   def head: T = {
     val h = iterator.take(1).toList.head
@@ -28,7 +28,7 @@ trait CloseableIterator[+T] {
     override val iterator: Iterator[U] = self.iter.map(f)
   }
 
-  def foldLeft[U](z: U)(op: (U, T) => U) = iterator.foldLeft(z)(op)
+  def foldLeft[U](z: U)(op: (U, T) => U): U = iterator.foldLeft(z)(op)
 
   def dropWhile(p: T => Boolean): CloseableIterator[T] = new CloseableIterator[T] {
     override def close(): Unit = self.close()
@@ -40,7 +40,7 @@ trait CloseableIterator[+T] {
     override val iterator: Iterator[T] = self.iter.drop(k)
   }
 
-  def size = iter.size
+  def size: Int = iter.size
 
   def take(k: Int): CloseableIterator[T] = new CloseableIterator[T] {
     override def close(): Unit = self.close()
@@ -75,9 +75,9 @@ trait CloseableIterator[+T] {
   def toList: List[T] = iter.toList
   def toVector: Vector[T] = iter.toVector
 
-  def forall(p: T => Boolean) = iter.forall(p)
-  def exists(p: T => Boolean) = iter.exists(p)
-  def find(p: T => Boolean) = iter.find(p)
+  def forall(p: T => Boolean): Boolean = iter.forall(p)
+  def exists(p: T => Boolean): Boolean = iter.exists(p)
+  def find(p: T => Boolean): Option[T] = iter.find(p)
 
   def zip[U](other: CloseableIterator[U]) = new CloseableIterator[(T, U)] {
 

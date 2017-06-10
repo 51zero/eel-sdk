@@ -284,6 +284,7 @@ trait Frame {
     * Returns a new Frame where the schema has been lowercased.
     * This does not affect values.
     */
+  @deprecated("use datastream", "1.2.0")
   def withLowerCaseSchema(): Frame = new Frame {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
@@ -292,6 +293,7 @@ trait Frame {
     }
   }
 
+  @deprecated("use datastream", "1.2.0")
   def drop(k: Int): Frame = new Frame {
     override def schema: StructType = outer.schema
     override def rows(): CloseableIterator[Row] = outer.rows().drop(k)
@@ -304,6 +306,7 @@ trait Frame {
 
   def filterNot(p: (Row) => Boolean): Frame = filter { str => !p(str) }
 
+  @deprecated("use datastream", "1.2.0")
   def filter(p: (Row) => Boolean): Frame = new Frame {
     override def schema: StructType = outer.schema
     override def rows(): CloseableIterator[Row] = outer.rows().filter(p)
@@ -352,7 +355,7 @@ trait Frame {
   def collect(): Vector[Row] = rows().toVector
 
   def toSeq(): Seq[Row] = collect
-  @deprecated("now returns a vector")
+  @deprecated("use toVector")
   def toList(): List[Row] = rows().toList
   def toVector(): Vector[Row] = collect
   def toSet(): Set[Row] = toVector().toSet

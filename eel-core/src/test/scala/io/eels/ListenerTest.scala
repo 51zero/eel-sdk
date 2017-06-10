@@ -1,4 +1,5 @@
 package io.eels
+
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels.component.csv.{CsvSink, CsvSource}
