@@ -15,7 +15,7 @@ object HdfsOps extends Logging {
   }
 
   def findFiles(path: Path, recursive: Boolean, fs: FileSystem): Iterator[LocatedFileStatus] = {
-    HdfsIterator(fs.listFiles(path, recursive))
+    HdfsIterator.remote(fs.listFiles(path, recursive))
   }
 
   def mkdirsp(path: Path, fs: FileSystem): Boolean = PathIterator(path).forall(fs.mkdirs)

@@ -1,10 +1,11 @@
 package io.eels.util
 
-import org.apache.hadoop.fs.{LocatedFileStatus, RemoteIterator}
+import org.apache.hadoop.fs.RemoteIterator
 
+// returns an iterator from a hadoop remote iterator
 object HdfsIterator {
-  def apply(iterator: RemoteIterator[LocatedFileStatus]): Iterator[LocatedFileStatus] = new Iterator[LocatedFileStatus] {
+  def remote[T](iterator: RemoteIterator[T]): Iterator[T] = new Iterator[T] {
     override def hasNext(): Boolean = iterator.hasNext()
-    override def next(): LocatedFileStatus = iterator.next()
+    override def next(): T = iterator.next()
   }
 }

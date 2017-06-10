@@ -22,7 +22,7 @@ object HiveFileScanner extends Logging {
     logger.debug(s"Scanning $path, filtering=$ignoreHiddenFiles, pattern=$hiddenFilePattern")
     val files: List[LocatedFileStatus] = if (fs.exists(path)) {
       val files = fs.listFiles(path, true)
-      HdfsIterator(files)
+      HdfsIterator.remote(files)
           .filter(_.isFile)
           .filterNot(skip)
           .toList

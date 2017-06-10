@@ -8,6 +8,7 @@ import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{FilePattern, Part, Predicate, Source}
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -32,7 +33,7 @@ case class HiveSource(dbName: String,
                       client: IMetaStoreClient) extends Source with Logging with Using {
     ParquetLogMute()
 
-  implicit val conf = fs.getConf
+  implicit val conf: Configuration = fs.getConf
   val ops = new HiveOps(client)
 
   @deprecated("use withProjection()", "1.1.0")
@@ -50,7 +51,7 @@ case class HiveSource(dbName: String,
   def files(): Map[Path, Seq[Path]] = {
     ops.partitions(dbName, tableName).map { p =>
       val location = new Path(p.getSd.getLocation)
-      val paths = HdfsIterator(fs.listFiles(location, false)).map(_.getPath).toList
+      val paths = HdfsIterator.remote(fs.listFiles(location, false)).map(_.getPath).toList
       location -> paths
     }.toMap
   }
@@ -60,7 +61,7 @@ case class HiveSource(dbName: String,
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSource = {
     login()
-    copy(principal = principal.some, keytabPath = keytabPath.some)
+    copy(principal = principal.some, keytabPath = keytabPath.option)
   }
 
   private def login(): Unit = {

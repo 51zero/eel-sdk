@@ -27,12 +27,12 @@ case class FilePattern(pattern: String,
     if (isDirectory()) {
       val path = new Path(pattern.stripSuffix("/*"))
       logger.debug("File expansion will check path: " + path)
-      HdfsIterator(fs.listFiles(path, true)).map(_.getPath).toList.filter(fs.isFile).filter(filter)
+      HdfsIterator.remote(fs.listFiles(path, true)).map(_.getPath).toList.filter(fs.isFile).filter(filter)
     } else if (isWildcard()) {
       val path = new Path(pattern.stripSuffix("*")).getParent
       val regex = new File(pattern).getName.replace("*", ".*")
       logger.debug("File expansion will check path: " + path)
-      HdfsIterator(fs.listFiles(path, false)).toList.map(_.getPath).filter(_.getName.matches(regex)).filter(filter)
+      HdfsIterator.remote(fs.listFiles(path, false)).toList.map(_.getPath).filter(_.getName.matches(regex)).filter(filter)
     } else {
       List(new Path(pattern))
     }

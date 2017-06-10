@@ -7,6 +7,8 @@ import scala.collection.JavaConverters._
   * A Coercer will coerce input values into an output value of type T.
   * The types of coercion supported depends on the implementation but for example,
   * a Double coercer might support converting a String, Float and Long to a Double.
+  *
+  * Note: No-coercer should be lossy.
   */
 trait Coercer[T] {
   def coerce(input: Any): T
