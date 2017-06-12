@@ -1,9 +1,12 @@
 package io.eels.dataframe
 
+import java.util.function
+import java.util.function.Predicate
+
+import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.schema.StructType
-import io.reactivex.Flowable
-import io.reactivex.functions.{Function, Predicate}
+import reactor.core.publisher.Flux
 
 import scala.language.implicitConversions
 
@@ -24,12 +27,8 @@ import scala.language.implicitConversions
   * to individual files, again allowing parallelization.
   *
   */
-trait DataStream {
+trait DataStream extends Logging {
   outer =>
-
-  private implicit def reactiveToScala[T, R](f: T => R): Function[T, R] = new io.reactivex.functions.Function[T, R] {
-    override def apply(t: T): R = f(t)
-  }
 
   /**
     * Returns the Schema for this stream. This call will not cause a full evaluation, but only
@@ -39,13 +38,21 @@ trait DataStream {
     */
   def schema: StructType
 
-  private[eels] def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]]
+  private implicit def scala2javafn[T, R](f: T => R): function.Function[T, R] = new java.util.function.Function[T, R] {
+    override def apply(t: T): R = f(t)
+  }
+
+  private implicit def scala2javapred[T](f: T => Boolean): function.Predicate[T] = new java.util.function.Predicate[T] {
+    override def test(t: T): Boolean = f(t)
+  }
+
+  private[eels] def partitions(implicit em: ExecutionManager): Seq[Flux[Row]]
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     override private[eels] def partitions(implicit em: ExecutionManager) = {
       outer.partitions.map { part =>
-        part.map(f): Flowable[Row]
+        part.map(f): Flux[Row]
       }
     }
   }
@@ -57,17 +64,32 @@ trait DataStream {
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
-    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
       outer.partitions.map(_.filter(new Predicate[Row] {
-        override def test(row: Row): Boolean = p(row)
+        override def test(row: Row): Boolean = {
+          p(row)
+        }
       }))
     }
   }
 
+  private def merged(implicit em: ExecutionManager) = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
+
+  def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
+  def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
+    override def schema: StructType = outer.schema
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = Seq(merged.takeWhile(pred))
+  }
+
+  def takeUntil(fieldName: String, pred: Any => Boolean): DataStream = takeUntil(row => pred(row.get(fieldName)))
+  def takeUntil(pred: Row => Boolean): DataStream = new DataStream {
+    override def schema: StructType = outer.schema
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = Seq(merged.takeUntil(pred))
+  }
+
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
-      val merged = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
       Seq(merged.take(k))
     }
   }
@@ -78,7 +100,7 @@ trait DataStream {
     */
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
       val merged = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
       Seq(merged.skip(k))
     }
@@ -87,7 +109,7 @@ trait DataStream {
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = outer.partitions
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = outer.partitions
   }
 
   /**
@@ -100,7 +122,7 @@ trait DataStream {
     */
   def join(other: DataStream): DataStream = new DataStream {
     override def schema: StructType = outer.schema.join(other.schema)
-    override def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
       // we must collapse each stream into a single partition, because otherwise each partition
       // may have differing numbers of rows and then they wouldn't match up properly
       val a = em.collapse(partitions)
@@ -143,10 +165,13 @@ object DataStream {
     * This will result in a single partitioned DataStream.
     */
   def apply(_schema: StructType, values: Seq[Seq[Any]]): DataStream = new DataStream {
+
+    import scala.collection.JavaConverters._
+
     override def schema: StructType = _schema
-    override private[eels] def partitions(implicit em: ExecutionManager): Seq[Flowable[Row]] = {
+    override private[eels] def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
       val rows = values.map(Row(schema, _))
-      Seq(Flowable.fromArray(rows: _*))
+      Seq(Flux.fromIterable(rows.asJava))
     }
   }
 }
@@ -157,15 +182,15 @@ trait ExecutionManager {
     * Returns a new Partition which is the result of flattening all given
     * partitions into a single partition.
     */
-  def collapse(partitions: Seq[Flowable[Row]]): Flowable[Row]
+  def collapse(partitions: Seq[Flux[Row]]): Flux[Row]
 
-  def reshuffle(partitions: Seq[Flowable[Row]], numOfPartitions: Int): Seq[Flowable[Row]]
+  def reshuffle(partitions: Seq[Flux[Row]], numOfPartitions: Int): Seq[Flux[Row]]
 }
 
 object ExecutionManager {
   def local = new ExecutionManager {
-    override def collapse(partitions: Seq[Flowable[Row]]): Flowable[Row] = ???
-    override def reshuffle(partitions: Seq[Flowable[Row]], numOfPartitions: Int): Seq[Flowable[Row]] = ???
+    override def collapse(partitions: Seq[Flux[Row]]): Flux[Row] = ???
+    override def reshuffle(partitions: Seq[Flux[Row]], numOfPartitions: Int): Seq[Flux[Row]] = ???
   }
 }
 
@@ -178,8 +203,8 @@ case class VectorAction(ds: DataStream) extends Action[Vector[Row]] {
   import scala.collection.JavaConverters._
 
   def execute(em: ExecutionManager): Vector[Row] = {
-    ds.partitions(em).flatMap { flowable =>
-      flowable.blockingIterable().asScala
+    ds.partitions(em).flatMap { flux =>
+      flux.toIterable.asScala.toVector
     }.toVector
   }
 }

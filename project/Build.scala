@@ -81,6 +81,7 @@ object Build extends Build {
       "com.univocity"               % "univocity-parsers"       % UnivocityVersion,
       "org.apache.avro"             % "avro"                    % AvroVersion,
       "io.reactivex.rxjava2"        % "rxjavafx"                % "2.1.0",
+      "io.projectreactor"           % "reactor-core"            % "3.0.7.RELEASE",
       "org.apache.hadoop"           % "hadoop-common"           % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
       "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
       "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
