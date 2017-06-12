@@ -52,4 +52,15 @@ class DataStreamTest extends WordSpec with Matchers {
       source.toDataStream.takeUntil("web", _.toString.contains(".de")).collect.size shouldBe 7
     }
   }
+
+  "DataStream.renameField" should {
+    "update the schema" in {
+      source.toDataStream.renameField("web", "website").schema.fieldNames() shouldBe
+        Vector("first_name", "last_name", "company_name", "address", "city", "county", "postal", "phone1", "phone2", "email", "website")
+    }
+    "copy the rows with updated schema" in {
+      source.toDataStream.renameField("web", "website").take(1).collect.head.schema.fieldNames() shouldBe
+        Vector("first_name", "last_name", "company_name", "address", "city", "county", "postal", "phone1", "phone2", "email", "website")
+    }
+  }
 }

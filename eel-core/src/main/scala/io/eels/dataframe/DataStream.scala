@@ -75,6 +75,18 @@ trait DataStream extends Logging {
 
   private def merged(implicit em: ExecutionManager) = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
 
+  def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
+    override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
+    override private[eels] def partitions(implicit em: ExecutionManager) = {
+      val updatedSchema = schema
+      outer.partitions.map { flux =>
+        flux.map(new function.Function[Row, Row] {
+          override def apply(row: Row): Row = Row(updatedSchema, row.values)
+        }): Flux[Row]
+      }
+    }
+  }
+
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema

@@ -246,30 +246,6 @@ class FrameTest extends WordSpec with Matchers with Eventually {
     //        Row(schema, "ham")
     //      )
     //    }
-    "support take while with row predicate" in {
-      val frame = Frame.fromValues(
-        StructType("name", "location"),
-        List("sam", "aylesbury"),
-        List("jam", "aylesbury"),
-        List("ham", "buckingham")
-      )
-      frame.takeWhile(row => row.get(1) == "aylesbury").toSet shouldBe Set(
-        Row(frame.schema, "sam", "aylesbury"),
-        Row(frame.schema, "jam", "aylesbury")
-      )
-    }
-    "support take while with column predicate" in {
-      val frame = Frame.fromValues(
-        StructType("name", "location"),
-        List("sam", "aylesbury"),
-        List("jam", "aylesbury"),
-        List("ham", "buckingham")
-      )
-      frame.takeWhile("location", _ == "aylesbury").toSet shouldBe Set(
-        Row(frame.schema, "sam", "aylesbury"),
-        Row(frame.schema, "jam", "aylesbury")
-      )
-    }
     "support drop while" in {
       val frame = Frame.fromValues(
         StructType("name", "location"),
@@ -393,14 +369,6 @@ class FrameTest extends WordSpec with Matchers with Eventually {
       )
       frame.updateField(Field("name", BooleanType, true)).schema shouldBe
         StructType(Field("name", BooleanType, true), Field("location", StringType))
-    }
-    "support column rename" in {
-      val frame = Frame.fromValues(
-        StructType("name", "location"),
-        List("sam", "aylesbury"),
-        List("ham", "buckingham")
-      )
-      frame.renameField("name", "blame").schema shouldBe StructType("blame", "location")
     }
     "convert from a Seq[T<:Product]" ignore {
 

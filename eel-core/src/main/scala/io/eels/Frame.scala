@@ -78,24 +78,6 @@ trait Frame {
 
   def listener(listener: Listener): Frame = foreach(listener.onNext)
 
-  def take(n: Int) = new Frame {
-    override def schema: StructType = outer.schema
-    override def rows(): CloseableIterator[Row] = outer.rows().take(n)
-  }
-
-  def takeWhile(pred: (Row) => Boolean): Frame = new Frame {
-    override def schema: StructType = outer.schema
-    override def rows(): CloseableIterator[Row] = outer.rows.takeWhile(pred)
-  }
-
-  def takeWhile(fieldName: String, pred: (Any) => Boolean): Frame = new Frame {
-    override def schema: StructType = outer.schema
-    override def rows(): CloseableIterator[Row] = {
-      val index = outer.schema.indexOf(fieldName)
-      outer.rows().takeWhile { row => pred(row.values(index)) }
-    }
-  }
-
   def updateFieldType(fieldName: String, fieldType: DataType): Frame = new Frame {
     override def schema: StructType = outer.schema.updateFieldType(fieldName, fieldType)
     override def rows(): CloseableIterator[Row] = outer.rows()
@@ -198,11 +180,6 @@ trait Frame {
     override def rows(): CloseableIterator[Row] = {
       throw new UnsupportedOperationException()
     }
-  }
-
-  def renameField(nameFrom: String, nameTo: String): Frame = new Frame {
-    override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
-    override def rows(): CloseableIterator[Row] = outer.rows()
   }
 
   /**
