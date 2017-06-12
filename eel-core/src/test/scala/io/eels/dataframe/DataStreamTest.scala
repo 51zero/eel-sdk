@@ -7,7 +7,6 @@ import org.scalatest.{Matchers, WordSpec}
 
 class DataStreamTest extends WordSpec with Matchers {
 
-  implicit val em = ExecutionManager.local
   val file = getClass.getResource("/uk-500.csv").toURI()
   val source = CsvSource(Paths.get(file))
 

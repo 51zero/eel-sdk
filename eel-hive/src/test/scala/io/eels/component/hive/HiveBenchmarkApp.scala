@@ -4,7 +4,6 @@ import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
-import io.eels.dataframe.ExecutionManager
 import io.eels.schema.{PartitionConstraint, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -100,8 +99,6 @@ object HiveBenchmarkApp extends App with Timed {
   Frame.fromValues(schema, rows).to(sink)
 
   logger.info("Write complete")
-
-  implicit val em = ExecutionManager.local
 
   while (true) {
 

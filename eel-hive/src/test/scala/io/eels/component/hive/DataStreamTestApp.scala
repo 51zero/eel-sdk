@@ -1,6 +1,5 @@
 package io.eels.component.hive
 
-import io.eels.dataframe.ExecutionManager
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -20,8 +19,6 @@ object DataStreamTestApp extends App {
   hiveConf.reloadConfiguration()
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
-
-  implicit val em = ExecutionManager.local
 
   val source = HiveSource("sam", "foo1")
   val ds = source.toDataStream()

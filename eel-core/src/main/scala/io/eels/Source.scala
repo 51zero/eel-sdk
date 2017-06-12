@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
-import io.eels.dataframe.{DataStream, ExecutionManager}
+import io.eels.dataframe.DataStream
 import io.eels.schema.StructType
 import io.eels.util.JacksonSupport
 import reactor.core.scheduler.Schedulers
@@ -40,7 +40,7 @@ trait Source extends Logging {
 
   def toDataStream(listener: Listener): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions(implicit em: ExecutionManager) = {
+    override private[eels] def partitions = {
       parts().map(_.flux.subscribeOn(Schedulers.elastic))
     }
   }
