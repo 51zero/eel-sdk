@@ -38,6 +38,8 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
+  private[eels] def partitions(implicit em: ExecutionManager): Seq[Flux[Row]]
+
   private implicit def scala2javafn[T, R](f: T => R): function.Function[T, R] = new java.util.function.Function[T, R] {
     override def apply(t: T): R = f(t)
   }
@@ -46,7 +48,7 @@ trait DataStream extends Logging {
     override def test(t: T): Boolean = f(t)
   }
 
-  private[eels] def partitions(implicit em: ExecutionManager): Seq[Flux[Row]]
+  private def coalesce(implicit em: ExecutionManager) = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = outer.schema
@@ -58,8 +60,7 @@ trait DataStream extends Logging {
   }
 
   /**
-    * For each row in the steam, filter drop any rows which do not match the predicate.
-    * EXAMPLE OF A 1-1 operation
+    * For each row in the stream, filter drops any rows which do not match the predicate.
     */
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
@@ -73,8 +74,6 @@ trait DataStream extends Logging {
     }
   }
 
-  private def merged(implicit em: ExecutionManager) = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
-
   def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
     override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
     override private[eels] def partitions(implicit em: ExecutionManager) = {
@@ -87,22 +86,42 @@ trait DataStream extends Logging {
     }
   }
 
+  /**
+    * Combines two frames together such that the fields from this frame are joined with the fields
+    * of the given frame. Eg, if this frame has A,B and the given frame has C,D then the result will
+    * be A,B,C,D
+    *
+    * Each stream has different partitions so we'll need to re-partition it to ensure we have an even
+    * distribution.
+    */
+  def join(other: DataStream): DataStream = new DataStream {
+    override def schema: StructType = outer.schema.join(other.schema)
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
+      // we must collapse each stream into a single partition, because otherwise each partition
+      // may have differing numbers of rows and then they wouldn't match up properly
+      val a = em.collapse(partitions)
+      val b = em.collapse(other.partitions)
+      // with two partitions we can now join together
+      Nil
+    }
+  }
+
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = Seq(merged.takeWhile(pred))
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = Seq(coalesce.takeWhile(pred))
   }
 
   def takeUntil(fieldName: String, pred: Any => Boolean): DataStream = takeUntil(row => pred(row.get(fieldName)))
   def takeUntil(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = Seq(merged.takeUntil(pred))
+    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = Seq(coalesce.takeUntil(pred))
   }
 
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
-      Seq(merged.take(k))
+      Seq(coalesce.take(k))
     }
   }
 
@@ -125,30 +144,16 @@ trait DataStream extends Logging {
   }
 
   /**
-    * Combines two frames together such that the fields from this frame are joined with the fields
-    * of the given frame. Eg, if this frame has A,B and the given frame has C,D then the result will
-    * be A,B,C,D
-    *
-    * Each stream has different partitions so we'll need to re-partition it to ensure we have an even
-    * distribution. EXAMPLE OF A RESHUFFLE.
-    */
-  def join(other: DataStream): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.join(other.schema)
-    override def partitions(implicit em: ExecutionManager): Seq[Flux[Row]] = {
-      // we must collapse each stream into a single partition, because otherwise each partition
-      // may have differing numbers of rows and then they wouldn't match up properly
-      val a = em.collapse(partitions)
-      val b = em.collapse(other.partitions)
-      // with two partitions we can now join together
-      Nil
-    }
-  }
-
-  /**
     * Action which results in all the rows being returned in memory as a Vector.
     * Alias for 'collect()'
     */
   def toVector(implicit em: ExecutionManager): Vector[Row] = collect
+
+  /**
+    * Action which returns a scala.collection.Iterator, which will result in the
+    * lazy evaluation of the stream, element by element.
+    */
+  def iterator(): Iterator[Row] = IteratorAction(this).execute()
 
   /**
     * Action which results in all the rows being returned in memory as a Vector.

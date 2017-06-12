@@ -1,11 +1,15 @@
 package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
+import java.util.function.Consumer
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.{CloseableIterator, Part, Row}
+import reactor.core.Disposable
+import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.Try
+import scala.util.control.NonFatal
 
 class JdbcPart(connFn: () => Connection,
                query: String,
@@ -13,6 +17,46 @@ class JdbcPart(connFn: () => Connection,
                fetchSize: Int = 100,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives {
+
+  override def flux(): Flux[Row] = {
+
+    val conn = connFn()
+    val stmt = conn.prepareStatement(query)
+    stmt.setFetchSize(fetchSize)
+    bindFn(stmt)
+
+    val rs = timed(s"Executing query $query") {
+      stmt.executeQuery()
+    }
+
+    val schema = schemaFor(dialect, rs)
+
+    Flux.create(new Consumer[FluxSink[Row]] {
+      override def accept(t: FluxSink[Row]): Unit = {
+
+        t.onDispose(new Disposable {
+          override def dispose(): Unit = {
+            Try { rs.close() }
+            Try { conn.close() }
+          }
+        })
+
+        try {
+          while (rs.next) {
+            val values = schema.fieldNames().map(name => rs.getObject(name))
+            val row = Row(schema, values)
+            t.next(row)
+          }
+          t.complete()
+        } catch {
+          case NonFatal(e) => t.error(e)
+        } finally {
+          Try { rs.close() }
+          Try { conn.close() }
+        }
+      }
+    })
+  }
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
 

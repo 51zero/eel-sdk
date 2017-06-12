@@ -2,8 +2,9 @@ package io.eels.component.hive
 
 import java.util.UUID
 
-import com.sksamuel.exts.Logging
+import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
+import io.eels.dataframe.ExecutionManager
 import io.eels.schema.{PartitionConstraint, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -12,7 +13,7 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 import scala.util.Random
 
-object HiveBenchmarkApp extends App with Logging {
+object HiveBenchmarkApp extends App with Timed {
 
   val states = List(
     "Alabama",
@@ -64,7 +65,7 @@ object HiveBenchmarkApp extends App with Logging {
     "Washington",
     "West Virginia",
     "Wisconsin",
-    "Wyoming")
+    "Wyoming").map(_.replace(' ', '_').toLowerCase)
 
   val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
@@ -80,7 +81,7 @@ object HiveBenchmarkApp extends App with Logging {
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
   val schema = StructType("id", "state")
-  val rows = List.fill(10000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
+  val rows = List.fill(100000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
 
   logger.info(s"Generated ${rows.size} rows")
 
@@ -100,21 +101,18 @@ object HiveBenchmarkApp extends App with Logging {
 
   logger.info("Write complete")
 
-  val start = System.currentTimeMillis()
+  implicit val em = ExecutionManager.local
 
-  val result = HiveSource("sam", "people")
-    .withPartitionConstraint(PartitionConstraint.lte("state", "Iowa"))
-    .withProjection("id", "foo", "woo").toFrame().toList
+  while (true) {
 
-  val end = System.currentTimeMillis()
+    timed("frame took") {
+      val result = HiveSource("sam", "people").toDataStream().collect
+      println(result.size)
+    }
 
-  import scala.concurrent.duration._
-
-  val duration = (end - start).millis
-
-  logger.info(s"Read complete ${result.size} results")
-  logger.info(s"Read took === ${duration.toSeconds} $duration")
-  result.take(100).foreach { row =>
-    logger.info("row=" + row)
+    timed("datastream took") {
+      val result = HiveSource("sam", "people").toDataStream().collect
+      println(result.size)
+    }
   }
 }

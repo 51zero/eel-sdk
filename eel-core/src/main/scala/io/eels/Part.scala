@@ -1,5 +1,7 @@
 package io.eels
 
+import reactor.core.publisher.Flux
+
 /**
  * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
  * in a multi-table source. Splitting sources into parts allows them to be read concurrently, therefore,
@@ -13,4 +15,7 @@ trait Part {
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
   def iterator(): CloseableIterator[Seq[Row]]
+
+  def flux(): Flux[Row] = Flux.empty()
+
 }

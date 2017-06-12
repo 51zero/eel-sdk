@@ -1,9 +1,10 @@
 package io.eels.component.hive
 
-import io.eels.{Predicate, _}
 import io.eels.schema.{PartitionPart, StructType}
+import io.eels.{Predicate, _}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
+import reactor.core.publisher.Flux
 
 /**
   * @param metastoreSchema  the schema as present in the metastore and used to match up with the raw data in dialects
@@ -26,6 +27,40 @@ class HiveFilePart(val dialect: HiveDialect,
                    val partitions: List[PartitionPart])
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
+
+  override def flux(): Flux[Row] = {
+
+    val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
+
+    // the schema we send to the dialect must have any partitions removed, because those fields won't exist
+    // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
+    val projectionFields = projectionSchema.fields.filterNot { it => partitionMap.contains(it.name) }
+
+    // after removing the partitions, we might have an empty projection, which won't work
+    // in parquet, so we can ask for the simplest projection which is just a single field (which we'll then throw
+    // away once the results come back and replace with the partition values)
+    val projectionWithoutPartitions = {
+      if (projectionFields.isEmpty)
+        StructType(metastoreSchema.fields.head)
+      else
+        StructType(projectionFields)
+    }
+
+    val flux = dialect.read2(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
+
+    import io.eels.util.FluxImplicits._
+
+    // since we removed the partition fields from the target schema, we must repopulate them after the read
+    // we also need to throw away the dummy field if we had an empty schema
+    flux.asScala.map { row =>
+      if (projectionFields.isEmpty) {
+        val values = projectionSchema.fieldNames().map(partitionMap.apply)
+        Row(projectionSchema, values.toVector)
+      } else {
+        RowUtils.rowAlign(row, projectionSchema, partitionMap)
+      }
+    }
+  }
 
   override def iterator(): CloseableIterator[Seq[Row]] = {
 

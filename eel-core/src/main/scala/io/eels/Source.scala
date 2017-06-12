@@ -1,14 +1,10 @@
 package io.eels
 
-import java.util.function.{Consumer, LongConsumer}
-
 import com.sksamuel.exts.Logging
 import io.eels.dataframe.{DataStream, ExecutionManager}
 import io.eels.schema.StructType
 import io.eels.util.JacksonSupport
-import reactor.core.publisher.{Flux, FluxSink}
-
-import scala.util.control.NonFatal
+import reactor.core.scheduler.Schedulers
 
 /**
   * A Source is a provider of data.
@@ -41,29 +37,11 @@ trait Source extends Logging {
   def toFrame(_listener: Listener): Frame = new SourceFrame(this, _listener)
 
   def toDataStream(): DataStream = toDataStream(NoopListener)
+
   def toDataStream(listener: Listener): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions(implicit em: ExecutionManager) = outer.parts().map { part =>
-
-      val iterator = part.iterator().toVector.flatten.iterator
-
-      Flux.create(new Consumer[FluxSink[Row]] {
-        override def accept(sink: FluxSink[Row]): Unit = {
-          logger.info(s"Accepting sink $sink")
-          sink.onRequest(new LongConsumer {
-            override def accept(req: Long): Unit = {
-              try {
-                logger.info(s"onRequest $req")
-                iterator.take(if (req > Int.MaxValue) Int.MaxValue else req.toInt).foreach(sink.next)
-                if (iterator.isEmpty)
-                  sink.complete()
-              } catch {
-                case NonFatal(e) => sink.error(e)
-              }
-            }
-          })
-        }
-      }, FluxSink.OverflowStrategy.BUFFER)
+    override private[eels] def partitions(implicit em: ExecutionManager) = {
+      parts().map(_.flux.subscribeOn(Schedulers.elastic))
     }
   }
 }

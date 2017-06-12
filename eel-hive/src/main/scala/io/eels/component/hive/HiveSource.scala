@@ -7,12 +7,13 @@ import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
-import io.eels.{FilePattern, Part, Predicate, Source}
+import io.eels.{FilePattern, Part, Predicate, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
+import reactor.core.publisher.Flux
 
 import scala.collection.JavaConverters._
 
