@@ -1,10 +1,14 @@
 package io.eels.dataframe
 
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.atomic.LongAdder
 import java.util.function
 
 import com.sksamuel.exts.Logging
-import io.eels.Row
+import io.eels.component.parquet.ParquetSink
 import io.eels.schema.StructType
+import io.eels.{Row, Sink}
+import org.reactivestreams.{Subscriber, Subscription}
 import reactor.core.publisher.Flux
 
 import scala.language.implicitConversions
@@ -141,8 +145,9 @@ trait DataStream extends Logging {
   /**
     * Action which results in all the rows being returned in memory as a Vector.
     */
-  def collect: Vector[Row] = VectorAction(this).execute()
+  def collect(): Vector[Row] = VectorAction(this).execute()
 
+  def to(sink: ParquetSink): Long = SinkAction(this, sink).execute()
 }
 
 object DataStream {
@@ -156,24 +161,24 @@ object DataStream {
     */
   def apply[T <: Product : TypeTag](ts: Seq[T]): DataStream = {
     val schema = StructType.from[T]
-    val rows = ts.map(_.productIterator.toVector)
-    apply(schema, rows)
+    val values = ts.map(_.productIterator.toVector)
+    fromValues(schema, values)
+  }
+
+  def fromRows(_schema: StructType, first: Row, rest: Row*): DataStream = fromRows(_schema, first +: rest)
+  def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
+
+    import scala.collection.JavaConverters._
+
+    override def schema: StructType = _schema
+    override private[dataframe] def partitions = Seq(Flux.fromIterable(rows.asJava))
   }
 
   /**
     * Create an in memory DataStream from the given Seq of values, and schema.
     * This will result in a single partitioned DataStream.
     */
-  def apply(_schema: StructType, values: Seq[Seq[Any]]): DataStream = new DataStream {
-
-    import scala.collection.JavaConverters._
-
-    override def schema: StructType = _schema
-    override private[eels] def partitions: Seq[Flux[Row]] = {
-      val rows = values.map(Row(schema, _))
-      Seq(Flux.fromIterable(rows.asJava))
-    }
-  }
+  def fromValues(schema: StructType, values: Seq[Seq[Any]]): DataStream = fromRows(schema, values.map(Row(schema, _)))
 }
 
 trait Action[T] {
@@ -185,4 +190,50 @@ case class VectorAction(ds: DataStream) extends Action[Vector[Row]] {
   import scala.collection.JavaConverters._
 
   def execute(): Vector[Row] = ds.coalesce.toIterable.asScala.toVector
+}
+
+case class SinkAction(ds: DataStream, sink: Sink) extends Action[Long] with Logging {
+
+  def execute(): Long = {
+
+    val schema = ds.schema
+    val count = new LongAdder
+    val latch = new CountDownLatch(ds.partitions.size)
+
+    // for each flux we create a separate writer
+    ds.partitions.zipWithIndex.foreach { case (flux, k) =>
+      logger.info(s"Processing partition ${k + 1}")
+
+      flux.subscribe(new Subscriber[Row] {
+
+        val localCount = new LongAdder
+        val writer = sink.writer(schema)
+
+        override def onError(t: Throwable): Unit = {
+          logger.info(s"Partition ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", t)
+          writer.close()
+          latch.countDown()
+        }
+
+        override def onComplete(): Unit = {
+          logger.info(s"Partition ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
+          writer.close()
+          latch.countDown()
+        }
+
+        override def onNext(row: Row): Unit = {
+          writer.write(row)
+          count.increment()
+          localCount.increment()
+        }
+
+        override def onSubscribe(s: Subscription): Unit = {
+          s.request(Long.MaxValue)
+        }
+      })
+    }
+
+    latch.await(21, TimeUnit.DAYS)
+    count.sum()
+  }
 }

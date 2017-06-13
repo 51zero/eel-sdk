@@ -30,14 +30,14 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.toAbsolutePath()).toFrame().toSet().map(_.values)
+      val people = ParquetSource(personFile.toAbsolutePath()).toDataStream().collect().map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir.resolve("*.pq")).toFrame().toSet().map(_.values)
+      val people = ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().collect().map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),
