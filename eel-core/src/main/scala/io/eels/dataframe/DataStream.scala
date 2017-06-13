@@ -1,7 +1,6 @@
 package io.eels.dataframe
 
 import java.util.function
-import java.util.function.Predicate
 
 import com.sksamuel.exts.Logging
 import io.eels.Row
@@ -30,6 +29,8 @@ import scala.language.implicitConversions
 trait DataStream extends Logging {
   outer =>
 
+  import io.eels.util.FluxImplicits._
+
   /**
     * Returns the Schema for this stream. This call will not cause a full evaluation, but only
     * the operations required to retrieve a schema will occur. For example, on a stream backed
@@ -39,22 +40,11 @@ trait DataStream extends Logging {
   def schema: StructType
 
   private[dataframe] def partitions: Seq[Flux[Row]]
-
-  private implicit def scala2javafn[T, R](f: T => R): function.Function[T, R] = new java.util.function.Function[T, R] {
-    override def apply(t: T): R = f(t)
-  }
-
-  private implicit def scala2javapred[T](f: T => Boolean): function.Predicate[T] = new java.util.function.Predicate[T] {
-    override def test(t: T): Boolean = f(t)
-  }
+  private[dataframe] def coalesce: Flux[Row] = partitions.reduceLeft((a, b) => a.mergeWith(b))
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
-      outer.partitions.map { part =>
-        part.map(f): Flux[Row]
-      }
-    }
+    override private[eels] def partitions = outer.partitions.map(_.asScala.map(f))
   }
 
   /**
@@ -64,11 +54,8 @@ trait DataStream extends Logging {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
     override def partitions: Seq[Flux[Row]] = {
-      outer.partitions.map(_.filter(new Predicate[Row] {
-        override def test(row: Row): Boolean = {
-          p(row)
-        }
-      }))
+      import io.eels.util.FluxImplicits._
+      outer.partitions.map(_.asScala.filter(p))
     }
   }
 
@@ -84,7 +71,6 @@ trait DataStream extends Logging {
     }
   }
 
-  private[eels] def coalesce: Flux[Row] = partitions.reduceLeft((a, b) => a.mergeWith(b))
 
   /**
     * Combines two frames together such that the fields from this frame are joined with the fields
@@ -109,20 +95,18 @@ trait DataStream extends Logging {
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = Seq(coalesce.takeWhile(pred))
+    override def partitions: Seq[Flux[Row]] = Seq(outer.coalesce.asScala.takeWhile(pred))
   }
 
   def takeUntil(fieldName: String, pred: Any => Boolean): DataStream = takeUntil(row => pred(row.get(fieldName)))
   def takeUntil(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = Seq(coalesce.takeUntil(pred))
+    override def partitions: Seq[Flux[Row]] = Seq(outer.coalesce.asScala.takeUntil(pred))
   }
 
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = {
-      Seq(coalesce.take(k))
-    }
+    override def partitions: Seq[Flux[Row]] = Seq(outer.coalesce.take(k))
   }
 
   /**
@@ -132,8 +116,7 @@ trait DataStream extends Logging {
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     override def partitions: Seq[Flux[Row]] = {
-      val merged = outer.partitions.reduceLeft { (a, b) => a.mergeWith(b) }
-      Seq(merged.skip(k))
+      Seq(outer.coalesce.skip(k))
     }
   }
 
@@ -141,14 +124,6 @@ trait DataStream extends Logging {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
     override def partitions: Seq[Flux[Row]] = outer.partitions
-  }
-
-  def repartition(numOfPartitions: Int) = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[dataframe] def partitions = {
-      coalesce.parallel(numOfPartitions)
-      null
-    }
   }
 
   /**

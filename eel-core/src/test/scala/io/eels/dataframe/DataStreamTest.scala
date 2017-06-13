@@ -22,15 +22,15 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
-  "DataStream.take" should {
-    "keep only the required number of rows" in {
-      source.toDataStream().take(3).collect.size shouldBe 3
-    }
-  }
-
   "DataStream.drop" should {
     "drop required number of rows" in {
       source.toDataStream().drop(32).collect.size shouldBe 468
+    }
+  }
+
+  "DataStream.take" should {
+    "return only n number of rows" in {
+      source.toDataStream.take(4).collect.size shouldBe 4
     }
   }
 
