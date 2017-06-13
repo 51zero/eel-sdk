@@ -29,6 +29,7 @@ case class FilePattern(pattern: String,
       HdfsIterator.remote(fs.listFiles(dir, false)).toList
         .map(_.getPath)
         .filter { path => path.getName.matches(regex) }
+        .filter(filter)
 
     } else if (isDirectory) {
       val path = new Path(pattern.stripSuffix("/"))
