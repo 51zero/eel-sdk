@@ -143,6 +143,14 @@ trait DataStream extends Logging {
     override def partitions: Seq[Flux[Row]] = outer.partitions
   }
 
+  def repartition(numOfPartitions: Int) = new DataStream {
+    override def schema: StructType = outer.schema
+    override private[dataframe] def partitions = {
+      coalesce.parallel(numOfPartitions)
+      null
+    }
+  }
+
   /**
     * Action which results in all the rows being returned in memory as a Vector.
     * Alias for 'collect()'
