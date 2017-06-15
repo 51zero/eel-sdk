@@ -1,6 +1,6 @@
 package io.eels
 
-import reactor.core.publisher.Flux
+import java.io.Closeable
 
 /**
  * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
@@ -16,6 +16,8 @@ trait Part {
     */
   def iterator(): CloseableIterator[Seq[Row]]
 
-  def flux(): Flux[Row] = Flux.empty()
+  def iterator2(): CloseIterator[Row] = CloseIterator(new Closeable {
+    override def close(): Unit = ()
+  }, Iterator.empty)
 
 }

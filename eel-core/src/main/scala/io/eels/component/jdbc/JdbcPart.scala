@@ -1,15 +1,12 @@
 package io.eels.component.jdbc
 
+import java.io.Closeable
 import java.sql.{Connection, PreparedStatement}
-import java.util.function.Consumer
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.{CloseableIterator, Part, Row}
-import reactor.core.Disposable
-import reactor.core.publisher.{Flux, FluxSink}
+import io.eels.{CloseIterator, CloseableIterator, Part, Row}
 
 import scala.util.Try
-import scala.util.control.NonFatal
 
 class JdbcPart(connFn: () => Connection,
                query: String,
@@ -18,7 +15,7 @@ class JdbcPart(connFn: () => Connection,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives {
 
-  override def flux(): Flux[Row] = {
+  override def iterator2(): CloseIterator[Row] = {
 
     val conn = connFn()
     val stmt = conn.prepareStatement(query)
@@ -30,32 +27,26 @@ class JdbcPart(connFn: () => Connection,
     }
 
     val schema = schemaFor(dialect, rs)
-
-    Flux.create(new Consumer[FluxSink[Row]] {
-      override def accept(t: FluxSink[Row]): Unit = {
-
-        t.onDispose(new Disposable {
-          override def dispose(): Unit = {
-            Try { rs.close() }
-            Try { conn.close() }
-          }
-        })
-
-        try {
-          while (rs.next) {
-            val values = schema.fieldNames().map(name => rs.getObject(name))
-            val row = Row(schema, values)
-            t.next(row)
-          }
-          t.complete()
-        } catch {
-          case NonFatal(e) => t.error(e)
-        } finally {
-          Try { rs.close() }
-          Try { conn.close() }
+    val closeable = new Closeable {
+      override def close(): Unit = {
+        Try {
+          rs.close()
+        }
+        Try {
+          conn.close()
         }
       }
-    })
+    }
+
+    val iterable = new Iterator[Row] {
+      override def hasNext: Boolean = rs.next()
+      override def next(): Row = {
+        val values = schema.fieldNames().map(name => rs.getObject(name))
+        Row(schema, values)
+      }
+    }
+
+    CloseIterator(closeable, iterable)
   }
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {

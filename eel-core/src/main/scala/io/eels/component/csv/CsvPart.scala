@@ -1,17 +1,14 @@
 package io.eels.component.csv
 
-import java.util.function.Consumer
+import java.io.Closeable
 
 import com.sksamuel.exts.Logging
 import com.univocity.parsers.csv.CsvParser
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Part, Row}
+import io.eels.{CloseIterator, CloseableIterator, Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
-import reactor.core.Disposable
-import reactor.core.publisher.{Flux, FluxSink}
 
 import scala.util.Try
-import scala.util.control.NonFatal
 
 class CsvPart(val createParser: () => CsvParser,
               val path: Path,
@@ -25,38 +22,24 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def flux(): Flux[Row] = {
-    Flux.create(new Consumer[FluxSink[Row]] {
-      override def accept(t: FluxSink[Row]): Unit = {
+  override def iterator2(): CloseIterator[Row] = {
 
-        val parser = createParser()
-        val input = fs.open(path)
-        parser.beginParsing(input)
+    val parser = createParser()
+    val input = fs.open(path)
+    parser.beginParsing(input)
 
-        def close(): Unit = {
-          Try {
-            parser.stopParsing()
-            input.close()
-          }
-        }
-
-        t.onDispose(new Disposable {
-          override def dispose(): Unit = close()
-        })
-
-        try {
-          Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).foreach { records =>
-            val row = Row(schema, records.toVector)
-            t.next(row)
-          }
-          t.complete()
-        } catch {
-          case NonFatal(e) => t.error(e)
-        } finally {
-          close()
-        }
+    val closeable = new Closeable {
+      override def close(): Unit = Try {
+        parser.stopParsing()
+        input.close()
       }
-    })
+    }
+
+    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
+      Row(schema, records.toVector)
+    }
+
+    CloseIterator(closeable, iterator)
   }
 
   override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
@@ -73,8 +56,9 @@ class CsvPart(val createParser: () => CsvParser,
       super.close()
     }
 
-    override val iterator: Iterator[Seq[Row]] = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
-      Row(schema, records.toVector)
+    override val iterator: Iterator[Seq[Row]] = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map {
+      records =>
+        Row(schema, records.toVector)
     }.grouped(1000).withPartial(true)
   }
 }

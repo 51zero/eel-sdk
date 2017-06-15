@@ -1,17 +1,16 @@
 package io.eels.dataframe
 
-import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.io.Closeable
 import java.util.concurrent.atomic.LongAdder
-import java.util.function
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import io.eels.component.parquet.ParquetSink
 import io.eels.schema.StructType
-import io.eels.{Row, Sink}
-import org.reactivestreams.{Subscriber, Subscription}
-import reactor.core.publisher.Flux
+import io.eels.{CloseIterator, Row, Sink}
 
 import scala.language.implicitConversions
+import scala.util.control.NonFatal
 
 /**
   * A DataStream is kind of like a table of data. It has fields (like columns) and rows of data. Each row
@@ -33,8 +32,6 @@ import scala.language.implicitConversions
 trait DataStream extends Logging {
   outer =>
 
-  import io.eels.util.FluxImplicits._
-
   /**
     * Returns the Schema for this stream. This call will not cause a full evaluation, but only
     * the operations required to retrieve a schema will occur. For example, on a stream backed
@@ -43,12 +40,12 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  private[dataframe] def partitions: Seq[Flux[Row]]
-  private[dataframe] def coalesce: Flux[Row] = partitions.reduceLeft((a, b) => a.mergeWith(b))
+  private[dataframe] def partitions: Seq[CloseIterator[Row]]
+  private[dataframe] def coalesce: CloseIterator[Row] = partitions.reduceLeft((a, b) => a merge b)
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = outer.partitions.map(_.asScala.map(f))
+    override private[eels] def partitions = outer.partitions.map(_.map(f))
   }
 
   /**
@@ -57,9 +54,8 @@ trait DataStream extends Logging {
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
-    override def partitions: Seq[Flux[Row]] = {
-      import io.eels.util.FluxImplicits._
-      outer.partitions.map(_.asScala.filter(p))
+    override def partitions: Seq[CloseIterator[Row]] = {
+      outer.partitions.map(_.filter(p))
     }
   }
 
@@ -67,10 +63,8 @@ trait DataStream extends Logging {
     override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
     override private[eels] def partitions = {
       val updatedSchema = schema
-      outer.partitions.map { flux =>
-        flux.map(new function.Function[Row, Row] {
-          override def apply(row: Row): Row = Row(updatedSchema, row.values)
-        }): Flux[Row]
+      outer.partitions.map { CloseIterator =>
+        CloseIterator.map { row => Row(updatedSchema, row.values) }
       }
     }
   }
@@ -86,7 +80,7 @@ trait DataStream extends Logging {
     */
   def join(other: DataStream): DataStream = new DataStream {
     override def schema: StructType = outer.schema.join(other.schema)
-    override def partitions: Seq[Flux[Row]] = {
+    override def partitions: Seq[CloseIterator[Row]] = {
       // we must collapse each stream into a single partition, because otherwise each partition
       // may have differing numbers of rows and then they wouldn't match up properly
       val a = outer.coalesce
@@ -99,18 +93,12 @@ trait DataStream extends Logging {
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = Seq(outer.coalesce.asScala.takeWhile(pred))
-  }
-
-  def takeUntil(fieldName: String, pred: Any => Boolean): DataStream = takeUntil(row => pred(row.get(fieldName)))
-  def takeUntil(pred: Row => Boolean): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = Seq(outer.coalesce.asScala.takeUntil(pred))
+    override def partitions: Seq[CloseIterator[Row]] = Seq(outer.coalesce.takeWhile(pred))
   }
 
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = Seq(outer.coalesce.take(k))
+    override def partitions: Seq[CloseIterator[Row]] = Seq(outer.coalesce.take(k))
   }
 
   /**
@@ -119,15 +107,15 @@ trait DataStream extends Logging {
     */
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Flux[Row]] = {
-      Seq(outer.coalesce.skip(k))
+    override def partitions: Seq[CloseIterator[Row]] = {
+      Seq(outer.coalesce.drop(k))
     }
   }
 
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def partitions: Seq[Flux[Row]] = outer.partitions
+    override def partitions: Seq[CloseIterator[Row]] = outer.partitions
   }
 
   /**
@@ -137,7 +125,7 @@ trait DataStream extends Logging {
   def toVector: Vector[Row] = collect
 
   /**
-    * Action which returns a scala.collection.Iterator, which will result in the
+    * Action which returns a scala.collection.CloseIterator, which will result in the
     * lazy evaluation of the stream, element by element.
     */
   def iterator(): Iterator[Row] = IteratorAction(this).execute()
@@ -168,10 +156,10 @@ object DataStream {
   def fromRows(_schema: StructType, first: Row, rest: Row*): DataStream = fromRows(_schema, first +: rest)
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
 
-    import scala.collection.JavaConverters._
-
     override def schema: StructType = _schema
-    override private[dataframe] def partitions = Seq(Flux.fromIterable(rows.asJava))
+    override private[dataframe] def partitions = Seq(CloseIterator(new Closeable {
+      override def close(): Unit = ()
+    }, rows.iterator))
   }
 
   /**
@@ -186,10 +174,7 @@ trait Action[T] {
 }
 
 case class VectorAction(ds: DataStream) extends Action[Vector[Row]] {
-
-  import scala.collection.JavaConverters._
-
-  def execute(): Vector[Row] = ds.coalesce.toIterable.asScala.toVector
+  def execute(): Vector[Row] = ds.coalesce.toIterable.toVector
 }
 
 case class SinkAction(ds: DataStream, sink: Sink) extends Action[Long] with Logging {
@@ -200,37 +185,22 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Action[Long] with Logg
     val count = new LongAdder
     val latch = new CountDownLatch(ds.partitions.size)
 
-    // for each flux we create a separate writer
-    ds.partitions.zipWithIndex.foreach { case (flux, k) =>
+    // for each CloseIterator we create a separate writer
+    ds.partitions.zipWithIndex.foreach { case (CloseIterator(closeable, iterator), k) =>
       logger.info(s"Processing partition ${k + 1}")
 
-      flux.subscribe(new Subscriber[Row] {
-
-        val localCount = new LongAdder
-        val writer = sink.writer(schema)
-
-        override def onError(t: Throwable): Unit = {
-          logger.info(s"Partition ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", t)
-          writer.close()
-          latch.countDown()
-        }
-
-        override def onComplete(): Unit = {
-          logger.info(s"Partition ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
-          writer.close()
-          latch.countDown()
-        }
-
-        override def onNext(row: Row): Unit = {
-          writer.write(row)
-          count.increment()
-          localCount.increment()
-        }
-
-        override def onSubscribe(s: Subscription): Unit = {
-          s.request(Long.MaxValue)
-        }
-      })
+      val localCount = new LongAdder
+      val writer = sink.writer(schema)
+      try {
+        iterator.foreach(writer.write)
+        logger.info(s"Partition ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
+      } catch {
+        case NonFatal(e) =>
+          logger.info(s"Partition ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", e)
+      } finally {
+        writer.close()
+        latch.countDown()
+      }
     }
 
     latch.await(21, TimeUnit.DAYS)

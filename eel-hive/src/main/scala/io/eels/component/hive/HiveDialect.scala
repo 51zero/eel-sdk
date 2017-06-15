@@ -1,5 +1,7 @@
 package io.eels.component.hive
 
+import java.io.Closeable
+
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
 import io.eels.schema.StructType
@@ -8,7 +10,6 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table
-import reactor.core.publisher.Flux
 
 trait HiveDialect extends Logging {
 
@@ -39,7 +40,7 @@ trait HiveDialect extends Logging {
             metastoreSchema: StructType,
             projectionSchema: StructType,
             predicate: Option[Predicate])
-           (implicit fs: FileSystem, conf: Configuration): Flux[Row] = Flux.empty()
+           (implicit fs: FileSystem, conf: Configuration): (Closeable, Iterator[Row]) = null
 
   /**
    * Creates a closeable iterator that will read from the given hadoop path.

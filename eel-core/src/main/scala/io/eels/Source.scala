@@ -4,7 +4,6 @@ import com.sksamuel.exts.Logging
 import io.eels.dataframe.DataStream
 import io.eels.schema.StructType
 import io.eels.util.JacksonSupport
-import reactor.core.scheduler.Schedulers
 
 /**
   * A Source is a provider of data.
@@ -40,8 +39,6 @@ trait Source extends Logging {
 
   def toDataStream(listener: Listener): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
-      parts().map(_.flux.subscribeOn(Schedulers.elastic))
-    }
+    override private[eels] def partitions = parts().map(_.iterator2())
   }
 }

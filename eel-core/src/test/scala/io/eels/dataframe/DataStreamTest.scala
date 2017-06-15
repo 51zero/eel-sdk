@@ -43,15 +43,6 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
-  "DataStream.takeUntil" should {
-    "support take until with row predicate" in {
-      source.toDataStream.takeUntil(row => row.values.mkString.contains(".de")).collect.size shouldBe 7
-    }
-    "support take until with column predicate" in {
-      source.toDataStream.takeUntil("web", _.toString.contains(".de")).collect.size shouldBe 7
-    }
-  }
-
   "DataStream.renameField" should {
     "update the schema" in {
       source.toDataStream.renameField("web", "website").schema.fieldNames() shouldBe
