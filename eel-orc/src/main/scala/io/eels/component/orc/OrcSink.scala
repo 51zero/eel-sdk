@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.config.ConfigSupport
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
-import io.eels.{Row, Sink, SinkWriter}
+import io.eels.{Row, Sink, RowOutputStream}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -51,7 +51,7 @@ case class OrcSink(path: Path,
   def withPermission(permission: FsPermission): OrcSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): OrcSink = copy(inheritPermissions = Option(inheritPermissions))
 
-  override def writer(schema: StructType): SinkWriter = new SinkWriter {
+  override def open(schema: StructType): RowOutputStream = new RowOutputStream {
 
     if (overwrite && fs.exists(path))
       fs.delete(path, false)

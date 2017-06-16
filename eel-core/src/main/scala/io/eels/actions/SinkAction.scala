@@ -7,7 +7,7 @@ object SinkAction extends Action {
   def execute(sink: Sink, frame: Frame, listener: Listener): Long = {
 
     val schema = frame.schema
-    val writer = sink.writer(schema)
+    val writer = sink.open(schema)
     var count = 0
 
     frame.rows().foreach { row =>

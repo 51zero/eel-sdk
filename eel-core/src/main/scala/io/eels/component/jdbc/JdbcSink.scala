@@ -37,6 +37,6 @@ case class JdbcSink(connFn: () => Connection,
   def withBatchSize(batchSize: Int) = copy(batchSize = batchSize)
   def withThreads(threads: Int) = copy(threads = threads)
 
-  override def writer(schema: StructType) =
+  override def open(schema: StructType) =
     new JdbcWriter(schema, connFn, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize)
 }

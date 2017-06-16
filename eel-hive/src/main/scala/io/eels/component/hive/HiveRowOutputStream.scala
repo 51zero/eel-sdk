@@ -8,7 +8,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
-import io.eels.{Row, SinkWriter}
+import io.eels.{Row, RowOutputStream}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -17,21 +17,21 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
-class HiveSinkWriter(sourceSchema: StructType,
-                     metastoreSchema: StructType,
-                     dbName: String,
-                     tableName: String,
-                     ioThreads: Int,
-                     dialect: HiveDialect,
-                     dynamicPartitioning: Boolean,
-                     bufferSize: Int,
-                     inheritPermissions: Option[Boolean],
-                     permission: Option[FsPermission],
-                     fileListener: FileListener,
-                     metadata: Map[String, String])
-                    (implicit fs: FileSystem,
+class HiveRowOutputStream(sourceSchema: StructType,
+                          metastoreSchema: StructType,
+                          dbName: String,
+                          tableName: String,
+                          ioThreads: Int,
+                          dialect: HiveDialect,
+                          dynamicPartitioning: Boolean,
+                          bufferSize: Int,
+                          inheritPermissions: Option[Boolean],
+                          permission: Option[FsPermission],
+                          fileListener: FileListener,
+                          metadata: Map[String, String])
+                         (implicit fs: FileSystem,
                      conf: Configuration,
-                     client: IMetaStoreClient) extends SinkWriter with Logging {
+                     client: IMetaStoreClient) extends RowOutputStream with Logging {
 
   private val config = ConfigFactory.load()
   private val sinkConfig = HiveSinkConfig()

@@ -5,7 +5,7 @@ import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import io.eels.{Row, SinkWriter}
+import io.eels.{Row, RowOutputStream}
 
 class JdbcWriter(schema: StructType,
                  connFn: () => Connection,
@@ -15,7 +15,7 @@ class JdbcWriter(schema: StructType,
                  threads: Int,
                  batchSize: Int,
                  autoCommit: Boolean,
-                 bufferSize: Int) extends SinkWriter with Logging {
+                 bufferSize: Int) extends RowOutputStream with Logging {
   logger.info("Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
   require(bufferSize >= batchSize)
 

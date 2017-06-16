@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.{Sink, SinkWriter}
+import io.eels.{Sink, RowOutputStream}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -68,7 +68,7 @@ case class HiveSink(dbName: String,
 
   def containsUpperCase(schema: StructType): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
-  override def writer(schema: StructType): SinkWriter = {
+  override def open(schema: StructType): RowOutputStream = {
     login()
 
     if (containsUpperCase(schema)) {
@@ -91,7 +91,7 @@ case class HiveSink(dbName: String,
 
     val metastoreSchema = ops.schema(dbName, tableName)
 
-    new HiveSinkWriter(
+    new HiveRowOutputStream(
       schema,
       metastoreSchema,
       dbName,

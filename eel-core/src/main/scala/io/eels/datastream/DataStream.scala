@@ -10,6 +10,7 @@ import io.eels.schema.StructType
 import io.eels.{CloseIterator, Row, Sink}
 
 import scala.language.implicitConversions
+import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
@@ -182,28 +183,35 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Action[Long] with Logg
   def execute(): Long = {
 
     val schema = ds.schema
-    val count = new LongAdder
-    val latch = new CountDownLatch(ds.partitions.size)
+    val partitions = ds.partitions
+    val total = new LongAdder
+    val latch = new CountDownLatch(partitions.size)
 
-    // for each CloseIterator we create a separate writer
-    ds.partitions.zipWithIndex.foreach { case (CloseIterator(closeable, iterator), k) =>
+    // we open up a seperate output stream for each partition
+    val streams = sink.open(schema, partitions.size)
+
+    partitions.zip(streams).zipWithIndex.foreach { case ((CloseIterator(closeable, iterator), stream), k) =>
       logger.info(s"Processing partition ${k + 1}")
 
       val localCount = new LongAdder
-      val writer = sink.writer(schema)
       try {
-        iterator.foreach(writer.write)
+        iterator.foreach { row =>
+          stream.write(row)
+          localCount.increment()
+          total.increment()
+        }
         logger.info(s"Partition ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
       } catch {
         case NonFatal(e) =>
           logger.info(s"Partition ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", e)
       } finally {
-        writer.close()
+        Try { closeable.close() }
+        Try { stream.close() }
         latch.countDown()
       }
     }
 
     latch.await(21, TimeUnit.DAYS)
-    count.sum()
+    total.sum()
   }
 }
