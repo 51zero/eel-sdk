@@ -1,4 +1,4 @@
-package io.eels.dataframe
+package io.eels.datastream
 
 import java.io.Closeable
 import java.util.concurrent.atomic.LongAdder
@@ -40,8 +40,8 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  private[dataframe] def partitions: Seq[CloseIterator[Row]]
-  private[dataframe] def coalesce: CloseIterator[Row] = partitions.reduceLeft((a, b) => a merge b)
+  private[datastream] def partitions: Seq[CloseIterator[Row]]
+  private[datastream] def coalesce: CloseIterator[Row] = partitions.reduceLeft((a, b) => a merge b)
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = outer.schema
@@ -157,7 +157,7 @@ object DataStream {
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
 
     override def schema: StructType = _schema
-    override private[dataframe] def partitions = Seq(CloseIterator(new Closeable {
+    override private[datastream] def partitions = Seq(CloseIterator(new Closeable {
       override def close(): Unit = ()
     }, rows.iterator))
   }

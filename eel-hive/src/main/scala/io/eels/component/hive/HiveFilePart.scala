@@ -45,7 +45,7 @@ class HiveFilePart(val dialect: HiveDialect,
         StructType(projectionFields)
     }
 
-    val (closeable, iterator) = dialect.read2(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
+    val CloseIterator(closeable, iterator) = dialect.read2(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema

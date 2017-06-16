@@ -17,3 +17,9 @@ case class CloseIterator[T](closeable: Closeable, iterator: Iterator[T]) extends
   override def takeWhile(p: T => Boolean): CloseIterator[T] = CloseIterator[T](closeable, iterator.takeWhile(p))
   def merge(other: Iterator[T]): CloseIterator[T] = CloseIterator[T](closeable, iterator ++ other)
 }
+
+object CloseIterator {
+  def empty: CloseIterator[Row] = CloseIterator(new Closeable {
+    override def close(): Unit = ()
+  }, Iterator.empty)
+}

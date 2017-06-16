@@ -1,4 +1,4 @@
-package io.eels.dataframe
+package io.eels.datastream
 
 import java.nio.file.Paths
 

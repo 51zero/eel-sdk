@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
 import io.eels.Row
-import io.eels.dataframe.DataStream
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission

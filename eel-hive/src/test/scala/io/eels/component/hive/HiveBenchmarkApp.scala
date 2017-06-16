@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Frame
-import io.eels.schema.{PartitionConstraint, StructType}
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -103,7 +103,7 @@ object HiveBenchmarkApp extends App with Timed {
   while (true) {
 
     timed("frame took") {
-      val result = HiveSource("sam", "people").toDataStream().collect
+      val result = HiveSource("sam", "people").toFrame().collect
       println(result.size)
     }
 

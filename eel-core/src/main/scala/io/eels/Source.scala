@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
-import io.eels.dataframe.DataStream
+import io.eels.datastream.{DataStream, DataStreamSource}
 import io.eels.schema.StructType
 import io.eels.util.JacksonSupport
 
@@ -36,9 +36,5 @@ trait Source extends Logging {
   def toFrame(_listener: Listener): Frame = new SourceFrame(this, _listener)
 
   def toDataStream(): DataStream = toDataStream(NoopListener)
-
-  def toDataStream(listener: Listener): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def partitions = parts().map(_.iterator2())
-  }
+  def toDataStream(listener: Listener): DataStream = new DataStreamSource(this, listener)
 }

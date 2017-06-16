@@ -1,11 +1,9 @@
 package io.eels.component.hive
 
-import java.io.Closeable
-
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Predicate, Row}
+import io.eels.{CloseIterator, CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -40,7 +38,7 @@ trait HiveDialect extends Logging {
             metastoreSchema: StructType,
             projectionSchema: StructType,
             predicate: Option[Predicate])
-           (implicit fs: FileSystem, conf: Configuration): (Closeable, Iterator[Row]) = null
+           (implicit fs: FileSystem, conf: Configuration): CloseIterator[Row] = CloseIterator.empty
 
   /**
    * Creates a closeable iterator that will read from the given hadoop path.
