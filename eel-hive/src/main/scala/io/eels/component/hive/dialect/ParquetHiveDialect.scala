@@ -1,23 +1,18 @@
 package io.eels.component.hive.dialect
 
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.Consumer
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Predicate, Row}
+import io.eels.{CloseIterator, CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
-import reactor.core.publisher.{Flux, FluxSink}
-import com.sksamuel.exts.OptionImplicits._
-import reactor.core.Disposable
-
-import scala.util.control.NonFatal
 
 object ParquetHiveDialect extends HiveDialect with Logging {
 
@@ -28,31 +23,13 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                      metastoreSchema: StructType,
                      projectionSchema: StructType,
                      predicate: Option[Predicate])
-                    (implicit fs: FileSystem, conf: Configuration): Flux[Row] = {
+                    (implicit fs: FileSystem, conf: Configuration): CloseIterator[Row] = {
 
     // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
     val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
     val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
-
-    Flux.create(new Consumer[FluxSink[Row]] {
-      override def accept(t: FluxSink[Row]): Unit = {
-
-        t.onCancel(new Disposable {
-          override def dispose(): Unit = {
-            reader.close()
-          }
-        })
-
-        try {
-          ParquetIterator(reader).foreach(t.next)
-          t.complete()
-        } catch {
-          case NonFatal(e) => t.error(e)
-        } finally {
-          reader.close()
-        }
-      }
-    })
+    val iterator = ParquetIterator(reader)
+    CloseIterator(reader, iterator)
   }
 
   override def read(path: Path,
