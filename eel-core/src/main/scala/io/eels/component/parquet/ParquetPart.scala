@@ -9,15 +9,15 @@ import io.eels.{CloseableIterator, Part, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.ParquetFileReader
+import org.apache.parquet.schema.MessageType
 
 class ParquetPart(path: Path,
                   predicate: Option[Predicate],
                   projection: Seq[String])
                  (implicit conf: Configuration) extends Part with Logging with Using {
 
-  lazy val projectionSchema = {
-    if (projection.isEmpty)
-      None
+  def readSchema: Option[MessageType] = {
+    if (projection.isEmpty) None
     else {
       val messageType = ParquetFileReader.open(conf, path).getFileMetaData.getSchema
       val structType = ParquetSchemaFns.fromParquetMessageType(messageType)
@@ -27,7 +27,7 @@ class ParquetPart(path: Path,
   }
 
   override def iterator(): CloseableIterator[Row] = {
-    val reader = RowParquetReaderFn(path, predicate, projectionSchema)
+    val reader = RowParquetReaderFn(path, predicate, readSchema)
     CloseableIterator(reader, ParquetIterator(reader))
   }
 }

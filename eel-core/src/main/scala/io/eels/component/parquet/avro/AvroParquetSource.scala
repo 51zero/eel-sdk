@@ -69,12 +69,12 @@ case class AvroParquetSource(pattern: FilePattern,
   }
 
   override def parts(): List[Part] = {
-    logger.debug(s"Parquet source has ${paths.size} files: $paths")
+    logger.debug(s"AvroParquetSource source has ${paths.size} files: $paths")
     paths.map { it => new AvroParquetPart(it, predicate) }
   }
 
   def footers(): List[Footer] = {
-    logger.debug(s"Parquet source will read footers from $paths")
+    logger.debug(s"AvroParquetSource source will read footers from $paths")
     paths.flatMap { it =>
       val status = fs.getFileStatus(it)
       logger.debug(s"status=$status; path=$it")

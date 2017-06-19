@@ -21,29 +21,31 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
   override def schema: StructType = source.schema
   override private[eels] def partitions = {
 
-    val executor = Executors.newCachedThreadPool()
-
     // we buffer the reading from the sources so that slow io can constantly be performing in the background
     // by using a list of rows we reduce contention on the queue
+
+    val io = Executors.newCachedThreadPool()
+
     val parts = source.parts()
 
     // each part should be read in on an io-thread-pool
-    logger.debug(s"Submitting ${parts.size} parts to executor")
-    val partitions = source.parts().zipWithIndex.map { case (part, k) =>
+    logger.debug(s"Preparing to read ${parts.size} parts")
+    val partitions = parts.zipWithIndex.map { case (part, k) =>
 
       val queue = new LinkedBlockingQueue[Row](config.getInt("eel.source.defaultBufferSize"))
       val running = new AtomicBoolean(true)
 
-      logger.info(s"Submitting partition ${k + 1} to executor...")
-      executor.submit {
+      logger.debug(s"Submitting source partition ${k + 1} to executor...")
+      io.submit {
         try {
-          logger.info(s"Starting partition ${k + 1}")
+          logger.debug(s"Starting source partition ${k + 1}")
           val CloseableIterator(closeable, iterator) = part.iterator()
           try {
             iterator.takeWhile(_ => running.get).foreach { row =>
               queue.put(row)
               listener.onNext(row)
             }
+            logger.debug(s"Source partition ${k + 1} has completed")
             listener.onComplete()
           } catch {
             case NonFatal(e) =>
@@ -57,7 +59,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
             queue.put(Row.Sentinel)
           }
         } catch {
-          case t: Throwable => logger.error(s"Error starting partition thread ${k + 1}", t)
+          case t: Throwable => logger.error(s"Error starting source partition thread ${k + 1}", t)
         }
       }
 
@@ -70,7 +72,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
     }
 
     // the executor will shut down once all the partitions have completed
-    executor.shutdown()
+    io.shutdown()
 
     partitions
   }

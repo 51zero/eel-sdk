@@ -21,18 +21,18 @@ object RowParquetReaderFn extends Logging {
   /**
     * Creates a new reader for the given path.
     *
-    * @param predicate        if set then a parquet predicate is applied to the rows
-    * @param projectionSchema if set then the schema is used to narrow the fields returned
+    * @param predicate  if set then a parquet predicate is applied to the rows
+    * @param readSchema optional schema used as a projection in the native parquet reader
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            projectionSchema: Option[Type])(implicit conf: Configuration): ParquetReader[Row] = {
+            readSchema: Option[Type])(implicit conf: Configuration): ParquetReader[Row] = {
     logger.debug(s"Opening parquet reader for $path")
 
     // The parquet reader can use a projection by setting a projected schema onto the supplied conf object
     def configuration(): Configuration = {
       val newconf = new Configuration(conf)
-      projectionSchema.foreach { it =>
+      readSchema.foreach { it =>
         newconf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
       newconf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")

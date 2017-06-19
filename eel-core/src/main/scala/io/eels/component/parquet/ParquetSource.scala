@@ -49,6 +49,7 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
+  // todo should take the merged schema from all files
   lazy val schema: StructType = {
     using(RowParquetReaderFn(paths.head, None, None)) { reader =>
       val row = Option(reader.read).getOrElse {

@@ -50,7 +50,7 @@ object ParquetSpeedTest extends App with Timed {
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
 
-  val path = new Path("parquet_speed.csv")
+  val path = new Path("parquet_speed.pq")
   fs.delete(path, false)
 
   new File(path.toString).deleteOnExit()

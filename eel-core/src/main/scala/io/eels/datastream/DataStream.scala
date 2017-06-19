@@ -48,34 +48,40 @@ trait DataStream extends Logging {
   private[eels] def partitions: Seq[CloseableIterator[Row]]
 
   private[eels] def coalesce: CloseableIterator[Row] = {
-    val queue = new LinkedBlockingQueue[Row](1000)
+
     val partitions = outer.partitions
-    val completed = new AtomicInteger(partitions.size)
-    partitions.zipWithIndex.foreach { case (partition, index) =>
-      executor.execute(new Runnable {
-        override def run(): Unit = {
-          try {
-            logger.info(s"Starting coalesce thread for partition $index")
-            partition.iterator.foreach(queue.put)
-          } catch {
-            case NonFatal(e) =>
-              logger.error("Error running coalesce task", e)
-          } finally {
-            logger.info(s"Finished coalesce thread for partition $index")
-            if (completed.incrementAndGet == partitions.size) {
-              logger.info("All coalesce tasks completed, closing downstream queue")
-              queue.put(Row.Sentinel)
+    if (partitions.size == 1) {
+      partitions.head
+    } else {
+
+      val queue = new LinkedBlockingQueue[Row](1000)
+      val completed = new AtomicInteger(0)
+
+      partitions.zipWithIndex.foreach { case (partition, index) =>
+        executor.execute(new Runnable {
+          override def run(): Unit = {
+            try {
+              logger.info(s"Starting coalesce thread for partition ${index + 1}")
+              partition.iterator.foreach(queue.put)
+              logger.info(s"Finished coalesce thread for partition ${index + 1}")
+            } catch {
+              case NonFatal(e) =>
+                logger.error("Error running coalesce task", e)
+            } finally {
+              if (completed.incrementAndGet == partitions.size) {
+                logger.info("All coalesce tasks completed, closing downstream queue")
+                queue.put(Row.Sentinel)
+              }
             }
           }
-        }
-      })
-    }
-
-    CloseableIterator(new Closeable {
-      override def close(): Unit = {
-        partitions.map(_.closeable).foreach(_.close)
+        })
       }
-    }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
+      CloseableIterator(new Closeable {
+        override def close(): Unit = {
+          partitions.map(_.closeable).foreach(_.close)
+        }
+      }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
+    }
   }
 
   def map(f: Row => Row): DataStream = new DataStream {
