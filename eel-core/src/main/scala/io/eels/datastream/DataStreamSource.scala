@@ -8,7 +8,7 @@ import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import com.sksamuel.exts.config.ConfigResolver
 import io.eels.schema.StructType
-import io.eels.{CloseIterator, Listener, NoopListener, Row, Source}
+import io.eels.{CloseableIterator, Listener, NoopListener, Row, Source}
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -38,7 +38,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
       executor.submit {
         try {
           logger.info(s"Starting partition ${k + 1}")
-          val CloseIterator(closeable, iterator) = part.iterator2()
+          val CloseableIterator(closeable, iterator) = part.iterator()
           try {
             iterator.takeWhile(_ => running.get).foreach { row =>
               queue.put(row)
@@ -61,7 +61,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
         }
       }
 
-      CloseIterator(new Closeable {
+      CloseableIterator(new Closeable {
         override def close(): Unit = {
           logger.debug(s"Closing partition ${k + 1}")
           running.set(false)

@@ -3,7 +3,7 @@ package io.eels.datastream
 import java.util.concurrent.CountDownLatch
 
 import com.sksamuel.exts.Logging
-import io.eels.{CloseIterator, Row}
+import io.eels.{CloseableIterator, Row}
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
 
 import scala.concurrent.ExecutionContext
@@ -51,7 +51,7 @@ trait GroupedDataStream {
           Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
         }
 
-        CloseIterator(partition.closeable, rows.iterator)
+        CloseableIterator(partition.closeable, rows.iterator)
       }
     }
   }

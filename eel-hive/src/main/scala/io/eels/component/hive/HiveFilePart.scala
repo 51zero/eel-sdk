@@ -27,7 +27,7 @@ class HiveFilePart(val dialect: HiveDialect,
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
-  override def iterator2(): CloseIterator[Row] = {
+  override def iterator(): CloseableIterator[Row] = {
 
     val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
 
@@ -45,7 +45,7 @@ class HiveFilePart(val dialect: HiveDialect,
         StructType(projectionFields)
     }
 
-    val CloseIterator(closeable, iterator) = dialect.read2(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
+    val CloseableIterator(closeable, iterator) = dialect.read(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema
@@ -58,6 +58,6 @@ class HiveFilePart(val dialect: HiveDialect,
       }
     }
 
-    CloseIterator(closeable, mapped)
+    CloseableIterator(closeable, mapped)
   }
 }

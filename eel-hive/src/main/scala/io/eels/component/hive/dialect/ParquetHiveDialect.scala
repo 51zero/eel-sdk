@@ -9,7 +9,7 @@ import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.schema.StructType
-import io.eels.{CloseIterator, Predicate, Row}
+import io.eels.{CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -19,17 +19,17 @@ object ParquetHiveDialect extends HiveDialect with Logging {
   private val config = ConfigFactory.load()
   private val bufferSize = config.getInt("eel.hive.dialect.reader.buffer-size")
 
-  override def read2(path: Path,
-                     metastoreSchema: StructType,
-                     projectionSchema: StructType,
-                     predicate: Option[Predicate])
-                    (implicit fs: FileSystem, conf: Configuration): CloseIterator[Row] = {
+  override def read(path: Path,
+                    metastoreSchema: StructType,
+                    projectionSchema: StructType,
+                    predicate: Option[Predicate])
+                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Row] = {
 
     // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
     val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
     val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
     val iterator = ParquetIterator(reader)
-    CloseIterator(reader, iterator)
+    CloseableIterator(reader, iterator)
   }
 
   override def writer(schema: StructType,

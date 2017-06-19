@@ -17,7 +17,7 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
 
 class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging {
 
-  override def iterator2(): CloseIterator[Row] = {
+  override def iterator(): CloseableIterator[Row] = {
 
     val reader = SequenceSupport.createReader(path)
     val k = new IntWritable()
@@ -29,6 +29,6 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
       override def hasNext(): Boolean = reader.next(k, v)
     }
 
-    CloseIterator(reader.close _, iterator)
+    CloseableIterator(reader.close _, iterator)
   }
 }

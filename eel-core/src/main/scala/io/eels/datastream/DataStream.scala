@@ -8,7 +8,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.actions.CountAction
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{CloseIterator, Listener, NoopListener, Row, Sink}
+import io.eels.{CloseableIterator, Listener, NoopListener, Row, Sink}
 
 import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
@@ -45,9 +45,9 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  private[eels] def partitions: Seq[CloseIterator[Row]]
+  private[eels] def partitions: Seq[CloseableIterator[Row]]
 
-  private[eels] def coalesce: CloseIterator[Row] = {
+  private[eels] def coalesce: CloseableIterator[Row] = {
     val queue = new LinkedBlockingQueue[Row](1000)
     val partitions = outer.partitions
     val completed = new AtomicInteger(partitions.size)
@@ -71,7 +71,7 @@ trait DataStream extends Logging {
       })
     }
 
-    CloseIterator(new Closeable {
+    CloseableIterator(new Closeable {
       override def close(): Unit = {
         partitions.map(_.closeable).foreach(_.close)
       }
@@ -91,7 +91,7 @@ trait DataStream extends Logging {
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
-    override def partitions: Seq[CloseIterator[Row]] = {
+    override def partitions: Seq[CloseableIterator[Row]] = {
       outer.partitions.map(_.filter(p))
     }
   }
@@ -101,7 +101,7 @@ trait DataStream extends Logging {
     */
   def filter(fieldName: String, p: (Any) => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseIterator[Row]] = {
+    override def partitions: Seq[CloseableIterator[Row]] = {
       val index = schema.indexOf(fieldName)
       if (index < 0)
         sys.error(s"Unknown field $fieldName")
@@ -301,7 +301,7 @@ trait DataStream extends Logging {
     */
   def addField(field: Field, defaultValue: Any): DataStream = new DataStream {
     override def schema: StructType = outer.schema.addField(field)
-    override def partitions: Seq[CloseIterator[Row]] = {
+    override def partitions: Seq[CloseableIterator[Row]] = {
       val exists = outer.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema
@@ -320,7 +320,7 @@ trait DataStream extends Logging {
     */
   def foreach[U](fn: (Row) => U): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseIterator[Row]] = outer.partitions.map(_.map { row =>
+    override def partitions: Seq[CloseableIterator[Row]] = outer.partitions.map(_.map { row =>
       fn(row)
       row
     })
@@ -363,7 +363,7 @@ trait DataStream extends Logging {
       val iterator = outer.coalesce.iterator.zip(other.coalesce.iterator).map { case (x, y) =>
         Row(combinedSchema, x.values ++ y.values)
       }
-      Seq(CloseIterator(closeable, iterator))
+      Seq(CloseableIterator(closeable, iterator))
     }
   }
 
@@ -380,12 +380,12 @@ trait DataStream extends Logging {
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseIterator[Row]] = Seq(outer.coalesce.takeWhile(pred))
+    override def partitions: Seq[CloseableIterator[Row]] = Seq(outer.coalesce.takeWhile(pred))
   }
 
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseIterator[Row]] = Seq(outer.coalesce.take(k))
+    override def partitions: Seq[CloseableIterator[Row]] = Seq(outer.coalesce.take(k))
   }
 
   /**
@@ -394,7 +394,7 @@ trait DataStream extends Logging {
     */
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseIterator[Row]] = {
+    override def partitions: Seq[CloseableIterator[Row]] = {
       Seq(outer.coalesce.drop(k))
     }
   }
@@ -421,7 +421,7 @@ trait DataStream extends Logging {
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def partitions: Seq[CloseIterator[Row]] = outer.partitions
+    override def partitions: Seq[CloseableIterator[Row]] = outer.partitions
   }
 
   // allows aggregations on the entire dataset
@@ -484,7 +484,7 @@ object DataStream {
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions = Seq(CloseIterator(rows))
+    override private[eels] def partitions = Seq(CloseableIterator(rows))
   }
 
   /**
@@ -502,7 +502,7 @@ object DataStream {
 
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions = Seq(CloseIterator(new Closeable {
+    override private[eels] def partitions = Seq(CloseableIterator(new Closeable {
       override def close(): Unit = ()
     }, rows.iterator))
   }
@@ -537,8 +537,8 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
     // we open up a seperate output stream for each partition
     val streams = sink.open(schema, partitions.size)
 
-    partitions.zip(streams).zipWithIndex.foreach { case ((CloseIterator(closeable, iterator), stream), k) =>
-      logger.debug(s"Preparing writing task ${k + 1}")
+    partitions.zip(streams).zipWithIndex.foreach { case ((CloseableIterator(closeable, iterator), stream), k) =>
+      logger.debug(s"Starting writing task ${k + 1}")
 
       // each partition will have a buffer, which will be populated from a cpu thread.
       // then an io-bound thread will write from the buffer to the file/disk
@@ -565,7 +565,6 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
 
         try {
           BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
-            logger.info(s"Read row from buffer $row")
             stream.write(row)
             localCount.increment()
             total.increment()

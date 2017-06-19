@@ -48,11 +48,11 @@ class OrcPart(path: Path,
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def iterator2(): CloseIterator[Row] = {
+  override def iterator(): CloseableIterator[Row] = {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf))
     val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
     val iterator: Iterator[Row] = OrcBatchIterator(reader, fileSchema, projection, predicate).flatten
-    CloseIterator(iterator)
+    CloseableIterator(iterator)
   }
 }
 

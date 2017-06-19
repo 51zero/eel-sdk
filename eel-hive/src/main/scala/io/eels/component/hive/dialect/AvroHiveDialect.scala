@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.{CloseIterator, Predicate, Row}
+import io.eels.{CloseableIterator, Predicate, Row}
 import io.eels.component.avro.{AvroSourcePart, AvroWriter}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.schema.StructType
@@ -11,12 +11,12 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 
 object AvroHiveDialect extends HiveDialect with Logging {
 
-  override def read2(path: Path,
-                     metastoreSchema: StructType,
-                     projectionSchema: StructType,
-                     predicate: Option[Predicate])
-                    (implicit fs: FileSystem, conf: Configuration): CloseIterator[Row] = {
-    AvroSourcePart(path).iterator2()
+  override def read(path: Path,
+                    metastoreSchema: StructType,
+                    projectionSchema: StructType,
+                    predicate: Option[Predicate])
+                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Row] = {
+    AvroSourcePart(path).iterator()
   }
 
   override def writer(schema: StructType,

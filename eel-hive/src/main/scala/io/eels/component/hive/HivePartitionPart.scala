@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
-import io.eels.{CloseIterator, Part, Row}
+import io.eels.{CloseableIterator, Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
@@ -51,7 +51,7 @@ class HivePartitionPart(dbName: String,
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def iterator2(): CloseIterator[Row] = {
+  override def iterator(): CloseableIterator[Row] = {
 
     import scala.collection.JavaConverters._
 
@@ -66,6 +66,6 @@ class HivePartitionPart(dbName: String,
       Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
     }
     logger.debug(s"After scanning partitions and files we have ${rows.size} rows")
-    if (rows.isEmpty) CloseIterator.empty else CloseIterator(rows.iterator)
+    if (rows.isEmpty) CloseableIterator.empty else CloseableIterator(rows.iterator)
   }
 }

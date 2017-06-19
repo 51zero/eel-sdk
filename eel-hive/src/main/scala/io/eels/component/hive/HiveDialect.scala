@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
 import io.eels.schema.StructType
-import io.eels.{CloseIterator, Predicate, Row}
+import io.eels.{CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -34,11 +34,11 @@ trait HiveDialect extends Logging {
     * The readerSchema is the schema required by the caller which may be the same as the written data, or
     * it may be a subset if a projection pushdown is being used.
     */
-  def read2(path: Path,
-            metastoreSchema: StructType,
-            projectionSchema: StructType,
-            predicate: Option[Predicate])
-           (implicit fs: FileSystem, conf: Configuration): CloseIterator[Row]
+  def read(path: Path,
+           metastoreSchema: StructType,
+           projectionSchema: StructType,
+           predicate: Option[Predicate])
+          (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Row]
 
   /**
     * Creates a new writer ready to do the bidding of the hive sink.
