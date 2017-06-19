@@ -17,7 +17,7 @@ class AvroParquetPart(path: Path,
   override def iterator(): CloseableIterator[Row] = {
     val reader = AvroParquetReaderFn(path, predicate, None)
     val deser = new AvroDeserializer()
-    val iterator: Iterator[Row] = ParquetIterator(reader).map(deser.toRow)
+    val iterator = ParquetIterator(reader).map(deser.toRow)
     CloseableIterator(reader.close _, iterator)
   }
 }

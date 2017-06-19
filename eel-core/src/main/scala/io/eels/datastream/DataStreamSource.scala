@@ -1,7 +1,6 @@
 package io.eels.datastream
 
 import java.io.Closeable
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
@@ -33,7 +32,6 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
     val partitions = parts.zipWithIndex.map { case (part, k) =>
 
       val queue = new LinkedBlockingQueue[Row](config.getInt("eel.source.defaultBufferSize"))
-      val running = new AtomicBoolean(true)
 
       logger.debug(s"Submitting source partition ${k + 1} to executor...")
       io.submit {
@@ -41,7 +39,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
           logger.debug(s"Starting source partition ${k + 1}")
           val CloseableIterator(closeable, iterator) = part.iterator()
           try {
-            iterator.takeWhile(_ => running.get).foreach { row =>
+            iterator.foreach { row =>
               queue.put(row)
               listener.onNext(row)
             }
@@ -51,6 +49,9 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
             case NonFatal(e) =>
               logger.error("Error while reading from source", e)
               listener.onError(e)
+            case e: InterruptedException =>
+              logger.error(s"Source partition ${k + 1} was interrupted")
+              listener.onError(e)
           } finally {
             Try {
               closeable.close()
@@ -59,14 +60,15 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
             queue.put(Row.Sentinel)
           }
         } catch {
-          case t: Throwable => logger.error(s"Error starting source partition thread ${k + 1}", t)
+          case t: Throwable =>
+            logger.error(s"Error in source partition thread ${k + 1}", t)
         }
       }
 
       CloseableIterator(new Closeable {
         override def close(): Unit = {
           logger.debug(s"Closing partition ${k + 1}")
-          running.set(false)
+          io.shutdownNow()
         }
       }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
     }

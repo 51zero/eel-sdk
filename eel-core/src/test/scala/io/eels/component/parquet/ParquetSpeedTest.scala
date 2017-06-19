@@ -37,7 +37,7 @@ import scala.util.Random
   * v1.1.0
   * 2m rows reading parquet=649; reading avro=777
   * v1.2.0-snapshot
-  * 2m rows reading parquet=970; reading avro=1700
+  * 2m rows reading parquet=770; reading avro=1400
   */
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()
