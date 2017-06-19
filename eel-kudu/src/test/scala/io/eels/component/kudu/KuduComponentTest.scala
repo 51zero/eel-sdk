@@ -1,8 +1,9 @@
 package io.eels.component.kudu
 
-import io.eels.{Frame, Row}
+import io.eels.Row
+import io.eels.datastream.DataStream
 import io.eels.schema._
-import org.scalatest.{FlatSpec, Matchers, Tag, WordSpec}
+import org.scalatest.{FlatSpec, Matchers, Tag}
 
 object Kudu extends Tag("kudu")
 
@@ -15,16 +16,18 @@ class KuduComponentTest extends FlatSpec with Matchers {
       Field("position", StringType, nullable = true)
     )
 
-    val frame = Frame.fromValues(
+    val ds = DataStream.fromValues(
       schema,
-      Vector("earth", 3),
-      Vector("saturn", 6)
+      Seq(
+        Vector("earth", 3),
+        Vector("saturn", 6)
+      )
     )
 
     val master = "localhost:7051"
-    frame.to(KuduSink(master, "mytable"))
+    ds.to(KuduSink(master, "mytable"))
 
-    val rows = KuduSource(master, "mytable").toFrame.collect()
+    val rows = KuduSource(master, "mytable").toDataStream().collect
     rows shouldBe Seq(
       Row(schema, Vector("earth", "3")),
       Row(schema, Vector("saturn", "6"))
@@ -44,12 +47,12 @@ class KuduComponentTest extends FlatSpec with Matchers {
 
     val data = Array("earth", 3: Byte, 4515135988.632, Array[Byte](1, 2, 3), false, 83000000)
 
-    val frame = Frame.fromValues(schema, data)
+    val ds = DataStream.fromValues(schema, Seq(data))
 
     val master = "localhost:7051"
-    frame.to(KuduSink(master, "mytable2"))
+    ds.to(KuduSink(master, "mytable2"))
 
-    val rows = KuduSource(master, "mytable2").toFrame.collect()
+    val rows = KuduSource(master, "mytable2").toDataStream().collect
     val values = rows.head.values.toArray
     data(3) = data(3).asInstanceOf[Array[Byte]].toList
     values shouldBe data

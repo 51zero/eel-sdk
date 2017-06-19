@@ -13,7 +13,7 @@ object AvroParquetSink {
 
 case class AvroParquetSink(path: Path, overwrite: Boolean = false)(implicit fs: FileSystem) extends Sink with Logging {
 
-  def withOverwrite(overwrite: Boolean) = copy(overwrite = overwrite)
+  def withOverwrite(overwrite: Boolean): AvroParquetSink = copy(overwrite = overwrite)
 
   override def open(schema: StructType): RowOutputStream = new RowOutputStream {
 

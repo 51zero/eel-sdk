@@ -30,7 +30,7 @@ class BucketPartitionStrategyTest extends WordSpec with Matchers {
     "return full and non overlapping data" in {
       JdbcSource(() => conn, "select * from bucket_test")
         .withPartitionStrategy(BucketPartitionStrategy("a", 4, 0, 10000))
-        .toFrame().collect().size shouldBe 20
+        .toDataStream().collect.size shouldBe 20
     }
   }
 }

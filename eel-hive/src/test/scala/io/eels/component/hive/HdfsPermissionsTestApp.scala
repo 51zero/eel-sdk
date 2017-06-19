@@ -1,8 +1,8 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.Frame
 import io.eels.component.hdfs.HdfsSource
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -39,7 +39,7 @@ object HdfsPermissionsTestApp extends App with Logging {
   )
 
   val rows = List.fill(100)(data(Random.nextInt(data.length)))
-  val frame = Frame.fromValues(StructType("artist", "album", "year"), rows)
+  val frame = DataStream.fromValues(StructType("artist", "album", "year"), rows)
 
   new HiveOps(client).createTable(
     Database,
@@ -50,7 +50,7 @@ object HdfsPermissionsTestApp extends App with Logging {
     overwrite = false
   )
 
-  val sink = HiveSink(Database, Table).withIOThreads(4).withInheritPermission(true)
+  val sink = HiveSink(Database, Table).withInheritPermission(true)
   frame.to(sink)
   logger.info("Write complete")
 

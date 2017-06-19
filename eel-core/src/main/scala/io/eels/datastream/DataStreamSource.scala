@@ -10,7 +10,6 @@ import com.sksamuel.exts.config.ConfigResolver
 import io.eels.schema.StructType
 import io.eels.{CloseIterator, Listener, NoopListener, Row, Source}
 
-import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -20,7 +19,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
   private val config = ConfigResolver()
 
   override def schema: StructType = source.schema
-  override private[datastream] def partitions = {
+  override private[eels] def partitions = {
 
     val executor = Executors.newCachedThreadPool()
 
@@ -35,10 +34,10 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
       val queue = new LinkedBlockingQueue[Row](config.getInt("eel.source.defaultBufferSize"))
       val running = new AtomicBoolean(true)
 
-      logger.info(s"Submitting partition $k to executor...")
+      logger.info(s"Submitting partition ${k + 1} to executor...")
       executor.submit {
         try {
-          logger.info(s"Starting partition $k")
+          logger.info(s"Starting partition ${k + 1}")
           val CloseIterator(closeable, iterator) = part.iterator2()
           try {
             iterator.takeWhile(_ => running.get).foreach { row =>
@@ -58,13 +57,13 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
             queue.put(Row.Sentinel)
           }
         } catch {
-          case t: Throwable => logger.error(s"Error starting partition thread $k", t)
+          case t: Throwable => logger.error(s"Error starting partition thread ${k + 1}", t)
         }
       }
 
       CloseIterator(new Closeable {
         override def close(): Unit = {
-          logger.debug(s"Closing partition $k")
+          logger.debug(s"Closing partition ${k + 1}")
           running.set(false)
         }
       }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))

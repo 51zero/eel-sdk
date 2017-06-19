@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.Frame
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -53,7 +53,9 @@ object HiveSpeedTest extends App with Timed {
   )
 
   val rows = List.fill(3000000)(data(Random.nextInt(data.length)))
-  val frame = Frame.fromValues(StructType("artist", "album", "year"), rows).addField("bibble", "myvalue").addField("timestamp", System.currentTimeMillis)
+  val frame = DataStream.fromValues(StructType("artist", "album", "year"), rows)
+    .addField("bibble", "myvalue")
+    .addField("timestamp", System.currentTimeMillis.toString)
   println(frame.schema.show())
 
   while (true) {
@@ -68,14 +70,14 @@ object HiveSpeedTest extends App with Timed {
     )
 
     timed("writing data") {
-      val sink = HiveSink(Database, Table).withIOThreads(4).withPermission(new FsPermission("700"))
+      val sink = HiveSink(Database, Table).withPermission(new FsPermission("700"))
       frame.to(sink)
       logger.info("Write complete")
     }
 
     timed("reading data") {
       val source = HiveSource(Database, Table)
-      source.toFrame().size()
+      source.toDataStream().size
       logger.info("Read complete")
     }
 

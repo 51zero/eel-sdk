@@ -3,24 +3,21 @@ package io.eels.component.parquet.avro
 import com.sksamuel.exts.Logging
 import io.eels.component.avro.AvroDeserializer
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.{CloseableIterator, Part, Predicate, Row}
+import io.eels.{CloseIterator, Part, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
 class AvroParquetPart(path: Path,
                       predicate: Option[Predicate])(implicit conf: Configuration) extends Part with Logging {
 
-  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
-
+  /**
+    * Returns the data contained in this part in the form of an iterator. This function should return a new
+    * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
+    */
+  override def iterator2(): CloseIterator[Row] = {
     val reader = AvroParquetReaderFn(path, predicate, None)
     val deser = new AvroDeserializer()
-
-    override def close(): Unit = {
-      super.close()
-      reader.close()
-    }
-
-    override val iterator: Iterator[Seq[Row]] =
-      ParquetIterator(reader).grouped(1000).withPartial(true).map(rows => rows.map(deser.toRow))
+    val iterator: Iterator[Row] = ParquetIterator(reader).map(deser.toRow)
+    CloseIterator(reader.close _, iterator)
   }
 }

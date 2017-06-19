@@ -1,43 +1,46 @@
-package io.eels
+package io.eels.datastream
 
 import java.util.concurrent.CountDownLatch
 
 import com.sksamuel.exts.Logging
+import io.eels.{CloseIterator, Row}
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
 
-object GroupedFrame {
+import scala.concurrent.ExecutionContext
+
+object GroupedDataStream {
   val FullDatasetKeyFn: Row => Any = { row => 0 }
 }
 
-trait GroupedFrame {
+trait GroupedDataStream {
   outer =>
 
-  // the source frame
-  def source: Frame
+  // the source data stream
+  def source: DataStream
 
   // the function that will return a key for the row
   def keyFn: Row => Any
 
   def aggregations: Vector[Aggregation]
 
-  def toFrame(): Frame = new Frame with Logging {
+  def toDataStream: DataStream = new DataStream with Logging {
 
     override val schema: StructType = {
       val fields = aggregations.map(agg => Field(agg.name, agg.dataType))
       StructType(
-        if (keyFn == GroupedFrame.FullDatasetKeyFn) fields
+        if (keyFn == GroupedDataStream.FullDatasetKeyFn) fields
         else Field("key") +: fields
       )
     }
 
-    override def rows(): CloseableIterator[Row] = new CloseableIterator[Row] {
+    override private[eels] def partitions = {
 
       val keys = scala.collection.mutable.Set.empty[Any]
       val latch = new CountDownLatch(1)
 
-      override val iterator: Iterator[Row] = {
+      source.partitions.map { partition =>
 
-        source.rows().foreach { row =>
+        partition.map { row =>
           val key = keyFn(row)
           keys.add(key)
           aggregations.foreach(_.aggregate(key, row))
@@ -45,30 +48,30 @@ trait GroupedFrame {
 
         val rows = keys.map { key =>
           val values = aggregations.map(_.value(key))
-          Row(schema, if (keyFn == GroupedFrame.FullDatasetKeyFn) values else key +: values)
+          Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
         }
 
-        rows.iterator
+        CloseIterator(partition.closeable, rows.iterator)
       }
     }
   }
 
-  def aggregation(agg: Aggregation): GroupedFrame = new GroupedFrame {
-    override def source = outer.source
+  def aggregation(agg: Aggregation): GroupedDataStream = new GroupedDataStream {
+    override def source: DataStream = outer.source
     override def aggregations: Vector[Aggregation] = outer.aggregations :+ agg
     override def keyFn: (Row) => Any = outer.keyFn
   }
 
   // actions
-  def size(): Long = toFrame().size()
-  def collect(): Vector[Row] = toFrame().collect()
+  def size: Long = toDataStream.size
+  def collect: Vector[Row] = toDataStream.collect
 
   // convenience methods to add aggregations for the named fields
-  def sum(field: String): GroupedFrame = aggregation(Aggregation.sum(field))
-  def count(name: String): GroupedFrame = aggregation(Aggregation.count(name))
-  def avg(name: String): GroupedFrame = aggregation(Aggregation.avg(name))
-  def min(name: String): GroupedFrame = aggregation(Aggregation.min(name))
-  def max(name: String): GroupedFrame = aggregation(Aggregation.max(name))
+  def sum(field: String): GroupedDataStream = aggregation(Aggregation.sum(field))
+  def count(name: String): GroupedDataStream = aggregation(Aggregation.count(name))
+  def avg(name: String): GroupedDataStream = aggregation(Aggregation.avg(name))
+  def min(name: String): GroupedDataStream = aggregation(Aggregation.min(name))
+  def max(name: String): GroupedDataStream = aggregation(Aggregation.max(name))
 }
 
 trait Aggregation {

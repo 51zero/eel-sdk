@@ -3,8 +3,9 @@ package io.eels.component.parquet
 import java.io.File
 import java.nio.file.Paths
 
+import io.eels.Row
+import io.eels.datastream.DataStream
 import io.eels.schema._
-import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
@@ -27,15 +28,17 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Field("location", StringType, nullable = false)
       )
 
-      val frame = Frame.fromValues(
+      val ds = DataStream.fromValues(
         structType,
-        Vector("clint eastwood", "actor", "carmel"),
-        Vector("elton john", "musician", "pinner")
+        Seq(
+          Vector("clint eastwood", "actor", "carmel"),
+          Vector("elton john", "musician", "pinner")
+        )
       )
 
-      frame.to(ParquetSink(path))
+      ds.to(ParquetSink(path))
 
-      val actual = ParquetSource(path).toFrame().collect()
+      val actual = ParquetSource(path).toDataStream().collect
       actual shouldBe Vector(
         Row(structType, "clint eastwood", "actor", "carmel"),
         Row(structType, "elton john", "musician", "pinner")
@@ -57,17 +60,19 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Field("location", StringType, nullable = false)
       )
 
-      val frame = Frame.fromValues(
+      val ds = DataStream.fromValues(
         structType,
-        Vector("clint eastwood", "carmel"),
-        Vector("elton john", "pinner")
+        Seq(
+          Vector("clint eastwood", "carmel"),
+          Vector("elton john", "pinner")
+        )
       )
 
-      frame.to(ParquetSink(path1))
-      frame.to(ParquetSink(path2))
+      ds.to(ParquetSink(path1))
+      ds.to(ParquetSink(path2))
 
       val parent = Paths.get(path1.toString).toAbsolutePath.resolve("*")
-      val actual = ParquetSource(parent.toString).toFrame().toSet()
+      val actual = ParquetSource(parent.toString).toDataStream().toSet
       actual shouldBe Set(
         Row(structType, "clint eastwood", "carmel"),
         Row(structType, "elton john", "pinner"),
@@ -87,15 +92,15 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       val sol = Vector("sol", Vector("earth", "mars", "saturn"))
       val algeron = Vector("algeron", Vector("algeron-i", "algeron-ii", "algeron-iii"))
-      val frame = Frame.fromValues(structType, sol, algeron)
+      val ds = DataStream.fromValues(structType, Seq(sol, algeron))
 
       val path = new Path("array.pq")
       if (fs.exists(path))
         fs.delete(path, false)
 
-      frame.to(ParquetSink(path))
+      ds.to(ParquetSink(path))
 
-      val rows = ParquetSource(path).toFrame().collect()
+      val rows = ParquetSource(path).toDataStream().collect
       rows.head.schema shouldBe structType
       rows.map(_.values).head(1).asInstanceOf[Seq[String]] shouldBe Vector("earth", "mars", "saturn")
       rows.map(_.values).last(1).asInstanceOf[Seq[String]] shouldBe Vector("algeron-i", "algeron-ii", "algeron-iii")
@@ -111,15 +116,15 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       val values1 = Vector("a", Vector(0.1, 0.2, 0.3))
       val values2 = Vector("b", Vector(0.3, 0.4, 0.5))
-      val frame = Frame.fromValues(structType, values1, values2)
+      val ds = DataStream.fromValues(structType, Seq(values1, values2))
 
       val path = new Path("array.pq")
       if (fs.exists(path))
         fs.delete(path, false)
 
-      frame.to(ParquetSink(path))
+      ds.to(ParquetSink(path))
 
-      val rows = ParquetSource(path).toFrame().collect()
+      val rows = ParquetSource(path).toDataStream().collect
       rows.head.schema shouldBe structType
       rows.map(_.values).head(1).asInstanceOf[Seq[Double]].toVector shouldBe Vector(0.1, 0.2, 0.3)
       rows.map(_.values).last(1).asInstanceOf[Seq[Double]].toVector shouldBe Vector(0.3, 0.4, 0.5)
@@ -138,10 +143,12 @@ class ParquetComponentTest extends WordSpec with Matchers {
         ))
       )
 
-      val frame = Frame.fromValues(
+      val frame = DataStream.fromValues(
         structType,
-        Vector("federation", Vector("sol", 0, 0, 0)),
-        Vector("empire", Vector("andromeda", 914, 735, 132))
+        Seq(
+          Vector("federation", Vector("sol", 0, 0, 0)),
+          Vector("empire", Vector("andromeda", 914, 735, 132))
+        )
       )
 
       val path = new Path("struct.pq")
@@ -150,7 +157,7 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       frame.to(ParquetSink(path))
 
-      val rows = ParquetSource(path).toFrame().collect()
+      val rows = ParquetSource(path).toDataStream().collect
       rows shouldBe Seq(
         Row(structType, Vector("federation", Vector("sol", 0, 0, 0))),
         Row(structType, Vector("empire", Vector("andromeda", 914, 735, 132)))
@@ -165,15 +172,15 @@ class ParquetComponentTest extends WordSpec with Matchers {
         Field("map", MapType(StringType, BooleanType))
       )
 
-      val frame = Frame.fromValues(structType, Vector("abc", Map("a" -> true, "b" -> false)))
+      val ds = DataStream.fromValues(structType, Seq(Vector("abc", Map("a" -> true, "b" -> false))))
 
       val path = new Path("maps.pq")
       if (fs.exists(path))
         fs.delete(path, false)
 
-      frame.to(ParquetSink(path))
+      ds.to(ParquetSink(path))
 
-      val rows = ParquetSource(path).toFrame().collect()
+      val rows = ParquetSource(path).toDataStream().collect
       structType shouldBe rows.head.schema
       rows shouldBe Seq(Row(structType, Vector("abc", Map("a" -> true, "b" -> false))))
 

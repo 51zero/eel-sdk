@@ -6,14 +6,8 @@ import com.sksamuel.exts.Logging
 import io.eels.Constants
 import io.eels.schema._
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.IMetaStoreClient
-import org.apache.hadoop.hive.metastore.TableType
-import org.apache.hadoop.hive.metastore.api.Database
-import org.apache.hadoop.hive.metastore.api.FieldSchema
-import org.apache.hadoop.hive.metastore.api.SerDeInfo
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor
-import org.apache.hadoop.hive.metastore.api.Table
-import org.apache.hadoop.hive.metastore.api.{Partition => HivePartition}
+import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
+import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
 
 import scala.collection.JavaConverters._
 

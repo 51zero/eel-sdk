@@ -2,7 +2,8 @@ package io.eels.component.parquet
 
 import java.io.File
 
-import io.eels.{Frame, Predicate}
+import io.eels.Predicate
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -15,10 +16,12 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     Field("job", StringType, nullable = false),
     Field("location", StringType, nullable = false)
   )
-  private val frame = Frame.fromValues(
+  private val ds = DataStream.fromValues(
     schema,
-    Vector("clint eastwood", "actor", "carmel"),
-    Vector("elton john", "musician", "pinner")
+    Seq(
+      Vector("clint eastwood", "actor", "carmel"),
+      Vector("elton john", "musician", "pinner")
+    )
   )
 
   private implicit val conf = new Configuration()
@@ -30,10 +33,10 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
 
   new File(path.toString).deleteOnExit()
 
-  frame.to(ParquetSink(path))
+  ds.to(ParquetSink(path))
 
   "ParquetSource" should "support predicates" in {
-    val rows = ParquetSource(path).withPredicate(Predicate.equals("job", "actor")).toFrame().collect()
+    val rows = ParquetSource(path).withPredicate(Predicate.equals("job", "actor")).toDataStream().collect
     rows.size shouldBe 1
   }
 }

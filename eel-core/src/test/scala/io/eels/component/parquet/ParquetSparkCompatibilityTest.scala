@@ -85,10 +85,10 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
 
     df.write.mode(SaveMode.Overwrite).parquet(path.toString)
 
-    val frame = ParquetSource(path).toFrame()
-    frame.schema shouldBe schema
+    val ds = ParquetSource(path).toDataStream()
+    ds.schema shouldBe schema
 
-    val values = frame.collect().head.values.toArray
+    val values = ds.collect.head.values.toArray
     // must convert byte array to list for deep equals
     values.update(8, values(8).asInstanceOf[Array[Byte]].toList)
     values shouldBe Vector(
@@ -164,7 +164,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
 
   "parquet source" should "support nullable maps created in spark" in {
     Seq(Maps(Map("a" -> true, "b" -> false))).toDF.write.mode(SaveMode.Overwrite).save("/tmp/a")
-    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
+    ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
   }
 
   it should "support non-null maps created in spark" in {
@@ -172,7 +172,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     val schema = org.apache.spark.sql.types.StructType(df1.schema.map(_.copy(nullable = false)))
     val df2 = df1.sqlContext.createDataFrame(df1.rdd, schema)
     df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
-    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
+    ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
   }
 
   it should "support nullable arrays created in spark" in {
@@ -182,10 +182,10 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(Array())).toDF.write.mode(SaveMode.Overwrite).save("/tmp/c")
     Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(null)).toDF.write.mode(SaveMode.Overwrite).save("/tmp/d")
 
-    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
-    ParquetSource(new Path("/tmp/b")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0)))
-    ParquetSource(new Path("/tmp/c")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector()))
-    ParquetSource(new Path("/tmp/d")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(null))
+    ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+    ParquetSource(new Path("/tmp/b")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0)))
+    ParquetSource(new Path("/tmp/c")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector()))
+    ParquetSource(new Path("/tmp/d")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(null))
   }
 
   it should "support non-null arrays created in spark" in {
@@ -194,7 +194,7 @@ class ParquetSparkCompatibilityTest extends FlatSpec with Matchers {
     val df2 = df1.sqlContext.createDataFrame(df1.rdd, schema)
     df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
 
-    ParquetSource(new Path("/tmp/a")).toFrame().collect().map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+    ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
   }
 }
 

@@ -21,7 +21,7 @@ class HashPartitionStrategyTest extends WordSpec with Matchers {
     "return full and non overlapping data" in {
       JdbcSource(() => conn, "select * from mytable")
         .withPartitionStrategy(HashPartitionStrategy("mod(a, 10)", 10))
-        .toFrame().collect().flatMap(_.values).toSet shouldBe
+        .toDataStream().collect.flatMap(_.values).toSet shouldBe
         Vector.tabulate(20) { k => k }.toSet
     }
   }

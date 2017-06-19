@@ -43,8 +43,7 @@ object GroupedByParquetSpeedTest extends App with Timed {
     timed("multiple files") {
 
       val f = ParquetSource("./parquettest/*")
-        .toFrame()
-        .listener(new Listener {
+        .toDataStream(new Listener {
           var count = 0
           override def onNext(row: Row): Unit = {
             count = count + 1
@@ -52,7 +51,7 @@ object GroupedByParquetSpeedTest extends App with Timed {
               println(count)
           }
         })
-      println(f.collect().last)
+      println(f.collect.last)
     }
   }
 

@@ -14,6 +14,8 @@ import org.scalatest.{Matchers, WordSpec}
 class ParquetSourceTest extends WordSpec with Matchers {
   ParquetLogMute()
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(conf)
 
@@ -30,14 +32,14 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.toAbsolutePath()).toDataStream().collect().map(_.values).toSet
+      val people = ParquetSource(personFile.toAbsolutePath()).toDataStream().collect.map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().collect().map(_.values).toSet
+      val people = ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().collect.map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),

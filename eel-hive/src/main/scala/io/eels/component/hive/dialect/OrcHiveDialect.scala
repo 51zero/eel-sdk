@@ -1,22 +1,22 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
+import io.eels.{CloseIterator, Predicate, Row}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcPart, OrcSinkConfig, OrcWriter}
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object OrcHiveDialect extends HiveDialect with Logging {
 
-  override def read(path: Path,
-                    metastoreSchema: StructType,
-                    projectionSchema: StructType,
-                    predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Seq[Row]] = {
-    new OrcPart(path, projectionSchema.fieldNames(), predicate).iterator()
+  override def read2(path: Path,
+                     metastoreSchema: StructType,
+                     projectionSchema: StructType,
+                     predicate: Option[Predicate])
+                    (implicit fs: FileSystem, conf: Configuration): CloseIterator[Row] = {
+    new OrcPart(path, projectionSchema.fieldNames(), predicate).iterator2()
   }
 
   override def writer(schema: StructType,
@@ -24,6 +24,7 @@ object OrcHiveDialect extends HiveDialect with Logging {
                       permission: Option[FsPermission],
                       metadata: Map[String, String])(implicit fs: FileSystem, conf: Configuration): HiveWriter = {
 
+    val path_x = path
     val writer = new OrcWriter(path, schema, Nil, None, OrcSinkConfig())
 
     new HiveWriter {
@@ -39,6 +40,7 @@ object OrcHiveDialect extends HiveDialect with Logging {
       }
 
       override def records: Int = writer.records
+      override def path: Path = path_x
     }
   }
 }

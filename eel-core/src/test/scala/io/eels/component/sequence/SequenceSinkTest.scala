@@ -1,6 +1,6 @@
 package io.eels.component.sequence
 
-import io.eels.Frame
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -9,10 +9,12 @@ import org.scalatest.{Matchers, WordSpec}
 
 class SequenceSinkTest extends WordSpec with Matchers {
 
-  private val frame = Frame.fromValues(
+  private val ds = DataStream.fromValues(
     StructType("a", "b", "c", "d"),
-    List("1", "2", "3", "4"),
-    List("5", "6", "7", "8")
+    Seq(
+      List("1", "2", "3", "4"),
+      List("5", "6", "7", "8")
+    )
   )
 
   "SequenceSink" should {
@@ -25,7 +27,7 @@ class SequenceSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, true)
 
-      frame.to(SequenceSink(path))
+      ds.to(SequenceSink(path))
 
       val reader = new SequenceFile.Reader(new Configuration, SequenceFile.Reader.file(path))
 

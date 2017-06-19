@@ -1,13 +1,12 @@
 package io.eels.component.hive
 
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{LinkedBlockingQueue, _}
+import java.util.concurrent._
 
 import com.sksamuel.exts.Logging
-import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
+import io.eels.util.RowNormalizerFn
 import io.eels.{Row, RowOutputStream}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -15,13 +14,14 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.concurrent.TrieMap
-import scala.util.control.NonFatal
 
 class HiveRowOutputStream(sourceSchema: StructType,
                           metastoreSchema: StructType,
                           dbName: String,
                           tableName: String,
-                          ioThreads: Int,
+                          // a discriminator for the file names, needed when we are writing to the same table
+                          // with multiple threads
+                          discriminator: Option[String],
                           dialect: HiveDialect,
                           dynamicPartitioning: Boolean,
                           bufferSize: Int,
@@ -30,8 +30,8 @@ class HiveRowOutputStream(sourceSchema: StructType,
                           fileListener: FileListener,
                           metadata: Map[String, String])
                          (implicit fs: FileSystem,
-                     conf: Configuration,
-                     client: IMetaStoreClient) extends RowOutputStream with Logging {
+                          conf: Configuration,
+                          client: IMetaStoreClient) extends RowOutputStream with Logging {
 
   private val config = ConfigFactory.load()
   private val sinkConfig = HiveSinkConfig()
@@ -59,104 +59,65 @@ class HiveRowOutputStream(sourceSchema: StructType,
   }
 
   // the normalizer takes care of making sure the row is aligned with the file schema
-  private val normalizer = new RowNormalizerFn(fileSchema)
+  private val normalizer = new RowNormalizerFn(fileSchema, ConfigFactory.load().getBoolean("eel.hive.sink.pad-with-null"))
 
-  // Since the data can come in unordered, we need to keep open a stream per partition path otherwise we'd
-  // be opening and closing streams frequently.
-  // We also can't share a writer amongst threads for obvious reasons otherwise we'd just have a single
-  // writer being used for all data. So the solution is a hive writer per thread per partition, each
-  // writing to their own files.
-  private val writers = new TrieMap[String, (Path, HiveWriter)]
+  // Since the data can come in unordered, we want to keep the streams for each partition open
+  // otherwise we would be opening and closing streams frequently.
+  private val writers = TrieMap.empty[String, HiveWriter]
 
   // this contains all the partitions we've checked.
-  // No need for multiple threads to keep hitting the meta store to check on the same partition paths
   private val createdPartitions = new ConcurrentSkipListSet[String]
 
-  // we buffer incoming data into this queue, so that slow writing doesn't unncessarily
-  // block threads feeding this sink
-  private val buffer = new LinkedBlockingQueue[Row](bufferSize)
-
-  // the io threads will run in their own threads inside this executor
-  private val writerPool = Executors.newFixedThreadPool(ioThreads)
-
-  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning; ioThreads=$ioThreads")
-
-  import com.sksamuel.exts.concurrent.ExecutorImplicits._
-
-  private val running = new AtomicBoolean(true)
-  private var throwable: Throwable = null
-
-  logger.debug(s"Creating $ioThreads hive writers")
-  for (k <- 0 until ioThreads) {
-    writerPool.submit {
-      try {
-        BlockingQueueConcurrentIterator(buffer, Row.Sentinel).takeWhile(_ => running.get).foreach { row =>
-          val writer = getOrCreateHiveWriter(row, k)._2
-          // need to strip out any partition information from the written data and possibly pad
-          writer.write(normalizer(row))
-        }
-      } catch {
-        case NonFatal(e) =>
-          logger.error("Error during write; aborting all writing threads", e)
-          running.set(false)
-          throwable = e
-      }
-    }
-  }
-  writerPool.shutdown()
+  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning")
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
   // returns a Map consisting of each path written, the size of the file, and the number of records in that file
   def writeStats(): Seq[WriteStatus] = {
-    writers.map { case (_, ph) => WriteStatus(ph._1, fs.getFileStatus(ph._1).getLen, ph._2.records) }
+    writers.values.map { writer => WriteStatus(writer.path, fs.getFileStatus(writer.path).getLen, writer.records) }
   }.toVector
 
   override def write(row: Row): Unit = {
-    if (throwable != null)
-      throw throwable
-    buffer.put(row)
+    val writer = getOrCreateHiveWriter(row)
+    // need to strip out any partition information from the written data and possibly pad
+    writer.write(normalizer(row))
   }
 
   override def close(): Unit = {
-    logger.debug("Closing hive writer once buffer is empty...")
-
-    buffer.put(Row.Sentinel)
-    writerPool.awaitTermination(100, TimeUnit.DAYS)
-    writers.values.foreach(_._2.close)
-    logger.debug(s"All hive writer threads have completed; usedTempDir=$writeToTempDirectory")
-
+    logger.info("Closing hive output stream")
     if (writeToTempDirectory) {
-      logger.debug("Moving files from temp dir to public")
+      logger.info("Moving files from temp dir to public")
+
       // move table/.temp/file to table/file
-      writers.values.foreach { case (path, _) => fs.rename(path, new Path(path.getParent.getParent, path.getName)) }
+      writers.values.foreach { writer =>
+        fs.rename(writer.path, new Path(writer.path.getParent.getParent, writer.path.getName))
+      }
+
       logger.debug("Deleting temp dirs")
-      writers.values.foreach { case (path, _) =>
-        fs.delete(path.getParent, true)
+      writers.values.foreach { writer =>
+        fs.delete(writer.path, true)
       }
     }
+    logger.debug(s"Closing ${writers.size} hive writers")
+    writers.values.foreach(_.close)
   }
 
-  def getOrCreateHiveWriter(row: Row, writerId: Int): (Path, HiveWriter) = {
+  def getOrCreateHiveWriter(row: Row): HiveWriter = {
 
-    // we need a hive writer per thread (to different files of course), and a writer
-    // per partition (as each partition is written to a different directory)
+    // we need a a writer per partition (as each partition is written to a different directory)
     val parts = PartitionPartsFn.rowPartitionParts(row, partitionKeyNames)
     val partPath = hiveOps.partitionPathString(parts, tablePath)
-    writers.getOrElseUpdate(partPath + writerId, {
 
-      // if dynamic partition is enabled then we will try to update
-      // the hive metastore with the new partition information
+    // we cache the writer so that we don't keep opening and closing loads of writers
+    writers.getOrElseUpdate(partPath, {
+
+      // if dynamic partition is enabled then we will create any partitions and
+      // update the hive metastore
       if (dynamicPartitioning) {
         if (parts.nonEmpty) {
-          // we need to synchronize this, as its quite likely that when ioThreads>1 we have >1 thread
-          // trying to createReader a partition at the same time. This is virtually guaranteed to happen if
-          // the data is in any way sorted
           if (!createdPartitions.contains(partPath.toString())) {
-            lock.synchronized {
-              hiveOps.createPartitionIfNotExists(dbName, tableName, parts)
-              createdPartitions.add(partPath.toString())
-            }
+            hiveOps.createPartitionIfNotExists(dbName, tableName, parts)
+            createdPartitions.add(partPath.toString())
           }
         }
       } else if (!hiveOps.partitionExists(dbName, tableName, parts)) {
@@ -173,7 +134,7 @@ class HiveRowOutputStream(sourceSchema: StructType,
         }
       }
 
-      val filename = "eel_" + System.nanoTime() + "_" + writerId
+      val filename = "eel_" + System.nanoTime() + discriminator.map("_" + _.stripPrefix("_")).getOrElse("")
       val filePath = if (writeToTempDirectory) {
         val temp = new Path(partPath, ".eeltemp_" + UUID.randomUUID.toString)
         new Path(temp, filename)
@@ -182,7 +143,8 @@ class HiveRowOutputStream(sourceSchema: StructType,
       }
       logger.debug(s"Creating hive writer for $filePath")
       fileListener.onFileCreated(filePath)
-      filePath -> dialect.writer(fileSchema, filePath, permission, metadata)
+
+      dialect.writer(fileSchema, filePath, permission, metadata)
     })
   }
 }

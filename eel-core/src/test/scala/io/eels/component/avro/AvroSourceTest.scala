@@ -22,7 +22,7 @@ class AvroSourceTest extends WordSpec with Matchers {
     "read strings as java.lang.String when eel.avro.java.string is true" in {
       System.setProperty("eel.avro.java.string", "true")
       ConfigFactory.invalidateCaches()
-      val people = AvroSource(Paths.get(getClass.getResource("/test.avro").getFile).toAbsolutePath).toFrame().toSet
+      val people = AvroSource(Paths.get(getClass.getResource("/test.avro").getFile).toAbsolutePath).toDataStream().toSet
       people.map(_.values) shouldBe Set(
         List("clint eastwood", "actor", "carmel"),
         List("elton john", "musician", "pinner"),
@@ -34,7 +34,7 @@ class AvroSourceTest extends WordSpec with Matchers {
     "read strings as utf8 when eel.avro.java.string is false" in {
       System.setProperty("eel.avro.java.string", "false")
       ConfigFactory.invalidateCaches()
-      val people = AvroSource(Paths.get(getClass.getResource("/test.avro").getFile).toAbsolutePath).toFrame().toSet
+      val people = AvroSource(Paths.get(getClass.getResource("/test.avro").getFile).toAbsolutePath).toDataStream().toSet
       people.map(_.values) shouldBe Set(
         List(new Utf8("clint eastwood"), new Utf8("actor"), new Utf8("carmel")),
         List(new Utf8("elton john"), new Utf8("musician"), new Utf8("pinner")),

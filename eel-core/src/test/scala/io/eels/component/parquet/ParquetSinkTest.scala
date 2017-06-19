@@ -10,6 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class ParquetSinkTest extends FlatSpec with Matchers {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(conf)
 
@@ -35,7 +36,7 @@ class ParquetSinkTest extends FlatSpec with Matchers {
 
     ds.to(ParquetSink(path))
 
-    val rows = ParquetSource(path).toDataStream().collect()
+    val rows = ParquetSource(path).toDataStream().collect
     rows shouldBe Seq(
       Row(schema, Vector("clint eastwood", "actor", null)),
       Row(schema, Vector("elton john", null, "pinner"))

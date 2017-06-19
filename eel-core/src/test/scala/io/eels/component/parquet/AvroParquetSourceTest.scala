@@ -31,14 +31,14 @@ class AvroParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read parquet files" in {
-      val people = AvroParquetSource(personFile.toAbsolutePath()).toFrame().toSet().map(_.values)
+      val people = AvroParquetSource(personFile.toAbsolutePath()).toDataStream().toSet.map(_.values)
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = AvroParquetSource(resourcesDir.resolve("*")).toFrame().toSet().map(_.values)
+      val people = AvroParquetSource(resourcesDir.resolve("*")).toDataStream().toSet.map(_.values)
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),

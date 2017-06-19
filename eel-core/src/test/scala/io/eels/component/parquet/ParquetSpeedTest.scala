@@ -3,10 +3,11 @@ package io.eels.component.parquet
 import java.io.File
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.Row
 import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
 import io.eels.component.parquet.util.ParquetLogMute
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
-import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -42,7 +43,7 @@ object ParquetSpeedTest extends App with Timed {
   val size = 2000000
   val schema = StructType("a", "b", "c", "d", "e")
   val createRow = Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4))
-  val frame = Frame.fromIterator(schema, Iterator.continually(createRow).take(size))
+  val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
 
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
@@ -53,18 +54,18 @@ object ParquetSpeedTest extends App with Timed {
   new File(path.toString).deleteOnExit()
 
   timed("Insertion") {
-    frame.to(AvroParquetSink(path))
+    ds.to(AvroParquetSink(path))
   }
 
   while (true) {
 
     timed("Reading with ParquetSource") {
-      val actual = ParquetSource(path).toFrame().size()
+      val actual = ParquetSource(path).toDataStream().size
       assert(actual == size)
     }
 
     timed("Reading with AvroParquetSource") {
-      val actual = AvroParquetSource(path).toFrame().size()
+      val actual = AvroParquetSource(path).toDataStream().size
       assert(actual == size)
     }
   }

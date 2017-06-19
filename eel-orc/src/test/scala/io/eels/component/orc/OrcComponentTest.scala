@@ -2,11 +2,11 @@ package io.eels.component.orc
 
 import java.sql.Timestamp
 
-import io.eels.{Frame, Row}
+import io.eels.Row
+import io.eels.datastream.DataStream
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.orc.TypeDescription
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
@@ -50,20 +50,20 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
 
       val batch2 = desc.createRowBatch(3332)
 
-      val frame = Frame(
+      val ds = DataStream.fromRows(
         schema,
         Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
         Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
 
       fs.delete(path, false)
-      frame.to(OrcSink(path))
+      ds.to(OrcSink(path))
 
-      val rows = OrcSource(path).toFrame().toSet()
+      val rows = OrcSource(path).toDataStream().toSet
       rows.size shouldBe 2
       fs.delete(path, false)
 
-      rows.head.schema shouldBe frame.schema
+      rows.head.schema shouldBe ds.schema
 
       rows shouldBe Set(
         Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
@@ -77,17 +77,17 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Field("c", DateType, true)
       )
 
-      val frame = Frame(
+      val ds = DataStream.fromRows(
         schema,
         Row(schema, Vector("a1", null, null)),
         Row(schema, Vector("a2", "b2", null))
       )
 
-      frame.to(OrcSink(path))
+      ds.to(OrcSink(path))
 
-      val rows = OrcSource(path).toFrame().toSet()
+      val rows = OrcSource(path).toDataStream().toSet
       rows.size shouldBe 2
-      rows.head.schema shouldBe frame.schema
+      rows.head.schema shouldBe ds.schema
       rows shouldBe Set(
         Row(schema, Vector("a1", null, null)),
         Row(schema, Vector("a2", "b2", null))
@@ -101,17 +101,17 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         ))
       )
 
-      val frame = Frame(
+      val ds = DataStream.fromRows(
         schema,
         Row(schema, Vector("a1", Vector("c1"))),
         Row(schema, Vector("a2", Vector("c2")))
       )
 
-      frame.to(OrcSink(path))
+      ds.to(OrcSink(path))
 
-      val rows = OrcSource(path).toFrame().toSet()
+      val rows = OrcSource(path).toDataStream().toSet
       rows.size shouldBe 2
-      rows.head.schema shouldBe frame.schema
+      rows.head.schema shouldBe ds.schema
       rows shouldBe Set(
         Row(schema, Vector("a1", Vector("c1"))),
         Row(schema, Vector("a2", Vector("c2")))
@@ -121,13 +121,13 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       val schema = StructType(Field("a", StringType), Field("b", BooleanType), Field("c", IntType.Signed))
       val projectedSchema = schema.removeField("b")
 
-      val frame = Frame(schema,
+      val ds = DataStream.fromRows(schema,
         Row(schema, Vector("x", true, 1)),
         Row(schema, Vector("y", false, 2))
       )
-      frame.to(OrcSink(path))
+      ds.to(OrcSink(path))
 
-      val rows = OrcSource(path).withProjection("a", "c").toFrame().toSet
+      val rows = OrcSource(path).withProjection("a", "c").toDataStream().toSet
       rows.size shouldBe 2
       rows.head.schema shouldBe projectedSchema
       rows shouldBe Set(
@@ -138,7 +138,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
     "support overwrite option" in {
 
       val schema = StructType(Field("a", StringType))
-      val frame = Frame(schema,
+      val frame = DataStream.fromRows(schema,
         Row(schema, Vector("x")),
         Row(schema, Vector("y"))
       )
@@ -153,12 +153,12 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       val path = new Path("permissions.pq")
 
       val schema = StructType(Field("a", StringType))
-      val frame = Frame(schema,
+      val ds = DataStream.fromRows(schema,
         Row(schema, Vector("x")),
         Row(schema, Vector("y"))
       )
 
-      frame.to(OrcSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
+      ds.to(OrcSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
       fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
       fs.delete(path, false)
     }

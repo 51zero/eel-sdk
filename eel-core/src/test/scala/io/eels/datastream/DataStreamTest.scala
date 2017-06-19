@@ -30,26 +30,26 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.take" should {
     "return only n number of rows" in {
-      source.toDataStream.take(4).collect.size shouldBe 4
+      source.toDataStream().take(4).collect.size shouldBe 4
     }
   }
 
   "DataStream.takeWhile" should {
     "support take while with row predicate" in {
-      source.toDataStream.takeWhile(row => row.values.mkString.contains("co.uk")).collect.size shouldBe 6
+      source.toDataStream().takeWhile(row => row.values.mkString.contains("co.uk")).collect.size shouldBe 6
     }
     "support take while with column predicate" in {
-      source.toDataStream.takeWhile("web", _.toString.contains("co.uk")).collect.size shouldBe 6
+      source.toDataStream().takeWhile("web", _.toString.contains("co.uk")).collect.size shouldBe 6
     }
   }
 
   "DataStream.renameField" should {
     "update the schema" in {
-      source.toDataStream.renameField("web", "website").schema.fieldNames() shouldBe
+      source.toDataStream().renameField("web", "website").schema.fieldNames() shouldBe
         Vector("first_name", "last_name", "company_name", "address", "city", "county", "postal", "phone1", "phone2", "email", "website")
     }
     "copy the rows with updated schema" in {
-      source.toDataStream.renameField("web", "website").take(1).collect.head.schema.fieldNames() shouldBe
+      source.toDataStream().renameField("web", "website").take(1).collect.head.schema.fieldNames() shouldBe
         Vector("first_name", "last_name", "company_name", "address", "city", "county", "postal", "phone1", "phone2", "email", "website")
     }
   }

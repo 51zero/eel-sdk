@@ -1,6 +1,6 @@
 package io.eels.component.json
 
-import io.eels.Frame
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StructType}
 import org.apache.commons.io.IOUtils
 import org.apache.hadoop.conf.Configuration
@@ -18,14 +18,16 @@ class JsonSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
 
       val schema = StructType(Field("name"), Field("location"))
-      val frame = Frame.fromValues(
+      val ds = DataStream.fromValues(
         schema,
-        Vector("sam", "aylesbury"),
-        Vector("jam", "aylesbury"),
-        Vector("ham", "buckingham")
+        Seq(
+          Vector("sam", "aylesbury"),
+          Vector("jam", "aylesbury"),
+          Vector("ham", "buckingham")
+        )
       )
 
-      frame.to(JsonSink(path))
+      ds.to(JsonSink(path))
       val input = IOUtils.toString(fs.open(path))
       input should include("""{"name":"sam","location":"aylesbury"}""")
       input should include("""{"name":"jam","location":"aylesbury"}""")
@@ -38,9 +40,9 @@ class JsonSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
 
       val schema = StructType(Field("name"), Field("skills"))
-      val frame = Frame.fromValues(
+      val frame = DataStream.fromValues(
         schema,
-        Vector("sam", Array("karate", "kung fu"))
+        Seq(Vector("sam", Array("karate", "kung fu")))
       )
 
       frame.to(JsonSink(path))
@@ -54,9 +56,9 @@ class JsonSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
 
       val schema = StructType(Field("name"), Field("locations"))
-      val frame = Frame.fromValues(
+      val frame = DataStream.fromValues(
         schema,
-        Vector("sam", Map("home" -> "boro", "work" -> "london"))
+        Seq(Vector("sam", Map("home" -> "boro", "work" -> "london")))
       )
 
       frame.to(JsonSink(path))
@@ -73,9 +75,9 @@ class JsonSinkTest extends WordSpec with Matchers {
         fs.delete(path, false)
 
       val schema = StructType(Field("name"), Field("locations"))
-      val frame = Frame.fromValues(
+      val frame = DataStream.fromValues(
         schema,
-        Vector("sam", Foo("boro", "london"))
+        Seq(Vector("sam", Foo("boro", "london")))
       )
 
       frame.to(JsonSink(path))

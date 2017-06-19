@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import io.eels.{Row, Sink, RowOutputStream}
+import io.eels.{Row, RowOutputStream, Sink}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -18,27 +18,35 @@ case class ParquetSink(path: Path,
   def withPermission(permission: FsPermission): ParquetSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): ParquetSink = copy(inheritPermissions = Option(inheritPermissions))
 
-  override def open(schema: StructType): RowOutputStream = new RowOutputStream {
+  private def create(schema: StructType, path: Path): RowOutputStream = {
 
     if (overwrite && fs.exists(path))
       fs.delete(path, false)
 
-    private val writer = RowParquetWriterFn(path, schema, metadata)
+    val writer = RowParquetWriterFn(path, schema, metadata)
 
-    override def write(row: Row): Unit = {
-      writer.write(row)
-    }
+    new RowOutputStream {
+      override def write(row: Row): Unit = {
+        writer.write(row)
+      }
 
-    override def close(): Unit = {
-      writer.close()
-      permission match {
-        case Some(perm) => fs.setPermission(path, perm)
-        case None =>
-          if (inheritPermissions.getOrElse(false)) {
-            val permission = fs.getFileStatus(path.getParent).getPermission
-            fs.setPermission(path, permission)
-          }
+      override def close(): Unit = {
+        writer.close()
+        permission match {
+          case Some(perm) => fs.setPermission(path, perm)
+          case None =>
+            if (inheritPermissions.getOrElse(false)) {
+              val permission = fs.getFileStatus(path.getParent).getPermission
+              fs.setPermission(path, permission)
+            }
+        }
       }
     }
   }
+
+  override def open(schema: StructType, n: Int): Seq[RowOutputStream] = {
+    List.tabulate(n) { k => create(schema, new Path(path.getParent, path.toString + "_" + k)) }
+  }
+
+  override def open(schema: StructType): RowOutputStream = create(schema, path)
 }

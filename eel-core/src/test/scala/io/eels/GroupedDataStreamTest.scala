@@ -1,9 +1,10 @@
 package io.eels
 
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, IntType, LongType, StructType}
 import org.scalatest.{Matchers, WordSpec}
 
-class GroupedFrameTest extends WordSpec with Matchers {
+class GroupedDataStreamTest extends WordSpec with Matchers {
 
   val schema = StructType(
     Field("artist"),
@@ -11,7 +12,7 @@ class GroupedFrameTest extends WordSpec with Matchers {
     Field("album"),
     Field("sales", LongType())
   )
-  val frame = Frame.apply(schema,
+  val ds = DataStream.fromRows(schema,
     Row(schema, Vector("Elton John", 1969, "Empty Sky", 1433)),
     Row(schema, Vector("Elton John", 1971, "Madman Across the Water", 7636)),
     Row(schema, Vector("Elton John", 1972, "Honky Château", 2525)),
@@ -26,31 +27,31 @@ class GroupedFrameTest extends WordSpec with Matchers {
 
   "grouped operations" should {
     "support sum" in {
-      frame.groupBy("artist").sum("sales").toFrame().toSet().map(_.values) shouldBe
+      ds.groupBy("artist").sum("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 21591), Vector("Kate Bush", 21514.0))
     }
     "support count" in {
-      frame.groupBy("artist").count("album").toFrame().toSet().map(_.values) shouldBe
+      ds.groupBy("artist").count("album").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 5), Vector("Kate Bush", 5))
     }
     "support avg" in {
-      frame.groupBy("artist").avg("sales").toFrame().toSet().map(_.values) shouldBe
+      ds.groupBy("artist").avg("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 4318.2), Vector("Kate Bush", 4302.8))
     }
     "support min" in {
-      frame.groupBy("artist").min("year").toFrame().toSet().map(_.values) shouldBe
+      ds.groupBy("artist").min("year").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 1969), Vector("Kate Bush", 1978))
     }
     "support max" in {
-      frame.groupBy("artist").max("year").toFrame().toSet().map(_.values) shouldBe
+      ds.groupBy("artist").max("year").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 1975), Vector("Kate Bush", 1985))
     }
     "support multiple aggregations" in {
-      frame.groupBy("artist").avg("year").sum("sales").toFrame().toSet().map(_.values) shouldBe
+      ds.groupBy("artist").avg("year").sum("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 1972.0, 21591.0), Vector("Kate Bush", 1980.6, 21514.0))
     }
     "support aggregations on entire dataset" in {
-      frame.aggregated().avg("year").sum("sales").toFrame().toSet().map(_.values) shouldBe
+      ds.aggregated().avg("year").sum("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector(1976.3, 43105.0))
     }
   }

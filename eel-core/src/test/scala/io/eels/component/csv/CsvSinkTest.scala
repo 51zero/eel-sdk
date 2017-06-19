@@ -1,7 +1,8 @@
 package io.eels.component.csv
 
+import io.eels.Row
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
-import io.eels.{Frame, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
@@ -27,7 +28,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
     "write csv data" in {
 
       val schema = StructType(Field("name"), Field("job"), Field("location"))
-      val frame = Frame(
+      val frame = DataStream.fromRows(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),
         Row(schema, Vector("elton john", "musician", "pinner"))
@@ -40,7 +41,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
     "support setting delimiter" in {
 
       val schema = StructType(Field("name"), Field("job"), Field("location"))
-      val frame = Frame(
+      val frame = DataStream.fromRows(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),
         Row(schema, Vector("elton john", "musician", "pinner"))
@@ -52,7 +53,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
     }
     "write headers when specified" in {
       val schema = StructType(Field("name"), Field("job"), Field("location"))
-      val frame = Frame(
+      val frame = DataStream.fromRows(
         schema,
         Row(schema, Vector("clint eastwood", "actor", "carmel")),
         Row(schema, Vector("elton john", "musician", "pinner"))
@@ -63,7 +64,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
     }
     "write null values as empty strings" in {
       val schema = StructType(Field("name"), Field("job"), Field("location"))
-      val frame = Frame(
+      val frame = DataStream.fromRows(
         schema,
         Row(schema, Vector("clint eastwood", null, "carmel")),
         Row(schema, Vector("elton john", null, "pinner"))
@@ -78,7 +79,8 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       fs.delete(path, false)
 
       val schema = StructType(Field("a", StringType))
-      val frame = Frame(schema,
+      val frame = DataStream.fromRows(
+        schema,
         Row(schema, Vector("x")),
         Row(schema, Vector("y"))
       )

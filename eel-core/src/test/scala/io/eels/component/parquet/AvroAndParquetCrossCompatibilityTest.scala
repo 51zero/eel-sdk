@@ -1,7 +1,7 @@
 package io.eels.component.parquet
 
-import io.eels.Frame
 import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -24,18 +24,20 @@ class AvroAndParquetCrossCompatibilityTest extends FlatSpec with Matchers {
       Field("location", StringType, nullable = false)
     )
 
-    val frame = Frame.fromValues(
+    val ds = DataStream.fromValues(
       structType,
-      Vector("clint eastwood", "carmel"),
-      Vector("elton john", "pinner")
+      Seq(
+        Vector("clint eastwood", "carmel"),
+        Vector("elton john", "pinner")
+      )
     )
 
-    frame.to(ParquetSink(path))
-    AvroParquetSource(path).toFrame().collect() shouldBe frame.collect()
+    ds.to(ParquetSink(path))
+    AvroParquetSource(path).toDataStream().collect shouldBe ds.collect
     fs.delete(path, false)
 
-    frame.to(AvroParquetSink(path))
-    ParquetSource(path).toFrame().collect() shouldBe frame.collect()
+    ds.to(AvroParquetSink(path))
+    ParquetSource(path).toDataStream().collect shouldBe ds.collect
     fs.delete(path, false)
   }
 }

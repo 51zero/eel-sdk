@@ -56,22 +56,13 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       val values = node.getElements.asScala.map(nodeToValue).toArray
       Row(schema, values)
     }
-
     /**
       * Returns the data contained in this part in the form of an iterator. This function should return a new
       * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
       */
-    override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
-
-      private val input = createInputStream(path)
-
-      override def close(): Unit = {
-        super.close()
-        input.close()
-      }
-
-      override val iterator: Iterator[Seq[Row]] =
-        reader.readValues[JsonNode](input).asScala.map(nodeToRow).grouped(100).withPartial(true)
+    override def iterator2(): CloseIterator[Row] = {
+      val input = createInputStream(path)
+      CloseIterator(input.close _, reader.readValues[JsonNode](input).asScala.map(nodeToRow))
     }
   }
 }

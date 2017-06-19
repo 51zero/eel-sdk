@@ -60,38 +60,4 @@ class HiveFilePart(val dialect: HiveDialect,
 
     CloseIterator(closeable, mapped)
   }
-
-  override def iterator(): CloseableIterator[Seq[Row]] = {
-
-    val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
-
-    // the schema we send to the dialect must have any partitions removed, because those fields won't exist
-    // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
-    val projectionFields = projectionSchema.fields.filterNot { it => partitionMap.contains(it.name) }
-
-    // once the partitions are removed from the projection, we might have an empty projection, which won't work
-    // in parquet, so we can ask for the simplest projection which is just a single field (which we'll then throw
-    // away once the results come back)
-    val projectionWithoutPartitions = {
-      if (projectionFields.isEmpty)
-        StructType(metastoreSchema.fields.head)
-      else
-        StructType(projectionFields)
-    }
-
-    val reader = dialect.read(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
-
-    // since we removed the partition fields from the target schema, we must repopulate them after the read
-    // we also need to throw away the dummy field if we had an empty schema
-    reader.map { rows =>
-      rows.map { row =>
-        if (projectionFields.isEmpty) {
-          val values = projectionSchema.fieldNames().map(partitionMap.apply)
-          Row(projectionSchema, values.toVector)
-        } else {
-          RowUtils.rowAlign(row, projectionSchema, partitionMap)
-        }
-      }
-    }
-  }
 }

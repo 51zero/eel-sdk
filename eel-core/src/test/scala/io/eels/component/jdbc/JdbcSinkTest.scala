@@ -3,8 +3,9 @@ package io.eels.component.jdbc
 import java.sql.DriverManager
 import java.util.UUID
 
+import io.eels.Row
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StructType}
-import io.eels.{Frame, Row}
 import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
 
 class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
@@ -15,7 +16,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
   conn.createStatement().executeUpdate("create table mytab (a integer, b integer, c integer)")
 
   private val schema = StructType(Field("a"), Field("b"), Field("c"))
-  private val frame = io.eels.Frame(schema, Row(schema, Vector("1", "2", "3")), Row(schema, Vector("4", "5", "6")))
+  private val frame = DataStream.fromRows(schema, Row(schema, Vector("1", "2", "3")), Row(schema, Vector("4", "5", "6")))
 
   "JdbcSink" should {
     "write frame to table" in {
@@ -34,7 +35,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
     }
     "support multiple writers" in {
       val rows = List.fill(10000)(Row(schema, Vector("1", "2", "3")))
-      val mframe = Frame(schema, rows)
+      val mframe = DataStream.fromRows(schema, rows)
       val sink = JdbcSink(url, "multithreads").withCreateTable(true).withThreads(4)
       mframe.to(sink)
       val rs = conn.createStatement().executeQuery("select count(*) from multithreads")

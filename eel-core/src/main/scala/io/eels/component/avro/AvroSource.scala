@@ -1,6 +1,6 @@
 package io.eels.component.avro
 
-import java.io.File
+import java.io.{Closeable, File}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
@@ -24,20 +24,24 @@ case class AvroSource(path: Path)
 
 case class AvroSourcePart(path: Path)
                          (implicit conf: Configuration, fs: FileSystem) extends Part with Logging {
-
-  override def iterator(): CloseableIterator[Seq[Row]] = new CloseableIterator[Seq[Row]] {
+  /**
+    * Returns the data contained in this part in the form of an iterator. This function should return a new
+    * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
+    */
+  override def iterator2(): CloseIterator[Row] = {
 
     val deserializer = new AvroDeserializer()
     val reader = AvroReaderFns.createAvroReader(path)
 
-    override def close(): Unit = {
-      super.close()
-      reader.close()
+    val closeable = new Closeable {
+      override def close(): Unit = reader.close()
     }
 
-    override val iterator: Iterator[Seq[Row]] = AvroRecordIterator(reader).map { record =>
+    val iterator: Iterator[Row] = AvroRecordIterator(reader).map { record =>
       deserializer.toRow(record)
-    }.grouped(1000).withPartial(true)
+    }
+
+    CloseIterator(closeable, iterator)
   }
 }
 

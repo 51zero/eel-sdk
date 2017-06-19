@@ -3,7 +3,7 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.Frame
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -80,7 +80,7 @@ object HiveBenchmarkApp extends App with Timed {
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
   val schema = StructType("id", "state")
-  val rows = List.fill(100000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
+  val rows = List.fill(30000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
 
   logger.info(s"Generated ${rows.size} rows")
 
@@ -95,17 +95,12 @@ object HiveBenchmarkApp extends App with Timed {
 
   logger.info("Table created")
 
-  val sink = HiveSink("sam", "people").withDynamicPartitioning(true).withIOThreads(4)
-  Frame.fromValues(schema, rows).to(sink)
+  val sink = HiveSink("sam", "people").withDynamicPartitioning(true)
+  DataStream.fromValues(schema, rows).to(sink)
 
   logger.info("Write complete")
 
   while (true) {
-
-    timed("frame took") {
-      val result = HiveSource("sam", "people").toFrame().collect
-      println(result.size)
-    }
 
     timed("datastream took") {
       val result = HiveSource("sam", "people").toDataStream().collect

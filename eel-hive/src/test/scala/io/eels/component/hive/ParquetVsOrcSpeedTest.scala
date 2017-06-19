@@ -4,9 +4,10 @@ import java.io.File
 import java.math.MathContext
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.Row
 import io.eels.component.orc.{OrcSink, OrcSource}
-import io.eels.{Frame, Row}
 import io.eels.component.parquet.{ParquetSink, ParquetSource}
+import io.eels.datastream.DataStream
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -30,7 +31,7 @@ object ParquetVsOrcSpeedTest extends App with Timed {
     Field("rating", DecimalType(4, 2))
   )
 
-  def iter = Iterator.continually(Vector(
+  def iter: Iterator[Vector[Any]] = Iterator.continually(Vector(
     Random.nextString(10),
     Random.nextInt(),
     Random.nextDouble(),
@@ -38,7 +39,8 @@ object ParquetVsOrcSpeedTest extends App with Timed {
     Random.nextLong(),
     BigDecimal(Random.nextDouble(), new MathContext(4)).setScale(2, RoundingMode.UP)
   ))
-  def frame = Frame.fromIterator(structType, iter.take(size).map(Row(structType, _)))
+
+  def ds: DataStream = DataStream.fromIterator(structType, iter.take(size).map(Row(structType, _)))
 
   val ppath = new Path("parquet_speed.pq")
   fs.delete(ppath, false)
@@ -50,22 +52,22 @@ object ParquetVsOrcSpeedTest extends App with Timed {
   new File(opath.toString).deleteOnExit()
 
   timed("Orc Insertion") {
-    frame.to(OrcSink(opath))
+    ds.to(OrcSink(opath))
   }
 
   timed("Parquet Insertion") {
-    frame.to(ParquetSink(ppath))
+    ds.to(ParquetSink(ppath))
   }
 
   while (true) {
 
     timed("Reading with OrcSource") {
-      val actual = OrcSource(opath).toFrame().size()
+      val actual = OrcSource(opath).toDataStream().size
       assert(actual == size, s"$actual != $size")
     }
 
     timed("Reading with ParquetSource") {
-      val actual = ParquetSource(ppath).toFrame().size()
+      val actual = ParquetSource(ppath).toDataStream().size
       assert(actual == size, s"$actual != $size")
     }
   }

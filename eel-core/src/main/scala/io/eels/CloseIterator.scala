@@ -10,6 +10,7 @@ case class CloseIterator[T](closeable: Closeable, iterator: Iterator[T]) extends
   override def next(): T = iterator.next
   override def map[B](f: T => B): CloseIterator[B] = CloseIterator[B](closeable, iterator.map(f))
   override def filter(p: T => Boolean): CloseIterator[T] = CloseIterator[T](closeable, iterator.filter(p))
+  override def filterNot(p: T => Boolean): CloseIterator[T] = filter(!p(_))
   override def drop(n: Int): CloseIterator[T] = CloseIterator[T](closeable, iterator.drop(n))
   override def take(n: Int): CloseIterator[T] = CloseIterator[T](closeable, iterator.take(n))
   override def dropWhile(p: T => Boolean): CloseIterator[T] = CloseIterator[T](closeable, iterator.dropWhile(p))
@@ -19,7 +20,16 @@ case class CloseIterator[T](closeable: Closeable, iterator: Iterator[T]) extends
 }
 
 object CloseIterator {
-  def empty: CloseIterator[Row] = CloseIterator(new Closeable {
+
+  def apply[T](iterator: Iterator[T]): CloseIterator[T] = CloseIterator(new Closeable {
+    override def close(): Unit = ()
+  }, iterator)
+
+  def apply[T](closefn: () => Unit, iterator: Iterator[T]): CloseIterator[T] = CloseIterator(new Closeable {
+    override def close(): Unit = closefn()
+  }, iterator)
+
+  def empty[T]: CloseIterator[T] = CloseIterator(new Closeable {
     override def close(): Unit = ()
   }, Iterator.empty)
 }

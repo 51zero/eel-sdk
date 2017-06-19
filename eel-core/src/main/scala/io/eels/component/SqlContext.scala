@@ -3,8 +3,8 @@ package io.eels.component
 import java.util.UUID
 
 import com.typesafe.config.ConfigFactory
-import io.eels.Frame
 import io.eels.component.jdbc.{JdbcSink, JdbcSource}
+import io.eels.datastream.DataStream
 
 class SqlContext {
   Class.forName("org.h2.Driver")
@@ -20,9 +20,9 @@ class SqlContext {
     s"jdbc:h2:mem:sqlcontext${UUID.randomUUID().toString().replace("-", "")};IGNORECASE=$ignoreCase;DB_CLOSE_DELAY=-1"
   }
 
-  def registerFrame(name: String, frame: Frame): Unit = {
-    frame.to(JdbcSink(uri, name).withCreateTable(true))
+  def registerFrame(name: String, ds: DataStream): Unit = {
+    ds.to(JdbcSink(uri, name).withCreateTable(true))
   }
 
-  def sql(query: String): Frame = JdbcSource(uri, query).toFrame()
+  def sql(query: String): DataStream = JdbcSource(uri, query).toDataStream()
 }

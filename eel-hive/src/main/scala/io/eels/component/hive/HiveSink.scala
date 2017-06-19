@@ -1,14 +1,14 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.{Sink, RowOutputStream}
+import io.eels.schema.StructType
+import io.eels.{RowOutputStream, Sink}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
-import com.sksamuel.exts.OptionImplicits._
-import io.eels.schema.StructType
 
 object HiveSink {
   val CaseErrorMsg = "Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive"
@@ -22,7 +22,6 @@ object HiveSink {
 
 case class HiveSink(dbName: String,
                     tableName: String,
-                    ioThreads: Int = 4,
                     dynamicPartitioning: Option[Boolean] = None,
                     schemaEvolution: Option[Boolean] = None,
                     permission: Option[FsPermission] = None,
@@ -39,7 +38,6 @@ case class HiveSink(dbName: String,
   implicit val conf = fs.getConf
   val ops = new HiveOps(client)
 
-  def withIOThreads(ioThreads: Int): HiveSink = copy(ioThreads = ioThreads)
   def withCreateTable(createTable: Boolean): HiveSink = copy(createTable = createTable)
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
@@ -50,7 +48,7 @@ case class HiveSink(dbName: String,
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
     login()
-    copy(principal = principal.some, keytabPath = keytabPath.some)
+    copy(principal = principal.some, keytabPath = keytabPath.option)
   }
 
   private def dialect(): HiveDialect = {
@@ -68,14 +66,15 @@ case class HiveSink(dbName: String,
 
   def containsUpperCase(schema: StructType): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
-  override def open(schema: StructType): RowOutputStream = {
+  override def open(schema: StructType, n: Int): Seq[RowOutputStream] = List.tabulate(n) { k => open(schema, Some(k.toString)) }
+  override def open(schema: StructType): RowOutputStream = open(schema, None)
+
+  def open(schema: StructType, discriminator: Option[String]): RowOutputStream = {
     login()
 
     if (containsUpperCase(schema)) {
-      if (errorOnUpperCase)
-        sys.error(HiveSink.CaseErrorMsg)
-      else
-        logger.warn(HiveSink.CaseErrorMsg)
+      if (errorOnUpperCase) sys.error(HiveSink.CaseErrorMsg)
+      else logger.warn(HiveSink.CaseErrorMsg)
     }
 
     if (createTable) {
@@ -96,7 +95,7 @@ case class HiveSink(dbName: String,
       metastoreSchema,
       dbName,
       tableName,
-      ioThreads,
+      discriminator,
       dialect(),
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
       bufferSize,

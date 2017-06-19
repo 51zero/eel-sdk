@@ -3,6 +3,7 @@ package io.eels
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels.component.csv.{CsvSink, CsvSource}
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -17,7 +18,7 @@ class ListenerTest extends WordSpec with Matchers {
 
   val schema = StructType("a", "b", "c", "d", "e")
   val rows = List.fill(1000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
-  val frame = Frame(schema, rows)
+  val ds = DataStream.fromRows(schema, rows)
 
   val path = new Path("listener_test.csv")
 
@@ -27,7 +28,7 @@ class ListenerTest extends WordSpec with Matchers {
       val latch = new CountDownLatch(1000)
       fs.delete(path, false)
 
-      frame.to(CsvSink(path), new Listener {
+      ds.to(CsvSink(path), new Listener {
         override def onNext(value: Row): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
@@ -45,13 +46,13 @@ class ListenerTest extends WordSpec with Matchers {
       val latch = new CountDownLatch(1000)
 
       fs.delete(path, false)
-      frame.to(CsvSink(path))
+      ds.to(CsvSink(path))
 
-      CsvSource(path).toFrame(new Listener {
+      CsvSource(path).toDataStream(new Listener {
         override def onNext(value: Row): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
-      }).collect()
+      }).collect
 
       latch.await(20, TimeUnit.SECONDS) shouldBe true
       fs.delete(path, false)
