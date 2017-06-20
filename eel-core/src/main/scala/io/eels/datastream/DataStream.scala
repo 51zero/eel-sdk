@@ -554,9 +554,15 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
         override def run(): Unit = {
           // each partition has its own stream, so once the iterator is finished we must notify the buffer
           try {
-            iterator.foreach(buffer.put)
+            iterator.foreach { row =>
+              listener.onNext(row)
+              buffer.put(row)
+            }
+            listener.onComplete()
           } catch {
-            case NonFatal(e) => logger.error("Error populating write buffer", e)
+            case NonFatal(e) =>
+              logger.error("Error populating write buffer", e)
+              listener.onError(e)
           } finally {
             logger.debug(s"Writing task ${k + 1} has completed")
             buffer.put(Row.Sentinel)

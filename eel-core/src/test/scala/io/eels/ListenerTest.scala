@@ -41,7 +41,7 @@ class ListenerTest extends WordSpec with Matchers {
   }
 
   "Source.toFrame" should {
-    "support user's listeners" in {
+    "call on next for each row" in {
 
       val latch = new CountDownLatch(1000)
 
@@ -54,7 +54,23 @@ class ListenerTest extends WordSpec with Matchers {
         override def onComplete(): Unit = ()
       }).collect
 
-      latch.await(20, TimeUnit.SECONDS) shouldBe true
+      latch.await(30, TimeUnit.SECONDS) shouldBe true
+      fs.delete(path, false)
+    }
+    "call on complete once finished" in {
+
+      val latch = new CountDownLatch(1001)
+
+      fs.delete(path, false)
+      ds.to(CsvSink(path))
+
+      CsvSource(path).toDataStream(new Listener {
+        override def onNext(value: Row): Unit = latch.countDown()
+        override def onError(e: Throwable): Unit = ()
+        override def onComplete(): Unit = latch.countDown()
+      }).collect
+
+      latch.await(30, TimeUnit.SECONDS) shouldBe true
       fs.delete(path, false)
     }
   }
