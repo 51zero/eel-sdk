@@ -8,6 +8,7 @@ case class CloseableIterator[T](closeable: Closeable, iterator: Iterator[T]) ext
   override def close(): Unit = closeable.close()
   override def hasNext: Boolean = iterator.hasNext
   override def next(): T = iterator.next
+  override def foreach[U](f: T => U): Unit = iterator.foreach(f)
   override def map[B](f: T => B): CloseableIterator[B] = CloseableIterator[B](closeable, iterator.map(f))
   override def filter(p: T => Boolean): CloseableIterator[T] = CloseableIterator[T](closeable, iterator.filter(p))
   override def filterNot(p: T => Boolean): CloseableIterator[T] = filter(!p(_))

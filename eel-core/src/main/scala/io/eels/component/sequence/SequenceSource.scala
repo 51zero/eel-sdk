@@ -24,6 +24,9 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
     val v = new BytesWritable()
     val schema = SequenceSupport.schema(path)
 
+    // throw away the header
+    reader.next(k, v)
+
     val iterator: Iterator[Row] = new Iterator[Row] {
       override def next(): Row = Row(schema, SequenceSupport.toValues(v).toVector)
       override def hasNext(): Boolean = reader.next(k, v)

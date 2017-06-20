@@ -45,7 +45,8 @@ case class ParquetSink(path: Path,
   }
 
   override def open(schema: StructType, n: Int): Seq[RowOutputStream] = {
-    List.tabulate(n) { k => create(schema, new Path(path.getParent, path.toString + "_" + k)) }
+    if (n == 1) Seq(create(schema, path))
+    else List.tabulate(n) { k => create(schema, new Path(path.getParent, path.toString + "_" + k)) }
   }
 
   override def open(schema: StructType): RowOutputStream = create(schema, path)

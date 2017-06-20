@@ -32,13 +32,7 @@ case class BucketPartitionStrategy(columnName: String,
     ranges.map { case (start, end) =>
 
       val partitionedQuery =
-        s"""|SELECT *
-            |FROM (
-            |  SELECT *
-            |  FROM ( $query )
-            |)
-            |WHERE $start <= $columnName AND $columnName <= $end
-            |""".stripMargin
+        s"""SELECT * FROM ( $query ) WHERE $start <= $columnName AND $columnName <= $end"""
 
       new JdbcPart(connFn, partitionedQuery, bindFn, fetchSize, dialect)
     }

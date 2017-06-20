@@ -40,7 +40,7 @@ class ListenerTest extends WordSpec with Matchers {
     }
   }
 
-  "Source.toFrame" should {
+  "Source.toDataStream" should {
     "call on next for each row" in {
 
       val latch = new CountDownLatch(1000)

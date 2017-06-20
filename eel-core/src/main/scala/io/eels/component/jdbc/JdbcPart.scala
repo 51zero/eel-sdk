@@ -29,12 +29,9 @@ class JdbcPart(connFn: () => Connection,
     val schema = schemaFor(dialect, rs)
     val closeable = new Closeable {
       override def close(): Unit = {
-        Try {
-          rs.close()
-        }
-        Try {
-          conn.close()
-        }
+        logger.debug(s"Closing result set on jdbc part $query")
+        Try { rs.close() }
+        Try { conn.close() }
       }
     }
 

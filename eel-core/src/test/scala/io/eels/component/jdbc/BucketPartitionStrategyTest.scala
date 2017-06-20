@@ -23,12 +23,12 @@ class BucketPartitionStrategyTest extends WordSpec with Matchers {
       BucketPartitionStrategy("a", 6, 1, 29).ranges shouldBe List((1, 5), (6, 10), (11, 15), (16, 20), (21, 25), (26, 29))
     }
     "return correct number of ranges" in {
-      JdbcSource(() => conn, "select * from bucket_test")
+      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test"), "select * from bucket_test")
         .withPartitionStrategy(BucketPartitionStrategy("a", 4, 0, 10000))
         .parts().size shouldBe 4
     }
     "return full and non overlapping data" in {
-      JdbcSource(() => conn, "select * from bucket_test")
+      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test"), "select * from bucket_test")
         .withPartitionStrategy(BucketPartitionStrategy("a", 4, 0, 10000))
         .toDataStream().collect.size shouldBe 20
     }

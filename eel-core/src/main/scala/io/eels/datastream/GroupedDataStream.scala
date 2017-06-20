@@ -1,15 +1,11 @@
 package io.eels.datastream
 
-import java.util.concurrent.CountDownLatch
-
 import com.sksamuel.exts.Logging
-import io.eels.{CloseableIterator, Row}
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-
-import scala.concurrent.ExecutionContext
+import io.eels.{CloseableIterator, Row}
 
 object GroupedDataStream {
-  val FullDatasetKeyFn: Row => Any = { row => 0 }
+  val FullDatasetKeyFn: Row => Any = { _ => 0 }
 }
 
 trait GroupedDataStream {
@@ -36,23 +32,24 @@ trait GroupedDataStream {
     override private[eels] def partitions = {
 
       val keys = scala.collection.mutable.Set.empty[Any]
-      val latch = new CountDownLatch(1)
 
-      source.partitions.map { partition =>
+      // if .aggregate was made thread safe, we could run it from multiple partitions
+      // at the same time, as it stands, we need to coalesce and then run it
+      val partition = source.coalesce
 
-        partition.map { row =>
-          val key = keyFn(row)
-          keys.add(key)
-          aggregations.foreach(_.aggregate(key, row))
-        }
-
-        val rows = keys.map { key =>
-          val values = aggregations.map(_.value(key))
-          Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
-        }
-
-        CloseableIterator(partition.closeable, rows.iterator)
+      // foreach forces the evaluation here
+      partition.foreach { row =>
+        val key = keyFn(row)
+        keys.add(key)
+        aggregations.foreach(_.aggregate(key, row))
       }
+
+      val rows = keys.map { key =>
+        val values = aggregations.map(_.value(key))
+        Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
+      }
+
+      Seq(CloseableIterator(rows.iterator))
     }
   }
 

@@ -6,14 +6,14 @@ import java.util.concurrent.{Executors, LinkedBlockingQueue}
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
 import com.sksamuel.exts.config.ConfigResolver
+import com.sksamuel.exts.io.Using
 import io.eels.schema.StructType
 import io.eels.{CloseableIterator, Listener, NoopListener, Row, Source}
 
-import scala.util.Try
 import scala.util.control.NonFatal
 
 // an implementation of DataStream that will read its partitions from a source
-class DataStreamSource(source: Source, listener: Listener = NoopListener) extends DataStream {
+class DataStreamSource(source: Source, listener: Listener = NoopListener) extends DataStream with Using {
 
   private val config = ConfigResolver()
 
@@ -37,31 +37,24 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
       io.submit {
         try {
           logger.debug(s"Starting source partition ${k + 1}")
-          val CloseableIterator(closeable, iterator) = part.iterator()
-          try {
+          using(part.iterator) { case CloseableIterator(_, iterator) =>
             iterator.foreach { row =>
               queue.put(row)
               listener.onNext(row)
             }
             logger.debug(s"Source partition ${k + 1} has completed")
             listener.onComplete()
-          } catch {
-            case NonFatal(e) =>
-              logger.error("Error while reading from source", e)
-              listener.onError(e)
-            case e: InterruptedException =>
-              logger.error(s"Source partition ${k + 1} was interrupted")
-              listener.onError(e)
-          } finally {
-            Try {
-              closeable.close()
-            }
-            // we must put the sentinel so the downstream knows when the queue has finished
-            queue.put(Row.Sentinel)
           }
         } catch {
-          case t: Throwable =>
-            logger.error(s"Error in source partition thread ${k + 1}", t)
+          case NonFatal(e) =>
+            logger.error(s"Error in source partition thread ${k + 1}", e)
+            listener.onError(e)
+          case e: InterruptedException =>
+            logger.error(s"Source partition ${k + 1} was interrupted")
+            listener.onError(e)
+        } finally {
+          // we must put the sentinel so the downstream knows when the queue has finished
+          queue.put(Row.Sentinel)
         }
       }
 

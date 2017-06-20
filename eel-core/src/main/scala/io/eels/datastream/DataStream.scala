@@ -58,26 +58,29 @@ trait DataStream extends Logging {
       val completed = new AtomicInteger(0)
 
       partitions.zipWithIndex.foreach { case (partition, index) =>
+
         executor.execute(new Runnable {
           override def run(): Unit = {
             try {
-              logger.info(s"Starting coalesce thread for partition ${index + 1}")
+              logger.debug(s"Starting coalesce thread for partition ${index + 1}")
               partition.iterator.foreach(queue.put)
-              logger.info(s"Finished coalesce thread for partition ${index + 1}")
+              logger.debug(s"Finished coalesce thread for partition ${index + 1}")
             } catch {
               case NonFatal(e) =>
                 logger.error("Error running coalesce task", e)
             } finally {
               if (completed.incrementAndGet == partitions.size) {
-                logger.info("All coalesce tasks completed, closing downstream queue")
+                logger.debug("All coalesce tasks completed, closing downstream queue")
                 queue.put(Row.Sentinel)
               }
             }
           }
         })
       }
+
       CloseableIterator(new Closeable {
         override def close(): Unit = {
+          logger.debug("Request to close all source parts")
           partitions.map(_.closeable).foreach(_.close)
         }
       }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
@@ -469,7 +472,7 @@ trait DataStream extends Logging {
     */
   def collect: Vector[Row] = VectorAction(this).execute
 
-  def to(sink: Sink): Long = SinkAction(this, sink).execute()
+  def to(sink: Sink): Long = to(sink, NoopListener)
   def to(sink: Sink, listener: Listener): Long = SinkAction(this, sink).execute(listener)
 
   def head: Row = partitions.foldLeft(None: Option[Row]) {
