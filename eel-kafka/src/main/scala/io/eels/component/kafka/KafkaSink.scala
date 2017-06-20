@@ -2,7 +2,7 @@ package io.eels.component.kafka
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import io.eels.{Row, Sink, SinkWriter}
+import io.eels.{Row, RowOutputStream, Sink}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 
 /**
@@ -71,18 +71,21 @@ case class KafkaSink[K, V](topic: String,
                            converter: KafkaRowConverter[V],
                            keygen: KafkaKeyGen[K]) extends Sink with Logging {
 
-  override def writer(schema: StructType): SinkWriter = new SinkWriter {
-    override def write(row: Row): Unit = {
-      val key = keygen.gen(row)
-      val value = converter.convert(row)
-      val record = partitioner.partition(row) match {
-        case Some(part) => new ProducerRecord[K, V](topic, part, key, value)
-        case _ => new ProducerRecord[K, V](topic, key, value)
+  def open(schema: StructType): RowOutputStream = {
+
+    new RowOutputStream {
+      override def write(row: Row): Unit = {
+        val key = keygen.gen(row)
+        val value = converter.convert(row)
+        val record = partitioner.partition(row) match {
+          case Some(part) => new ProducerRecord[K, V](topic, part, key, value)
+          case _ => new ProducerRecord[K, V](topic, key, value)
+        }
+        logger.debug(s"Sending record $record")
+        producer.send(record)
+        producer.flush()
       }
-      logger.debug(s"Sending record $record")
-      producer.send(record)
-      producer.flush()
+      override def close(): Unit = producer.close()
     }
-    override def close(): Unit = producer.close()
   }
 }

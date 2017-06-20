@@ -3,8 +3,9 @@ package io.eels.component.kafka
 import java.util
 import java.util.{Properties, UUID}
 
+import io.eels.Row
+import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
-import io.eels.{Frame, Row}
 import net.manub.embeddedkafka.{EmbeddedKafka, EmbeddedKafkaConfig}
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -26,10 +27,12 @@ class KafkaSinkTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     Field("location", StringType, nullable = true)
   )
 
-  val frame = Frame.fromValues(
+  val frame = DataStream.fromValues(
     schema,
-    Vector("clint eastwood", UUID.randomUUID().toString),
-    Vector("elton john", UUID.randomUUID().toString)
+    Seq(
+      Vector("clint eastwood", UUID.randomUUID().toString),
+      Vector("elton john", UUID.randomUUID().toString)
+    )
   )
 
   override def afterAll(): Unit = {
