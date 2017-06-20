@@ -31,13 +31,13 @@ import scala.util.Random
   * // switched to size only operation, to measure speed of parquet only and not overhead of gc
   *
   * v.1.1-snapshot-4th jan, native parquet reader
-  * 2m rows string of length 4; reading parquet=1695; reading avro=2426
+  * 2m rows same contents string of length 4; reading parquet=1695; reading avro=2426
   * v1.1.0-M2 6th jan
-  * 2m rows string of length 4; reading parquet=381; reading avro=486
+  * 2m rows same contents string of length 4; reading parquet=381; reading avro=486 <-- dubious
   * v1.1.0
-  * 2m rows reading parquet=649; reading avro=777
+  * 2m rows same contents reading parquet=649; reading avro=777
   * v1.2.0-snapshot
-  * 2m rows reading parquet=770; reading avro=1400
+  * 2m rows same contents reading parquet=770; reading avro=1400
   */
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()
@@ -66,9 +66,15 @@ object ParquetSpeedTest extends App with Timed {
       assert(actual == size)
     }
 
-    timed("Reading with AvroParquetSource") {
-      val actual = AvroParquetSource(path).toDataStream().size
-      assert(actual == size)
-    }
+    println("")
+    println("---------")
+    println("")
+
+    Thread.sleep(2000)
+
+    // timed("Reading with AvroParquetSource") {
+    //   val actual = AvroParquetSource(path).toDataStream().size
+    //   assert(actual == size)
+    // }
   }
 }

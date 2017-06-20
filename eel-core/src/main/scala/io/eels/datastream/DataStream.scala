@@ -47,6 +47,38 @@ trait DataStream extends Logging {
 
   private[eels] def partitions: Seq[CloseableIterator[Row]]
 
+  private[eels] def repartition(numOfPartitions: Int): Seq[CloseableIterator[Row]] = {
+
+    val closeable = new Closeable {
+      override def close(): Unit = outer.partitions.map(_.closeable).foreach(_.close)
+    }
+
+    val buckets = List.fill(numOfPartitions)(new LinkedBlockingQueue[Row](1000))
+
+    val completed = new AtomicLong(0)
+
+    val parts = outer.partitions
+    parts.foreach { partition =>
+      executor.execute(new Runnable {
+        override def run(): Unit = {
+          var count = 0
+          partition.iterator.foreach { row =>
+            val bucket = count % numOfPartitions
+            buckets(bucket).put(row)
+            count = count + 1
+          }
+          if (completed.incrementAndGet == parts.size) {
+            buckets.foreach(_.put(Row.Sentinel))
+          }
+        }
+      })
+    }
+
+    buckets.map { bucket =>
+      CloseableIterator(closeable, BlockingQueueConcurrentIterator(bucket, Row.Sentinel))
+    }
+  }
+
   private[eels] def coalesce: CloseableIterator[Row] = {
 
     val partitions = outer.partitions
@@ -79,10 +111,7 @@ trait DataStream extends Logging {
       }
 
       CloseableIterator(new Closeable {
-        override def close(): Unit = {
-          logger.debug("Request to close all source parts")
-          partitions.map(_.closeable).foreach(_.close)
-        }
+        override def close(): Unit = partitions.map(_.closeable).foreach(_.close)
       }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
     }
   }
