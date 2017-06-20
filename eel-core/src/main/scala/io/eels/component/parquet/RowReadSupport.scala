@@ -80,12 +80,14 @@ class StructConverter(schema: StructType, index: Int, parent: Option[ValuesBuild
   // nested array for this group/struct
   val builder: ValuesBuilder = new ArrayBuilder(schema.size)
 
+  // convert to .toArray is a micro opt
   private val converters = schema.fields.zipWithIndex.map {
     case (field, fieldIndex) => Converter(field.dataType, field.nullable, fieldIndex, builder)
-  }
+  }.toArray
 
   override def getConverter(fieldIndex: Int): Converter = converters(fieldIndex)
-  override def end(): Unit = parent.foreach(_.put(index, builder.result))
+  // .isDefined and .get are micro optimizations
+  override def end(): Unit = if (parent.isDefined) parent.get.put(index, builder.result)
   override def start(): Unit = builder.reset()
 }
 
