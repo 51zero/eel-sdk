@@ -26,49 +26,52 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
     val io = Executors.newCachedThreadPool()
 
     val parts = source.parts()
+    if (parts.isEmpty) {
+      Nil
+    } else {
+      // each part should be read in on an io-thread-pool
+      logger.debug(s"Preparing to read ${parts.size} parts")
+      val partitions = parts.zipWithIndex.map { case (part, k) =>
 
-    // each part should be read in on an io-thread-pool
-    logger.debug(s"Preparing to read ${parts.size} parts")
-    val partitions = parts.zipWithIndex.map { case (part, k) =>
+        val queue = new LinkedBlockingQueue[Row](config.getInt("eel.source.defaultBufferSize"))
 
-      val queue = new LinkedBlockingQueue[Row](config.getInt("eel.source.defaultBufferSize"))
-
-      logger.debug(s"Submitting source partition ${k + 1} to executor...")
-      io.submit {
-        try {
-          logger.debug(s"Starting source partition ${k + 1}")
-          using(part.iterator) { case CloseableIterator(_, iterator) =>
-            iterator.foreach { row =>
-              queue.put(row)
-              listener.onNext(row)
+        logger.debug(s"Submitting source partition ${k + 1} to executor...")
+        io.submit {
+          try {
+            logger.debug(s"Starting source partition ${k + 1}")
+            using(part.iterator) { case CloseableIterator(_, iterator) =>
+              iterator.foreach { row =>
+                queue.put(row)
+                listener.onNext(row)
+              }
+              logger.debug(s"Source partition ${k + 1} has completed")
+              listener.onComplete()
             }
-            logger.debug(s"Source partition ${k + 1} has completed")
-            listener.onComplete()
+          } catch {
+            case NonFatal(e) =>
+              logger.error(s"Error in source partition thread ${k + 1}", e)
+              listener.onError(e)
+            case e: InterruptedException =>
+              logger.error(s"Source partition ${k + 1} was interrupted")
+              listener.onError(e)
+          } finally {
+            // we must put the sentinel so the downstream knows when the queue has finished
+            queue.put(Row.Sentinel)
           }
-        } catch {
-          case NonFatal(e) =>
-            logger.error(s"Error in source partition thread ${k + 1}", e)
-            listener.onError(e)
-          case e: InterruptedException =>
-            logger.error(s"Source partition ${k + 1} was interrupted")
-            listener.onError(e)
-        } finally {
-          // we must put the sentinel so the downstream knows when the queue has finished
-          queue.put(Row.Sentinel)
         }
+
+        CloseableIterator(new Closeable {
+          override def close(): Unit = {
+            logger.debug(s"Closing partition ${k + 1}")
+            io.shutdownNow()
+          }
+        }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
       }
 
-      CloseableIterator(new Closeable {
-        override def close(): Unit = {
-          logger.debug(s"Closing partition ${k + 1}")
-          io.shutdownNow()
-        }
-      }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
+      // the executor will shut down once all the partitions have completed
+      io.shutdown()
+
+      partitions
     }
-
-    // the executor will shut down once all the partitions have completed
-    io.shutdown()
-
-    partitions
   }
 }

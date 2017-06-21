@@ -82,9 +82,9 @@ trait DataStream extends Logging {
   private[eels] def coalesce: CloseableIterator[Row] = {
 
     val partitions = outer.partitions
-    if (partitions.size == 1) {
-      partitions.head
-    } else {
+    if (partitions.isEmpty) CloseableIterator.empty
+    else if (partitions.size == 1) partitions.head
+    else {
 
       val queue = new LinkedBlockingQueue[Row](1000)
       val completed = new AtomicInteger(0)
@@ -578,37 +578,13 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
     partitions.zip(streams).zipWithIndex.foreach { case ((CloseableIterator(closeable, iterator), stream), k) =>
       logger.debug(s"Starting writing task ${k + 1}")
 
-      // each partition will have a buffer, which will be populated from a cpu thread.
-      // then an io-bound thread will write from the buffer to the file/disk
-
-      val buffer = new LinkedBlockingQueue[Row](100)
-      ds.executor.execute(new Runnable {
-        override def run(): Unit = {
-          // each partition has its own stream, so once the iterator is finished we must notify the buffer
-          try {
-            iterator.foreach { row =>
-              listener.onNext(row)
-              buffer.put(row)
-            }
-            listener.onComplete()
-          } catch {
-            case NonFatal(e) =>
-              logger.error("Error populating write buffer", e)
-              listener.onError(e)
-          } finally {
-            logger.debug(s"Writing task ${k + 1} has completed")
-            buffer.put(Row.Sentinel)
-          }
-        }
-      })
-
-      // the io-bound thread to copy from the buffer to the file
+      // each partition will have an-io thread which will write to the file/disk
       io.submit {
 
         val localCount = new LongAdder
 
         try {
-          BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
+          iterator.foreach { row =>
             stream.write(row)
             localCount.increment()
             total.increment()
@@ -631,6 +607,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
 
     io.shutdown()
     latch.await(21, TimeUnit.DAYS)
+    logger.debug("To task has completed")
     total.sum()
   }
 }

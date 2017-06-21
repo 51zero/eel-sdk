@@ -14,23 +14,18 @@ import scala.collection.JavaConverters._
 
 object ParquetSource {
 
-  def apply(string: String)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
-    apply(FilePattern(string))
+  def apply(uri: java.net.URI)(implicit fs: FileSystem, conf: Configuration): ParquetSource = apply(FilePattern(new Path(uri.toString)))
 
-  def apply(uri: java.net.URI)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
-    apply(FilePattern(new Path(uri.toString)))
+  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource = apply(FilePattern(path))
 
-  def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
-    apply(FilePattern(path))
-
-  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource =
-    apply(FilePattern(path))
+  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource = apply(FilePattern(path))
 }
 
 case class ParquetSource(pattern: FilePattern,
                          predicate: Option[Predicate] = None,
                          projection: Seq[String] = Nil)
                         (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
+  logger.debug(s"Created parquet source with pattern=$pattern")
 
   lazy val paths: List[Path] = pattern.toPaths()
 

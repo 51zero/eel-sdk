@@ -1,6 +1,9 @@
 package io.eels.component.parquet
 
+import java.sql.DriverManager
+
 import io.eels.Row
+import io.eels.component.jdbc.{BucketPartitionStrategy, JdbcSource}
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
@@ -8,9 +11,10 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{FlatSpec, Matchers}
 
+import scala.util.Random
+
 class ParquetSinkTest extends FlatSpec with Matchers {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(conf)
 
@@ -76,5 +80,21 @@ class ParquetSinkTest extends FlatSpec with Matchers {
     ds.to(ParquetSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
     fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
     fs.delete(path, false)
+  }
+
+  it should "support parallel writes" in {
+
+    val conn = DriverManager.getConnection("jdbc:h2:mem:parquetsink")
+    conn.createStatement().executeUpdate("create table parquet_test (a integer)")
+    for (k <- 0 until 20) {
+      conn.createStatement().executeUpdate(s"insert into parquet_test (a) values (${Random.nextInt(10000)})")
+    }
+
+    JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:parquetsink"), "select * from parquet_test")
+      .withPartitionStrategy(BucketPartitionStrategy("a", 4, 0, 10000))
+      .toDataStream()
+      .to(ParquetSink(new Path("./parquet-par-test/permissions.pq")).withOverwrite(true))
+
+    ParquetSource("./parquet-par-test/permissions.pq*").toDataStream().collect.size shouldBe 20
   }
 }
