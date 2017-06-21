@@ -28,7 +28,7 @@ case class AvroSourcePart(path: Path)
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def iterator(): CloseableIterator[Row] = {
+  override def iterator(): Channel[Row] = {
 
     val deserializer = new AvroDeserializer()
     val reader = AvroReaderFns.createAvroReader(path)
@@ -41,7 +41,7 @@ case class AvroSourcePart(path: Path)
       deserializer.toRow(record)
     }
 
-    CloseableIterator(closeable, iterator)
+    Channel(closeable, iterator)
   }
 }
 

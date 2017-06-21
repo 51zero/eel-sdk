@@ -1,18 +1,17 @@
 package io.eels.datastream
 
 import java.io.Closeable
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong, LongAdder}
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.actions.CountAction
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{CloseableIterator, Listener, NoopListener, Row, Sink}
+import io.eels.{Channel, Listener, NoopListener, Row, Sink}
 
 import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
-import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
@@ -45,9 +44,9 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  private[eels] def partitions: Seq[CloseableIterator[Row]]
+  private[eels] def partitions: Seq[Channel[Row]]
 
-  private[eels] def repartition(numOfPartitions: Int): Seq[CloseableIterator[Row]] = {
+  private[eels] def repartition(numOfPartitions: Int): Seq[Channel[Row]] = {
 
     val closeable = new Closeable {
       override def close(): Unit = outer.partitions.map(_.closeable).foreach(_.close)
@@ -75,14 +74,14 @@ trait DataStream extends Logging {
     }
 
     buckets.map { bucket =>
-      CloseableIterator(closeable, BlockingQueueConcurrentIterator(bucket, Row.Sentinel))
+      Channel(closeable, BlockingQueueConcurrentIterator(bucket, Row.Sentinel))
     }
   }
 
-  private[eels] def coalesce: CloseableIterator[Row] = {
+  private[eels] def coalesce: Channel[Row] = {
 
     val partitions = outer.partitions
-    if (partitions.isEmpty) CloseableIterator.empty
+    if (partitions.isEmpty) Channel.empty
     else if (partitions.size == 1) partitions.head
     else {
 
@@ -110,7 +109,7 @@ trait DataStream extends Logging {
         })
       }
 
-      CloseableIterator(new Closeable {
+      Channel(new Closeable {
         override def close(): Unit = partitions.map(_.closeable).foreach(_.close)
       }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
     }
@@ -129,7 +128,7 @@ trait DataStream extends Logging {
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
-    override def partitions: Seq[CloseableIterator[Row]] = {
+    override def partitions: Seq[Channel[Row]] = {
       outer.partitions.map(_.filter(p))
     }
   }
@@ -139,7 +138,7 @@ trait DataStream extends Logging {
     */
   def filter(fieldName: String, p: (Any) => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseableIterator[Row]] = {
+    override def partitions: Seq[Channel[Row]] = {
       val index = schema.indexOf(fieldName)
       if (index < 0)
         sys.error(s"Unknown field $fieldName")
@@ -339,7 +338,7 @@ trait DataStream extends Logging {
     */
   def addField(field: Field, defaultValue: Any): DataStream = new DataStream {
     override def schema: StructType = outer.schema.addField(field)
-    override def partitions: Seq[CloseableIterator[Row]] = {
+    override def partitions: Seq[Channel[Row]] = {
       val exists = outer.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema
@@ -358,7 +357,7 @@ trait DataStream extends Logging {
     */
   def foreach[U](fn: (Row) => U): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseableIterator[Row]] = outer.partitions.map(_.map { row =>
+    override def partitions: Seq[Channel[Row]] = outer.partitions.map(_.map { row =>
       fn(row)
       row
     })
@@ -401,7 +400,7 @@ trait DataStream extends Logging {
       val iterator = outer.coalesce.iterator.zip(other.coalesce.iterator).map { case (x, y) =>
         Row(combinedSchema, x.values ++ y.values)
       }
-      Seq(CloseableIterator(closeable, iterator))
+      Seq(Channel(closeable, iterator))
     }
   }
 
@@ -418,12 +417,12 @@ trait DataStream extends Logging {
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseableIterator[Row]] = Seq(outer.coalesce.takeWhile(pred))
+    override def partitions: Seq[Channel[Row]] = Seq(outer.coalesce.takeWhile(pred))
   }
 
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseableIterator[Row]] = Seq(outer.coalesce.take(k))
+    override def partitions: Seq[Channel[Row]] = Seq(outer.coalesce.take(k))
   }
 
   /**
@@ -432,7 +431,7 @@ trait DataStream extends Logging {
     */
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[CloseableIterator[Row]] = {
+    override def partitions: Seq[Channel[Row]] = {
       Seq(outer.coalesce.drop(k))
     }
   }
@@ -459,7 +458,7 @@ trait DataStream extends Logging {
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def partitions: Seq[CloseableIterator[Row]] = outer.partitions
+    override def partitions: Seq[Channel[Row]] = outer.partitions
   }
 
   // allows aggregations on the entire dataset
@@ -522,7 +521,7 @@ object DataStream {
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions = Seq(CloseableIterator(rows))
+    override private[eels] def partitions = Seq(Channel(rows))
   }
 
   /**
@@ -540,7 +539,7 @@ object DataStream {
 
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions = Seq(CloseableIterator(new Closeable {
+    override private[eels] def partitions = Seq(Channel(new Closeable {
       override def close(): Unit = ()
     }, rows.iterator))
   }
@@ -551,63 +550,5 @@ object DataStream {
     */
   def fromValues(schema: StructType, values: Seq[Seq[Any]]): DataStream = {
     fromRows(schema, values.map(Row(schema, _)))
-  }
-}
-
-case class VectorAction(ds: DataStream) {
-  def execute: Vector[Row] = ds.coalesce.toIterable.toVector
-}
-
-case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
-
-  import com.sksamuel.exts.concurrent.ExecutorImplicits._
-
-  def execute(listener: Listener = NoopListener): Long = {
-
-    val schema = ds.schema
-    val partitions = ds.partitions
-    val total = new LongAdder
-    val latch = new CountDownLatch(partitions.size)
-
-    // each output stream will operate in an io thread.
-    val io = Executors.newCachedThreadPool()
-
-    // we open up a seperate output stream for each partition
-    val streams = sink.open(schema, partitions.size)
-
-    partitions.zip(streams).zipWithIndex.foreach { case ((CloseableIterator(closeable, iterator), stream), k) =>
-      logger.debug(s"Starting writing task ${k + 1}")
-
-      // each partition will have an-io thread which will write to the file/disk
-      io.submit {
-
-        val localCount = new LongAdder
-
-        try {
-          iterator.foreach { row =>
-            stream.write(row)
-            localCount.increment()
-            total.increment()
-          }
-          logger.info(s"Partition ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
-        } catch {
-          case NonFatal(e) =>
-            logger.info(s"Partition ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", e)
-        } finally {
-          Try {
-            closeable.close()
-          }
-          Try {
-            stream.close()
-          }
-          latch.countDown()
-        }
-      }
-    }
-
-    io.shutdown()
-    latch.await(21, TimeUnit.DAYS)
-    logger.debug("To task has completed")
-    total.sum()
   }
 }

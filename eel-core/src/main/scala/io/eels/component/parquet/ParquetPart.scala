@@ -5,7 +5,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Part, Predicate, Row}
+import io.eels.{Channel, Part, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.ParquetFileReader
@@ -26,8 +26,8 @@ class ParquetPart(path: Path,
     }
   }
 
-  override def iterator(): CloseableIterator[Row] = {
+  override def iterator(): Channel[Row] = {
     val reader = RowParquetReaderFn(path, predicate, readSchema)
-    CloseableIterator(reader, ParquetIterator(reader))
+    Channel(reader, ParquetIterator(reader))
   }
 }

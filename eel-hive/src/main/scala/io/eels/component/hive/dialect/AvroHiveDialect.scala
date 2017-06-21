@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.{CloseableIterator, Predicate, Row}
+import io.eels.{Channel, Predicate, Row}
 import io.eels.component.avro.{AvroSourcePart, AvroWriter}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.schema.StructType
@@ -15,7 +15,7 @@ object AvroHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): CloseableIterator[Row] = {
+                   (implicit fs: FileSystem, conf: Configuration): Channel[Row] = {
     AvroSourcePart(path).iterator()
   }
 

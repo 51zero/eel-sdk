@@ -5,7 +5,7 @@ import java.io.Closeable
 import com.sksamuel.exts.Logging
 import com.univocity.parsers.csv.CsvParser
 import io.eels.schema.StructType
-import io.eels.{CloseableIterator, Part, Row}
+import io.eels.{Channel, Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 import scala.util.Try
@@ -22,7 +22,7 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def iterator(): CloseableIterator[Row] = {
+  override def iterator(): Channel[Row] = {
 
     val parser = createParser()
     val input = fs.open(path)
@@ -39,6 +39,6 @@ class CsvPart(val createParser: () => CsvParser,
       Row(schema, records.toVector)
     }
 
-    CloseableIterator(closeable, iterator)
+    Channel(closeable, iterator)
   }
 }

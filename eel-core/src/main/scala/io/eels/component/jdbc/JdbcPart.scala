@@ -4,7 +4,7 @@ import java.io.Closeable
 import java.sql.{Connection, PreparedStatement}
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.{CloseableIterator, Part, Row}
+import io.eels.{Channel, Part, Row}
 
 import scala.util.Try
 
@@ -15,7 +15,7 @@ class JdbcPart(connFn: () => Connection,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives {
 
-  override def iterator(): CloseableIterator[Row] = {
+  override def iterator(): Channel[Row] = {
 
     val conn = connFn()
     val stmt = conn.prepareStatement(query)
@@ -43,6 +43,6 @@ class JdbcPart(connFn: () => Connection,
       }
     }
 
-    CloseableIterator(closeable, iterable)
+    Channel(closeable, iterable)
   }
 }

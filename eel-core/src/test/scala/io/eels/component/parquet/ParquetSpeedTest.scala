@@ -37,7 +37,7 @@ import scala.util.Random
   * v1.1.0
   * 2m rows same contents reading parquet=649; reading avro=777
   * v1.2.0-snapshot
-  * 2m rows same contents reading parquet=770; reading avro=1400
+  * 2m rows same contents reading parquet=620; reading avro=1400
   */
 object ParquetSpeedTest extends App with Timed {
   ParquetLogMute()
@@ -72,9 +72,9 @@ object ParquetSpeedTest extends App with Timed {
 
     Thread.sleep(2000)
 
-    // timed("Reading with AvroParquetSource") {
-    //   val actual = AvroParquetSource(path).toDataStream().size
-    //   assert(actual == size)
-    // }
+    timed("Reading with AvroParquetSource") {
+      val actual = AvroParquetSource(path).toDataStream().size
+      assert(actual == size)
+    }
   }
 }

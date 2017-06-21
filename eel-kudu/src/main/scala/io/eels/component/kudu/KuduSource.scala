@@ -2,7 +2,7 @@ package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
 import io.eels.schema._
-import io.eels.{CloseableIterator, Part, Row, Source}
+import io.eels.{Channel, Part, Row, Source}
 import org.apache.kudu.client.{KuduClient, RowResultIterator}
 
 import scala.collection.JavaConverters._
@@ -18,7 +18,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
   class KuduPart(tableName: String) extends Part {
 
-    override def iterator(): CloseableIterator[Row] = {
+    override def iterator(): Channel[Row] = {
 
       val projectColumns = schema.fieldNames()
       val table = client.openTable(tableName)
@@ -41,7 +41,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
       }
 
       val fn: () => Unit = scanner.close
-      CloseableIterator(fn, iterator)
+      Channel(fn, iterator)
     }
   }
 }

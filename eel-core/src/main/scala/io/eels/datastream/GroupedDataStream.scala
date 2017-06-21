@@ -2,7 +2,7 @@ package io.eels.datastream
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-import io.eels.{CloseableIterator, Row}
+import io.eels.{Channel, Row}
 
 object GroupedDataStream {
   val FullDatasetKeyFn: Row => Any = { _ => 0 }
@@ -49,7 +49,7 @@ trait GroupedDataStream {
         Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
       }
 
-      Seq(CloseableIterator(rows.iterator))
+      Seq(Channel(rows.iterator))
     }
   }
 

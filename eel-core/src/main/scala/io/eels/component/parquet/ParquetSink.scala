@@ -26,6 +26,7 @@ case class ParquetSink(path: Path,
     val writer = RowParquetWriterFn(path, schema, metadata)
 
     new RowOutputStream {
+
       override def write(row: Row): Unit = {
         writer.write(row)
       }
