@@ -73,7 +73,7 @@ case class DecimalType(precision: Precision = Precision(0),
   if (precision.value != -1)
     require(scale.value <= precision.value, s"Scale ${scale.value} should be less than or equal to precision ${precision.value}")
   override def canonicalName: String = "decimal(" + precision.value + "," + scale.value + ")"
-  override def matches(from: DataType) = from match {
+  override def matches(from: DataType): Boolean = from match {
     case DecimalType(p, s) => (s == scale || s.value == -1 || scale.value == -1) && (p == precision || p.value == -1 || precision.value == -1)
     case other => false
   }

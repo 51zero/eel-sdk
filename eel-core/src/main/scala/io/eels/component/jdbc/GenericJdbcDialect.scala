@@ -37,16 +37,16 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
 
   // http://stackoverflow.com/questions/593197/what-is-the-default-precision-and-scale-for-a-number-in-oracle
   private def decimalType(column: Int, metadata: ResultSetMetaData): DataType = {
-    // if scale == -127 then it means "any scale" and that can't be supported by hive, so we
-    // need to throw it back to the developer to decide what to do (perhaps cast in the sql)
     val precision = metadata.getPrecision(column)
     val scale = metadata.getScale(column)
-    if (scale == -127)
-      sys.error("Scale is -127 which means 'variable scale' which is not supported, specify a scale in SQL by casting to the appropriate type")
     require(scale <= precision, "Scale must be less than precision")
+
+    // if scale == -127 then it means no scale was defined, which is what happens when you do NUMBER
+    // in oracle without a scale or precision, and then it defaults to max precision/max scale, but storing
+    // the number as given. For eel we'll use the max precision hive supports.
     DecimalType(
       if (precision <= 0) config.defaultPrecision else precision,
-      if (scale < 0) config.defaultScale else scale
+      if (scale == -127) 18 else if (scale < 0) config.defaultScale else scale
     )
   }
 
