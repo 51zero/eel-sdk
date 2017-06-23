@@ -16,6 +16,7 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     Field("job", StringType, nullable = false),
     Field("location", StringType, nullable = false)
   )
+
   private val ds = DataStream.fromValues(
     schema,
     Seq(
