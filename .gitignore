@@ -22,3 +22,4 @@ data
 big.csv
 .gradle
 metastore_db
+parquet-par-test
