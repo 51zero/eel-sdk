@@ -16,17 +16,17 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
   def execute(listener: Listener = NoopListener): Long = {
 
     val schema = ds.schema
-    val partitions = ds.channels
+    val channels = ds.channels
     val total = new LongAdder
-    val latch = new CountDownLatch(partitions.size)
+    val latch = new CountDownLatch(channels.size)
 
     // each output stream will operate in an io thread.
     val io = Executors.newCachedThreadPool()
 
     // we open up a seperate output stream for each partition
-    val streams = sink.open(schema, partitions.size)
+    val streams = sink.open(schema, channels.size)
 
-    partitions.zip(streams).zipWithIndex.foreach { case ((Channel(_, iterator), stream), k) =>
+    channels.zip(streams).zipWithIndex.foreach { case ((Channel(_, iterator), stream), k) =>
       logger.debug(s"Starting writing task ${k + 1}")
 
       val buffer = new LinkedBlockingQueue[Row](100)
@@ -79,7 +79,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
     io.shutdown()
     latch.await(21, TimeUnit.DAYS)
     logger.debug("Sink has completed; closing all input channels")
-    partitions.foreach { it => Try {
+    channels.foreach { it => Try {
       it.close()
     }
     }

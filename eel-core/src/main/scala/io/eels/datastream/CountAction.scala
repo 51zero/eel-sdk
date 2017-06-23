@@ -1,6 +1,6 @@
-package io.eels.datastream;
+package io.eels.datastream
 
-case class CountAction(ds: DataStream) extends Action {
+case class CountAction(ds: DataStream) {
   def execute: Long = {
     var count = 0
     ds.coalesce.iterator.foreach(_ => count = count + 1)

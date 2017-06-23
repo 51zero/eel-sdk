@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
-import io.eels.actions.CountAction
 import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{Channel, Listener, NoopListener, Row, Sink}
 

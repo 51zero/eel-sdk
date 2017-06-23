@@ -23,7 +23,7 @@ case class Field(name: String,
 
   def withComment(comment: String): Field = copy(comment = Option(comment))
   def withNullable(nullable: Boolean): Field = copy(nullable = nullable)
-  def withPartition(partition: Boolean) = copy(partition = partition)
+  def withPartition(partition: Boolean): Field = copy(partition = partition)
 }
 
 object Field {

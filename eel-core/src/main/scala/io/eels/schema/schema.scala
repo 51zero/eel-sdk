@@ -75,7 +75,7 @@ case class DecimalType(precision: Precision = Precision(0),
   override def canonicalName: String = "decimal(" + precision.value + "," + scale.value + ")"
   override def matches(from: DataType): Boolean = from match {
     case DecimalType(p, s) => (s == scale || s.value == -1 || scale.value == -1) && (p == precision || p.value == -1 || precision.value == -1)
-    case other => false
+    case _ => false
   }
 }
 
