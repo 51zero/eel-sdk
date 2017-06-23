@@ -4,10 +4,10 @@ import java.sql.{Connection, PreparedStatement}
 
 import io.eels.Part
 
-case class BucketPartitionStrategy(columnName: String,
-                                   numberOfPartitions: Int,
-                                   min: Long,
-                                   max: Long) extends JdbcPartitionStrategy {
+case class RangePartitionStrategy(columnName: String,
+                                  numberOfPartitions: Int,
+                                  min: Long,
+                                  max: Long) extends JdbcPartitionStrategy {
 
   def ranges: Seq[(Long, Long)] = {
 

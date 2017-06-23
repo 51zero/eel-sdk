@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import java.sql.DriverManager
 
 import io.eels.Row
-import io.eels.component.jdbc.{BucketPartitionStrategy, JdbcSource}
+import io.eels.component.jdbc.{RangePartitionStrategy, JdbcSource}
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
@@ -91,7 +91,7 @@ class ParquetSinkTest extends FlatSpec with Matchers {
     }
 
     JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:parquetsink"), "select * from parquet_test")
-      .withPartitionStrategy(BucketPartitionStrategy("a", 4, 0, 10000))
+      .withPartitionStrategy(RangePartitionStrategy("a", 4, 0, 10000))
       .toDataStream()
       .to(ParquetSink(new Path("./parquet-par-test/permissions.pq")).withOverwrite(true))
 
