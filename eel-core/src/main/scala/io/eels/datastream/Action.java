@@ -1,7 +1,4 @@
-package io.eels.actions
-
-import com.sksamuel.exts.Logging
-import com.typesafe.config.ConfigFactory
+package io.eels.datastream;
 
 trait Action extends Logging {
   val config = ConfigFactory.load()

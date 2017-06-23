@@ -18,7 +18,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
   class KuduPart(tableName: String) extends Part {
 
-    override def iterator(): Channel[Row] = {
+    override def channel(): Channel[Row] = {
 
       val projectColumns = schema.fieldNames()
       val table = client.openTable(tableName)

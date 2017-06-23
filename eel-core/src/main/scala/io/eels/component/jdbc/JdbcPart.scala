@@ -15,7 +15,7 @@ class JdbcPart(connFn: () => Connection,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives {
 
-  override def iterator(): Channel[Row] = {
+  override def channel(): Channel[Row] = {
 
     val conn = connFn()
     val stmt = conn.prepareStatement(query)

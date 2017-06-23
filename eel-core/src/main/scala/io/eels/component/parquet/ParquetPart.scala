@@ -26,7 +26,7 @@ class ParquetPart(path: Path,
     }
   }
 
-  override def iterator(): Channel[Row] = {
+  override def channel(): Channel[Row] = {
     val reader = RowParquetReaderFn(path, predicate, readSchema)
     Channel(reader, ParquetIterator(reader))
   }

@@ -27,7 +27,7 @@ class HiveFilePart(val dialect: HiveDialect,
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
-  override def iterator(): Channel[Row] = {
+  override def channel(): Channel[Row] = {
 
     val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
 

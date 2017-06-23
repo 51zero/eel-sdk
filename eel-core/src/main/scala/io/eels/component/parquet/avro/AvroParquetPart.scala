@@ -14,7 +14,7 @@ class AvroParquetPart(path: Path,
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def iterator(): Channel[Row] = {
+  override def channel(): Channel[Row] = {
     val reader = AvroParquetReaderFn(path, predicate, None)
     val deser = new AvroDeserializer()
     val iterator = ParquetIterator(reader).map(deser.toRow)

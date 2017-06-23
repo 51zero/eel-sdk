@@ -16,7 +16,7 @@ object AvroHiveDialect extends HiveDialect with Logging {
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
                    (implicit fs: FileSystem, conf: Configuration): Channel[Row] = {
-    AvroSourcePart(path).iterator()
+    AvroSourcePart(path).channel()
   }
 
   override def writer(schema: StructType,

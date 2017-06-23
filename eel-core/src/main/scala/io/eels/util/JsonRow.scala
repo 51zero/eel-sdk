@@ -1,7 +1,7 @@
-package io.eels
+package io.eels.util
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.eels.util.JacksonSupport
+import io.eels.Row
 
 object JsonRow {
   def apply(row: Row): ObjectNode = {

@@ -16,7 +16,7 @@ object OrcHiveDialect extends HiveDialect with Logging {
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
                    (implicit fs: FileSystem, conf: Configuration): Channel[Row] = {
-    new OrcPart(path, projectionSchema.fieldNames(), predicate).iterator()
+    new OrcPart(path, projectionSchema.fieldNames(), predicate).channel()
   }
 
   override def writer(schema: StructType,

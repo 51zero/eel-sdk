@@ -17,7 +17,7 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
 
 class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging {
 
-  override def iterator(): Channel[Row] = {
+  override def channel(): Channel[Row] = {
 
     val reader = SequenceSupport.createReader(path)
     val k = new IntWritable()

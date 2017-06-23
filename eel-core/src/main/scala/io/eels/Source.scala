@@ -3,7 +3,7 @@ package io.eels
 import com.sksamuel.exts.Logging
 import io.eels.datastream.{DataStream, DataStreamSource}
 import io.eels.schema.StructType
-import io.eels.util.JacksonSupport
+import io.eels.util.{JacksonSupport, JsonRow}
 
 /**
   * A Source is a provider of data.

@@ -44,19 +44,19 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  private[eels] def partitions: Seq[Channel[Row]]
+  private[eels] def channels: Seq[Channel[Row]]
 
   private[eels] def repartition(numOfPartitions: Int): Seq[Channel[Row]] = {
 
     val closeable = new Closeable {
-      override def close(): Unit = outer.partitions.map(_.closeable).foreach(_.close)
+      override def close(): Unit = outer.channels.map(_.closeable).foreach(_.close)
     }
 
     val buckets = List.fill(numOfPartitions)(new LinkedBlockingQueue[Row](1000))
 
     val completed = new AtomicLong(0)
 
-    val parts = outer.partitions
+    val parts = outer.channels
     parts.foreach { partition =>
       executor.execute(new Runnable {
         override def run(): Unit = {
@@ -80,7 +80,7 @@ trait DataStream extends Logging {
 
   private[eels] def coalesce: Channel[Row] = {
 
-    val partitions = outer.partitions
+    val partitions = outer.channels
     if (partitions.isEmpty) Channel.empty
     else if (partitions.size == 1) partitions.head
     else {
@@ -117,7 +117,7 @@ trait DataStream extends Logging {
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = outer.partitions.map(_.map(f))
+    override private[eels] def channels = outer.channels.map(_.map(f))
   }
 
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
@@ -128,8 +128,8 @@ trait DataStream extends Logging {
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
     // we can keep each partition as is, and just filter individually
-    override def partitions: Seq[Channel[Row]] = {
-      outer.partitions.map(_.filter(p))
+    override def channels: Seq[Channel[Row]] = {
+      outer.channels.map(_.filter(p))
     }
   }
 
@@ -138,11 +138,11 @@ trait DataStream extends Logging {
     */
   def filter(fieldName: String, p: (Any) => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Channel[Row]] = {
+    override def channels: Seq[Channel[Row]] = {
       val index = schema.indexOf(fieldName)
       if (index < 0)
         sys.error(s"Unknown field $fieldName")
-      outer.partitions.map(_.filter { row => p(row.values(index)) })
+      outer.channels.map(_.filter { row => p(row.values(index)) })
     }
   }
 
@@ -154,12 +154,12 @@ trait DataStream extends Logging {
     */
   def projection(fields: Seq[String]): DataStream = new DataStream {
     override def schema: StructType = outer.schema.projection(fields)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
 
       val oldSchema = outer.schema
       val newSchema = schema
 
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row =>
           val values = newSchema.fieldNames().map { name =>
             val k = oldSchema.indexOf(name)
@@ -173,8 +173,8 @@ trait DataStream extends Logging {
 
   def replaceNullValues(defaultValue: String): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
-      outer.partitions.map { partition =>
+    override private[eels] def channels = {
+      outer.channels.map { partition =>
         partition.map { row =>
           val newValues = row.values.map {
             case null => defaultValue
@@ -194,7 +194,7 @@ trait DataStream extends Logging {
     */
   def sample(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = outer.partitions.map { partition =>
+    override private[eels] def channels = outer.channels.map { partition =>
       val counter = new AtomicLong(0)
       partition.filter { row =>
         if (counter.getAndIncrement % k == 0) false
@@ -212,7 +212,7 @@ trait DataStream extends Logging {
   def union(other: DataStream): DataStream = new DataStream {
     // todo check schemas are compatible
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = outer.partitions ++ other.partitions
+    override private[eels] def channels = outer.channels ++ other.channels
   }
 
   /**
@@ -221,17 +221,17 @@ trait DataStream extends Logging {
     */
   def updateFieldType(fieldName: String, datatype: DataType): DataStream = new DataStream {
     override def schema: StructType = outer.schema.updateFieldType(fieldName, datatype)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val updatedSchema = schema
-      outer.partitions.map { part => part.map { row => Row(updatedSchema, row.values) } }
+      outer.channels.map { part => part.map { row => Row(updatedSchema, row.values) } }
     }
   }
 
   def updateField(name: String, field: Field): DataStream = new DataStream {
     override def schema: StructType = outer.schema.replaceField(name, field)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val updatedSchema = schema
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row => Row(updatedSchema, row.values) }
       }
     }
@@ -243,9 +243,9 @@ trait DataStream extends Logging {
     */
   def stripCharsFromFieldNames(chars: Seq[Char]): DataStream = new DataStream {
     override def schema: StructType = outer.schema.stripFromFieldNames(chars)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val updatedschema = schema
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row => Row(updatedschema, row.values) }
       }
     }
@@ -257,9 +257,9 @@ trait DataStream extends Logging {
     */
   def replace(fieldName: String, fn: (Any) => Any): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val index = schema.indexOf(fieldName)
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row =>
           val newValues = row.values.updated(index, fn(row.values(index)))
           Row(row.schema, newValues)
@@ -274,9 +274,9 @@ trait DataStream extends Logging {
     */
   def replace(fieldName: String, from: String, target: Any): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val index = schema.indexOf(fieldName)
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row =>
           val existing = row.values(index)
           if (existing == from) {
@@ -291,16 +291,16 @@ trait DataStream extends Logging {
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = outer.partitions.map { partition =>
+    override private[eels] def channels = outer.channels.map { partition =>
       partition.flatMap { row => fn(row) }
     }
   }
 
   def replaceFieldType(from: DataType, toType: DataType): DataStream = new DataStream {
     override def schema: StructType = outer.schema.replaceFieldType(from, toType)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val updatedSchema = schema
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row => Row(updatedSchema, row.values) }
       }
     }
@@ -312,8 +312,8 @@ trait DataStream extends Logging {
     */
   def replace(from: String, target: Any): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
-      outer.partitions.map { partition =>
+    override private[eels] def channels = {
+      outer.channels.map { partition =>
         partition.map { row =>
           val values = row.values.map { value =>
             if (value == from) target else value
@@ -338,11 +338,11 @@ trait DataStream extends Logging {
     */
   def addField(field: Field, defaultValue: Any): DataStream = new DataStream {
     override def schema: StructType = outer.schema.addField(field)
-    override def partitions: Seq[Channel[Row]] = {
+    override def channels: Seq[Channel[Row]] = {
       val exists = outer.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema
-      outer.partitions.map { part => part.map(row => Row(newSchema, row.values :+ defaultValue)) }
+      outer.channels.map { part => part.map(row => Row(newSchema, row.values :+ defaultValue)) }
     }
   }
 
@@ -357,7 +357,7 @@ trait DataStream extends Logging {
     */
   def foreach[U](fn: (Row) => U): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Channel[Row]] = outer.partitions.map(_.map { row =>
+    override def channels: Seq[Channel[Row]] = outer.channels.map(_.map { row =>
       fn(row)
       row
     })
@@ -365,10 +365,10 @@ trait DataStream extends Logging {
 
   def removeField(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = outer.schema.removeField(fieldName, caseSensitive)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val index = outer.schema.indexOf(fieldName, caseSensitive)
       val newSchema = schema
-      outer.partitions.map { partition =>
+      outer.channels.map { partition =>
         partition.map { row =>
           val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
           Row(newSchema, newValues)
@@ -387,7 +387,7 @@ trait DataStream extends Logging {
     */
   def join(other: DataStream): DataStream = new DataStream {
     override def schema: StructType = outer.schema.join(other.schema)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val combinedSchema = schema
       val a = outer.coalesce
       val b = other.coalesce
@@ -406,9 +406,9 @@ trait DataStream extends Logging {
 
   def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
     override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val updatedSchema = schema
-      outer.partitions.map { CloseIterator =>
+      outer.channels.map { CloseIterator =>
         CloseIterator.map { row => Row(updatedSchema, row.values) }
       }
     }
@@ -417,12 +417,12 @@ trait DataStream extends Logging {
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Channel[Row]] = Seq(outer.coalesce.takeWhile(pred))
+    override def channels: Seq[Channel[Row]] = Seq(outer.coalesce.takeWhile(pred))
   }
 
   def take(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Channel[Row]] = Seq(outer.coalesce.take(k))
+    override def channels: Seq[Channel[Row]] = Seq(outer.coalesce.take(k))
   }
 
   /**
@@ -431,19 +431,19 @@ trait DataStream extends Logging {
     */
   def drop(k: Int): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override def partitions: Seq[Channel[Row]] = {
+    override def channels: Seq[Channel[Row]] = {
       Seq(outer.coalesce.drop(k))
     }
   }
 
   def dropWhile(p: (Row) => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = Seq(outer.coalesce.dropWhile(p))
+    override private[eels] def channels = Seq(outer.coalesce.dropWhile(p))
   }
 
   def dropWhile(fieldName: String, pred: (Any) => Boolean): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
       val index = outer.schema.indexOf(fieldName)
       Seq(outer.coalesce.dropWhile { row => pred(row.values(index)) })
     }
@@ -452,13 +452,13 @@ trait DataStream extends Logging {
   // returns a new DataStream with any rows that contain one or more nulls excluded
   def dropNullRows(): DataStream = new DataStream {
     override def schema: StructType = outer.schema
-    override private[eels] def partitions = outer.partitions.map { partition => partition.filterNot(_.values.contains(null)) }
+    override private[eels] def channels = outer.channels.map { partition => partition.filterNot(_.values.contains(null)) }
   }
 
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = outer.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def partitions: Seq[Channel[Row]] = outer.partitions
+    override def channels: Seq[Channel[Row]] = outer.channels
   }
 
   // allows aggregations on the entire dataset
@@ -503,7 +503,7 @@ trait DataStream extends Logging {
   def to(sink: Sink): Long = to(sink, NoopListener)
   def to(sink: Sink, listener: Listener): Long = SinkAction(this, sink).execute(listener)
 
-  def head: Row = partitions.foldLeft(None: Option[Row]) {
+  def head: Row = channels.foldLeft(None: Option[Row]) {
     (head, partition) => head orElse partition.iterator.take(1).toList.headOption
   }.get
 
@@ -521,7 +521,7 @@ object DataStream {
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions = Seq(Channel(rows))
+    override private[eels] def channels = Seq(Channel(rows))
   }
 
   /**
@@ -539,7 +539,7 @@ object DataStream {
 
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def partitions = Seq(Channel(new Closeable {
+    override private[eels] def channels = Seq(Channel(new Closeable {
       override def close(): Unit = ()
     }, rows.iterator))
   }

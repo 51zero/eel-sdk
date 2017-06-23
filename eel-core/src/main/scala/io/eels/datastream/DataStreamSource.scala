@@ -18,7 +18,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
   private val config = ConfigResolver()
 
   override def schema: StructType = source.schema
-  override private[eels] def partitions = {
+  override private[eels] def channels = {
 
     // we buffer the reading from the sources so that slow io can constantly be performing in the background
     // by using a list of rows we reduce contention on the queue
@@ -39,7 +39,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
         io.submit {
           try {
             logger.debug(s"Starting source part ${k + 1}")
-            using(part.iterator) { case Channel(_, iterator) =>
+            using(part.channel) { case Channel(_, iterator) =>
               iterator.foreach { row =>
                 queue.put(row)
                 listener.onNext(row)

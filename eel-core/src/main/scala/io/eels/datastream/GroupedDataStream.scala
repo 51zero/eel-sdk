@@ -29,7 +29,7 @@ trait GroupedDataStream {
       )
     }
 
-    override private[eels] def partitions = {
+    override private[eels] def channels = {
 
       val keys = scala.collection.mutable.Set.empty[Any]
 

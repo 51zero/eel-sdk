@@ -16,7 +16,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
   def execute(listener: Listener = NoopListener): Long = {
 
     val schema = ds.schema
-    val partitions = ds.partitions
+    val partitions = ds.channels
     val total = new LongAdder
     val latch = new CountDownLatch(partitions.size)
 

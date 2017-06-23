@@ -1,6 +1,4 @@
-package io.eels.actions
-
-import io.eels.datastream.DataStream
+package io.eels.datastream;
 
 case class CountAction(ds: DataStream) extends Action {
   def execute: Long = {

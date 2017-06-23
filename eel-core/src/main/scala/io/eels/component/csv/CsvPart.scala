@@ -22,7 +22,7 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def iterator(): Channel[Row] = {
+  override def channel(): Channel[Row] = {
 
     val parser = createParser()
     val input = fs.open(path)
