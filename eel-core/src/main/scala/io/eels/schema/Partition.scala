@@ -4,7 +4,7 @@ package io.eels.schema
 // eg key1=value1,key2=value2,key3=value3 is a partition
 case class Partition(entries: Seq[PartitionEntry]) {
 
-  def pretty: String = entries.map { case (key, value) => s"$key=$value" }.mkString("/")
+  def pretty: String = entries.map { entry => s"${entry.key}=${entry.value}" }.mkString("/")
 
   def keys: Seq[String] = entries.map(_.key)
 
