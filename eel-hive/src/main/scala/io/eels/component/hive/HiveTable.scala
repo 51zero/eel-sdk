@@ -16,4 +16,8 @@ case class HiveTable(dbName: String, tableName: String)(implicit client: IMetaSt
     logger.debug(s"Deleting partition ${partition.pretty}")
     client.dropPartition(dbName, tableName, partition.values.asJava, true)
   }
+
+  def drop(): Unit = {
+    client.dropTable(dbName, tableName, true, true)
+  }
 }
