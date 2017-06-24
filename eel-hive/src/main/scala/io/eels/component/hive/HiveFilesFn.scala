@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.schema.{PartitionConstraint, PartitionPart, PartitionSpec}
+import io.eels.schema.{Partition, PartitionConstraint, PartitionEntry}
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.hive.metastore.api.{Table, Partition => HivePartition}
@@ -24,17 +24,19 @@ object HiveFilesFn extends Logging {
   def apply(table: Table,
             partitionKeys: List[String],
             partitionConstraint: Option[PartitionConstraint])
-           (implicit fs: FileSystem, client: IMetaStoreClient): List[(LocatedFileStatus, PartitionSpec)] = {
+           (implicit fs: FileSystem, client: IMetaStoreClient): Seq[(LocatedFileStatus, Partition)] = {
 
-    def rootScan(): List[(LocatedFileStatus, PartitionSpec)] = {
+    // when we have no partitions, this will scan just the table folder directly for files
+    def rootScan(): Seq[(LocatedFileStatus, Partition)] = {
       logger.debug(s"No partitions for ${table.getTableName}; performing root scan")
       val location = new Path(table.getSd.getLocation)
       HiveFileScanner(location).map { it =>
-        Pair(it, PartitionSpec.empty)
+        Pair(it, Partition.empty)
       }
     }
 
-    def partitionsScan(partitions: Seq[HivePartition]): List[(LocatedFileStatus, PartitionSpec)] = {
+    // scans all the partitions for files, returning the files and the meta data object for each partition
+    def partitionsScan(partitions: Seq[HivePartition]): Seq[(LocatedFileStatus, Partition)] = {
       logger.debug(s"partitionsScan for $partitions")
       // first we filter out any partitions that don't meet our partition constraints
       val filteredPartitions = partitions.filter { it =>
@@ -43,10 +45,10 @@ object HiveFilesFn extends Logging {
         })
         // for each partition we need to combine the values with the partition keys as the
         // partition objects don't contain that
-        val parts = partitionKeys.zip(it.getValues.asScala).map { case (key, value) =>
-          PartitionPart(key, value)
+        val entries = partitionKeys.zip(it.getValues.asScala).map { case (key, value) =>
+          PartitionEntry(key, value)
         }
-        val spec = PartitionSpec(parts.toArray)
+        val spec = Partition(entries)
         partitionConstraint.fold(true)(_.eval(spec))
       }
 
@@ -59,9 +61,9 @@ object HiveFilesFn extends Logging {
         if (fs.exists(path)) {
           HiveFileScanner(path).map { it =>
             val parts = partitionKeys.zip(part.getValues.asScala).map { case (key, value) =>
-              PartitionPart(key, value)
+              PartitionEntry(key, value)
             }
-            Pair(it, PartitionSpec(parts.toArray))
+            Pair(it, Partition(parts))
           }
         } else if (missingPartitionAction == "error") {
           throw new IllegalStateException(s"Partition [$location] was specified in the hive metastore but did not exist on disk. To disable these exceptions set eel.hive.source.missingPartitionAction=warn")

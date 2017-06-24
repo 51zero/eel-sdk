@@ -3,6 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.{Config, ConfigFactory}
+import io.eels.component.hive.partition.{DefaultHivePathStrategy, PartitionPathStrategy}
 import io.eels.schema.StructType
 import io.eels.{RowOutputStream, Sink}
 import org.apache.hadoop.fs.FileSystem
@@ -27,9 +28,13 @@ case class HiveSink(dbName: String,
                     permission: Option[FsPermission] = None,
                     inheritPermissions: Option[Boolean] = None,
                     principal: Option[String] = None,
+                    partitionFields: Seq[String] = Nil,
+                    partitionPathStrategy: PartitionPathStrategy = DefaultHivePathStrategy,
+                    filenameStrategy: FilenameStrategy = DefaultEelFilenameStrategy,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
+                    overwrite: Boolean = false,
                     metadata: Map[String, String] = Map.empty)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
@@ -38,12 +43,15 @@ case class HiveSink(dbName: String,
   implicit val conf = fs.getConf
   val ops = new HiveOps(client)
 
-  def withCreateTable(createTable: Boolean): HiveSink = copy(createTable = createTable)
+  def withCreateTable(createTable: Boolean, overwrite: Boolean, partitionFields: Seq[String]): HiveSink =
+    copy(createTable = createTable, partitionFields = partitionFields, overwrite = overwrite)
+
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
   def withFileListener(listener: FileListener): HiveSink = copy(fileListener = listener)
+  def partitionPathStrategy(strategy: PartitionPathStrategy): HiveSink = copy(partitionPathStrategy = strategy)
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
@@ -78,8 +86,14 @@ case class HiveSink(dbName: String,
     }
 
     if (createTable) {
-      if (!ops.tableExists(dbName, tableName)) {
-        ops.createTable(dbName, tableName, schema, schema.partitions.map(_.name.toLowerCase), HiveFormat.Parquet, Map.empty, TableType.MANAGED_TABLE)
+      if (overwrite || !ops.tableExists(dbName, tableName)) {
+        ops.createTable(dbName, tableName, schema,
+          partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
+          overwrite = overwrite,
+          format = HiveFormat.Parquet,
+          props = Map.empty,
+          tableType = TableType.MANAGED_TABLE
+        )
       }
     }
 
@@ -98,6 +112,8 @@ case class HiveSink(dbName: String,
       discriminator,
       dialect(),
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
+      partitionPathStrategy,
+      filenameStrategy,
       bufferSize,
       inheritPermissions,
       permission,

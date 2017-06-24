@@ -1,6 +1,6 @@
 package io.eels.component.hive
 
-import io.eels.schema.{PartitionPart, StructType}
+import io.eels.schema.{Partition, StructType}
 import io.eels.{Predicate, _}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
@@ -15,7 +15,7 @@ import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
   *                         some file schemas can read data more efficiently if they know they can omit some fields (eg Parquet).
   * @param predicate        predicate for filtering rows, is pushed down to the parquet reader for efficiency if
   *                         the predicate can operate on the files.
-  * @param partitions       a list of partition key-values for this file. We require this to repopulate the partition
+  * @param partition       a list of partition key-values for this file. We require this to repopulate the partition
   *                         values when creating the final Row.
   */
 class HiveFilePart(val dialect: HiveDialect,
@@ -23,13 +23,13 @@ class HiveFilePart(val dialect: HiveDialect,
                    val metastoreSchema: StructType,
                    val projectionSchema: StructType,
                    val predicate: Option[Predicate],
-                   val partitions: List[PartitionPart])
+                   val partition: Partition)
                   (implicit fs: FileSystem, conf: Configuration) extends Part {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
   override def channel(): Channel[Row] = {
 
-    val partitionMap: Map[String, Any] = partitions.map { it => (it.key, it.value) }.toMap
+    val partitionMap: Map[String, Any] = partition.entries.map { it => (it.key, it.value) }.toMap
 
     // the schema we send to the dialect must have any partitions removed, because those fields won't exist
     // in the data files. This is because partitions are not written and instead inferred from the hive meta store.

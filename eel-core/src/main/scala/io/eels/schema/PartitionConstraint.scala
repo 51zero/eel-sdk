@@ -2,46 +2,42 @@ package io.eels.schema
 
 trait PartitionConstraint {
   // returns true if the partition name and value matches any of the parts of the given partition
-  def eval(partition: PartitionSpec): Boolean
+  def eval(partition: Partition): Boolean
 }
 
 object PartitionConstraint {
 
   def or(left: PartitionConstraint, right: PartitionConstraint): PartitionConstraint = new PartitionConstraint {
-    def eval(partition: PartitionSpec): Boolean = {
-      left.eval(partition) || right.eval(partition)
-    }
+    def eval(partition: Partition): Boolean = left.eval(partition) || right.eval(partition)
   }
 
   def and(left: PartitionConstraint, right: PartitionConstraint): PartitionConstraint = new PartitionConstraint {
-    def eval(partition: PartitionSpec): Boolean = {
-      left.eval(partition) && right.eval(partition)
-    }
+    def eval(partition: Partition): Boolean = left.eval(partition) && right.eval(partition)
   }
 
-  def equals(name: String, value: Any): PartitionConstraint = new PartitionConstraint {
-    override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.contains(PartitionPart(name, value.toString))
+  def equals(key: String, value: Any): PartitionConstraint = new PartitionConstraint {
+    override def eval(partition: Partition): Boolean =
+      partition.entries.contains(PartitionEntry(key, value.toString))
   }
 
-  def lt(name: String, value: String): PartitionConstraint = new PartitionConstraint {
-    override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.find(_.key == name).exists(_.value.compareTo(value) < 0)
+  def lt(key: String, value: String): PartitionConstraint = new PartitionConstraint {
+    override def eval(partition: Partition): Boolean =
+      partition.entries.find(_.key == key).exists(_.value.compareTo(value) < 0)
   }
 
-  def lte(name: String, value: String): PartitionConstraint = new PartitionConstraint {
-    override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.find(_.key == name).exists(_.value.compareTo(value) <= 0)
+  def lte(key: String, value: String): PartitionConstraint = new PartitionConstraint {
+    override def eval(partition: Partition): Boolean =
+      partition.entries.find(_.key == key).exists(_.value.compareTo(value) <= 0)
   }
 
-  def gt(name: String, value: String): PartitionConstraint = new PartitionConstraint {
-    override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.find(_.key == name).exists(_.value.compareTo(value) > 0)
+  def gt(key: String, value: String): PartitionConstraint = new PartitionConstraint {
+    override def eval(partition: Partition): Boolean =
+      partition.entries.find(_.key == key).exists(_.value.compareTo(value) > 0)
   }
 
-  def gte(name: String, value: String): PartitionConstraint = new PartitionConstraint {
-    override def eval(partition: PartitionSpec): Boolean =
-      partition.parts.find(_.key == name).exists(_.value.compareTo(value) >= 0)
+  def gte(key: String, value: String): PartitionConstraint = new PartitionConstraint {
+    override def eval(partition: Partition): Boolean =
+      partition.entries.find(_.key == key).exists(_.value.compareTo(value) >= 0)
   }
 }
 

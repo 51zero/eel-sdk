@@ -64,12 +64,10 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
           }
           logger.info(s"Channel ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
         } catch {
-          case NonFatal(e) =>
+          case e: Throwable =>
             logger.info(s"Channel ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", e)
         } finally {
-          Try {
-            stream.close()
-          }
+          Try { stream.close() }
           total.add(localCount.sum)
           latch.countDown()
         }
@@ -79,10 +77,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
     io.shutdown()
     latch.await(21, TimeUnit.DAYS)
     logger.debug("Sink has completed; closing all input channels")
-    channels.foreach { it => Try {
-      it.close()
-    }
-    }
+    channels.foreach { it => Try { it.close() }}
     total.sum()
   }
 }

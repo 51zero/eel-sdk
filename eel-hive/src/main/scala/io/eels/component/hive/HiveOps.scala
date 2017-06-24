@@ -1,62 +1,78 @@
 package io.eels.component.hive
 
-import java.util
-
 import com.sksamuel.exts.Logging
 import io.eels.Constants
+import io.eels.component.hive.partition.{PartitionMetaData, PartitionPathStrategy}
 import io.eels.schema._
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
+import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
 
+// client for operating at a low level on the metastore
+// methods in this class will accept/return eel classes, and convert
+// the operations into hive specific ones
 class HiveOps(val client: IMetaStoreClient) extends Logging {
 
-  //  /**
-  //   * Returns a map of all partition partitionKeys to their values.
-  //   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
-  //   * directly from the hive metastore.
-  //   */
-  //  def partitionMap(dbName: String, tableName: String): Map<String, List<String>> =
-  //    client.listPartitionNames(dbName, tableName, Short.MAX_VALUE)
-  //        .flatMap { Partition(it).parts }
-  //        .groupBy { it.key }
-  //        .map { key, values -> Pair(key, values.map { it.value }) }
-  //
-  //  /**
-  //   * Returns all partition values for the given partition partitionKeys.
-  //   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
-  //   * directly from the hive metastore.
-  //   */
-  //  def partitionValues(dbName: String, tableName: String, partitionKeys: List<String>): List<PartitionPartValues> =
-  //    partitionMap(dbName, tableName).collect { case (key, values) if partitionKeys contains key => values }.toList
-
-  //  /**
-  //   * Returns all partition values for a given partition key.
-  //   * This operation is optimized, in that it does not need to scan files, but can retrieve the information
-  //   * directly from the hive metastore.
-  //   */
-  //  def partitionValues(dbName: String, tableName: String, key: String): List<String> =
-  //      partitionMap(dbName, tableName).getOrElse(key, { listOf() })
-
   /**
-    * Creates a new partition in Hive in the given database:table in the default location, which will be the
-    * partition key values as a subdirectory of the table location. The values for the serialzation formats are
-    * taken from the values for the table.
+    * Returns a map of all partition keys to the distinct values.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
     */
-  def createPartition(dbName: String, tableName: String, partition: PartitionSpec): Unit = {
-    val table = client.getTable(dbName, tableName)
-    val location = new Path(table.getSd.getLocation, partition.name())
-    createPartition(dbName, tableName, partition, location)
+  def partitionMap(dbName: String, tableName: String): Map[String, Seq[String]] = {
+    partitions(dbName, tableName)
+      .flatMap(_.entries)
+      .groupBy(_.key)
+      .map { case (key, entries) => key -> entries.map(_.value) }
   }
 
   /**
-    * Creates a new partition in Hive in the given database:table. The location of the partition must be
-    * specified. If you want to use the default location then use the other variant that doesn't require the
-    * location path. The values for the serialzation formats are taken from the values for the table.
+    * Returns all partition values for a given partition key.
+    * This operation is optimized, in that it does not need to scan files, but can retrieve the information
+    * directly from the hive metastore.
     */
-  def createPartition(dbName: String, tableName: String, partition: PartitionSpec, location: Path): Unit = {
+  def partitionValues(dbName: String, tableName: String, key: String): Seq[String] = {
+    partitions(dbName, tableName).flatMap(_.entries).find(_.key == key).map(_.value).toSeq.distinct
+  }
+
+  // returns the eel field instances which correspond to the partition keys for this table
+  def partitionFields(dbName: String, tableName: String): List[Field] = {
+    val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
+    keys.map { schema =>
+      HiveSchemaFns.fromHiveField(schema).withNullable(false).withPartition(true)
+    }.toList
+  }
+
+  // returns the eel partitions for this hive table
+  def partitions(dbName: String, tableName: String): List[Partition] = {
+    val fields = partitionFields(dbName, tableName)
+    client.listPartitions(dbName, tableName, Short.MaxValue).asScala.map { it =>
+      val entries = it.getValues.asScala.zipWithIndex.map { case (str, int) =>
+        PartitionEntry(fields(int).name, str)
+      }
+      Partition(entries.toList)
+    }.toList
+  }
+
+  /**
+    * Creates a new partition in Hive in the given database.table in the default location, which will be
+    * a subdirectory of the table location.
+    * The supplied partition path strategy will be used to generate the partition name.
+    */
+  def createPartition(dbName: String, tableName: String, partition: Partition, strategy: PartitionPathStrategy): Unit = {
+    val table = client.getTable(dbName, tableName)
+    val location = new Path(table.getSd.getLocation, strategy.name(partition))
+    createPartition(dbName, tableName, location, partition.values)
+  }
+
+  /**
+    * Creates a new partition in Hive in the given database.table. The location of the partition must be
+    * specified. If you want to use the default location then use the other variant that doesn't require the
+    * location path. The values for the serialization formats are taken from the values for the table.
+    */
+  def createPartition(dbName: String, tableName: String, location: Path, values: Seq[String]): Unit = {
+    logger.info(s"Creating partition ${values.mkString(",")} on $dbName.$tableName at location=$location")
 
     // we fetch the table so we can copy the serde/format values from the table. It makes no sense
     // to store a partition with different serialization formats to other partitions.
@@ -64,9 +80,9 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     val sd = new StorageDescriptor(table.getSd)
     sd.setLocation(location.toString())
 
-    val vals = util.Arrays.asList(partition.values(): _*) // the hive partition values are the actual values of the partition parts
+    // the hive partition requires the values of the entries
     val hivePartition = new HivePartition(
-      vals,
+      values.asJava,
       dbName,
       tableName,
       createTimeAsInt(),
@@ -80,18 +96,34 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
 
   /**
     * Returns hive API partitions for the given dbName:tableName
+    *
+    * In Hive, a partition is a set
     */
-  def partitions(dbName: String, tableName: String): List[HivePartition] = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
+  def hivePartitions(dbName: String, tableName: String): List[HivePartition] = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
 
+  // returns the partition meta datas for this table
+  def partitionsMetaData(dbName: String, tableName: String): Seq[PartitionMetaData] = {
+    val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
+    client.listPartitions(dbName, tableName, Short.MaxValue).asScala.map { it =>
+      PartitionMetaData(
+        new Path(it.getSd.getLocation),
+        it.getSd.getInputFormat,
+        it.getSd.getOutputFormat,
+        it.getCreateTime,
+        it.getLastAccessTime,
+        keys.zip(it.getValues.asScala).map { case (key, value) => PartitionEntry(key.getName, value) }
+      )
+    }
+  }
   def createTimeAsInt(): Int = (System.currentTimeMillis() / 1000).toInt
 
   /**
     * Returns the hive FieldSchema's for partition columns.
     * Hive calls these "partition partitionKeys"
     */
-  def partitionKeys(dbName: String, tableName: String): List[FieldSchema] = client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
+  def partitionFieldSchemas(dbName: String, tableName: String): List[FieldSchema] = client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
 
-  def partitionKeyNames(dbName: String, tableName: String): List[String] = partitionKeys(dbName, tableName).map(_.getName)
+  def partitionKeys(dbName: String, tableName: String): List[String] = partitionFieldSchemas(dbName, tableName).map(_.getName)
 
   def tableExists(databaseName: String, tableName: String): Boolean = client.tableExists(databaseName, tableName)
 
@@ -100,14 +132,6 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   def location(dbName: String, tableName: String): String = client.getTable(dbName, tableName).getSd.getLocation
 
   def tablePath(dbName: String, tableName: String): Path = new Path(location(dbName, tableName))
-
-  def partitionPath(dbName: String, tableName: String, parts: List[PartitionPart]): Path =
-    partitionPath(parts, tablePath(dbName, tableName))
-
-  def partitionPath(parts: List[PartitionPart], tablePath: Path): Path = new Path(partitionPathString(parts, tablePath))
-
-  def partitionPathString(parts: List[PartitionPart], tablePath: Path): String =
-    tablePath.toString() + "/" + parts.map(_.unquoted).mkString("/")
 
   // Returns the eel schema for the hive dbName:tableName
   def schema(dbName: String, tableName: String): StructType = {
@@ -135,56 +159,39 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     client.alter_table(dbName, tableName, table)
   }
 
-  // creates (if not existing) the partition for the given partition parts
+  // returns true if the given partition exists for the given database.table
   def partitionExists(dbName: String,
                       tableName: String,
-                      parts: List[PartitionPart]): Boolean = {
-
-    val partitionName = parts.map(_.unquoted).mkString("/")
-    logger.debug(s"Checking if partition exists '$partitionName'")
+                      partition: Partition): Boolean = {
+    logger.debug(s"Checking if partition exists '${partition.entries.mkString(",")}'")
+    import scala.collection.JavaConverters._
 
     try {
-      client.getPartition(dbName, tableName, partitionName) != null
+      // when checking if a partition exists, remember the partition path might not actually be
+      // the standard hive partition string, so instead pass in the vals which will always work
+      client.getPartition(dbName, tableName, partition.values.asJava) != null
     } catch {
       case t: Throwable => false
     }
   }
 
-  //  def applySpec(spec: HiveSpec, overwrite: Boolean): Unit {
-  //    spec.tables().fore {
-  //      val schemas = HiveSpecFn.toSchemas(spec)
-  //      createTable(spec.dbName,
-  //        table.tableName,
-  //        schemas(table.tableName),
-  //        table.partitionKeys,
-  //        HiveFormat.fromInputFormat(table.inputFormat),
-  //        Map.empty,
-  //        TableType.MANAGED_TABLE,
-  //        None,
-  //        overwrite
-  //      )
-  //    }
-  //  }
-
-  // creates (if not existing) the partition for the given partition parts
+  // creates (if not existing) the given partition, using the supplied partition path strategy,
+  // to determine the format of the path
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
-                                 parts: List[PartitionPart]): Unit = {
-    val partitionName = parts.map(_.unquoted()).mkString("/")
-    logger.debug(s"Ensuring partition exists '$partitionName'")
+                                 partition: Partition,
+                                 partitionPathStrategy: PartitionPathStrategy): Unit = {
+    logger.debug(s"Ensuring partition exists '$partition'")
+
     val exists = try {
-      client.getPartition(dbName, tableName, partitionName) != null
+      client.getPartition(dbName, tableName, partition.values.asJava) != null
     } catch {
-      case t: Throwable => false
+      // exception is thrown if the partition doesn't exist, quickest way to find out if it exists
+      case _: Throwable => false
     }
 
     if (!exists) {
-
-      val path = partitionPath(dbName, tableName, parts)
-      logger.debug(s"Creating partition '$partitionName' at $path")
-
-      val partition = PartitionSpec(parts.toArray)
-      createPartition(dbName, tableName, partition)
+      createPartition(dbName, tableName, partition, partitionPathStrategy)
     }
   }
 

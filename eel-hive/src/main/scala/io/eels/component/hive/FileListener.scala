@@ -8,7 +8,6 @@ object FileListener {
   }
 }
 
-
 trait FileListener {
   def onFileCreated(path: Path)
 }

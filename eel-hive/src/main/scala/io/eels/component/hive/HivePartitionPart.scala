@@ -16,7 +16,7 @@ import scala.util.control.NonFatal
 class HivePartitionPart(dbName: String,
                         tableName: String,
                         projectionSchema: StructType,
-                        partitionKeys: List[PartitionKey], // partition keys for this table, used to map the partition values back to a map
+                        partitionKeys: List[String], // partition keys for this table, used to map the partition values back to a map
                         dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true
                        )
                        (implicit fs: FileSystem,
@@ -62,7 +62,7 @@ class HivePartitionPart(dbName: String,
       // the partition values are assumed to be the same order as the supplied partition keys
       // first we build a map of the keys to values, then use that map to return a Row with
       // values in the order set by the fieldNames parameter
-      val map = partitionKeys.map(_.field.name).zip(part.getValues.asScala).toMap
+      val map = partitionKeys.zip(part.getValues.asScala).toMap
       Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
     }
     logger.debug(s"After scanning partitions and files we have ${rows.size} rows")

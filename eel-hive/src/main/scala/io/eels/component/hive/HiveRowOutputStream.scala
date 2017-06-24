@@ -1,12 +1,12 @@
 package io.eels.component.hive
 
-import java.util.UUID
 import java.util.concurrent._
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
+import io.eels.component.hive.partition.{PartitionPathStrategy, RowPartitionFn}
 import io.eels.schema.StructType
-import io.eels.util.RowNormalizerFn
+import io.eels.util.{HdfsMkpath, RowNormalizerFn}
 import io.eels.{Row, RowOutputStream}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.concurrent.TrieMap
+import scala.util.control.NonFatal
 
 class HiveRowOutputStream(sourceSchema: StructType,
                           metastoreSchema: StructType,
@@ -24,6 +25,8 @@ class HiveRowOutputStream(sourceSchema: StructType,
                           discriminator: Option[String],
                           dialect: HiveDialect,
                           dynamicPartitioning: Boolean,
+                          partitionPathStrategy: PartitionPathStrategy,
+                          filenameStrategy: FilenameStrategy,
                           bufferSize: Int,
                           inheritPermissions: Option[Boolean],
                           permission: Option[FsPermission],
@@ -43,7 +46,7 @@ class HiveRowOutputStream(sourceSchema: StructType,
   private val lock = new AnyRef()
 
   // these will be in lower case
-  private val partitionKeyNames = hiveOps.partitionKeyNames(dbName, tableName)
+  private val partitionKeyNames = hiveOps.partitionKeys(dbName, tableName)
 
   // the file schema is the metastore schema with the partition columns removed. This is because the
   // partition columns are not written to the file (they are taken from the partition itself)
@@ -63,7 +66,7 @@ class HiveRowOutputStream(sourceSchema: StructType,
 
   // Since the data can come in unordered, we want to keep the streams for each partition open
   // otherwise we would be opening and closing streams frequently.
-  private val writers = TrieMap.empty[String, HiveWriter]
+  private val writers = TrieMap.empty[Path, HiveWriter]
 
   // this contains all the partitions we've checked.
   private val createdPartitions = new ConcurrentSkipListSet[String]
@@ -105,46 +108,45 @@ class HiveRowOutputStream(sourceSchema: StructType,
   def getOrCreateHiveWriter(row: Row): HiveWriter = {
 
     // we need a a writer per partition (as each partition is written to a different directory)
-    val parts = PartitionPartsFn.rowPartitionParts(row, partitionKeyNames)
-    val partPath = hiveOps.partitionPathString(parts, tablePath)
+    val partition = RowPartitionFn(row, partitionKeyNames)
+    val partitionPath = new Path(tablePath, partitionPathStrategy.name(partition))
 
     // we cache the writer so that we don't keep opening and closing loads of writers
-    writers.getOrElseUpdate(partPath, {
+    writers.getOrElseUpdate(partitionPath, try {
+      logger.debug(s"Creating new HiveWriter for partition $partitionPath")
 
       // if dynamic partition is enabled then we will create any partitions and
       // update the hive metastore
       if (dynamicPartitioning) {
-        if (parts.nonEmpty) {
-          if (!createdPartitions.contains(partPath.toString())) {
-            hiveOps.createPartitionIfNotExists(dbName, tableName, parts)
-            createdPartitions.add(partPath.toString())
+        if (partition.entries.nonEmpty) {
+          if (!createdPartitions.contains(partitionPath.toString)) {
+            hiveOps.createPartitionIfNotExists(dbName, tableName, partition, partitionPathStrategy)
+            createdPartitions.add(partitionPath.toString)
           }
         }
-      } else if (!hiveOps.partitionExists(dbName, tableName, parts)) {
-        sys.error(s"Partition $partPath does not exist and dynamicPartitioning = false")
+      } else if (!hiveOps.partitionExists(dbName, tableName, partition)) {
+        sys.error(s"Partition $partitionPath does not exist and dynamicPartitioning = false")
       }
 
-      // ensure the part path is created, with permissions from parent
-      if (inheritPermissions.getOrElse(inheritPermissionsDefault)) {
-        val parent = Iterator.iterate(new Path(partPath))(_.getParent).dropWhile(false == fs.exists(_)).take(1).toList.head
-        val permission = fs.getFileStatus(parent).getPermission
-        Iterator.iterate(new Path(partPath))(_.getParent).takeWhile(false == fs.exists(_)).foreach { path =>
-          fs.create(path, false)
-          fs.setPermission(path, permission)
-        }
-      }
+      // ensure the part path is created, with permissions from parent if applicable
+      HdfsMkpath(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
 
-      val filename = "eel_" + System.nanoTime() + discriminator.map("_" + _.stripPrefix("_")).getOrElse("")
+      val filename = filenameStrategy.filename(discriminator)
       val filePath = if (writeToTempDirectory) {
-        val temp = new Path(partPath, ".eeltemp_" + UUID.randomUUID.toString)
+        val temp = new Path(partitionPath, filenameStrategy.tempdir)
         new Path(temp, filename)
       } else {
-        new Path(partPath, filename)
+        new Path(partitionPath, filename)
       }
-      logger.debug(s"Creating hive writer for $filePath")
+
+      logger.debug(s"HiveWriter wil write to file $filePath")
       fileListener.onFileCreated(filePath)
 
       dialect.writer(fileSchema, filePath, permission, metadata)
+    } catch {
+      case NonFatal(e) =>
+        logger.error(s"Error getting or creating the hive writer for $partitionPath", e)
+        throw e
     })
   }
 }
