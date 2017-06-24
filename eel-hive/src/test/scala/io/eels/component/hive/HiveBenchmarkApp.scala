@@ -80,7 +80,7 @@ object HiveBenchmarkApp extends App with Timed {
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
   val schema = StructType("id", "state")
-  val rows = List.fill(30000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
+  val rows = List.fill(1000000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
 
   logger.info(s"Generated ${rows.size} rows")
 

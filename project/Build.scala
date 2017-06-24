@@ -21,7 +21,6 @@ object Build extends Build {
   val MysqlVersion = "5.1.42"
   val OrcVersion = "1.4.0"
   val ParquetVersion = "1.9.0"
-  val ScalaVersion = "2.11.8"
   val ScalatestVersion = "3.0.0"
   val Slf4jVersion = "1.7.12"
   val UnivocityVersion = "2.4.1"
@@ -61,8 +60,8 @@ object Build extends Build {
 
   val rootSettings = Seq(
     organization := org,
-    scalaVersion := ScalaVersion,
-    crossScalaVersions := Seq(ScalaVersion),
+    scalaVersion := "2.11.8",
+    crossScalaVersions := Seq("2.11.8"),
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
     publishArtifact in Test := false,
