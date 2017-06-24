@@ -515,7 +515,6 @@ trait DataStream extends Logging {
 
 object DataStream {
 
-
   import scala.reflect.runtime.universe._
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {

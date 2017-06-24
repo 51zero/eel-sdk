@@ -4,6 +4,8 @@ import io.eels.schema.PartitionEntry
 import org.apache.hadoop.fs.Path
 
 case class PartitionMetaData(location: Path,
+                             // just the part of the path unique to the partition
+                             name: String,
                              inputFormat: String,
                              outputFormat: String,
                              createTime: Long,

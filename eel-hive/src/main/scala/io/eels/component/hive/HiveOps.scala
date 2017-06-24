@@ -107,6 +107,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.map { it =>
       PartitionMetaData(
         new Path(it.getSd.getLocation),
+        it.getSd.getLocation,
         it.getSd.getInputFormat,
         it.getSd.getOutputFormat,
         it.getCreateTime,

@@ -117,8 +117,6 @@ object Scale {
 }
 
 case class StructType(fields: Vector[Field]) extends DataType {
-
-
   require(fields.map(_.name).distinct.length == fields.size, "StructType cannot have duplicated field names")
   require(fields.nonEmpty, "StructType cannot be empty")
 
