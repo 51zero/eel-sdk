@@ -403,6 +403,30 @@ trait DataStream extends Logging {
     }
   }
 
+  /**
+    * Joins the given datastream to this datastream on the given key column,
+    * where the values of the keys are equal as taken by the scala == operator.
+    * Both datastreams must contain the key column.
+    *
+    * The given datastream is fully inflated when this datastream needs to be materialized.
+    * For that reason, always use the smallest datastream as the parameter, and the larger
+    * datastream as the receiver.
+    */
+  def join(key: String, other: DataStream): DataStream = new DataStream {
+    override def schema: StructType = outer.schema.join(other.schema)
+    override private[eels] def channels = {
+      val joinedschema = schema
+      val map = other.collect.map { row => row.get(key) -> row }.toMap
+      outer.channels.map { channel =>
+        channel.map { row =>
+          val value = row.get(key)
+          val rhs = map(value)
+          Row(joinedschema, row.values ++ rhs.values)
+        }
+      }
+    }
+  }
+
   def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
     override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
     override private[eels] def channels = {

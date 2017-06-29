@@ -9,6 +9,7 @@ object Row {
 }
 
 case class Row(schema: StructType, values: Seq[Any]) {
+
   require(
     schema.size == values.size,
     s"Row should have a value for each field (${schema.fields.size} fields=${schema.fieldNames().mkString(",")}, ${values.size} values=${values.mkString(",")})"
