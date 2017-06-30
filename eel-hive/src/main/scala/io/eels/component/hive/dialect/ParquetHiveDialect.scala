@@ -9,7 +9,7 @@ import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.schema.StructType
-import io.eels.{Channel, Predicate, Row}
+import io.eels.{Flow, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -23,13 +23,13 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Channel[Row] = {
+                   (implicit fs: FileSystem, conf: Configuration): Flow = {
 
     // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
     val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
     val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
     val iterator = ParquetIterator(reader)
-    Channel(reader, iterator)
+    Flow(reader, iterator)
   }
 
   override def writer(schema: StructType,

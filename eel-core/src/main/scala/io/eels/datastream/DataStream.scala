@@ -1,17 +1,15 @@
 package io.eels.datastream
 
 import java.io.Closeable
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicLong
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{Channel, Listener, NoopListener, Row, Sink}
+import io.eels.{Flow, Listener, NoopListener, Row, Sink}
 
-import scala.concurrent.ExecutionContext
 import scala.language.implicitConversions
-import scala.util.control.NonFatal
 
 /**
   * A DataStream is kind of like a table of data. It has fields (like columns) and rows of data. Each row
@@ -24,16 +22,14 @@ import scala.util.control.NonFatal
   * create a fully evaluated one from an in memory structure. In the case of the former, the data
   * will only be loaded on demand as an action is performed.
   *
-  * A DataStream is split into one or more partitions. Each partition can operate independantly
-  * of the others. For example, if you filter a stream, each partition will be filtered seperately,
-  * which allows it to be parallelized. If you write out a stream, each partition can be written out
+  * A DataStream is split into one or more flows. Each flow can operate independantly
+  * of the others. For example, if you filter a flow, each flow will be filtered seperately,
+  * which allows it to be parallelized. If you write out a flow, each partition can be written out
   * to individual files, again allowing parallelization.
   *
   */
 trait DataStream extends Logging {
-  outer =>
-
-  implicit val executor = ExecutionContext.Implicits.global
+  self =>
 
   /**
     * Returns the Schema for this stream. This call will not cause a full evaluation, but only
@@ -43,80 +39,24 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  private[eels] def channels: Seq[Channel[Row]]
+  // the underlying flow for this data stream
+  private[eels] def flows: Seq[Flow]
 
-  private[eels] def repartition(numOfPartitions: Int): Seq[Channel[Row]] = {
-
-    val closeable = new Closeable {
-      override def close(): Unit = outer.channels.map(_.closeable).foreach(_.close)
-    }
-
-    val buckets = List.fill(numOfPartitions)(new LinkedBlockingQueue[Row](1000))
-
-    val completed = new AtomicLong(0)
-
-    val parts = outer.channels
-    parts.foreach { partition =>
-      executor.execute(new Runnable {
-        override def run(): Unit = {
-          var count = 0
-          partition.iterator.foreach { row =>
-            val bucket = count % numOfPartitions
-            buckets(bucket).put(row)
-            count = count + 1
-          }
-          if (completed.incrementAndGet == parts.size) {
-            buckets.foreach(_.put(Row.Sentinel))
-          }
-        }
-      })
-    }
-
-    buckets.map { bucket =>
-      Channel(closeable, BlockingQueueConcurrentIterator(bucket, Row.Sentinel))
-    }
-  }
-
-  private[eels] def coalesce: Channel[Row] = {
-
-    val partitions = outer.channels
-    if (partitions.isEmpty) Channel.empty
-    else if (partitions.size == 1) partitions.head
-    else {
-
-      val queue = new LinkedBlockingQueue[Row](1000)
-      val completed = new AtomicInteger(0)
-
-      partitions.zipWithIndex.foreach { case (partition, index) =>
-
-        executor.execute(new Runnable {
-          override def run(): Unit = {
-            try {
-              logger.debug(s"Starting coalesce thread for partition ${index + 1}")
-              partition.iterator.foreach(queue.put)
-              logger.debug(s"Finished coalesce thread for partition ${index + 1}")
-            } catch {
-              case NonFatal(e) =>
-                logger.error("Error running coalesce task", e)
-            } finally {
-              if (completed.incrementAndGet == partitions.size) {
-                logger.debug("All coalesce tasks completed, closing downstream queue")
-                queue.put(Row.Sentinel)
-              }
-            }
-          }
-        })
+  // when this datastream is executed, causes all operations to this point to be parallelized
+  def parallelize(n: Int, executor: Executor): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override private[eels] def flows = {
+      val queue = Flow.toQueue(self.flows, executor)
+      for (k <- 1 to n) yield {
+        val iter = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
+        Flow(iter)
       }
-
-      Channel(new Closeable {
-        override def close(): Unit = partitions.map(_.closeable).foreach(_.close)
-      }, BlockingQueueConcurrentIterator(queue, Row.Sentinel))
     }
   }
 
   def map(f: Row => Row): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = outer.channels.map(_.map(f))
+    override def schema: StructType = self.schema
+    override private[eels] def flows = self.flows.map(_.map(f))
   }
 
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
@@ -125,10 +65,10 @@ trait DataStream extends Logging {
     * For each row in the stream, filter drops any rows which do not match the predicate.
     */
   def filter(p: Row => Boolean): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
+    override def schema: StructType = self.schema
     // we can keep each partition as is, and just filter individually
-    override def channels: Seq[Channel[Row]] = {
-      outer.channels.map(_.filter(p))
+    override def flows: Seq[Flow] = {
+      self.flows.map(_.filter(p))
     }
   }
 
@@ -136,12 +76,12 @@ trait DataStream extends Logging {
     * Filters where the given field name matches the given predicate.
     */
   def filter(fieldName: String, p: (Any) => Boolean): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override def channels: Seq[Channel[Row]] = {
+    override def schema: StructType = self.schema
+    override def flows: Seq[Flow] = {
       val index = schema.indexOf(fieldName)
       if (index < 0)
         sys.error(s"Unknown field $fieldName")
-      outer.channels.map(_.filter { row => p(row.values(index)) })
+      self.flows.map(_.filter { row => p(row.values(index)) })
     }
   }
 
@@ -152,13 +92,13 @@ trait DataStream extends Logging {
     * Returns a new DataStream which contains the given list of fields from the existing stream.
     */
   def projection(fields: Seq[String]): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.projection(fields)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.projection(fields)
+    override private[eels] def flows = {
 
-      val oldSchema = outer.schema
+      val oldSchema = self.schema
       val newSchema = schema
 
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row =>
           val values = newSchema.fieldNames().map { name =>
             val k = oldSchema.indexOf(name)
@@ -171,9 +111,9 @@ trait DataStream extends Logging {
   }
 
   def replaceNullValues(defaultValue: String): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = {
-      outer.channels.map { partition =>
+    override def schema: StructType = self.schema
+    override private[eels] def flows = {
+      self.flows.map { partition =>
         partition.map { row =>
           val newValues = row.values.map {
             case null => defaultValue
@@ -192,8 +132,8 @@ trait DataStream extends Logging {
     * workers pull through the rows. Each partition uses its own couter.
     */
   def sample(k: Int): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = outer.channels.map { partition =>
+    override def schema: StructType = self.schema
+    override private[eels] def flows = self.flows.map { partition =>
       val counter = new AtomicLong(0)
       partition.filter { row =>
         if (counter.getAndIncrement % k == 0) false
@@ -210,8 +150,8 @@ trait DataStream extends Logging {
   def ++(other: DataStream): DataStream = union(other)
   def union(other: DataStream): DataStream = new DataStream {
     // todo check schemas are compatible
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = outer.channels ++ other.channels
+    override def schema: StructType = self.schema
+    override private[eels] def flows = self.flows ++ other.flows
   }
 
   /**
@@ -219,18 +159,18 @@ trait DataStream extends Logging {
     * the given name will have its datatype set to the given datatype.
     */
   def updateFieldType(fieldName: String, datatype: DataType): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.updateFieldType(fieldName, datatype)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.updateFieldType(fieldName, datatype)
+    override private[eels] def flows = {
       val updatedSchema = schema
-      outer.channels.map { part => part.map { row => Row(updatedSchema, row.values) } }
+      self.flows.map { part => part.map { row => Row(updatedSchema, row.values) } }
     }
   }
 
   def updateField(name: String, field: Field): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.replaceField(name, field)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.replaceField(name, field)
+    override private[eels] def flows = {
       val updatedSchema = schema
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row => Row(updatedSchema, row.values) }
       }
     }
@@ -241,10 +181,10 @@ trait DataStream extends Logging {
     * by removing any occurances of the given characters.
     */
   def stripCharsFromFieldNames(chars: Seq[Char]): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.stripFromFieldNames(chars)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.stripFromFieldNames(chars)
+    override private[eels] def flows = {
       val updatedschema = schema
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row => Row(updatedschema, row.values) }
       }
     }
@@ -255,10 +195,10 @@ trait DataStream extends Logging {
     * The result of the function is the new value for that cell.
     */
   def replace(fieldName: String, fn: (Any) => Any): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema
+    override private[eels] def flows = {
       val index = schema.indexOf(fieldName)
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row =>
           val newValues = row.values.updated(index, fn(row.values(index)))
           Row(row.schema, newValues)
@@ -272,10 +212,10 @@ trait DataStream extends Logging {
     * This operation only applies to the field name specified.
     */
   def replace(fieldName: String, from: String, target: Any): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema
+    override private[eels] def flows = {
       val index = schema.indexOf(fieldName)
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row =>
           val existing = row.values(index)
           if (existing == from) {
@@ -289,17 +229,17 @@ trait DataStream extends Logging {
   }
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = outer.channels.map { partition =>
+    override def schema: StructType = self.schema
+    override private[eels] def flows = self.flows.map { partition =>
       partition.flatMap { row => fn(row) }
     }
   }
 
   def replaceFieldType(from: DataType, toType: DataType): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.replaceFieldType(from, toType)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.replaceFieldType(from, toType)
+    override private[eels] def flows = {
       val updatedSchema = schema
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row => Row(updatedSchema, row.values) }
       }
     }
@@ -310,9 +250,9 @@ trait DataStream extends Logging {
     * This operation applies to all values for all rows.
     */
   def replace(from: String, target: Any): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = {
-      outer.channels.map { partition =>
+    override def schema: StructType = self.schema
+    override private[eels] def flows = {
+      self.flows.map { partition =>
         partition.map { row =>
           val values = row.values.map { value =>
             if (value == from) target else value
@@ -325,7 +265,7 @@ trait DataStream extends Logging {
 
   def addFieldIfNotExists(name: String, defaultValue: Any): DataStream = addFieldIfNotExists(Field(name, StringType), defaultValue)
   def addFieldIfNotExists(field: Field, defaultValue: Any): DataStream = {
-    val exists = outer.schema.fieldNames().contains(field.name)
+    val exists = self.schema.fieldNames().contains(field.name)
     if (exists) this else addField(field, defaultValue)
   }
 
@@ -336,12 +276,12 @@ trait DataStream extends Logging {
     * value was 1.3
     */
   def addField(field: Field, defaultValue: Any): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.addField(field)
-    override def channels: Seq[Channel[Row]] = {
-      val exists = outer.schema.fieldNames().contains(field.name)
+    override def schema: StructType = self.schema.addField(field)
+    override def flows: Seq[Flow] = {
+      val exists = self.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema
-      outer.channels.map { part => part.map(row => Row(newSchema, row.values :+ defaultValue)) }
+      self.flows.map { part => part.map(row => Row(newSchema, row.values :+ defaultValue)) }
     }
   }
 
@@ -355,19 +295,19 @@ trait DataStream extends Logging {
     * Execute a side effecting function for every row in the stream, returning the same row.
     */
   def foreach[U](fn: (Row) => U): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override def channels: Seq[Channel[Row]] = outer.channels.map(_.map { row =>
+    override def schema: StructType = self.schema
+    override def flows: Seq[Flow] = self.flows.map(_.map { row =>
       fn(row)
       row
     })
   }
 
   def removeField(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.removeField(fieldName, caseSensitive)
-    override private[eels] def channels = {
-      val index = outer.schema.indexOf(fieldName, caseSensitive)
+    override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
+    override private[eels] def flows = {
+      val index = self.schema.indexOf(fieldName, caseSensitive)
       val newSchema = schema
-      outer.channels.map { partition =>
+      self.flows.map { partition =>
         partition.map { row =>
           val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
           Row(newSchema, newValues)
@@ -377,29 +317,30 @@ trait DataStream extends Logging {
   }
 
   /**
-    * Combines two frames together such that the fields from this frame are joined with the fields
-    * of the given frame. Eg, if this frame has A,B and the given frame has C,D then the result will
+    * Combines two datastreams together such that the fields from this datastream are joined with the fields
+    * of the given datastream. Eg, if this datastream has A,B and the given datastream has C,D then the result will
     * be A,B,C,D
     *
-    * Each stream has different partitions so we'll need to re-partition it to ensure we have an even
-    * distribution.
+    * This operation requires an executor, as it must buffer rows to ensure an even distribution.
     */
-  def join(other: DataStream): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.join(other.schema)
-    override private[eels] def channels = {
+  def join(other: DataStream, executor: Executor): DataStream = new DataStream {
+
+    override def schema: StructType = self.schema.join(other.schema)
+    override private[eels] def flows = {
+
       val combinedSchema = schema
-      val a = outer.coalesce
-      val b = other.coalesce
-      val closeable = new Closeable {
-        override def close(): Unit = {
-          a.close()
-          b.close()
-        }
-      }
-      val iterator = outer.coalesce.iterator.zip(other.coalesce.iterator).map { case (x, y) =>
+
+      val lq = Flow.toQueue(self.flows, executor)
+      val rq = Flow.toQueue(other.flows, executor)
+
+      val li = BlockingQueueConcurrentIterator(lq, Row.Sentinel)
+      val ri = BlockingQueueConcurrentIterator(rq, Row.Sentinel)
+
+      li.zip(ri).map { case (x, y) =>
         Row(combinedSchema, x.values ++ y.values)
       }
-      Seq(Channel(closeable, iterator))
+
+      Seq(Flow(iterator))
     }
   }
 
@@ -413,11 +354,11 @@ trait DataStream extends Logging {
     * datastream as the receiver.
     */
   def join(key: String, other: DataStream): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.join(other.schema)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.join(other.schema)
+    override private[eels] def flows = {
       val joinedschema = schema
       val map = other.collect.map { row => row.get(key) -> row }.toMap
-      outer.channels.map { channel =>
+      self.flows.map { channel =>
         channel.map { row =>
           val value = row.get(key)
           val rhs = map(value)
@@ -428,10 +369,10 @@ trait DataStream extends Logging {
   }
 
   def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
-    override def schema: StructType = outer.schema.renameField(nameFrom, nameTo)
-    override private[eels] def channels = {
+    override def schema: StructType = self.schema.renameField(nameFrom, nameTo)
+    override private[eels] def flows = {
       val updatedSchema = schema
-      outer.channels.map { CloseIterator =>
+      self.flows.map { CloseIterator =>
         CloseIterator.map { row => Row(updatedSchema, row.values) }
       }
     }
@@ -439,54 +380,64 @@ trait DataStream extends Logging {
 
   def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
   def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override def channels: Seq[Channel[Row]] = Seq(outer.coalesce.takeWhile(pred))
+    override def schema: StructType = self.schema
+    override def flows: Seq[Flow] = self.flows.map(_.takeWhile(pred))
   }
 
-  def take(k: Int): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override def channels: Seq[Channel[Row]] = Seq(outer.coalesce.take(k))
+  /**
+    * Returns a new DataStream where k number of rows only are processed.
+    */
+  def take(k: Long): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override def flows: Seq[Flow] = {
+      val taken = new AtomicLong(0)
+      self.flows.map { flow =>
+        flow.takeWhile(_ => taken.incrementAndGet <= k)
+      }
+    }
   }
 
   /**
     * Returns a new DataStream where k number of rows has been dropped.
-    * This operation requires a reshuffle.
     */
-  def drop(k: Int): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override def channels: Seq[Channel[Row]] = {
-      Seq(outer.coalesce.drop(k))
+  def drop(k: Long): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override def flows: Seq[Flow] = {
+      val dropped = new AtomicLong(0)
+      self.flows.map { flow =>
+        flow.dropWhile(_ => dropped.incrementAndGet <= k)
+      }
     }
   }
 
   def dropWhile(p: (Row) => Boolean): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = Seq(outer.coalesce.dropWhile(p))
+    override def schema: StructType = self.schema
+    override private[eels] def flows = self.flows.map(_.dropWhile(p))
   }
 
   def dropWhile(fieldName: String, pred: (Any) => Boolean): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = {
-      val index = outer.schema.indexOf(fieldName)
-      Seq(outer.coalesce.dropWhile { row => pred(row.values(index)) })
+    override def schema: StructType = self.schema
+    override private[eels] def flows = {
+      val index = self.schema.indexOf(fieldName)
+      self.flows.map(_.dropWhile { row => pred(row.values(index)) })
     }
   }
 
   // returns a new DataStream with any rows that contain one or more nulls excluded
   def dropNullRows(): DataStream = new DataStream {
-    override def schema: StructType = outer.schema
-    override private[eels] def channels = outer.channels.map { partition => partition.filterNot(_.values.contains(null)) }
+    override def schema: StructType = self.schema
+    override private[eels] def flows = self.flows.map { partition => partition.filterNot(_.values.contains(null)) }
   }
 
   def withLowerCaseSchema(): DataStream = new DataStream {
-    private lazy val lowerSchema = outer.schema.toLowerCase()
+    private lazy val lowerSchema = self.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def channels: Seq[Channel[Row]] = outer.channels
+    override def flows: Seq[Flow] = self.flows
   }
 
   // allows aggregations on the entire dataset
   def aggregated(): GroupedDataStream = new GroupedDataStream {
-    override def source: DataStream = outer
+    override def source: DataStream = self
     override def keyFn: Row => Any = GroupedDataStream.FullDatasetKeyFn
     override def aggregations: Vector[Aggregation] = Vector.empty
   }
@@ -497,7 +448,7 @@ trait DataStream extends Logging {
 
   // group by an arbitary function on the row data
   def groupBy(fn: Row => Any): GroupedDataStream = new GroupedDataStream {
-    override def source: DataStream = outer
+    override def source: DataStream = self
     override def keyFn: (Row) => Any = fn
     override def aggregations: Vector[Aggregation] = Vector.empty
   }
@@ -526,7 +477,7 @@ trait DataStream extends Logging {
   def to(sink: Sink): Long = to(sink, NoopListener)
   def to(sink: Sink, listener: Listener): Long = SinkAction(this, sink).execute(listener)
 
-  def head: Row = channels.foldLeft(None: Option[Row]) {
+  def head: Row = flows.foldLeft(None: Option[Row]) {
     (head, partition) => head orElse partition.iterator.take(1).toList.headOption
   }.get
 
@@ -543,7 +494,7 @@ object DataStream {
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def channels = Seq(Channel(rows))
+    override private[eels] def flows = Seq(Flow(rows))
   }
 
   /**
@@ -561,9 +512,7 @@ object DataStream {
 
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def channels = Seq(Channel(new Closeable {
-      override def close(): Unit = ()
-    }, rows.iterator))
+    override private[eels] def flows = Seq(Flow(rows.iterator))
   }
 
   /**

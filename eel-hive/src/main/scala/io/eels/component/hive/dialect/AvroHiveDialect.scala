@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.{Channel, Predicate, Row}
+import io.eels.{Flow, Predicate, Row}
 import io.eels.component.avro.{AvroSourcePart, AvroWriter}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.schema.StructType
@@ -15,8 +15,8 @@ object AvroHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Channel[Row] = {
-    AvroSourcePart(path).channel()
+                   (implicit fs: FileSystem, conf: Configuration): Flow = {
+    AvroSourcePart(path).open()
   }
 
   override def writer(schema: StructType,
@@ -29,7 +29,6 @@ object AvroHiveDialect extends HiveDialect with Logging {
 
       private val out = fs.create(path)
       private val writer = new AvroWriter(schema, out)
-
 
       override def write(row: Row): Unit = writer.write(row)
 

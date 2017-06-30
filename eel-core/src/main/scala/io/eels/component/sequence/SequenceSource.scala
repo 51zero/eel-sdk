@@ -17,7 +17,7 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
 
 class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging {
 
-  override def channel(): Channel[Row] = {
+  override def open(): Flow = {
 
     val reader = SequenceSupport.createReader(path)
     val k = new IntWritable()
@@ -32,6 +32,6 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
       override def hasNext(): Boolean = reader.next(k, v)
     }
 
-    Channel(reader.close _, iterator)
+    Flow(reader.close _, iterator)
   }
 }

@@ -5,7 +5,7 @@ import java.io.Closeable
 import com.sksamuel.exts.Logging
 import com.univocity.parsers.csv.CsvParser
 import io.eels.schema.StructType
-import io.eels.{Channel, Part, Row}
+import io.eels.{Flow, Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 import scala.util.Try
@@ -22,11 +22,15 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def channel(): Channel[Row] = {
+  override def open(): Flow = {
 
     val parser = createParser()
     val input = fs.open(path)
     parser.beginParsing(input)
+
+    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
+      Row(schema, records.toVector)
+    }
 
     val closeable = new Closeable {
       override def close(): Unit = Try {
@@ -35,10 +39,6 @@ class CsvPart(val createParser: () => CsvParser,
       }
     }
 
-    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
-      Row(schema, records.toVector)
-    }
-
-    Channel(closeable, iterator)
+    Flow(closeable, iterator)
   }
 }

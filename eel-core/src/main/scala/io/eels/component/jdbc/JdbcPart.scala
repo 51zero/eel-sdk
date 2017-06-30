@@ -4,7 +4,7 @@ import java.io.Closeable
 import java.sql.{Connection, PreparedStatement}
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.{Channel, Part, Row}
+import io.eels.{Flow, Part, Row}
 
 import scala.util.Try
 
@@ -15,7 +15,7 @@ class JdbcPart(connFn: () => Connection,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives {
 
-  override def channel(): Channel[Row] = {
+  override def open(): Flow = {
 
     val conn = connFn()
     val stmt = conn.prepareStatement(query)
@@ -27,15 +27,8 @@ class JdbcPart(connFn: () => Connection,
     }
 
     val schema = schemaFor(dialect, rs)
-    val closeable = new Closeable {
-      override def close(): Unit = {
-        logger.debug(s"Closing result set on jdbc part $query")
-        Try { rs.close() }
-        Try { conn.close() }
-      }
-    }
 
-    val iterable = new Iterator[Row] {
+    val iterator = new Iterator[Row] {
       override def hasNext: Boolean = rs.next()
       override def next(): Row = {
         val values = schema.fieldNames().map(name => rs.getObject(name))
@@ -43,6 +36,18 @@ class JdbcPart(connFn: () => Connection,
       }
     }
 
-    Channel(closeable, iterable)
+    val closeable = new Closeable {
+      override def close(): Unit = {
+        logger.debug(s"Closing result set on jdbc part $query")
+        Try {
+          rs.close()
+        }
+        Try {
+          conn.close()
+        }
+      }
+    }
+
+    Flow(closeable, iterator)
   }
 }

@@ -2,8 +2,7 @@ package io.eels.datastream
 
 case class CountAction(ds: DataStream) {
   def execute: Long = {
-    var count = 0
-    ds.coalesce.iterator.foreach(_ => count = count + 1)
-    count
+    val counts = ds.flows.map(_.iterator.size)
+    if (counts.isEmpty) 0 else counts.sum
   }
 }

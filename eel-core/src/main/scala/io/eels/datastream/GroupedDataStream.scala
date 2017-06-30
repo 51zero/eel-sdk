@@ -1,15 +1,20 @@
 package io.eels.datastream
 
+import java.util.concurrent.ConcurrentHashMap
+
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-import io.eels.{Channel, Row}
+import io.eels.{Flow, Row}
+
+import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
 
 object GroupedDataStream {
   val FullDatasetKeyFn: Row => Any = { _ => 0 }
 }
 
 trait GroupedDataStream {
-  outer =>
+  self =>
 
   // the source data stream
   def source: DataStream
@@ -29,34 +34,42 @@ trait GroupedDataStream {
       )
     }
 
-    override private[eels] def channels = {
+    override private[eels] def flows = {
 
-      val keys = scala.collection.mutable.Set.empty[Any]
-
-      // if .aggregate was made thread safe, we could run it from multiple partitions
-      // at the same time, as it stands, we need to coalesce and then run it
-      val partition = source.coalesce
+      val keys = new ConcurrentHashMap[Any, Boolean]()
 
       // foreach forces the evaluation here
-      partition.foreach { row =>
-        val key = keyFn(row)
-        keys.add(key)
-        aggregations.foreach(_.aggregate(key, row))
+      try {
+        self.source.flows.foreach { flow =>
+          println(flow)
+          flow.foreach { row =>
+            println(row)
+            val key = keyFn(row)
+            keys.put(key, true)
+            aggregations.foreach(_.aggregate(key, row))
+          }
+        }
+      } catch {
+        case NonFatal(e) =>
+          logger.error("Error processing aggregation", e)
+          e.printStackTrace()
       }
 
-      val rows = keys.map { key =>
+      println(keys)
+
+      val rows = keys.keys().asScala.map { key =>
         val values = aggregations.map(_.value(key))
         Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
       }
 
-      Seq(Channel(rows.iterator))
+      Seq(Flow(rows))
     }
   }
 
   def aggregation(agg: Aggregation): GroupedDataStream = new GroupedDataStream {
-    override def source: DataStream = outer.source
-    override def aggregations: Vector[Aggregation] = outer.aggregations :+ agg
-    override def keyFn: (Row) => Any = outer.keyFn
+    override def source: DataStream = self.source
+    override def aggregations: Vector[Aggregation] = self.aggregations :+ agg
+    override def keyFn: (Row) => Any = self.keyFn
   }
 
   // actions

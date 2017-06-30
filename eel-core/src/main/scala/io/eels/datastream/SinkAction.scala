@@ -1,12 +1,11 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.LongAdder
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{CountDownLatch, Executors, TimeUnit}
 
 import com.sksamuel.exts.Logging
-import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
-import io.eels.{Channel, Listener, NoopListener, Row, Sink}
+import io.eels.{Listener, NoopListener, Sink}
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -16,56 +15,38 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
   def execute(listener: Listener = NoopListener): Long = {
 
     val schema = ds.schema
-    val channels = ds.channels
+    val flows = ds.flows
     val total = new LongAdder
-    val latch = new CountDownLatch(channels.size)
+    val latch = new CountDownLatch(flows.size)
 
     // each output stream will operate in an io thread.
     val io = Executors.newCachedThreadPool()
 
-    // we open up a seperate output stream for each partition
-    val streams = sink.open(schema, channels.size)
+    // we open up a seperate output stream for each flow
+    val streams = sink.open(schema, flows.size)
 
-    channels.zip(streams).zipWithIndex.foreach { case ((Channel(_, iterator), stream), k) =>
+    flows.zip(streams).zipWithIndex.foreach { case ((flow, stream), k) =>
       logger.debug(s"Starting writing task ${k + 1}")
-
-      val buffer = new LinkedBlockingQueue[Row](100)
-
-      ds.executor.execute(new Runnable {
-        override def run(): Unit = {
-          // each channel has its own output stream, so once the iterator is finished we must notify the buffer
-          // so the output stream can be closed
-          try {
-            iterator.foreach { row =>
-              listener.onNext(row)
-              buffer.put(row)
-            }
-            listener.onComplete()
-          } catch {
-            case NonFatal(e) =>
-              logger.error("Error populating write buffer", e)
-              listener.onError(e)
-          } finally {
-            logger.debug(s"Writing task ${k + 1} has completed")
-            buffer.put(Row.Sentinel)
-          }
-        }
-      })
 
       // each channel will have an io-thread which will write to the file/disk
       io.submit {
 
         val localCount = new LongAdder
 
+        // each flow has its own output stream, so once the iterator is finished we
+        // must should close the output stream immediately, no sense in keeping it open
         try {
-          BlockingQueueConcurrentIterator(buffer, Row.Sentinel).foreach { row =>
-            stream.write(row)
+          flow.iterator.foreach { row =>
             localCount.increment()
+            stream.write(row)
+            listener.onNext(row)
           }
-          logger.info(s"Channel ${k + 1} has completed; wrote ${localCount.sum} records; closing writer")
+          logger.info(s"Channel ${k + 1} has completed; wrote ${localCount.sum} records; closing output stream")
+          listener.onComplete()
         } catch {
-          case e: Throwable =>
-            logger.info(s"Channel ${k + 1} has errored; wrote ${localCount.sum} records; closing writer", e)
+          case NonFatal(e) =>
+            logger.info(s"Channel ${k + 1} has errored; wrote ${localCount.sum} records; closing output stream", e)
+            listener.onError(e)
         } finally {
           Try { stream.close() }
           total.add(localCount.sum)
@@ -75,9 +56,10 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
     }
 
     io.shutdown()
-    latch.await(21, TimeUnit.DAYS)
+    latch.await(999, TimeUnit.DAYS)
+
     logger.debug("Sink has completed; closing all input channels")
-    channels.foreach { it => Try { it.close() }}
+    flows.foreach { it => it.close() }
     total.sum()
   }
 }

@@ -9,9 +9,8 @@ package io.eels
 trait Part {
 
   /**
-    * Returns the data contained in this part in the form of a channel. This function should return a new
-    * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
+    * Returns the data contained in this part in the form of a reader. This function should return a new
+    * reader on each invocation. The reader can be lazily initialized to the first read if required.
     */
-  def channel(): Channel[Row]
-
+  def open(): Flow
 }

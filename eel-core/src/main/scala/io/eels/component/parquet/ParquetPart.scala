@@ -5,7 +5,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.schema.StructType
-import io.eels.{Channel, Part, Predicate, Row}
+import io.eels.{Flow, Part, Predicate}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.ParquetFileReader
@@ -26,8 +26,9 @@ class ParquetPart(path: Path,
     }
   }
 
-  override def channel(): Channel[Row] = {
+  override def open(): Flow = {
     val reader = RowParquetReaderFn(path, predicate, readSchema)
-    Channel(reader, ParquetIterator(reader))
+    val iterator = ParquetIterator(reader)
+    Flow(reader.close _, iterator)
   }
 }

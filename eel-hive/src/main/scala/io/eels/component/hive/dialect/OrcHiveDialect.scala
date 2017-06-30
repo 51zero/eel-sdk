@@ -1,7 +1,7 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.{Channel, Predicate, Row}
+import io.eels.{Flow, Predicate, Row}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.orc.{OrcPart, OrcSinkConfig, OrcWriter}
 import io.eels.schema.StructType
@@ -15,8 +15,8 @@ object OrcHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Channel[Row] = {
-    new OrcPart(path, projectionSchema.fieldNames(), predicate).channel()
+                   (implicit fs: FileSystem, conf: Configuration): Flow = {
+    new OrcPart(path, projectionSchema.fieldNames(), predicate).open()
   }
 
   override def writer(schema: StructType,
