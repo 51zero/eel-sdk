@@ -1,13 +1,12 @@
 package io.eels.datastream
 
-import java.io.Closeable
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicLong
 
 import com.sksamuel.exts.Logging
-import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{Flow, Listener, NoopListener, Row, Sink}
+import io.eels.{Listener, NoopListener, Row, Sink}
+import io.reactivex.{Flowable, functions}
 
 import scala.language.implicitConversions
 
@@ -39,24 +38,14 @@ trait DataStream extends Logging {
     */
   def schema: StructType
 
-  // the underlying flow for this data stream
-  private[eels] def flows: Seq[Flow]
-
-  // when this datastream is executed, causes all operations to this point to be parallelized
-  def parallelize(n: Int, executor: Executor): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override private[eels] def flows = {
-      val queue = Flow.toQueue(self.flows, executor)
-      for (k <- 1 to n) yield {
-        val iter = BlockingQueueConcurrentIterator(queue, Row.Sentinel)
-        Flow(iter)
-      }
-    }
-  }
+  // the underlying flowable for this data stream
+  def flowable: Flowable[Row]
 
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override private[eels] def flows = self.flows.map(_.map(f))
+    override def flowable: Flowable[Row] = self.flowable.map(new functions.Function[Row, Row] {
+      override def apply(row: Row): Row = f(row)
+    })
   }
 
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
@@ -66,10 +55,9 @@ trait DataStream extends Logging {
     */
   def filter(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    // we can keep each partition as is, and just filter individually
-    override def flows: Seq[Flow] = {
-      self.flows.map(_.filter(p))
-    }
+    override def flowable: Flowable[Row] = self.flowable.filter(new functions.Predicate[Row] {
+      override def test(row: Row): Boolean = p(row)
+    })
   }
 
   /**
@@ -77,11 +65,13 @@ trait DataStream extends Logging {
     */
   def filter(fieldName: String, p: (Any) => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def flows: Seq[Flow] = {
+    override def flowable: Flowable[Row] = {
       val index = schema.indexOf(fieldName)
       if (index < 0)
         sys.error(s"Unknown field $fieldName")
-      self.flows.map(_.filter { row => p(row.values(index)) })
+      self.flowable.filter(new functions.Predicate[Row] {
+        override def test(row: Row): Boolean = p(row.values(index))
+      })
     }
   }
 
@@ -93,35 +83,35 @@ trait DataStream extends Logging {
     */
   def projection(fields: Seq[String]): DataStream = new DataStream {
     override def schema: StructType = self.schema.projection(fields)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
 
       val oldSchema = self.schema
       val newSchema = schema
 
-      self.flows.map { partition =>
-        partition.map { row =>
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
           val values = newSchema.fieldNames().map { name =>
             val k = oldSchema.indexOf(name)
             row.values(k)
           }
           Row(newSchema, values)
         }
-      }
+      })
     }
   }
 
   def replaceNullValues(defaultValue: String): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override private[eels] def flows = {
-      self.flows.map { partition =>
-        partition.map { row =>
+    override def flowable: Flowable[Row] = {
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
           val newValues = row.values.map {
             case null => defaultValue
             case otherwise => otherwise
           }
           Row(row.schema, newValues)
         }
-      }
+      })
     }
   }
 
@@ -133,12 +123,14 @@ trait DataStream extends Logging {
     */
   def sample(k: Int): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override private[eels] def flows = self.flows.map { partition =>
+    override def flowable: Flowable[Row] = {
       val counter = new AtomicLong(0)
-      partition.filter { row =>
-        if (counter.getAndIncrement % k == 0) false
-        else true
-      }
+      self.flowable.filter(new functions.Predicate[Row] {
+        override def test(row: Row): Boolean = {
+          if (counter.getAndIncrement % k == 0) false
+          else true
+        }
+      })
     }
   }
 
@@ -151,7 +143,7 @@ trait DataStream extends Logging {
   def union(other: DataStream): DataStream = new DataStream {
     // todo check schemas are compatible
     override def schema: StructType = self.schema
-    override private[eels] def flows = self.flows ++ other.flows
+    override def flowable: Flowable[Row] = self.flowable concatWith other.flowable
   }
 
   /**
@@ -160,19 +152,21 @@ trait DataStream extends Logging {
     */
   def updateFieldType(fieldName: String, datatype: DataType): DataStream = new DataStream {
     override def schema: StructType = self.schema.updateFieldType(fieldName, datatype)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val updatedSchema = schema
-      self.flows.map { part => part.map { row => Row(updatedSchema, row.values) } }
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(updatedSchema, row.values)
+      })
     }
   }
 
   def updateField(name: String, field: Field): DataStream = new DataStream {
     override def schema: StructType = self.schema.replaceField(name, field)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val updatedSchema = schema
-      self.flows.map { partition =>
-        partition.map { row => Row(updatedSchema, row.values) }
-      }
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(updatedSchema, row.values)
+      })
     }
   }
 
@@ -182,11 +176,11 @@ trait DataStream extends Logging {
     */
   def stripCharsFromFieldNames(chars: Seq[Char]): DataStream = new DataStream {
     override def schema: StructType = self.schema.stripFromFieldNames(chars)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val updatedschema = schema
-      self.flows.map { partition =>
-        partition.map { row => Row(updatedschema, row.values) }
-      }
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(updatedschema, row.values)
+      })
     }
   }
 
@@ -196,14 +190,14 @@ trait DataStream extends Logging {
     */
   def replace(fieldName: String, fn: (Any) => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val index = schema.indexOf(fieldName)
-      self.flows.map { partition =>
-        partition.map { row =>
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
           val newValues = row.values.updated(index, fn(row.values(index)))
           Row(row.schema, newValues)
         }
-      }
+      })
     }
   }
 
@@ -213,10 +207,10 @@ trait DataStream extends Logging {
     */
   def replace(fieldName: String, from: String, target: Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val index = schema.indexOf(fieldName)
-      self.flows.map { partition =>
-        partition.map { row =>
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
           val existing = row.values(index)
           if (existing == from) {
             Row(row.schema, row.values.updated(index, target))
@@ -224,24 +218,26 @@ trait DataStream extends Logging {
             row
           }
         }
-      }
+      })
     }
   }
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override private[eels] def flows = self.flows.map { partition =>
-      partition.flatMap { row => fn(row) }
+    override def flowable: Flowable[Row] = {
+      self.flowable.flatMap(new functions.Function[Row, Flowable[Row]] {
+        override def apply(row: Row): Flowable[Row] = Flowable.fromArray(fn(row): _*)
+      })
     }
   }
 
   def replaceFieldType(from: DataType, toType: DataType): DataStream = new DataStream {
     override def schema: StructType = self.schema.replaceFieldType(from, toType)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val updatedSchema = schema
-      self.flows.map { partition =>
-        partition.map { row => Row(updatedSchema, row.values) }
-      }
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(updatedSchema, row.values)
+      })
     }
   }
 
@@ -249,18 +245,11 @@ trait DataStream extends Logging {
     * Foreach row, any values that match "from" will be replaced with "target".
     * This operation applies to all values for all rows.
     */
-  def replace(from: String, target: Any): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override private[eels] def flows = {
-      self.flows.map { partition =>
-        partition.map { row =>
-          val values = row.values.map { value =>
-            if (value == from) target else value
-          }
-          Row(row.schema, values)
-        }
-      }
+  def replace(from: String, target: Any): DataStream = map { row =>
+    val values = row.values.map { value =>
+      if (value == from) target else value
     }
+    Row(row.schema, values)
   }
 
   def addFieldIfNotExists(name: String, defaultValue: Any): DataStream = addFieldIfNotExists(Field(name, StringType), defaultValue)
@@ -277,11 +266,13 @@ trait DataStream extends Logging {
     */
   def addField(field: Field, defaultValue: Any): DataStream = new DataStream {
     override def schema: StructType = self.schema.addField(field)
-    override def flows: Seq[Flow] = {
+    override def flowable: Flowable[Row] = {
       val exists = self.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema
-      self.flows.map { part => part.map(row => Row(newSchema, row.values :+ defaultValue)) }
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = Row(newSchema, row.values :+ defaultValue)
+      })
     }
   }
 
@@ -296,23 +287,27 @@ trait DataStream extends Logging {
     */
   def foreach[U](fn: (Row) => U): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def flows: Seq[Flow] = self.flows.map(_.map { row =>
-      fn(row)
-      row
-    })
+    override def flowable: Flowable[Row] = {
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          fn(row)
+          row
+        }
+      })
+    }
   }
 
   def removeField(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val index = self.schema.indexOf(fieldName, caseSensitive)
       val newSchema = schema
-      self.flows.map { partition =>
-        partition.map { row =>
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
           val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
           Row(newSchema, newValues)
         }
-      }
+      })
     }
   }
 
@@ -326,22 +321,22 @@ trait DataStream extends Logging {
   def join(other: DataStream, executor: Executor): DataStream = new DataStream {
 
     override def schema: StructType = self.schema.join(other.schema)
-    override private[eels] def flows = {
 
-      val combinedSchema = schema
 
-      val lq = Flow.toQueue(self.flows, executor)
-      val rq = Flow.toQueue(other.flows, executor)
-
-      val li = BlockingQueueConcurrentIterator(lq, Row.Sentinel)
-      val ri = BlockingQueueConcurrentIterator(rq, Row.Sentinel)
-
-      li.zip(ri).map { case (x, y) =>
-        Row(combinedSchema, x.values ++ y.values)
-      }
-
-      Seq(Flow(iterator))
-    }
+    //      val combinedSchema = schema
+    //
+    //      val lq = Flow.toQueue(self.flows, executor)
+    //      val rq = Flow.toQueue(other.flows, executor)
+    //
+    //      val li = BlockingQueueConcurrentIterator(lq, Row.Sentinel)
+    //      val ri = BlockingQueueConcurrentIterator(rq, Row.Sentinel)
+    //
+    //      li.zip(ri).map { case (x, y) =>
+    //        Row(combinedSchema, x.values ++ y.values)
+    //      }
+    //
+    //      Seq(Flow(iterator))
+    override def flowable: Flowable[Row] = ???
   }
 
   /**
@@ -355,84 +350,39 @@ trait DataStream extends Logging {
     */
   def join(key: String, other: DataStream): DataStream = new DataStream {
     override def schema: StructType = self.schema.join(other.schema)
-    override private[eels] def flows = {
-      val joinedschema = schema
-      val map = other.collect.map { row => row.get(key) -> row }.toMap
-      self.flows.map { channel =>
-        channel.map { row =>
-          val value = row.get(key)
-          val rhs = map(value)
-          Row(joinedschema, row.values ++ rhs.values)
-        }
-      }
-    }
+    //    override private[eels] def flows = {
+    //      val joinedschema = schema
+    //      val map = other.collect.map { row => row.get(key) -> row }.toMap
+    //      self.flows.map { channel =>
+    //        channel.map { row =>
+    //          val value = row.get(key)
+    //          val rhs = map(value)
+    //          Row(joinedschema, row.values ++ rhs.values)
+    //        }
+    //      }
+    //    }
+    override def flowable: Flowable[Row] = ???
   }
 
   def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
     override def schema: StructType = self.schema.renameField(nameFrom, nameTo)
-    override private[eels] def flows = {
+    override def flowable: Flowable[Row] = {
       val updatedSchema = schema
-      self.flows.map { CloseIterator =>
-        CloseIterator.map { row => Row(updatedSchema, row.values) }
-      }
-    }
-  }
-
-  def takeWhile(fieldName: String, pred: Any => Boolean): DataStream = takeWhile(row => pred(row.get(fieldName)))
-  def takeWhile(pred: Row => Boolean): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override def flows: Seq[Flow] = self.flows.map(_.takeWhile(pred))
-  }
-
-  /**
-    * Returns a new DataStream where k number of rows only are processed.
-    */
-  def take(k: Long): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override def flows: Seq[Flow] = {
-      val taken = new AtomicLong(0)
-      self.flows.map { flow =>
-        flow.takeWhile(_ => taken.incrementAndGet <= k)
-      }
-    }
-  }
-
-  /**
-    * Returns a new DataStream where k number of rows has been dropped.
-    */
-  def drop(k: Long): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override def flows: Seq[Flow] = {
-      val dropped = new AtomicLong(0)
-      self.flows.map { flow =>
-        flow.dropWhile(_ => dropped.incrementAndGet <= k)
-      }
-    }
-  }
-
-  def dropWhile(p: (Row) => Boolean): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override private[eels] def flows = self.flows.map(_.dropWhile(p))
-  }
-
-  def dropWhile(fieldName: String, pred: (Any) => Boolean): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override private[eels] def flows = {
-      val index = self.schema.indexOf(fieldName)
-      self.flows.map(_.dropWhile { row => pred(row.values(index)) })
+      self.flowable.map(new functions.Function[Row, Row] {
+        override def apply(row: Row): Row = {
+          Row(updatedSchema, row.values)
+        }
+      })
     }
   }
 
   // returns a new DataStream with any rows that contain one or more nulls excluded
-  def dropNullRows(): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override private[eels] def flows = self.flows.map { partition => partition.filterNot(_.values.contains(null)) }
-  }
+  def dropNullRows(): DataStream = filterNot(_.values.contains(null))
 
   def withLowerCaseSchema(): DataStream = new DataStream {
     private lazy val lowerSchema = self.schema.toLowerCase()
     override def schema: StructType = lowerSchema
-    override def flows: Seq[Flow] = self.flows
+    override def flowable: Flowable[Row] = self.flowable
   }
 
   // allows aggregations on the entire dataset
@@ -477,9 +427,7 @@ trait DataStream extends Logging {
   def to(sink: Sink): Long = to(sink, NoopListener)
   def to(sink: Sink, listener: Listener): Long = SinkAction(this, sink).execute(listener)
 
-  def head: Row = flows.foldLeft(None: Option[Row]) {
-    (head, partition) => head orElse partition.iterator.take(1).toList.headOption
-  }.get
+  def head: Row = flowable.blockingFirst()
 
   // -- actions --
   def fold[A](initial: A)(fn: (A, Row) => A): A = ??? // rows().foldLeft(initial)(fn)
@@ -490,11 +438,12 @@ trait DataStream extends Logging {
 
 object DataStream {
 
+  import scala.collection.JavaConverters._
   import scala.reflect.runtime.universe._
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def flows = Seq(Flow(rows))
+    override def flowable: Flowable[Row] = Flowable.fromIterable(rows.toIterable.asJava)
   }
 
   /**
@@ -512,7 +461,7 @@ object DataStream {
 
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override private[eels] def flows = Seq(Flow(rows.iterator))
+    override def flowable: Flowable[Row] = Flowable.fromArray(rows: _*)
   }
 
   /**

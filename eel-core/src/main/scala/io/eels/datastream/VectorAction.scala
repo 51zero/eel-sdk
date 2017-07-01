@@ -1,7 +1,8 @@
 package io.eels.datastream
 
 import io.eels.Row
+import scala.collection.JavaConverters._
 
 case class VectorAction(ds: DataStream) {
-  def execute: Vector[Row] = ds.flows.map(_.iterator).reduce((a, b) => a ++ b).toVector
+  def execute: Vector[Row] = ds.flowable.toList.blockingGet().asScala.toVector
 }

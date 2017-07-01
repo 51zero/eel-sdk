@@ -1,13 +1,9 @@
 package io.eels.datastream
 
-import java.util.concurrent.ConcurrentHashMap
-
 import com.sksamuel.exts.Logging
+import io.eels.Row
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-import io.eels.{Flow, Row}
-
-import scala.collection.JavaConverters._
-import scala.util.control.NonFatal
+import io.reactivex.Flowable
 
 object GroupedDataStream {
   val FullDatasetKeyFn: Row => Any = { _ => 0 }
@@ -34,36 +30,37 @@ trait GroupedDataStream {
       )
     }
 
-    override private[eels] def flows = {
-
-      val keys = new ConcurrentHashMap[Any, Boolean]()
-
-      // foreach forces the evaluation here
-      try {
-        self.source.flows.foreach { flow =>
-          println(flow)
-          flow.foreach { row =>
-            println(row)
-            val key = keyFn(row)
-            keys.put(key, true)
-            aggregations.foreach(_.aggregate(key, row))
-          }
-        }
-      } catch {
-        case NonFatal(e) =>
-          logger.error("Error processing aggregation", e)
-          e.printStackTrace()
-      }
-
-      println(keys)
-
-      val rows = keys.keys().asScala.map { key =>
-        val values = aggregations.map(_.value(key))
-        Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
-      }
-
-      Seq(Flow(rows))
-    }
+    //    override private[eels] def flows = {
+    //
+    //      val keys = new ConcurrentHashMap[Any, Boolean]()
+    //
+    //      // foreach forces the evaluation here
+    //      try {
+    //        self.source.flows.foreach { flow =>
+    //          println(flow)
+    //          flow.foreach { row =>
+    //            println(row)
+    //            val key = keyFn(row)
+    //            keys.put(key, true)
+    //            aggregations.foreach(_.aggregate(key, row))
+    //          }
+    //        }
+    //      } catch {
+    //        case NonFatal(e) =>
+    //          logger.error("Error processing aggregation", e)
+    //          e.printStackTrace()
+    //      }
+    //
+    //      println(keys)
+    //
+    //      val rows = keys.keys().asScala.map { key =>
+    //        val values = aggregations.map(_.value(key))
+    //        Row(schema, if (keyFn == GroupedDataStream.FullDatasetKeyFn) values else key +: values)
+    //      }
+    //
+    //      Seq(Flow(rows))
+    //    }
+    override def flowable: Flowable[Row] = ???
   }
 
   def aggregation(agg: Aggregation): GroupedDataStream = new GroupedDataStream {

@@ -1,12 +1,13 @@
 package io.eels.component.jdbc
 
-import java.io.Closeable
 import java.sql.{Connection, PreparedStatement}
 
+import com.sksamuel.exts.TryOrLog
 import com.sksamuel.exts.metrics.Timed
-import io.eels.{Flow, Part, Row}
-
-import scala.util.Try
+import io.eels.component.FlowableIterator
+import io.eels.{Part, Row}
+import io.reactivex.Flowable
+import io.reactivex.disposables.Disposable
 
 class JdbcPart(connFn: () => Connection,
                query: String,
@@ -15,7 +16,7 @@ class JdbcPart(connFn: () => Connection,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives {
 
-  override def open(): Flow = {
+  override def open(): Flowable[Row] = {
 
     val conn = connFn()
     val stmt = conn.prepareStatement(query)
@@ -36,18 +37,19 @@ class JdbcPart(connFn: () => Connection,
       }
     }
 
-    val closeable = new Closeable {
-      override def close(): Unit = {
+    val disposable = new Disposable {
+      override def isDisposed: Boolean = conn.isClosed
+      override def dispose(): Unit = {
         logger.debug(s"Closing result set on jdbc part $query")
-        Try {
+        TryOrLog {
           rs.close()
         }
-        Try {
+        TryOrLog {
           conn.close()
         }
       }
     }
 
-    Flow(closeable, iterator)
+    FlowableIterator(iterator, disposable)
   }
 }

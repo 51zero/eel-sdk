@@ -1,8 +1,10 @@
 package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
+import io.eels.component.FlowableIterator
 import io.eels.schema._
-import io.eels.{Flow, Part, Row, Source}
+import io.eels.{Part, Row, Source}
+import io.reactivex.Flowable
 import org.apache.kudu.client.{KuduClient, RowResultIterator}
 
 import scala.collection.JavaConverters._
@@ -18,7 +20,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
   class KuduPart(tableName: String) extends Part {
 
-    override def open(): Flow = {
+    override def open(): Flowable[Row] = {
 
       val projectColumns = schema.fieldNames()
       val table = client.openTable(tableName)
@@ -40,7 +42,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
         override def next(): Row = iter.next()
       }
 
-      Flow(() => scanner.close(), iterator)
+      FlowableIterator(iterator, () => scanner.close)
     }
   }
 }

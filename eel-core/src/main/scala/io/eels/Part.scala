@@ -1,5 +1,7 @@
 package io.eels
 
+import io.reactivex.Flowable
+
 /**
  * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
  * in a multi-table source. Splitting sources into parts allows them to be read concurrently, therefore,
@@ -9,8 +11,8 @@ package io.eels
 trait Part {
 
   /**
-    * Returns the data contained in this part in the form of a reader. This function should return a new
-    * reader on each invocation. The reader can be lazily initialized to the first read if required.
+    * Returns the data contained in this part in the form of a Flowable. This function should
+    * return a new Flowable on each invocation.
     */
-  def open(): Flow
+  def open(): Flowable[Row]
 }

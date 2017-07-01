@@ -11,7 +11,7 @@ object Build extends Build {
 
   val AvroVersion = "1.8.2"
   val DerbyVersion = "10.13.1.1"
-  val ExtsVersion = "1.48.0"
+  val ExtsVersion = "1.49.0"
   val H2Version = "1.4.195"
   val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
@@ -89,6 +89,8 @@ object Build extends Build {
       "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion,
       "org.apache.derby"            % "derby"                               % DerbyVersion,
       "com.h2database"              % "h2"                                  % H2Version,
+      "io.projectreactor"           % "reactor-core"                        % "3.0.7.RELEASE",
+      "io.reactivex.rxjava2"        % "rxjavafx"                            % "2.1.1",
       "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,

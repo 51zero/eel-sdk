@@ -3,9 +3,12 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
+import io.eels.component.FlowableIterator
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.schema.StructType
-import io.eels.{Flow, Part, Predicate}
+import io.eels.{Part, Predicate, Row}
+import io.reactivex.Flowable
+import io.reactivex.disposables.Disposable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.ParquetFileReader
@@ -26,9 +29,16 @@ class ParquetPart(path: Path,
     }
   }
 
-  override def open(): Flow = {
+  override def open(): Flowable[Row] = {
+
     val reader = RowParquetReaderFn(path, predicate, readSchema)
     val iterator = ParquetIterator(reader)
-    Flow(reader.close _, iterator)
+
+    val disposable = new Disposable {
+      override def dispose(): Unit = reader.close()
+      override def isDisposed: Boolean = false
+    }
+
+    FlowableIterator(iterator, disposable)
   }
 }

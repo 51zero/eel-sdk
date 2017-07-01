@@ -32,5 +32,7 @@ trait Source extends Logging {
     }
   }
 
+  def toDataStream2 = new DataStreamSource(this, NoopListener)
+
   def toDataStream(listener: Listener = NoopListener): DataStream = new DataStreamSource(this, listener)
 }

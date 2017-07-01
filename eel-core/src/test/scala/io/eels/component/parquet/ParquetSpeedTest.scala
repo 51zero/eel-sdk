@@ -56,7 +56,7 @@ object ParquetSpeedTest extends App with Timed {
   new File(path.toString).deleteOnExit()
 
   timed("Insertion") {
-    ds.to(AvroParquetSink(path))
+    ds.to(AvroParquetSink(path).withOverwrite(true))
   }
 
   while (true) {

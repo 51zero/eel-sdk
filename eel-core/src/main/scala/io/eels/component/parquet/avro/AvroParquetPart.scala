@@ -1,9 +1,11 @@
 package io.eels.component.parquet.avro
 
 import com.sksamuel.exts.Logging
+import io.eels.component.FlowableIterator
 import io.eels.component.avro.AvroDeserializer
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.{Flow, Part, Predicate}
+import io.eels.{Part, Predicate, Row}
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
@@ -14,10 +16,10 @@ class AvroParquetPart(path: Path,
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def open(): Flow = {
+  override def open(): Flowable[Row] = {
     val reader = AvroParquetReaderFn(path, predicate, None)
     val deser = new AvroDeserializer()
     val iterator = ParquetIterator(reader).map(deser.toRow)
-    Flow(reader.close _, iterator)
+    FlowableIterator(iterator, reader.close _)
   }
 }

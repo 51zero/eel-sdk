@@ -1,11 +1,12 @@
 package io.eels.component.csv
 
-import java.io.Closeable
-
 import com.sksamuel.exts.Logging
 import com.univocity.parsers.csv.CsvParser
+import io.eels.component.FlowableIterator
 import io.eels.schema.StructType
-import io.eels.{Flow, Part, Row}
+import io.eels.{Part, Row}
+import io.reactivex.Flowable
+import io.reactivex.disposables.Disposable
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 import scala.util.Try
@@ -22,7 +23,7 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def open(): Flow = {
+  override def open(): Flowable[Row] = {
 
     val parser = createParser()
     val input = fs.open(path)
@@ -32,13 +33,14 @@ class CsvPart(val createParser: () => CsvParser,
       Row(schema, records.toVector)
     }
 
-    val closeable = new Closeable {
-      override def close(): Unit = Try {
+    val disposable = new Disposable {
+      override def dispose(): Unit = Try {
         parser.stopParsing()
         input.close()
       }
+      override def isDisposed: Boolean = false
     }
 
-    Flow(closeable, iterator)
+    FlowableIterator(iterator, disposable)
   }
 }

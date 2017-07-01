@@ -2,7 +2,9 @@ package io.eels.component.json
 
 import com.sksamuel.exts.io.Using
 import io.eels._
+import io.eels.component.FlowableIterator
 import io.eels.schema.{Field, StructType}
+import io.reactivex.Flowable
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
@@ -60,10 +62,10 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       * Returns the data contained in this part in the form of an iterator. This function should return a new
       * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
       */
-    override def open(): Flow = {
+    override def open(): Flowable[Row] = {
       val input = createInputStream(path)
       val iterator = reader.readValues[JsonNode](input).asScala.map(nodeToRow)
-      Flow(input.close _, iterator)
+      FlowableIterator(iterator, input.close _)
     }
   }
 }

@@ -3,7 +3,8 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
 import io.eels.schema.StructType
-import io.eels.{Flow, Predicate}
+import io.eels.{Predicate, Row}
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -38,7 +39,7 @@ trait HiveDialect extends Logging {
            metastoreSchema: StructType,
            projectionSchema: StructType,
            predicate: Option[Predicate])
-          (implicit fs: FileSystem, conf: Configuration): Flow
+          (implicit fs: FileSystem, conf: Configuration): Flowable[Row]
 
   /**
     * Creates a new writer ready to do the bidding of the hive sink.

@@ -3,7 +3,9 @@ package io.eels.component.sequence
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
+import io.eels.component.FlowableIterator
 import io.eels.schema.StructType
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable}
@@ -17,7 +19,7 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
 
 class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging {
 
-  override def open(): Flow = {
+  override def open(): Flowable[Row] = {
 
     val reader = SequenceSupport.createReader(path)
     val k = new IntWritable()
@@ -32,6 +34,6 @@ class SequencePart(val path: Path)(implicit conf: Configuration) extends Part wi
       override def hasNext(): Boolean = reader.next(k, v)
     }
 
-    Flow(reader.close _, iterator)
+    FlowableIterator(iterator, reader.close _)
   }
 }

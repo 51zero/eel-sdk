@@ -3,7 +3,9 @@ package io.eels.component.orc
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels._
+import io.eels.component.FlowableIterator
 import io.eels.schema.StructType
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.orc.OrcFile.ReaderOptions
@@ -48,11 +50,11 @@ class OrcPart(path: Path,
     * Returns the data contained in this part in the form of an iterator. This function should return a new
     * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
     */
-  override def open(): Flow = {
+  override def open(): Flowable[Row] = {
     val reader = OrcFile.createReader(path, new ReaderOptions(conf))
     val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
     val iterator: Iterator[Row] = OrcBatchIterator(reader, fileSchema, projection, predicate).flatten
-    Flow(iterator)
+    FlowableIterator(iterator)
   }
 }
 
