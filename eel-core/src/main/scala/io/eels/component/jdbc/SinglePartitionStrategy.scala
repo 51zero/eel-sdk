@@ -3,6 +3,7 @@ package io.eels.component.jdbc
 import java.sql.{Connection, PreparedStatement}
 
 import io.eels.Part
+import io.eels.component.jdbc.dialect.JdbcDialect
 
 case object SinglePartitionStrategy extends JdbcPartitionStrategy {
   override def parts(connFn: () => Connection,

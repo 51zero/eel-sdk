@@ -1,7 +1,7 @@
-package io.eels.component.jdbc
+package io.eels.component.jdbc.dialect
 
-import io.eels.schema.{DataType, Field, StructType}
 import io.eels.Row
+import io.eels.schema.{DataType, Field, StructType}
 
 trait JdbcDialect {
 
@@ -17,6 +17,9 @@ trait JdbcDialect {
 }
 
 object JdbcDialect {
-  def apply(url: String): JdbcDialect = new GenericJdbcDialect()
+  def apply(url: String): JdbcDialect = {
+    if (url.toLowerCase.startsWith("jdbc:oracle")) new OracleJdbcDialect()
+    else new GenericJdbcDialect()
+  }
 }
 

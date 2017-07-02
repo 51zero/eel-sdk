@@ -5,6 +5,7 @@ import java.sql.Connection
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.jdbc.ResultSetIterator
 import io.eels.Row
+import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.schema.StructType
 
 class JdbcInserter(val connFn: () => Connection,

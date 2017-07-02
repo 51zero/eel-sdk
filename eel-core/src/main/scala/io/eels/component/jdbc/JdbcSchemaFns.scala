@@ -3,6 +3,7 @@ package io.eels.component.jdbc
 import java.sql.{ResultSet, ResultSetMetaData}
 
 import com.sksamuel.exts.Logging
+import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.schema.{Field, StructType}
 
 /**

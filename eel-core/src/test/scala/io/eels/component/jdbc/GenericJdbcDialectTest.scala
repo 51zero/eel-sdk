@@ -1,5 +1,6 @@
 package io.eels.component.jdbc
 
+import io.eels.component.jdbc.dialect.GenericJdbcDialect
 import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 

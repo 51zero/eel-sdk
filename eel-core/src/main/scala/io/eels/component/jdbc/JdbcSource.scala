@@ -5,6 +5,7 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
+import io.eels.component.jdbc.dialect.{GenericJdbcDialect, JdbcDialect}
 import io.eels.{Part, Source}
 import io.eels.schema.StructType
 

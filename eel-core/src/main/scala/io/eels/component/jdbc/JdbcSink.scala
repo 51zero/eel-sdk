@@ -5,6 +5,7 @@ import java.sql.{Connection, DriverManager}
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.Sink
+import io.eels.component.jdbc.dialect.GenericJdbcDialect
 import io.eels.schema.StructType
 
 object JdbcSink extends Logging {

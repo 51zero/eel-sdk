@@ -5,6 +5,7 @@ import java.sql.{Connection, PreparedStatement}
 import com.sksamuel.exts.TryOrLog
 import com.sksamuel.exts.metrics.Timed
 import io.eels.component.FlowableIterator
+import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.{Part, Row}
 import io.reactivex.Flowable
 import io.reactivex.disposables.Disposable

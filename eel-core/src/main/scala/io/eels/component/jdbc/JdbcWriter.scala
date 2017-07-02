@@ -4,6 +4,7 @@ import java.sql.Connection
 import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
+import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.schema.StructType
 import io.eels.{Row, RowOutputStream}
 

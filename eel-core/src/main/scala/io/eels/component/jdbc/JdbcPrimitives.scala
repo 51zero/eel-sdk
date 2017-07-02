@@ -3,6 +3,7 @@ package io.eels.component.jdbc
 import java.sql.{Connection, DriverManager, ResultSet}
 
 import com.sksamuel.exts.Logging
+import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.schema.StructType
 
 trait JdbcPrimitives extends Logging {

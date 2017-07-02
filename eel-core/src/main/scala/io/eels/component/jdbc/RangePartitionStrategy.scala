@@ -3,6 +3,7 @@ package io.eels.component.jdbc
 import java.sql.{Connection, PreparedStatement}
 
 import io.eels.Part
+import io.eels.component.jdbc.dialect.JdbcDialect
 
 case class RangePartitionStrategy(columnName: String,
                                   numberOfPartitions: Int,
