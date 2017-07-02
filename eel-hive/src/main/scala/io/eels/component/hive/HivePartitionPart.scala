@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.FlowableIterator
 import io.eels.schema.StructType
-import io.eels.{Flow, Part, Row}
+import io.eels.{Part, Row}
 import io.reactivex.Flowable
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient

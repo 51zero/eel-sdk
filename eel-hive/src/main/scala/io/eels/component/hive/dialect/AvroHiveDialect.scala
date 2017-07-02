@@ -1,10 +1,11 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.{Flow, Predicate, Row}
 import io.eels.component.avro.{AvroSourcePart, AvroWriter}
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.schema.StructType
+import io.eels.{Predicate, Row}
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -15,7 +16,7 @@ object AvroHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Flow = {
+                   (implicit fs: FileSystem, conf: Configuration): Flowable[Row] = {
     AvroSourcePart(path).open()
   }
 

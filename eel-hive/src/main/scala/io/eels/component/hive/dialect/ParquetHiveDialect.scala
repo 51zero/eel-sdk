@@ -5,11 +5,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
+import io.eels.component.FlowableIterator
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.schema.StructType
-import io.eels.{Flow, Predicate, Row}
+import io.eels.{Predicate, Row}
+import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -23,13 +25,13 @@ object ParquetHiveDialect extends HiveDialect with Logging {
                     metastoreSchema: StructType,
                     projectionSchema: StructType,
                     predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Flow = {
+                   (implicit fs: FileSystem, conf: Configuration): Flowable[Row] = {
 
     // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
     val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
     val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
     val iterator = ParquetIterator(reader)
-    Flow(reader, iterator)
+    FlowableIterator(iterator, reader.close _)
   }
 
   override def writer(schema: StructType,
