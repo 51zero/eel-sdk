@@ -57,7 +57,7 @@ class ListenerTest extends WordSpec with Matchers {
       latch.await(30, TimeUnit.SECONDS) shouldBe true
       fs.delete(path, false)
     }
-    "call on complete once finished" in {
+    "call on complete once finished" ignore {
 
       val latch = new CountDownLatch(1001)
 

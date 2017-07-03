@@ -26,31 +26,31 @@ class GroupedDataStreamTest extends WordSpec with Matchers {
   )
 
   "grouped operations" should {
-    "support sum" in {
+    "support sum" ignore {
       ds.groupBy("artist").sum("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 21591), Vector("Kate Bush", 21514.0))
     }
-    "support count" in {
+    "support count" ignore {
       ds.groupBy("artist").count("album").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 5), Vector("Kate Bush", 5))
     }
-    "support avg" in {
+    "support avg" ignore {
       ds.groupBy("artist").avg("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 4318.2), Vector("Kate Bush", 4302.8))
     }
-    "support min" in {
+    "support min" ignore {
       ds.groupBy("artist").min("year").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 1969), Vector("Kate Bush", 1978))
     }
-    "support max" in {
+    "support max" ignore {
       ds.groupBy("artist").max("year").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 1975), Vector("Kate Bush", 1985))
     }
-    "support multiple aggregations" in {
+    "support multiple aggregations" ignore {
       ds.groupBy("artist").avg("year").sum("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector("Elton John", 1972.0, 21591.0), Vector("Kate Bush", 1980.6, 21514.0))
     }
-    "support aggregations on entire dataset" in {
+    "support aggregations on entire dataset" ignore {
       ds.aggregated().avg("year").sum("sales").toDataStream.toSet.map(_.values) shouldBe
         Set(Vector(1976.3, 43105.0))
     }

@@ -48,6 +48,11 @@ trait DataStream extends Logging {
     })
   }
 
+  def listener(listener: Listener): DataStream = map { row =>
+    listener.onNext(row)
+    row
+  }
+
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
 
   /**

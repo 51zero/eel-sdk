@@ -26,13 +26,12 @@ trait Source extends Logging {
   def parts(): Seq[Part]
 
   def load[T: Manifest]: Seq[T] = {
-    toDataStream().collect.map { row =>
+    toDataStream.collect.map { row =>
       val node = JsonRow(row)
       JacksonSupport.mapper.readerFor[T].readValue(node)
     }
   }
 
-  def toDataStream2 = new DataStreamSource(this, NoopListener)
-
-  def toDataStream(listener: Listener = NoopListener): DataStream = new DataStreamSource(this, listener)
+  def toDataStream() = new DataStreamSource(this)
+  def toDataStream(listener: Listener): DataStream = new DataStreamSource(this).listener(listener)
 }

@@ -38,7 +38,7 @@ class AvroParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = AvroParquetSource(resourcesDir.resolve("*")).toDataStream().toSet.map(_.values)
+      val people = AvroParquetSource(resourcesDir.resolve("*.pq")).toDataStream().toSet.map(_.values)
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),

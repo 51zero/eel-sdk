@@ -27,6 +27,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
         override def onError(t: Throwable): Unit = {
           logger.error(s"Stream error", t)
           stream.close()
+          listener.onError(t)
           latch.countDown()
         }
         override def onComplete(): Unit = {
@@ -36,6 +37,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
         }
         override def onNext(row: Row): Unit = {
           stream.write(row)
+          listener.onNext(row)
         }
       }
     }
@@ -45,6 +47,7 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
       .subscribe(subscribers.toArray)
 
     latch.await()
+    listener.onComplete()
 
     total.sum()
   }
