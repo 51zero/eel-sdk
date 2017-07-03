@@ -10,6 +10,14 @@ class OracleJdbcDialect extends GenericJdbcDialect with Logging {
 
   val config = JdbcReaderConfig()
 
+  // oracle uses its own timestamp types
+  override def sanitize(value: Any): Any = {
+    value.getClass.getName match {
+      case "oracle.sql.TIMESTAMP" => value.getClass.getDeclaredMethod("timestampValue").invoke(value)
+      case other => super.sanitize(other)
+    }
+  }
+
   // http://stackoverflow.com/questions/593197/what-is-the-default-precision-and-scale-for-a-number-in-oracle
   private def decimalType(column: Int, metadata: ResultSetMetaData): DataType = {
     val precision = metadata.getPrecision(column)

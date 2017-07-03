@@ -10,6 +10,9 @@ trait JdbcDialect {
   def toJdbcType(field: Field): String
   def fromJdbcType(column: Int, metadata: java.sql.ResultSetMetaData): DataType
 
+  // accepts a raw value from the jdbc driver and returns an appropriate neutral type
+  def sanitize(value: Any): Any
+
   /**
     * Returns a parameterized insert query
     */

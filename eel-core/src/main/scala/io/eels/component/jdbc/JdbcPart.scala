@@ -33,7 +33,10 @@ class JdbcPart(connFn: () => Connection,
     val iterator = new Iterator[Row] {
       override def hasNext: Boolean = rs.next()
       override def next(): Row = {
-        val values = schema.fieldNames().map(name => rs.getObject(name))
+        val values = schema.fieldNames().map { name =>
+          val raw = rs.getObject(name)
+          dialect.sanitize(raw)
+        }
         Row(schema, values)
       }
     }
