@@ -28,11 +28,11 @@ class ListenerTest extends WordSpec with Matchers {
       val latch = new CountDownLatch(1000)
       fs.delete(path, false)
 
-      ds.to(CsvSink(path), new Listener {
+      ds.listener(new Listener {
         override def onNext(value: Row): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
-      })
+      }).to(CsvSink(path))
 
       latch.await(20, TimeUnit.SECONDS) shouldBe true
 
@@ -57,7 +57,7 @@ class ListenerTest extends WordSpec with Matchers {
       latch.await(30, TimeUnit.SECONDS) shouldBe true
       fs.delete(path, false)
     }
-    "call on complete once finished" ignore {
+    "call on complete once finished" in {
 
       val latch = new CountDownLatch(1001)
 

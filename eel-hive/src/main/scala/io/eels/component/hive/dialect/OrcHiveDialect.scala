@@ -10,7 +10,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-object OrcHiveDialect extends HiveDialect with Logging {
+class OrcHiveDialect extends HiveDialect with Logging {
 
   override def read(path: Path,
                     metastoreSchema: StructType,

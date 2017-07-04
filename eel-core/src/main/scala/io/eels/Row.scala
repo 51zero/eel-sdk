@@ -1,6 +1,6 @@
 package io.eels
 
-import io.eels.schema.{Field, StructType, StringType}
+import io.eels.schema.{Field, StringType, StructType}
 
 object Row {
   val Sentinel = new Row(StructType(Field("a", StringType)), Array(null))

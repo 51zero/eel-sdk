@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
-import com.typesafe.config.ConfigFactory
 import io.eels.component.FlowableIterator
 import io.eels.component.hive.{HiveDialect, HiveWriter}
 import io.eels.component.parquet._
@@ -16,10 +15,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-object ParquetHiveDialect extends HiveDialect with Logging {
-
-  private val config = ConfigFactory.load()
-  private val bufferSize = config.getInt("eel.hive.dialect.reader.buffer-size")
+class ParquetHiveDialect extends HiveDialect with Logging {
 
   override def read(path: Path,
                     metastoreSchema: StructType,
@@ -29,9 +25,11 @@ object ParquetHiveDialect extends HiveDialect with Logging {
 
     // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
     val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
-    val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
-    val iterator = ParquetIterator(reader)
-    FlowableIterator(iterator, reader.close _)
+    FlowableIterator.create {
+      val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
+      val iterator = ParquetIterator(reader)
+      (iterator, reader.close)
+    }
   }
 
   override def writer(schema: StructType,

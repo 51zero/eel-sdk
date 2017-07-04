@@ -40,8 +40,7 @@ object Build extends Build {
 
   val orcSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.orc"                          % "orc-core"                % OrcVersion,
-      "org.apache.orc"                          % "orc-mapreduce"           % OrcVersion
+      "org.apache.orc"                          % "orc-core"                % OrcVersion
     )
   )
 

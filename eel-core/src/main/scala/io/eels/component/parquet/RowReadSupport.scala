@@ -30,7 +30,7 @@ class RowReadSupport extends ReadSupport[Row] with Logging {
                     fileSchema: MessageType): ReadSupport.ReadContext = {
     val projectionSchemaString = configuration.get(ReadSupport.PARQUET_READ_SCHEMA)
     val requestedSchema = ReadSupport.getSchemaForRead(fileSchema, projectionSchemaString)
-    logger.debug("Parquet requested schema: " + requestedSchema)
+    logger.trace("Parquet requested schema: " + requestedSchema)
     new ReadSupport.ReadContext(requestedSchema)
   }
 }
@@ -44,7 +44,7 @@ class RowRecordMaterializer(fileSchema: MessageType,
                             readContext: ReadContext) extends RecordMaterializer[Row] with Logging {
 
   private val schema = ParquetSchemaFns.fromParquetMessageType(readContext.getRequestedSchema)
-  logger.debug(s"Record materializer will create row with schema $schema")
+  logger.trace(s"Record materializer will create row with schema $schema")
 
   override val getRootConverter: StructConverter = new StructConverter(schema, -1, None)
   override def skipCurrentRecord(): Unit = getRootConverter.start()
@@ -75,7 +75,7 @@ object Converter {
 }
 
 class StructConverter(schema: StructType, index: Int, parent: Option[ValuesBuilder]) extends GroupConverter with Logging {
-  logger.debug(s"Creating group converter for $schema")
+  logger.trace(s"Creating group converter for $schema")
 
   // nested array for this group/struct
   val builder: ValuesBuilder = new ArrayBuilder(schema.size)

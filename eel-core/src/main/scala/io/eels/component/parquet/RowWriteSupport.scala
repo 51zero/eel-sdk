@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 // implementation of WriteSupport for Row's used by the native ParquetWriter
 class RowWriteSupport(schema: MessageType,
                       metadata: Map[String, String]) extends WriteSupport[Row] with Logging {
-  logger.debug(s"Created parquet row write support for schema message type $schema")
+  logger.trace(s"Created parquet row write support for schema message type $schema")
 
   private var writer: RowWriter = _
 

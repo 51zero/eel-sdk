@@ -60,8 +60,8 @@ trait HiveDialect extends Logging {
 object HiveDialect extends Logging {
 
   def apply(format: String): HiveDialect = format match {
-    case input if input.contains("ParquetInputFormat") => ParquetHiveDialect
-    case input if input.contains("OrcInputFormat") => OrcHiveDialect
+    case input if input.contains("ParquetInputFormat") => new ParquetHiveDialect
+    case input if input.contains("OrcInputFormat") => new OrcHiveDialect
     case input if input.contains("AvroHiveDialect") || input.contains("AvroContainerInputFormat") => AvroHiveDialect
     //      "org.apache.hadoop.mapred.TextInputFormat" -> TextHiveDialect
     case _ => throw new UnsupportedOperationException(s"Unknown hive input format $format")

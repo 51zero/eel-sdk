@@ -8,6 +8,7 @@ import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{Listener, Row, Sink}
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.{Flowable, functions}
+import org.reactivestreams.{Subscriber, Subscription}
 
 import scala.language.implicitConversions
 
@@ -435,12 +436,18 @@ trait DataStream extends Logging {
     */
   def collect: Vector[Row] = VectorAction(this).execute
 
-  val listeners: List[Listener] = Nil
-
+  /**
+    * Adds a listener to this datastream. This won't change the row values, but will invoke
+    * the attached listener at this stage in the pipeline.
+    */
   def listener(_listener: Listener) = new DataStream {
     override def schema: StructType = self.schema
-    override def flowable: Flowable[Row] = self.flowable
-    override val listeners = self.listeners :+ _listener
+    override def flowable: Flowable[Row] = self.flowable.doOnEach(new Subscriber[Row] {
+      override def onError(t: Throwable): Unit = _listener.onError(t)
+      override def onComplete(): Unit = _listener.onComplete()
+      override def onNext(t: Row): Unit = _listener.onNext(t)
+      override def onSubscribe(s: Subscription): Unit = ()
+    })
   }
 
   def to(sink: Sink): Long = to(sink, 1)
