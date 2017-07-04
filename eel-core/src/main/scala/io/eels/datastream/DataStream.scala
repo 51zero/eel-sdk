@@ -1,11 +1,12 @@
 package io.eels.datastream
 
-import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{Executor, Executors}
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{Listener, NoopListener, Row, Sink}
+import io.eels.{Listener, Row, Sink}
+import io.reactivex.schedulers.Schedulers
 import io.reactivex.{Flowable, functions}
 
 import scala.language.implicitConversions
@@ -41,16 +42,21 @@ trait DataStream extends Logging {
   // the underlying flowable for this data stream
   def flowable: Flowable[Row]
 
+  def parallelize(parts: Int,
+                  executor: Executor = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors)): DataStream = {
+    new DataStream {
+      override def schema: StructType = self.schema
+      override def flowable: Flowable[Row] = {
+        self.flowable.parallel(parts).runOn(Schedulers.from(executor)).sequential()
+      }
+    }
+  }
+
   def map(f: Row => Row): DataStream = new DataStream {
     override def schema: StructType = self.schema
     override def flowable: Flowable[Row] = self.flowable.map(new functions.Function[Row, Row] {
       override def apply(row: Row): Row = f(row)
     })
-  }
-
-  def listener(listener: Listener): DataStream = map { row =>
-    listener.onNext(row)
-    row
   }
 
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
@@ -429,8 +435,16 @@ trait DataStream extends Logging {
     */
   def collect: Vector[Row] = VectorAction(this).execute
 
-  def to(sink: Sink): Long = to(sink, NoopListener)
-  def to(sink: Sink, listener: Listener): Long = SinkAction(this, sink).execute(listener)
+  val listeners: List[Listener] = Nil
+
+  def listener(_listener: Listener) = new DataStream {
+    override def schema: StructType = self.schema
+    override def flowable: Flowable[Row] = self.flowable
+    override val listeners = self.listeners :+ _listener
+  }
+
+  def to(sink: Sink): Long = to(sink, 1)
+  def to(sink: Sink, parallelism: Int): Long = SinkAction(this, sink, parallelism).execute()
 
   def head: Row = flowable.blockingFirst()
 

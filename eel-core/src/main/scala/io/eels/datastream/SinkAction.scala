@@ -4,22 +4,20 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.LongAdder
 
 import com.sksamuel.exts.Logging
-import io.eels.{Listener, NoopListener, Row, Sink}
+import io.eels.{Row, Sink}
 import io.reactivex.schedulers.Schedulers
 import org.reactivestreams.{Subscriber, Subscription}
 
-case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
+case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logging {
 
-  private val threads = 1
-
-  def execute(listener: Listener = NoopListener): Long = {
+  def execute(): Long = {
 
     val schema = ds.schema
     val total = new LongAdder
-    val latch = new CountDownLatch(threads)
+    val latch = new CountDownLatch(parallelism)
 
     // we open up a separate output stream for each flow
-    val streams = sink.open(schema, threads)
+    val streams = sink.open(schema, parallelism)
 
     val subscribers = streams.map { stream =>
       new Subscriber[Row] {
@@ -27,7 +25,6 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
         override def onError(t: Throwable): Unit = {
           logger.error(s"Stream error", t)
           stream.close()
-          listener.onError(t)
           latch.countDown()
         }
         override def onComplete(): Unit = {
@@ -37,18 +34,15 @@ case class SinkAction(ds: DataStream, sink: Sink) extends Logging {
         }
         override def onNext(row: Row): Unit = {
           stream.write(row)
-          listener.onNext(row)
         }
       }
     }
 
-    ds.flowable.parallel(threads, 100)
+    ds.flowable.parallel(parallelism)
       .runOn(Schedulers.io)
       .subscribe(subscribers.toArray)
 
     latch.await()
-    listener.onComplete()
-
     total.sum()
   }
 }
