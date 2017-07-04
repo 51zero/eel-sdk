@@ -9,7 +9,7 @@ import io.eels.schema._
 class GenericJdbcDialect extends JdbcDialect with Logging {
 
   // generic jdbc will just return the values as is
-  override def sanitize(value: Any): Any = value
+  override def sanitize(value: AnyRef): Any = value
 
   override def toJdbcType(field: Field): String = field.dataType match {
     case BigIntType => "int"
