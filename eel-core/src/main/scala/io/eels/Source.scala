@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
-import io.eels.datastream.{DataStream, DataStreamSource, DataStreamSource2}
+import io.eels.datastream.{DataStream, DataStreamSource}
 import io.eels.schema.StructType
 import io.eels.util.{JacksonSupport, JsonRow}
 
@@ -34,6 +34,4 @@ trait Source extends Logging {
 
   def toDataStream() = new DataStreamSource(this)
   def toDataStream(listener: Listener): DataStream = new DataStreamSource(this).listener(listener)
-
-  def toDataStream2 = new DataStreamSource2(this)
 }

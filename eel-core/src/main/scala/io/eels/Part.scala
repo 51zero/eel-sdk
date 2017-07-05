@@ -15,6 +15,4 @@ trait Part {
     * return a new Flowable on each invocation.
     */
   def open(): Flowable[Row]
-
-  def open2(): Flow = Flow.empty
 }

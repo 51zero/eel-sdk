@@ -3,10 +3,10 @@ package io.eels.component.parquet
 import java.io.File
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.{FilePattern, Listener, Row}
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.datastream.DataStream
 import io.eels.schema.StructType
+import io.eels.{FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -37,7 +37,7 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     ds.to(ParquetSink(new Path("parquet-speed/parquet_speed.pq")), count)
   }
 
-  for (_ <- 1 to 5) {
+  for (_ <- 1 to 25) {
     assert(count == FilePattern("parquet-speed/*").toPaths().size)
 
     timed("Reading with ParquetSource ds1") {
@@ -48,17 +48,5 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     println("")
     println("---------")
     println("")
-
-    //    timed("Reading with ParquetSource ds2") {
-    //      val actual = ParquetSource("parquet-speed/*").toDataStream2.listener(new Listener {
-    //        override def onNext(row: Row): Unit = ()
-    //      }).size
-    //      assert(actual == size, s"Expected $size but was $actual")
-    //    }
-    //
-    //    println("")
-    //    println("---------")
-    //    println("")
-
   }
 }
