@@ -90,6 +90,9 @@ class ArrayParquetWriter(nested: RecordConsumerWriter) extends RecordConsumerWri
 class StructWriter(structType: StructType,
                    nested: Boolean // nested groups, ie not the outer record, must be handled differently
                   ) extends RecordConsumerWriter with Logging {
+
+  val writers = structType.fields.map(_.dataType).map(RecordConsumerWriter.apply)
+
   override def write(record: RecordConsumer, value: Any): Unit = {
     require(record != null)
     if (nested)
@@ -101,7 +104,7 @@ class StructWriter(structType: StructType,
       if (value != null) {
         val field = structType.field(k)
         record.startField(field.name, k)
-        val writer = RecordConsumerWriter(field.dataType)
+        val writer = writers(k)
         writer.write(record, value)
         record.endField(field.name, k)
       }
