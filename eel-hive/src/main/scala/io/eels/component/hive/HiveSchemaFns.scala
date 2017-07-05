@@ -12,6 +12,10 @@ object HiveSchemaFns extends Logging {
   val VarcharRegex = "varchar\\((.*?)\\)".r
   val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".r
   val StructRegex = "struct<(.*?)>".r
+
+  // everything up to the type seperator, then letters (which is the datatype), with an optional type params
+  val StructElementRegex = "(.*?)\\:([a-z]+)(\\(.*?\\))?,?".r
+
   val ArrayRegex = "array<(.*?)>".r
 
   def fromHiveField(fieldSchema: FieldSchema): Field =
@@ -41,12 +45,13 @@ object HiveSchemaFns extends Logging {
     case "timestamp" => TimestampMillisType
     case "tinyint" => ByteType.Signed
     case StructRegex(struct) =>
-      val fields = struct.split(",").map(_.split(":")).collect {
-        case Array(fieldName, typeInfo) =>
-          val dataType = fromHiveType(typeInfo)
-          Field(fieldName, dataType, true)
+      val fields = StructElementRegex.findAllMatchIn(struct).map { pattern =>
+        val name = pattern.group(1)
+        val datatypeString = pattern.group(2) + Option(pattern.group(3)).getOrElse("")
+        val dataType = fromHiveType(datatypeString)
+        Field(name, dataType, true)
       }
-      StructType(fields)
+      StructType(fields.toVector)
     case VarcharRegex(size) => VarcharType(size.toInt)
     case _ => sys.error(s"Unsupported hive type [$descriptor]")
   }
