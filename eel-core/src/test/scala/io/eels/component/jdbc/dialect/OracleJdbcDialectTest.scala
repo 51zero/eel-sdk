@@ -5,6 +5,10 @@ import org.scalatest.{FunSuite, Matchers}
 class OracleJdbcDialectTest extends FunSuite with Matchers {
 
   test("oracle dialect should handle nulls") {
-    new OracleJdbcDialect().sanitize(null: AnyRef) == null shouldBe true
+    new OracleJdbcDialect().sanitize(null) == null shouldBe true
+  }
+
+  test("oracle dialect should handle strings as is") {
+    new OracleJdbcDialect().sanitize("test") shouldBe "test"
   }
 }

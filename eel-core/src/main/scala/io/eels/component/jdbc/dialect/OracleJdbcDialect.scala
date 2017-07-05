@@ -11,9 +11,9 @@ class OracleJdbcDialect extends GenericJdbcDialect with Logging {
   val config = JdbcReaderConfig()
 
   // oracle uses its own timestamp types
-  override def sanitize(value: AnyRef): Any = {
-    value match {
-      case null => null
+  override def sanitize(value: Any): Any = {
+    if (value == null) null
+    else value match {
       case other if other.getClass.getName == "oracle.sql.TIMESTAMP" =>
         value.getClass.getDeclaredMethod("timestampValue").invoke(value)
       case other => super.sanitize(other)
