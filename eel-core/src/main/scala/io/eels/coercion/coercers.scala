@@ -44,6 +44,7 @@ object TimestampCoercer extends Coercer[java.sql.Timestamp] {
 object IntCoercer extends Coercer[Int] {
   override def coerce(input: Any): Int = input match {
     case i: Int => i // passthrough
+    case l: Long if Int.MinValue <= l && l <= Int.MaxValue => l.toInt
     case b: Byte => b
     case s: Short => s
     case s: String => s.toInt
@@ -54,6 +55,8 @@ object ShortCoercer extends Coercer[Short] {
   override def coerce(input: Any): Short = input match {
     case b: Byte => b
     case s: Short => s
+    case i: Int if Short.MinValue <= i && i <= Short.MaxValue => i.toShort
+    case l: Long if Short.MinValue <= l && l <= Short.MaxValue => l.toShort
     case s: String => s.toShort
   }
 }
@@ -62,6 +65,9 @@ object ByteCoercer extends Coercer[Byte] {
   override def coerce(input: Any): Byte = input match {
     case b: Byte => b
     case s: String => s.toByte
+    case s: Short if Byte.MinValue <= s && s <= Byte.MaxValue => s.toByte
+    case i: Int if Byte.MinValue <= i && i <= Byte.MaxValue => i.toByte
+    case l: Long if Byte.MinValue <= l && l <= Byte.MaxValue => l.toByte
   }
 }
 
