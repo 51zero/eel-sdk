@@ -156,7 +156,7 @@ case class HiveSource(dbName: String,
     val table = client.getTable(dbName, tableName)
     val tableType = TableType.values().find(_.name.toLowerCase == table.getTableType.toLowerCase)
       .getOrElse(sys.error("Hive table type is not supported by this version of hive"))
-    val params = table.getParameters.asScala.toMap
+    val params = table.getParameters.asScala.toMap ++ table.getSd.getParameters.asScala.toMap
     TableSpec(
       tableName,
       tableType,
