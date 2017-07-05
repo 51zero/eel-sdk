@@ -10,31 +10,32 @@ object Build extends Build {
   val org = "io.eels"
 
   val AvroVersion = "1.8.2"
-  val DerbyVersion = "10.13.1.1"
   val ExtsVersion = "1.49.0"
-  val H2Version = "1.4.195"
+  val H2Version = "1.4.196"
   val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
-  val JacksonVersion = "2.8.6"
-  val Log4jVersion = "1.2.17"
+  val JacksonVersion = "2.8.9"
   val MetricsVersion = "3.1.2"
   val MysqlVersion = "5.1.42"
   val OrcVersion = "1.4.0"
   val ParquetVersion = "1.9.0"
-  val ScalatestVersion = "3.0.0"
+  val ScalatestVersion = "3.0.3"
   val Slf4jVersion = "1.7.12"
   val UnivocityVersion = "2.4.1"
   val ConfigVersion = "1.3.0"
   val KafkaVersion = "0.10.2.1"
-  val KuduVersion = "1.3.1"
+  val KuduVersion = "1.4.0"
+  val Log4jVersion = "2.7"
+  val SparkVersion = "2.1.1"
+  val RxJavaVersion = "2.1.1"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.hadoop"   % "hadoop-yarn"               % HadoopVersion,
       "org.apache.hive"     % "hive-exec"                 % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
-      "org.apache.logging.log4j" % "log4j-api"            % "2.7"     % "test",
-      "org.apache.logging.log4j" % "log4j-core"           % "2.7"     % "test",
-      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % "2.7"     % "test"
+      "org.apache.logging.log4j" % "log4j-api"            % Log4jVersion     % "test",
+      "org.apache.logging.log4j" % "log4j-core"           % Log4jVersion     % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % Log4jVersion     % "test"
     )
   )
 
@@ -86,19 +87,18 @@ object Build extends Build {
       "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
       "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
       "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion,
-      "org.apache.derby"            % "derby"                               % DerbyVersion,
       "com.h2database"              % "h2"                                  % H2Version,
-      "io.reactivex.rxjava2"        % "rxjavafx"                            % "2.1.1",
+      "io.reactivex.rxjava2"        % "rxjavafx"                            % RxJavaVersion,
       "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
-      "org.apache.spark"            %% "spark-sql"              % "2.1.0"           % "test",
-      "org.apache.logging.log4j"    % "log4j-api"               % "2.7"             % "test",
-      "org.apache.logging.log4j"    % "log4j-core"              % "2.7"             % "test",
-      "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % "2.7"             % "test",
-      "mysql"                       % "mysql-connector-java"    % MysqlVersion      % "test",
-      "org.scalatest"               %% "scalatest"              % ScalatestVersion  % "test"
+      "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
+      "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
+      "org.apache.logging.log4j"    % "log4j-core"              % Log4jVersion             % "test",
+      "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % Log4jVersion             % "test",
+      "mysql"                       % "mysql-connector-java"    % MysqlVersion             % "test",
+      "org.scalatest"               %% "scalatest"              % ScalatestVersion         % "test"
     ),
     excludeDependencies += "org.slf4j" % "slf4j-log4j12",
     publishTo <<= version {
