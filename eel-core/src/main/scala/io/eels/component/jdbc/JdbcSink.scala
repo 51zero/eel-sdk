@@ -29,7 +29,7 @@ case class JdbcSink(connFn: () => Connection,
                     table: String,
                     createTable: Boolean = false,
                     batchSize: Int = 1000,
-                    commitSize: Int = 0, // 0 means commit at the end
+                    batchesPerCommit: Int = 0, // 0 means commit at the end, otherwise how many batches before a commit
                     dialect: Option[JdbcDialect] = None,
                     threads: Int = 4) extends Sink with Logging {
 
@@ -40,9 +40,9 @@ case class JdbcSink(connFn: () => Connection,
   def withCreateTable(createTable: Boolean): JdbcSink = copy(createTable = createTable)
   def withBatchSize(batchSize: Int): JdbcSink = copy(batchSize = batchSize)
   def withThreads(threads: Int): JdbcSink = copy(threads = threads)
-  def withCommitSize(commitSize: Int): JdbcSink = copy(commitSize = commitSize)
+  def withBatchesPerCommit(commitSize: Int): JdbcSink = copy(batchesPerCommit = batchesPerCommit)
   def withDialect(dialect: JdbcDialect): JdbcSink = copy(dialect = dialect.some)
 
   override def open(schema: StructType) =
-    new JdbcWriter(schema, connFn, table, createTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, autoCommit, bufferSize)
+    new JdbcWriter(schema, connFn, table, createTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, batchesPerCommit, autoCommit, bufferSize)
 }

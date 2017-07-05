@@ -15,13 +15,16 @@ class JdbcWriter(schema: StructType,
                  dialect: JdbcDialect,
                  threads: Int,
                  batchSize: Int,
+                 batchesPerCommit: Int,
                  autoCommit: Boolean,
                  bufferSize: Int) extends RowOutputStream with Logging {
-  logger.info("Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
+  logger.info(s"Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
   require(bufferSize >= batchSize)
 
+  import com.sksamuel.exts.concurrent.ExecutorImplicits._
+
   // the buffer is a concurrent receiver for the write method. It needs to hold enough elements so that
-  // the invokers of this class can keek pumping in rows while we wait for a buffer to fill up.
+  // the invokers of this class can keep pumping in rows while we wait for a buffer to fill up.
   // the buffer size must be >= batch size or we'll never fill up enough to trigger a batch
   private val buffer = new LinkedBlockingQueue[Row](bufferSize)
 
@@ -29,14 +32,12 @@ class JdbcWriter(schema: StructType,
   private val coordinatorPool = Executors.newSingleThreadExecutor()
 
   private lazy val inserter = {
-    val inserter = new JdbcInserter(connFn, table, schema, autoCommit, dialect)
+    val inserter = new JdbcInserter(connFn, table, schema, autoCommit, batchesPerCommit, dialect)
     if (createTable) {
       inserter.ensureTableCreated()
     }
     inserter
   }
-
-  import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
   // todo this needs to allow multiple batches at once
   coordinatorPool.submit {

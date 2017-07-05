@@ -12,12 +12,15 @@ class JdbcInserter(val connFn: () => Connection,
                    val table: String,
                    val schema: StructType,
                    val autoCommit: Boolean,
+                   val batchesPerCommit: Int,
                    val dialect: JdbcDialect) extends Logging {
 
   logger.debug("Connecting to JDBC to insert.. ..")
-  val conn = connFn()
+  private val conn = connFn()
   conn.setAutoCommit(autoCommit)
   logger.debug(s"Connected successfully; autoCommit=$autoCommit")
+
+  private var batches = 0
 
   def insertBatch(batch: Seq[Row]): Unit = {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
@@ -28,8 +31,13 @@ class JdbcInserter(val connFn: () => Connection,
         }
         stmt.addBatch()
       }
-      val result = stmt.executeBatch()
+      batches = batches + 1
+      stmt.executeBatch()
       if (!autoCommit) conn.commit()
+      else if (batches == batchesPerCommit) {
+        batches = 0
+        conn.commit()
+      }
     } catch {
       case t: Throwable =>
         logger.error("Batch failure", t)
