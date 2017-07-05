@@ -5,7 +5,7 @@ import java.time._
 import java.time.temporal.ChronoUnit
 
 import com.sksamuel.exts.Logging
-import io.eels.coercion.{BigDecimalCoercer, DoubleCoercer, MapCoercer, SequenceCoercer}
+import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, MapCoercer, SequenceCoercer, ShortCoercer, StringCoercer, TimestampCoercer}
 import io.eels.schema._
 import org.apache.parquet.io.api.{Binary, RecordConsumer}
 
@@ -117,8 +117,7 @@ class StructWriter(structType: StructType,
 object BinaryParquetWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     value match {
-      case array: Array[Byte] =>
-        record.addBinary(Binary.fromReusedByteArray(value.asInstanceOf[Array[Byte]]))
+      case array: Array[Byte] => record.addBinary(Binary.fromReusedByteArray(array))
       case seq: Seq[Byte] => write(record, seq.toArray)
     }
   }
@@ -142,7 +141,7 @@ class DecimalWriter(precision: Precision, scale: Scale) extends RecordConsumerWr
 
 object BigIntRecordConsumerWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addLong(value.asInstanceOf[BigInt].toLong)
+    record.addLong(BigIntegerCoercer.coerce(value).longValue)
   }
 }
 
@@ -169,15 +168,13 @@ object TimeRecordConsumerWriter extends RecordConsumerWriter {
   // first 8 bytes are the nanoseconds
   // second 4 bytes are the days
   override def write(record: RecordConsumer, value: Any): Unit = {
-    value match {
-      case timestamp: java.sql.Timestamp =>
-        val nanos = timestamp.getNanos
-        val dt = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.systemDefault)
-        val days = ChronoUnit.DAYS.between(JulianEpochInGregorian, dt).toInt
-        val bytes = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN).putLong(nanos).putInt(days)
-        val binary = Binary.fromReusedByteBuffer(bytes)
-        record.addBinary(binary)
-    }
+    val timestamp = TimestampCoercer.coerce(value)
+    val nanos = timestamp.getNanos
+    val dt = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.systemDefault)
+    val days = ChronoUnit.DAYS.between(JulianEpochInGregorian, dt).toInt
+    val bytes = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN).putLong(nanos).putInt(days)
+    val binary = Binary.fromReusedByteBuffer(bytes)
+    record.addBinary(binary)
   }
 }
 
@@ -186,27 +183,25 @@ object TimestampRecordConsumerWriter extends RecordConsumerWriter {
   private val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
   override def write(record: RecordConsumer, value: Any): Unit = {
-    value match {
-      case timestamp: java.sql.Timestamp =>
-        val dt = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.systemDefault)
-        val days = ChronoUnit.DAYS.between(JulianEpochInGregorian, dt).toInt
-        val nanos = timestamp.getNanos + ChronoUnit.NANOS.between(dt.toLocalDate.atStartOfDay(ZoneId.systemDefault).toLocalTime, dt.toLocalTime)
-        val bytes = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN).putLong(nanos).putInt(days).array()
-        val binary = Binary.fromReusedByteArray(bytes)
-        record.addBinary(binary)
-    }
+    val timestamp = TimestampCoercer.coerce(value)
+    val dt = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.systemDefault)
+    val days = ChronoUnit.DAYS.between(JulianEpochInGregorian, dt).toInt
+    val nanos = timestamp.getNanos + ChronoUnit.NANOS.between(dt.toLocalDate.atStartOfDay(ZoneId.systemDefault).toLocalTime, dt.toLocalTime)
+    val bytes = ByteBuffer.allocate(12).order(ByteOrder.LITTLE_ENDIAN).putLong(nanos).putInt(days).array()
+    val binary = Binary.fromReusedByteArray(bytes)
+    record.addBinary(binary)
   }
 }
 
 object StringRecordConsumerWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addBinary(Binary.fromString(value.toString))
+    record.addBinary(Binary.fromString(StringCoercer.coerce(value)))
   }
 }
 
 object ShortParquetWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addInteger(value.toString.toShort)
+    record.addInteger(ShortCoercer.coerce(value))
   }
 }
 
@@ -218,24 +213,24 @@ object DoubleRecordConsumerWriter extends RecordConsumerWriter {
 
 object FloatRecordConsumerWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addFloat(value.asInstanceOf[Float])
+    record.addFloat(FloatCoercer.coerce(value))
   }
 }
 
 object BooleanRecordConsumerWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addBoolean(value.asInstanceOf[Boolean])
+    record.addBoolean(BooleanCoercer.coerce(value))
   }
 }
 
 object LongRecordConsumerWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addLong(value.asInstanceOf[Long])
+    record.addLong(LongCoercer.coerce(value))
   }
 }
 
 object IntRecordConsumerWriter extends RecordConsumerWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
-    record.addInteger(value.asInstanceOf[Int])
+    record.addInteger(IntCoercer.coerce(value))
   }
 }
