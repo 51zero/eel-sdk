@@ -39,7 +39,7 @@ class KafkaSinkTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     EmbeddedKafka.stop()
   }
 
-  "KafkaSink" should "support default implicits" in {
+  "KafkaSink" should "support default implicits" ignore {
 
     val topic = "mytopic"
 
