@@ -51,7 +51,8 @@ case class HiveSink(dbName: String,
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
   def withFileListener(listener: FileListener): HiveSink = copy(fileListener = listener)
-  def partitionPathStrategy(strategy: PartitionPathStrategy): HiveSink = copy(partitionPathStrategy = strategy)
+  def withFilenameStrategy(filenameStrategy: FilenameStrategy): HiveSink = copy(filenameStrategy = filenameStrategy)
+  def withPartitionPathStrategy(strategy: PartitionPathStrategy): HiveSink = copy(partitionPathStrategy = strategy)
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
