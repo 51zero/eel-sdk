@@ -5,8 +5,9 @@ import java.sql.{Connection, DriverManager}
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.Sink
-import io.eels.component.jdbc.dialect.GenericJdbcDialect
+import io.eels.component.jdbc.dialect.{GenericJdbcDialect, JdbcDialect}
 import io.eels.schema.StructType
+import com.sksamuel.exts.OptionImplicits._
 
 object JdbcSink extends Logging {
 
@@ -28,6 +29,8 @@ case class JdbcSink(connFn: () => Connection,
                     table: String,
                     createTable: Boolean = false,
                     batchSize: Int = 1000,
+                    commitSize: Int = 0, // 0 means commit at the end
+                    dialect: Option[JdbcDialect] = None,
                     threads: Int = 4) extends Sink with Logging {
 
   private val config = ConfigFactory.load()
@@ -37,7 +40,9 @@ case class JdbcSink(connFn: () => Connection,
   def withCreateTable(createTable: Boolean): JdbcSink = copy(createTable = createTable)
   def withBatchSize(batchSize: Int): JdbcSink = copy(batchSize = batchSize)
   def withThreads(threads: Int): JdbcSink = copy(threads = threads)
+  def withCommitSize(commitSize: Int): JdbcSink = copy(commitSize = commitSize)
+  def withDialect(dialect: JdbcDialect): JdbcSink = copy(dialect = dialect.some)
 
   override def open(schema: StructType) =
-    new JdbcWriter(schema, connFn, table, createTable, new GenericJdbcDialect(), threads, batchSize, autoCommit, bufferSize)
+    new JdbcWriter(schema, connFn, table, createTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, autoCommit, bufferSize)
 }
