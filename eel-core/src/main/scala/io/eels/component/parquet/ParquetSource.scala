@@ -75,7 +75,7 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   override def parts(): List[Part] = {
-    logger.debug(s"Parquet source has ${paths.size} files: $paths")
+    logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
     paths.map { it => new ParquetPart(it, predicate, projection) }
   }
 

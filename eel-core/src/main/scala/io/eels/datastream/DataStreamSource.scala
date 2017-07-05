@@ -24,7 +24,7 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
       Flowable.empty()
     } else {
       val flowables = parts.map(_.open.subscribeOn(Schedulers.io))
-      Flowable.merge(flowables.asJava).observeOn(Schedulers.computation)
+      Flowable.merge(flowables.asJava)
     }
   }
 }

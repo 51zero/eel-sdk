@@ -41,9 +41,7 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     assert(count == FilePattern("parquet-speed/*").toPaths().size)
 
     timed("Reading with ParquetSource ds1") {
-      val actual = ParquetSource("parquet-speed/*").toDataStream().listener(new Listener {
-        override def onNext(row: Row): Unit = ()
-      }).size
+      val actual = ParquetSource("parquet-speed/*").toDataStream().size
       assert(actual == size, s"Expected $size but was $actual")
     }
 
@@ -51,16 +49,16 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     println("---------")
     println("")
 
-    timed("Reading with ParquetSource ds2") {
-      val actual = ParquetSource("parquet-speed/*").toDataStream2.listener(new Listener {
-        override def onNext(row: Row): Unit = ()
-      }).size
-      assert(actual == size, s"Expected $size but was $actual")
-    }
-
-    println("")
-    println("---------")
-    println("")
+    //    timed("Reading with ParquetSource ds2") {
+    //      val actual = ParquetSource("parquet-speed/*").toDataStream2.listener(new Listener {
+    //        override def onNext(row: Row): Unit = ()
+    //      }).size
+    //      assert(actual == size, s"Expected $size but was $actual")
+    //    }
+    //
+    //    println("")
+    //    println("---------")
+    //    println("")
 
   }
 }
