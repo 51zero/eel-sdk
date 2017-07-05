@@ -1,6 +1,7 @@
 package io.eels.coercion
 
 import java.sql.Timestamp
+
 import scala.collection.JavaConverters._
 
 /**
@@ -49,6 +50,21 @@ object IntCoercer extends Coercer[Int] {
   }
 }
 
+object ShortCoercer extends Coercer[Short] {
+  override def coerce(input: Any): Short = input match {
+    case b: Byte => b
+    case s: Short => s
+    case s: String => s.toShort
+  }
+}
+
+object ByteCoercer extends Coercer[Byte] {
+  override def coerce(input: Any): Byte = input match {
+    case b: Byte => b
+    case s: String => s.toByte
+  }
+}
+
 object LongCoercer extends Coercer[Long] {
   override def coerce(input: Any): Long = input match {
     case l: Long => l // passthrough
@@ -94,6 +110,13 @@ object BigDecimalCoercer extends Coercer[BigDecimal] {
     case b: java.math.BigDecimal => b // implicit
     case b: java.math.BigInteger => BigDecimal(b)
     case s: String => BigDecimal(s)
+  }
+}
+
+object StringCoercer extends Coercer[String] {
+  override def coerce(input: Any): String = input match {
+    case s: String => s
+    case other => other.toString
   }
 }
 

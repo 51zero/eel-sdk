@@ -125,7 +125,7 @@ object StringColumnSerializer extends OrcSerializer[BytesColumnVector] {
       vector.isNull(k) = true
       vector.noNulls = false
     } else {
-      val bytes = value.toString.getBytes("UTF8")
+      val bytes = StringCoercer.coerce(value).getBytes("UTF8")
       vector.setRef(k, bytes, 0, bytes.length)
     }
   }
