@@ -1,5 +1,6 @@
 package io.eels
 
+import io.eels.datastream.Subscriber
 import io.reactivex.Flowable
 
 /**
@@ -16,5 +17,5 @@ trait Part {
     */
   def open(): Flowable[Row]
 
-  def open2(): Flow = Flow.empty
+  def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ()
 }

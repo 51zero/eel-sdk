@@ -5,8 +5,9 @@ import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.FlowableIterator
 import io.eels.component.parquet.util.ParquetIterator
+import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
-import io.eels.{Flow, Part, Predicate, Row}
+import io.eels.{Part, Predicate, Row}
 import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -36,9 +37,14 @@ class ParquetPart(path: Path,
     }
   }
 
-  override def open2(): Flow = {
-    val reader = RowParquetReaderFn(path, predicate, readSchema)
-    val iterator = ParquetIterator(reader).grouped(1000)
-    Flow(reader.close _, iterator)
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    try {
+      val reader = RowParquetReaderFn(path, predicate, readSchema)
+      val iterator = ParquetIterator(reader).grouped(1000)
+      iterator.foreach(subscriber.next)
+      subscriber.completed()
+    } catch {
+      case t: Throwable => subscriber.error(t)
+    }
   }
 }

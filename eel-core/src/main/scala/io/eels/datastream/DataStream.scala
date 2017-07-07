@@ -503,98 +503,87 @@ trait DataStream2 {
 
   def schema: StructType
 
-  // the underlying reactive stream
-  def publisher: Publisher[Seq[Row]]
+  def subscribe(subscriber: Subscriber[Seq[Row]]): Unit
 
   def map(f: Row => Row): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-          override def next(t: Seq[Row]): Unit = subscriber.next(t.map(f))
-        })
-      }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = subscriber.next(t.map(f))
+      })
     }
   }
 
   def filter(f: Row => Boolean): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-          override def next(t: Seq[Row]): Unit = subscriber.next(t.filter(f))
-        })
-      }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = subscriber.next(t.filter(f))
+      })
     }
   }
 
   def withLowerCaseSchema(): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema.toLowerCase()
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-          val lower = schema
-          override def next(t: Seq[Row]): Unit = {
-            val ts = t.map { row => Row(lower, row.values) }
-            subscriber.next(ts)
-          }
-        })
-      }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        val lower = schema
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.map { row => Row(lower, row.values) }
+          subscriber.next(ts)
+        }
+      })
     }
   }
 
   def take(n: Int): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        val count = new AtomicInteger(0)
-        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-          override def next(t: Seq[Row]): Unit = {
-            val remaining = n - count.get
-            if (remaining > 0) {
-              val ts = t.take(remaining)
-              count.addAndGet(ts.size)
-              subscriber.next(ts)
-            }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      val count = new AtomicInteger(0)
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          val remaining = n - count.get
+          if (remaining > 0) {
+            val ts = t.take(remaining)
+            count.addAndGet(ts.size)
+            subscriber.next(ts)
           }
-        })
-      }
+        }
+      })
     }
   }
 
   def listener(_listener: Listener): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        self.publisher.subscribe(new Subscriber[Seq[Row]] {
-          override def next(t: Seq[Row]): Unit = {
-            subscriber.next(t)
-            try {
-              t.foreach(_listener.onNext)
-            } catch {
-              case t: Throwable => _listener.onError(t)
-              // todo need to then cancel the subscription
-            }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new Subscriber[Seq[Row]] {
+        override def next(t: Seq[Row]): Unit = {
+          subscriber.next(t)
+          try {
+            t.foreach(_listener.onNext)
+          } catch {
+            case t: Throwable => _listener.onError(t)
+            // todo need to then cancel the subscription
           }
-          override def started(s: Subscription): Unit = {
-            subscriber.started(s)
-            try {
-              _listener.started()
-            } catch {
-              case t: Throwable => _listener.onError(t)
-              // todo need to then cancel the subscription
-            }
+        }
+        override def started(s: Cancellable): Unit = {
+          subscriber.started(s)
+          try {
+            _listener.started()
+          } catch {
+            case t: Throwable => _listener.onError(t)
+            // todo need to then cancel the subscription
           }
-          override def completed(): Unit = {
-            subscriber.completed()
-            _listener.onComplete()
-          }
-          override def error(t: Throwable): Unit = {
-            subscriber.error(t)
-            _listener.onError(t)
-          }
-        })
-      }
+        }
+        override def completed(): Unit = {
+          subscriber.completed()
+          _listener.onComplete()
+        }
+        override def error(t: Throwable): Unit = {
+          subscriber.error(t)
+          _listener.onError(t)
+        }
+      })
     }
   }
 
@@ -608,46 +597,42 @@ trait DataStream2 {
 
     override def schema: StructType = self.schema.projection(fields)
 
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
-        val oldSchema = self.schema
-        val newSchema = schema
+      val oldSchema = self.schema
+      val newSchema = schema
 
-        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-          override def next(t: Seq[Row]): Unit = {
-            val ts = t.map { row =>
-              val values = newSchema.fieldNames().map { name =>
-                val k = oldSchema.indexOf(name)
-                row.values(k)
-              }
-              Row(newSchema, values)
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.map { row =>
+            val values = newSchema.fieldNames().map { name =>
+              val k = oldSchema.indexOf(name)
+              row.values(k)
             }
-            subscriber.next(ts)
+            Row(newSchema, values)
           }
-        })
-      }
+          subscriber.next(ts)
+        }
+      })
     }
   }
 
   def replaceNullValues(defaultValue: String): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema
 
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-          override def next(t: Seq[Row]): Unit = {
-            val ts = t.map { row =>
-              val newValues = row.values.map {
-                case null => defaultValue
-                case otherwise => otherwise
-              }
-              Row(row.schema, newValues)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.map { row =>
+            val newValues = row.values.map {
+              case null => defaultValue
+              case otherwise => otherwise
             }
-            subscriber.next(ts)
+            Row(row.schema, newValues)
           }
-        })
-      }
+          subscriber.next(ts)
+        }
+      })
     }
   }
 
@@ -673,17 +658,13 @@ trait DataStream2 {
     */
   def addField(field: Field, defaultValue: Any): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema.addField(field)
-    override def publisher: Publisher[Seq[Row]] = {
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val exists = self.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
       val newSchema = schema
-      new Publisher[Seq[Row]] {
-        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-          self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-            override def next(t: Seq[Row]): Unit = subscriber.next(t.map(row => Row(newSchema, row.values :+ defaultValue)))
-          })
-        }
-      }
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = subscriber.next(t.map(row => Row(newSchema, row.values :+ defaultValue)))
+      })
     }
   }
 
@@ -692,9 +673,9 @@ trait DataStream2 {
     */
   def collect: Vector[Row] = {
     val vector = Vector.newBuilder[Row]
-    publisher.subscribe(new Subscriber[Seq[Row]] {
+    subscribe(new Subscriber[Seq[Row]] {
       override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
-      override def started(subscription: Subscription): Unit = ()
+      override def started(subscription: Cancellable): Unit = ()
       override def completed(): Unit = ()
       override def error(t: Throwable): Unit = ()
     })
@@ -705,9 +686,9 @@ trait DataStream2 {
   def size: Long = {
     var count = 0L
     val latch = new CountDownLatch(1)
-    publisher.subscribe(new Subscriber[Seq[Row]] {
+    subscribe(new Subscriber[Seq[Row]] {
       override def next(t: Seq[Row]): Unit = count = count + t.size
-      override def started(subscription: Subscription): Unit = ()
+      override def started(subscription: Cancellable): Unit = ()
       override def completed(): Unit = latch.countDown()
       override def error(t: Throwable): Unit = ()
     })
@@ -725,14 +706,12 @@ object DataStream2 {
 
   def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream2 = new DataStream2 {
     override def schema: StructType = _schema
-    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        try {
-          rows.grouped(1000).foreach(subscriber.next)
-          subscriber.completed()
-        } catch {
-          case t: Throwable => subscriber.error(t)
-        }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      try {
+        rows.grouped(1000).foreach(subscriber.next)
+        subscriber.completed()
+      } catch {
+        case t: Throwable => subscriber.error(t)
       }
     }
   }

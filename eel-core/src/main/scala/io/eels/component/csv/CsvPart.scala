@@ -1,12 +1,11 @@
 package io.eels.component.csv
 
-import java.io.Closeable
-
-import com.sksamuel.exts.Logging
+import com.sksamuel.exts.{Logging, TryOrLog}
 import com.univocity.parsers.csv.CsvParser
 import io.eels.component.FlowableIterator
+import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
-import io.eels.{Flow, Part, Row}
+import io.eels.{Part, Row}
 import io.reactivex.Flowable
 import io.reactivex.disposables.Disposable
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -25,24 +24,28 @@ class CsvPart(val createParser: () => CsvParser,
     case _ => 0
   }
 
-  override def open2(): Flow = {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    TryOrLog {
+      val parser = createParser()
+      val input = fs.open(path)
 
-    val parser = createParser()
-    val input = fs.open(path)
-    parser.beginParsing(input)
+      try {
+        parser.beginParsing(input)
 
-    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
-      Row(schema, records.toVector)
-    }
+        val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
+          Row(schema, records.toVector)
+        }
 
-    val closeable = new Closeable {
-      override def close(): Unit = Try {
+        iterator.grouped(1000).foreach(subscriber.next)
+        subscriber.completed()
+
+      } catch {
+        case t: Throwable => subscriber.error(t)
+      } finally {
         parser.stopParsing()
         input.close()
       }
     }
-
-    Flow(closeable, iterator.grouped(100))
   }
 
   override def open(): Flowable[Row] = {
@@ -57,8 +60,7 @@ class CsvPart(val createParser: () => CsvParser,
 
     val disposable = new Disposable {
       override def dispose(): Unit = Try {
-        parser.stopParsing()
-        input.close()
+
       }
       override def isDisposed: Boolean = false
     }

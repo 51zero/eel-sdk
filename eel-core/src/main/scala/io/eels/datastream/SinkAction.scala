@@ -80,13 +80,13 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
 
     var failure: Throwable = null
 
-    ds.publisher.subscribe(new Subscriber[Seq[Row]] {
+    ds.subscribe(new Subscriber[Seq[Row]] {
 
       override def next(t: Seq[Row]): Unit = {
         executor.execute(new OutputWriterTask(t))
       }
 
-      override def started(s: Subscription): Unit = ()
+      override def started(s: Cancellable): Unit = ()
 
       override def completed(): Unit = {
         latch.countDown()
