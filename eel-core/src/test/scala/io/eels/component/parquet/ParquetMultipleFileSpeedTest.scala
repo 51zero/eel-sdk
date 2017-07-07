@@ -31,26 +31,17 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
   val dir = new Path("parquet-speed-test")
   new File(dir.toString).mkdirs()
 
-  for (_ <- 1 to 3) {
-
-    timed("Insertion ds1") {
-      val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
-      new File(dir.toString).listFiles().foreach(_.delete)
-      ds.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
-    }
-
-    timed("Insertion ds2") {
-      val ds2 = DataStream2.fromIterator(schema, Iterator.continually(createRow).take(size))
-      new File(dir.toString).listFiles().foreach(_.delete)
-      ds2.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
-    }
+  timed("Insertion") {
+    val ds = DataStream2.fromIterator(schema, Iterator.continually(createRow).take(size))
+    new File(dir.toString).listFiles().foreach(_.delete)
+    ds.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
   }
 
   for (_ <- 1 to 25) {
     assert(count == FilePattern("parquet-speed-test/*").toPaths().size)
 
     timed("Reading with ParquetSource ds1") {
-      val actual = ParquetSource("parquet-speed-test/*").toDataStream().map { row => row }.filter(row => true).size
+      val actual = ParquetSource("parquet-speed-test/*").toDataStream().map { row => row }.filter(_ => true).size
       assert(actual == size, s"Expected $size but was $actual")
     }
 
@@ -58,8 +49,8 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     println("---------")
     println("")
 
-    timed("Reading with ParquetSource ds1") {
-      val actual = ParquetSource("parquet-speed-test/*").toDataStream2.map { row => row }.filter(row => true).size
+    timed("Reading with ParquetSource ds2") {
+      val actual = ParquetSource("parquet-speed-test/*").toDataStream2.map { row => row }.filter(_ => true).size
       assert(actual == size, s"Expected $size but was $actual")
     }
 

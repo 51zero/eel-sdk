@@ -40,8 +40,7 @@ class ParquetPart(path: Path,
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
       val reader = RowParquetReaderFn(path, predicate, readSchema)
-      val iterator = ParquetIterator(reader).grouped(1000)
-      iterator.foreach(subscriber.next)
+      ParquetIterator(reader).grouped(1000).foreach(subscriber.next)
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

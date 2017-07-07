@@ -1,7 +1,7 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.LongAdder
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{CountDownLatch, LinkedBlockingQueue}
 
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.{Logging, TryOrLog}
@@ -65,11 +65,11 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
     val schema = ds.schema
     val total = new LongAdder
 
+    val latch = new CountDownLatch(parallelism)
     val queue = new LinkedBlockingQueue[Seq[Row]](1000)
-    val executor = Executors.newFixedThreadPool(parallelism)
 
     sink.open(schema, parallelism).zipWithIndex.foreach { case (stream, k) =>
-      executor.submit(new Runnable {
+      ExecutorInstances.io.submit(new Runnable {
         logger.debug(s"Starting output stream $k")
         override def run(): Unit = {
           try {
@@ -81,6 +81,7 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
           } finally {
             logger.debug(s"Closing output stream $k")
             stream.close()
+            latch.countDown()
           }
         }
       })
@@ -100,9 +101,7 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
 
     // at this point, the subscriber has returned, and now we need to wait until the
     // queue has been emptied by the io threads
-    executor.shutdown()
-    executor.awaitTermination(1, TimeUnit.DAYS)
-
+    latch.await()
     total.sum()
   }
 }

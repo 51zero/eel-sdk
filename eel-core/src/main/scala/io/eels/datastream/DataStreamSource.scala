@@ -1,7 +1,9 @@
 package io.eels.datastream
 
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.{Executors, LinkedBlockingQueue}
 
+import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.io.Using
 import io.eels.schema.StructType
@@ -13,7 +15,7 @@ import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 // an implementation of DataStream that provides a Flowable populated from 1 or more parts
-class DataStreamSource(source: Source, listener: Listener = NoopListener) extends DataStream with Using {
+class DataStreamSource(source: Source, listener: Listener = NoopListener) extends DataStream with Using with Logging {
 
   override def schema: StructType = source.schema
 
@@ -32,7 +34,11 @@ class DataStreamSource(source: Source, listener: Listener = NoopListener) extend
   }
 }
 
-class DataStreamSource2(source: Source) extends DataStream2 with Using {
+object ExecutorInstances {
+  val io = Executors.newCachedThreadPool()
+}
+
+class DataStreamSource2(source: Source) extends DataStream2 with Using with Logging {
 
   override def schema: StructType = source.schema
 
@@ -40,17 +46,37 @@ class DataStreamSource2(source: Source) extends DataStream2 with Using {
 
     val queue = new LinkedBlockingQueue[Seq[Row]](1000)
 
-    source.parts.foreach { part =>
-      part.subscribe(new Subscriber[Seq[Row]] {
-        override def next(t: Seq[Row]): Unit = queue.put(t)
-        override def started(c: Cancellable): Unit = ()
-        override def completed(): Unit = queue.put(Nil)
-        override def error(t: Throwable): Unit = queue.put(Nil)
+    val finished = new AtomicLong(0)
+    val parts = source.parts()
+
+    // each part should be read in its own io thread
+    parts.zipWithIndex.foreach { case (part, k) =>
+      ExecutorInstances.io.execute(new Runnable {
+        override def run(): Unit = {
+          part.subscribe(new Subscriber[Seq[Row]] {
+            logger.debug(s"Starting reads for part $k")
+            override def next(t: Seq[Row]): Unit = queue.put(t)
+            override def started(c: Cancellable): Unit = ()
+            override def completed(): Unit = {
+              logger.debug(s"Part $k has finished")
+              if (finished.incrementAndGet == parts.size)
+                queue.put(Nil)
+            }
+            override def error(t: Throwable): Unit = {
+              logger.error(s"Error reading part $k", t)
+              if (finished.incrementAndGet == parts.size)
+                queue.put(Nil)
+            }
+          })
+        }
       })
     }
 
-    Attempt(s) { sub =>
-      BlockingQueueConcurrentIterator(queue, Nil).foreach(sub.next)
+    try {
+      BlockingQueueConcurrentIterator(queue, Nil).foreach(s.next)
+      s.completed()
+    } catch {
+      case t: Throwable => s.error(t)
     }
   }
 }
