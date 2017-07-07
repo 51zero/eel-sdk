@@ -562,6 +562,32 @@ trait DataStream2 {
     }
   }
 
+  def listener(_listener: Listener): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        self.publisher.subscribe(new Subscriber[Seq[Row]] {
+          override def next(t: Seq[Row]): Unit = {
+            subscriber.next(t)
+            t.foreach(_listener.onNext)
+          }
+          override def started(s: Subscription): Unit = {
+            subscriber.started(s)
+            _listener.started()
+          }
+          override def completed(): Unit = {
+            subscriber.completed()
+            _listener.onComplete()
+          }
+          override def error(t: Throwable): Unit = {
+            subscriber.error(t)
+            _listener.onError(t)
+          }
+        })
+      }
+    }
+  }
+
   def projectionExpression(expr: String): DataStream2 = projection(expr.split(',').map(_.trim()))
   def projection(first: String, rest: String*): DataStream2 = projection((first +: rest).toList)
 
@@ -599,10 +625,6 @@ trait DataStream2 {
 
     override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
       override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-
-        val oldSchema = self.schema
-        val newSchema = schema
-
         self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
           override def next(t: Seq[Row]): Unit = {
             val ts = t.map { row =>
