@@ -9,15 +9,15 @@ import io.eels.schema.StructType
 trait JdbcPrimitives extends Logging {
 
   def connect(url: String): Connection = {
-    logger.info("Connecting to jdbc source $url...")
+    logger.debug(s"Connecting to jdbc source $url...")
     val conn = DriverManager.getConnection(url)
-    logger.debug("Connected to $url")
+    logger.debug(s"Connected to $url")
     conn
   }
 
   def schemaFor(dialect: JdbcDialect, rs: ResultSet): StructType = {
     val schema = JdbcSchemaFns.fromJdbcResultset(rs, dialect)
-    logger.debug("Fetched schema:\n" + schema.show())
+    logger.trace("Fetched schema:\n" + schema.show())
     schema
   }
 }
