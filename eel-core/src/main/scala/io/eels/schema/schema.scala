@@ -80,6 +80,7 @@ case class DecimalType(precision: Precision = Precision(0),
 }
 
 object DecimalType {
+  val MaxPrecision = 38
   val Wildcard = DecimalType(Precision(-1), Scale(-1))
   val Default = DecimalType(Precision(18), Scale(2))
 }

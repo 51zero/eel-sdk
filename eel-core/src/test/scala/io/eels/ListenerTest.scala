@@ -22,7 +22,7 @@ class ListenerTest extends WordSpec with Matchers {
 
   val path = new Path("listener_test.csv")
 
-  "Frame.to" should {
+  "DataStream" should {
     "support user's listeners" in {
 
       val latch = new CountDownLatch(1000)
@@ -37,6 +37,23 @@ class ListenerTest extends WordSpec with Matchers {
       latch.await(20, TimeUnit.SECONDS) shouldBe true
 
       fs.delete(path, false)
+    }
+    "propagate errors in listeners" in {
+
+      class TestSink extends Sink {
+        override def open(schema: StructType): RowOutputStream = new RowOutputStream {
+          override def close(): Unit = ()
+          override def write(row: Row): Unit = ()
+        }
+      }
+
+      intercept[RuntimeException] {
+        ds.listener(new Listener {
+          override def onNext(value: Row): Unit = sys.error("boom")
+          override def onError(e: Throwable): Unit = ()
+          override def onComplete(): Unit = ()
+        }).to(new TestSink)
+      }
     }
   }
 

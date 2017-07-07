@@ -1,14 +1,13 @@
 package io.eels.datastream
 
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.{Executor, Executors}
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
+import java.util.concurrent.{CountDownLatch, Executor, Executors}
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{Listener, Row, Sink}
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.{Flowable, functions}
-import org.reactivestreams.{Subscriber, Subscription}
 
 import scala.language.implicitConversions
 
@@ -442,11 +441,11 @@ trait DataStream extends Logging {
     */
   def listener(_listener: Listener) = new DataStream {
     override def schema: StructType = self.schema
-    override def flowable: Flowable[Row] = self.flowable.doOnEach(new Subscriber[Row] {
+    override def flowable: Flowable[Row] = self.flowable.doOnEach(new org.reactivestreams.Subscriber[Row] {
       override def onError(t: Throwable): Unit = _listener.onError(t)
       override def onComplete(): Unit = _listener.onComplete()
       override def onNext(t: Row): Unit = _listener.onNext(t)
-      override def onSubscribe(s: Subscription): Unit = ()
+      override def onSubscribe(s: org.reactivestreams.Subscription): Unit = ()
     })
   }
 
@@ -495,6 +494,222 @@ object DataStream {
     * This will result in a single partitioned DataStream.
     */
   def fromValues(schema: StructType, values: Seq[Seq[Any]]): DataStream = {
+    fromRows(schema, values.map(Row(schema, _)))
+  }
+}
+
+trait DataStream2 {
+  self =>
+
+  def schema: StructType
+
+  // the underlying reactive stream
+  def publisher: Publisher[Seq[Row]]
+
+  def map(f: Row => Row): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+          override def next(t: Seq[Row]): Unit = subscriber.next(t.map(f))
+        })
+      }
+    }
+  }
+
+  def filter(f: Row => Boolean): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+          override def next(t: Seq[Row]): Unit = subscriber.next(t.filter(f))
+        })
+      }
+    }
+  }
+
+  def withLowerCaseSchema(): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema.toLowerCase()
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+          val lower = schema
+          override def next(t: Seq[Row]): Unit = {
+            val ts = t.map { row => Row(lower, row.values) }
+            subscriber.next(ts)
+          }
+        })
+      }
+    }
+  }
+
+  def take(n: Int): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        val count = new AtomicInteger(0)
+        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+          override def next(t: Seq[Row]): Unit = {
+            val remaining = n - count.get
+            if (remaining > 0) {
+              val ts = t.take(remaining)
+              count.addAndGet(ts.size)
+              subscriber.next(ts)
+            }
+          }
+        })
+      }
+    }
+  }
+
+  def projectionExpression(expr: String): DataStream2 = projection(expr.split(',').map(_.trim()))
+  def projection(first: String, rest: String*): DataStream2 = projection((first +: rest).toList)
+
+  /**
+    * Returns a new DataStream which contains the given list of fields from the existing stream.
+    */
+  def projection(fields: Seq[String]): DataStream2 = new DataStream2 {
+
+    override def schema: StructType = self.schema.projection(fields)
+
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+
+        val oldSchema = self.schema
+        val newSchema = schema
+
+        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+          override def next(t: Seq[Row]): Unit = {
+            val ts = t.map { row =>
+              val values = newSchema.fieldNames().map { name =>
+                val k = oldSchema.indexOf(name)
+                row.values(k)
+              }
+              Row(newSchema, values)
+            }
+            subscriber.next(ts)
+          }
+        })
+      }
+    }
+  }
+
+  def replaceNullValues(defaultValue: String): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema
+
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+
+        val oldSchema = self.schema
+        val newSchema = schema
+
+        self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+          override def next(t: Seq[Row]): Unit = {
+            val ts = t.map { row =>
+              val newValues = row.values.map {
+                case null => defaultValue
+                case otherwise => otherwise
+              }
+              Row(row.schema, newValues)
+            }
+            subscriber.next(ts)
+          }
+        })
+      }
+    }
+  }
+
+  def addFieldIfNotExists(name: String, defaultValue: Any): DataStream2 =
+    addFieldIfNotExists(Field(name, StringType), defaultValue)
+
+  def addFieldIfNotExists(field: Field, defaultValue: Any): DataStream2 = {
+    val exists = self.schema.fieldNames().contains(field.name)
+    if (exists) this else addField(field, defaultValue)
+  }
+
+  /**
+    * Returns a new DataStream with the new field of type String added at the end. The value of
+    * this field for each Row is specified by the default value.
+    */
+  def addField(name: String, defaultValue: String): DataStream2 = addField(Field(name, StringType), defaultValue)
+
+  /**
+    * Returns a new DataStream with the given field added at the end. The value of this field
+    * for each Row is specified by the default value. The value must be compatible with the
+    * field definition. Eg, an error will occur if the field has type Int and the default
+    * value was 1.3
+    */
+  def addField(field: Field, defaultValue: Any): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema.addField(field)
+    override def publisher: Publisher[Seq[Row]] = {
+      val exists = self.schema.fieldNames().contains(field.name)
+      if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
+      val newSchema = schema
+      new Publisher[Seq[Row]] {
+        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+          self.publisher.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+            override def next(t: Seq[Row]): Unit = subscriber.next(t.map(row => Row(newSchema, row.values :+ defaultValue)))
+          })
+        }
+      }
+    }
+  }
+
+  def size: Long = {
+    var count = 0L
+    val latch = new CountDownLatch(1)
+    publisher.subscribe(new Subscriber[Seq[Row]] {
+      override def next(t: Seq[Row]): Unit = count = count + t.size
+      override def started(subscription: Subscription): Unit = ()
+      override def completed(): Unit = latch.countDown()
+      override def error(t: Throwable): Unit = ()
+    })
+    latch.await()
+    count
+  }
+
+  def to(sink: Sink): Long = to(sink, 1)
+  def to(sink: Sink, parallelism: Int): Long = SinkAction2(this, sink, parallelism).execute()
+}
+
+object DataStream2 {
+
+  import scala.reflect.runtime.universe._
+
+  def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream2 = new DataStream2 {
+    override def schema: StructType = _schema
+    override def publisher: Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        try {
+          rows.grouped(1000).foreach(subscriber.next)
+          subscriber.completed()
+        } catch {
+          case t: Throwable => subscriber.error(t)
+        }
+      }
+    }
+  }
+
+  /**
+    * Create an in memory DataStream from the given Seq of Products.
+    * The schema will be derived from the fields of the products using scala reflection.
+    * This will result in a single partitioned DataStream.
+    */
+  def apply[T <: Product : TypeTag](ts: Seq[T]): DataStream2 = {
+    val schema = StructType.from[T]
+    val values = ts.map(_.productIterator.toVector)
+    fromValues(schema, values)
+  }
+
+  def fromRows(_schema: StructType, first: Row, rest: Row*): DataStream2 = fromRows(_schema, first +: rest)
+
+  def fromRows(_schema: StructType, rows: Seq[Row]): DataStream2 = fromIterator(_schema, rows.iterator)
+
+  /**
+    * Create an in memory DataStream from the given Seq of values, and schema.
+    * This will result in a single partitioned DataStream.
+    */
+  def fromValues(schema: StructType, values: Seq[Seq[Any]]): DataStream2 = {
     fromRows(schema, values.map(Row(schema, _)))
   }
 }
