@@ -18,29 +18,26 @@ case class ParquetSink(path: Path,
   def withPermission(permission: FsPermission): ParquetSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): ParquetSink = copy(inheritPermissions = Option(inheritPermissions))
 
-  private def create(schema: StructType, path: Path): RowOutputStream = {
+  private def create(schema: StructType, path: Path): RowOutputStream = new RowOutputStream {
 
     if (overwrite && fs.exists(path))
       fs.delete(path, false)
 
     val writer = RowParquetWriterFn(path, schema, metadata)
 
-    new RowOutputStream {
+    override def write(row: Row): Unit = {
+      writer.write(row)
+    }
 
-      override def write(row: Row): Unit = {
-        writer.write(row)
-      }
-
-      override def close(): Unit = {
-        writer.close()
-        permission match {
-          case Some(perm) => fs.setPermission(path, perm)
-          case None =>
-            if (inheritPermissions.getOrElse(false)) {
-              val permission = fs.getFileStatus(path.getParent).getPermission
-              fs.setPermission(path, permission)
-            }
-        }
+    override def close(): Unit = {
+      writer.close()
+      permission match {
+        case Some(perm) => fs.setPermission(path, perm)
+        case None =>
+          if (inheritPermissions.getOrElse(false)) {
+            val permission = fs.getFileStatus(path.getParent).getPermission
+            fs.setPermission(path, permission)
+          }
       }
     }
   }

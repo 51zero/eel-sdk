@@ -1,8 +1,9 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.LongAdder
-import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch, Executors}
+import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
 
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.{Logging, TryOrLog}
 import io.eels.{Row, Sink}
 import io.reactivex.schedulers.Schedulers
@@ -59,50 +60,49 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
 
 case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Logging {
 
-  import scala.collection.JavaConverters._
-
   def execute(): Long = {
 
     val schema = ds.schema
     val total = new LongAdder
-    val latch = new CountDownLatch(1)
+
+    val queue = new LinkedBlockingQueue[Seq[Row]](1000)
     val executor = Executors.newFixedThreadPool(parallelism)
-    val streams = new ConcurrentLinkedQueue(sink.open(schema, parallelism).asJava)
 
-    class OutputWriterTask(chunk: Seq[Row]) extends Runnable {
-
-      override def run(): Unit = {
-        val stream = streams.poll
-        chunk.foreach(stream.write)
-        streams.add(stream)
-      }
+    sink.open(schema, parallelism).zipWithIndex.foreach { case (stream, k) =>
+      executor.submit(new Runnable {
+        logger.debug(s"Starting output stream $k")
+        override def run(): Unit = {
+          try {
+            BlockingQueueConcurrentIterator(queue, Nil).foreach { chunk =>
+              chunk.foreach(stream.write)
+            }
+          } catch {
+            case t: Throwable => logger.error("Error writing out", t)
+          } finally {
+            logger.debug(s"Closing output stream $k")
+            stream.close()
+          }
+        }
+      })
     }
 
-    var failure: Throwable = null
-
     ds.subscribe(new Subscriber[Seq[Row]] {
-
-      override def next(t: Seq[Row]): Unit = {
-        executor.execute(new OutputWriterTask(t))
-      }
-
       override def started(s: Cancellable): Unit = ()
-
-      override def completed(): Unit = {
-        latch.countDown()
+      override def next(t: Seq[Row]): Unit = {
+        queue.put(t)
       }
-
+      override def completed(): Unit = queue.put(Nil)
       override def error(t: Throwable): Unit = {
-        failure = t
-        latch.countDown()
+        queue.put(Nil)
+        throw t
       }
-
     })
 
-    latch.await()
-    streams.asScala.foreach(_.close)
-    if (failure != null)
-      throw failure
+    // at this point, the subscriber has returned, and now we need to wait until the
+    // queue has been emptied by the io threads
+    executor.shutdown()
+    executor.awaitTermination(1, TimeUnit.DAYS)
+
     total.sum()
   }
 }
