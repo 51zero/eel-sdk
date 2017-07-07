@@ -28,7 +28,7 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.getLocal(new Configuration())
 
-  val dir = new Path("parquet-speed")
+  val dir = new Path("parquet-speed-test")
   new File(dir.toString).mkdirs()
 
   for (_ <- 1 to 3) {
@@ -36,21 +36,21 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     timed("Insertion ds1") {
       val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
       new File(dir.toString).listFiles().foreach(_.delete)
-      ds.to(ParquetSink(new Path("parquet-speed/parquet_speed.pq")), count)
+      ds.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
     }
 
     timed("Insertion ds2") {
       val ds2 = DataStream2.fromIterator(schema, Iterator.continually(createRow).take(size))
       new File(dir.toString).listFiles().foreach(_.delete)
-      ds2.to(ParquetSink(new Path("parquet-speed/parquet_speed.pq")), count)
+      ds2.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
     }
   }
 
   for (_ <- 1 to 25) {
-    assert(count == FilePattern("parquet-speed/*").toPaths().size)
+    assert(count == FilePattern("parquet-speed-test/*").toPaths().size)
 
     timed("Reading with ParquetSource ds1") {
-      val actual = ParquetSource("parquet-speed/*").toDataStream().map { row => row }.filter(row => true).size
+      val actual = ParquetSource("parquet-speed-test/*").toDataStream().map { row => row }.filter(row => true).size
       assert(actual == size, s"Expected $size but was $actual")
     }
 
@@ -59,7 +59,7 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
     println("")
 
     timed("Reading with ParquetSource ds1") {
-      val actual = ParquetSource("parquet-speed/*").toDataStream2.map { row => row }.filter(row => true).size
+      val actual = ParquetSource("parquet-speed-test/*").toDataStream2.map { row => row }.filter(row => true).size
       assert(actual == size, s"Expected $size but was $actual")
     }
 
