@@ -553,6 +553,20 @@ trait DataStream2 {
     }
   }
 
+  def drop(n: Int): DataStream2 = new DataStream2 {
+    override def schema: StructType = self.schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      var left = n
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          val todrop = Math.min(left, t.size)
+          left = left - todrop
+          subscriber next t.drop(todrop)
+        }
+      })
+    }
+  }
+
   def listener(_listener: Listener): DataStream2 = new DataStream2 {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
