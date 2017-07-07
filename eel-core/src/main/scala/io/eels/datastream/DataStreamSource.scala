@@ -41,18 +41,19 @@ class DataStreamSource2(source: Source) extends DataStream2 with Using {
       val e = Executors.newSingleThreadExecutor()
       e.submit(new Runnable {
         override def run(): Unit = {
-          Flow.coalesce(flows, Executors.newCachedThreadPool).iterator.foreach { chunk =>
-            s.next(chunk)
+          try {
+            Flow.coalesce(flows, Executors.newCachedThreadPool).iterator.foreach { chunk =>
+              s.next(chunk)
+            }
+            s.completed()
+          } catch {
+            case t: Throwable => s.error(t)
           }
-          s.completed()
         }
       })
       e.shutdown
     }
   }
-
-  def listener(listener: Listener): DataStreamSource2 = ???
-
 }
 
 trait Publisher[T] {

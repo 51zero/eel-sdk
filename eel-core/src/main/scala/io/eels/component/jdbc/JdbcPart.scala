@@ -1,12 +1,13 @@
 package io.eels.component.jdbc
 
+import java.io.Closeable
 import java.sql.{Connection, PreparedStatement}
 
 import com.sksamuel.exts.TryOrLog
 import com.sksamuel.exts.metrics.Timed
 import io.eels.component.FlowableIterator
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.{Part, Row}
+import io.eels.{Flow, Part, Row}
 import io.reactivex.Flowable
 import io.reactivex.disposables.Disposable
 
@@ -55,5 +56,44 @@ class JdbcPart(connFn: () => Connection,
     }
 
     FlowableIterator(iterator, disposable)
+  }
+
+  override def open2(): Flow = {
+
+    val conn = connFn()
+    val stmt = conn.prepareStatement(query)
+    stmt.setFetchSize(fetchSize)
+    bindFn(stmt)
+
+    val rs = timed(s"Executing query $query") {
+      stmt.executeQuery()
+    }
+
+    val schema = schemaFor(dialect, rs)
+
+    val iterator = new Iterator[Row] {
+      override def hasNext: Boolean = rs.next()
+      override def next(): Row = {
+        val values = schema.fieldNames().map { name =>
+          val raw = rs.getObject(name)
+          dialect.sanitize(raw)
+        }
+        Row(schema, values)
+      }
+    }
+
+    val closeable = new Closeable {
+      override def close(): Unit = {
+        logger.debug(s"Closing result set on jdbc part $query")
+        TryOrLog {
+          rs.close()
+        }
+        TryOrLog {
+          conn.close()
+        }
+      }
+    }
+
+    Flow(closeable, iterator.grouped(1000))
   }
 }

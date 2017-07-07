@@ -78,7 +78,10 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
       }
     }
 
+    var failure: Throwable = null
+
     ds.publisher.subscribe(new Subscriber[Seq[Row]] {
+
       override def next(t: Seq[Row]): Unit = {
         executor.execute(new OutputWriterTask(t))
       }
@@ -90,6 +93,7 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
       }
 
       override def error(t: Throwable): Unit = {
+        failure = t
         latch.countDown()
       }
 
@@ -97,6 +101,8 @@ case class SinkAction2(ds: DataStream2, sink: Sink, parallelism: Int) extends Lo
 
     latch.await()
     streams.asScala.foreach(_.close)
+    if (failure != null)
+      throw failure
     total.sum()
   }
 }

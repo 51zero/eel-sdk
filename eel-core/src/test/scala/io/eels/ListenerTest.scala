@@ -65,13 +65,13 @@ class ListenerTest extends WordSpec with Matchers {
       fs.delete(path, false)
       ds.to(CsvSink(path))
 
-      CsvSource(path).toDataStream(new Listener {
+      CsvSource(path).toDataStream2(new Listener {
         override def onNext(value: Row): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
       }).collect
 
-      latch.await(30, TimeUnit.SECONDS) shouldBe true
+      latch.await(5, TimeUnit.SECONDS) shouldBe true
       fs.delete(path, false)
     }
     "call on complete once finished" in {
@@ -81,13 +81,13 @@ class ListenerTest extends WordSpec with Matchers {
       fs.delete(path, false)
       ds.to(CsvSink(path))
 
-      CsvSource(path).toDataStream(new Listener {
+      CsvSource(path).toDataStream2(new Listener {
         override def onNext(value: Row): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = latch.countDown()
       }).collect
 
-      latch.await(30, TimeUnit.SECONDS) shouldBe true
+      latch.await(5, TimeUnit.SECONDS) shouldBe true
       fs.delete(path, false)
     }
   }

@@ -569,11 +569,21 @@ trait DataStream2 {
         self.publisher.subscribe(new Subscriber[Seq[Row]] {
           override def next(t: Seq[Row]): Unit = {
             subscriber.next(t)
-            t.foreach(_listener.onNext)
+            try {
+              t.foreach(_listener.onNext)
+            } catch {
+              case t: Throwable => _listener.onError(t)
+              // todo need to then cancel the subscription
+            }
           }
           override def started(s: Subscription): Unit = {
             subscriber.started(s)
-            _listener.started()
+            try {
+              _listener.started()
+            } catch {
+              case t: Throwable => _listener.onError(t)
+              // todo need to then cancel the subscription
+            }
           }
           override def completed(): Unit = {
             subscriber.completed()
@@ -677,6 +687,21 @@ trait DataStream2 {
     }
   }
 
+  /**
+    * Action which results in all the rows being returned in memory as a Vector.
+    */
+  def collect: Vector[Row] = {
+    val vector = Vector.newBuilder[Row]
+    publisher.subscribe(new Subscriber[Seq[Row]] {
+      override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
+      override def started(subscription: Subscription): Unit = ()
+      override def completed(): Unit = ()
+      override def error(t: Throwable): Unit = ()
+    })
+    vector.result()
+  }
+
+  def count: Long = size
   def size: Long = {
     var count = 0L
     val latch = new CountDownLatch(1)
