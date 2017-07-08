@@ -105,6 +105,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   def partitionsMetaData(dbName: String, tableName: String): Seq[PartitionMetaData] = {
     val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.map { it =>
+      val partition = Partition(keys.zip(it.getValues.asScala).map { case (key, value) => PartitionEntry(key.getName, value) })
       PartitionMetaData(
         new Path(it.getSd.getLocation),
         it.getSd.getLocation,
@@ -112,7 +113,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
         it.getSd.getOutputFormat,
         it.getCreateTime,
         it.getLastAccessTime,
-        keys.zip(it.getValues.asScala).map { case (key, value) => PartitionEntry(key.getName, value) }
+        partition
       )
     }
   }

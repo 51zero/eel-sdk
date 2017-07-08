@@ -10,24 +10,25 @@ object Build extends Build {
   val org = "io.eels"
 
   val AvroVersion = "1.8.2"
+  val ConfigVersion = "1.3.0"
+  val Elastic4sVersion = "5.4.6"
   val ExtsVersion = "1.49.0"
   val H2Version = "1.4.196"
   val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
   val JacksonVersion = "2.8.9"
+  val KafkaVersion = "0.10.2.1"
+  val KuduVersion = "1.4.0"
+  val Log4jVersion = "2.7"
   val MetricsVersion = "3.1.2"
   val MysqlVersion = "5.1.42"
   val OrcVersion = "1.4.0"
   val ParquetVersion = "1.9.0"
+  val RxJavaVersion = "2.1.1"
   val ScalatestVersion = "3.0.3"
   val Slf4jVersion = "1.7.12"
-  val UnivocityVersion = "2.4.1"
-  val ConfigVersion = "1.3.0"
-  val KafkaVersion = "0.10.2.1"
-  val KuduVersion = "1.4.0"
-  val Log4jVersion = "2.7"
   val SparkVersion = "2.1.1"
-  val RxJavaVersion = "2.1.1"
+  val UnivocityVersion = "2.4.1"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -58,10 +59,16 @@ object Build extends Build {
     )
   )
 
+  val esSettings = Seq(
+    libraryDependencies ++= Seq(
+      "com.sksamuel.elastic4s" %% "elastic4s-http" % Elastic4sVersion
+    )
+  )
+
   val rootSettings = Seq(
     organization := org,
-    scalaVersion := "2.11.8",
-    crossScalaVersions := Seq("2.11.8"),
+    scalaVersion := "2.11.11",
+    crossScalaVersions := Seq("2.11.11"),
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
     publishArtifact in Test := false,
@@ -138,7 +145,8 @@ object Build extends Build {
       orc,
       hive,
       kafka,
-      kudu)
+      kudu,
+      elasticsearch)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -166,5 +174,11 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(kuduSettings: _*)
     .settings(name := "eel-kudu")
+    .dependsOn(core)
+
+  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
+    .settings(rootSettings: _*)
+    .settings(esSettings: _*)
+    .settings(name := "eel-elasticsearch")
     .dependsOn(core)
 }
