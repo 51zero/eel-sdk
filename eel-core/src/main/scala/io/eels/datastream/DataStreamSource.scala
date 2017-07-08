@@ -37,25 +37,25 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
               override def completed(): Unit = {
                 logger.debug(s"Part $k has finished")
                 if (finished.incrementAndGet == parts.size)
-                  queue.put(Nil)
+                  queue.put(Row.Sentinel)
               }
               override def error(t: Throwable): Unit = {
                 logger.error(s"Error reading part $k", t)
                 if (finished.incrementAndGet == parts.size)
-                  queue.put(Nil)
+                  queue.put(Row.Sentinel)
               }
             })
           } catch {
             case t: Throwable =>
               logger.error(s"Error subscribing to part $k", t)
-              queue.put(Nil)
+              queue.put(Row.Sentinel)
           }
         }
       })
     }
 
     try {
-      BlockingQueueConcurrentIterator(queue, Nil).foreach(s.next)
+      BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach(s.next)
       s.completed()
     } catch {
       case t: Throwable => s.error(t)

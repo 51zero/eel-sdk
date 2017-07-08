@@ -5,7 +5,7 @@ import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.schema.StructType
+import io.eels.schema.{Field, StructType}
 import io.eels.{Row, RowOutputStream}
 
 class JdbcWriter(schema: StructType,
@@ -20,6 +20,8 @@ class JdbcWriter(schema: StructType,
                  bufferSize: Int) extends RowOutputStream with Logging {
   logger.info(s"Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
   require(bufferSize >= batchSize)
+
+  private val Sentinel = Row(StructType(Field("____jdbcsentinel")), Seq(null))
 
   import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
@@ -45,11 +47,11 @@ class JdbcWriter(schema: StructType,
       logger.debug("Starting JdbcWriter Coordinator")
       // once we receive the pill its all over for the writer
       Iterator.continually(buffer.take)
-        .takeWhile(_ != Row.Sentinel)
+        .takeWhile(_ != Sentinel)
         .grouped(batchSize).withPartial(true)
         .foreach { batch =>
           inserter.insertBatch(batch)
-      }
+        }
       logger.debug("Write completed; shutting down coordinator")
     } catch {
       case t: Throwable =>
@@ -61,7 +63,7 @@ class JdbcWriter(schema: StructType,
   coordinatorPool.shutdown()
 
   override def close(): Unit = {
-    buffer.put(Row.Sentinel)
+    buffer.put(Sentinel)
     logger.info("Closing JDBC Writer... waiting on writes to finish")
     coordinatorPool.awaitTermination(1, TimeUnit.DAYS)
   }

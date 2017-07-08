@@ -3,7 +3,7 @@ package io.eels
 import io.eels.schema.{Field, StringType, StructType}
 
 object Row {
-  val Sentinel = new Row(StructType(Field("a", StringType)), Array(null))
+  val Sentinel = List(Row(StructType(Field("__sentinel__", StringType)), Array(null)))
   def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
   def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
 }

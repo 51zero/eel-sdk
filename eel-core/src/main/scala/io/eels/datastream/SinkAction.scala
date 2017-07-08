@@ -12,7 +12,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
   def execute(): Long = {
 
     val schema = ds.schema
-    val total = new LongAdder
+    val adder = new LongAdder
 
     val latch = new CountDownLatch(parallelism)
     val queue = new LinkedBlockingQueue[Seq[Row]](1000)
@@ -22,8 +22,11 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
         logger.debug(s"Starting output stream $k")
         override def run(): Unit = {
           try {
-            BlockingQueueConcurrentIterator(queue, Nil).foreach { chunk =>
-              chunk.foreach(stream.write)
+            BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { chunk =>
+              chunk.foreach { row =>
+                stream.write(row)
+                adder.increment()
+              }
             }
           } catch {
             case t: Throwable => logger.error("Error writing out", t)
@@ -41,9 +44,11 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
       override def next(t: Seq[Row]): Unit = {
         queue.put(t)
       }
-      override def completed(): Unit = queue.put(Nil)
+      override def completed(): Unit = {
+        queue.put(Row.Sentinel)
+      }
       override def error(t: Throwable): Unit = {
-        queue.put(Nil)
+        queue.put(Row.Sentinel)
         throw t
       }
     })
@@ -51,6 +56,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     // at this point, the subscriber has returned, and now we need to wait until the
     // queue has been emptied by the io threads
     latch.await()
-    total.sum()
+    logger.info(s"Sink has written ${adder.sum} rows")
+    adder.sum()
   }
 }

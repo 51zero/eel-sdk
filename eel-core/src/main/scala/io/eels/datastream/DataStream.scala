@@ -539,7 +539,17 @@ object DataStream {
 
   def fromRows(_schema: StructType, first: Row, rest: Row*): DataStream = fromRows(_schema, first +: rest)
 
-  def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = fromIterator(_schema, rows.iterator)
+  def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
+    override def schema: StructType = _schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      try {
+        rows.grouped(1000).foreach(subscriber.next)
+        subscriber.completed()
+      } catch {
+        case t: Throwable => subscriber.error(t)
+      }
+    }
+  }
 
   /**
     * Create an in memory DataStream from the given Seq of values, and schema.
