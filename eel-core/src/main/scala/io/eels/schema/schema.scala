@@ -118,8 +118,11 @@ object Scale {
 }
 
 case class StructType(fields: Vector[Field]) extends DataType {
-  require(fields.map(_.name).distinct.length == fields.size, "StructType cannot have duplicated field names")
   require(fields.nonEmpty, "StructType cannot be empty")
+  val dups = fields.map(_.name).groupBy(identity).collect { case (x, list) if list.size > 1 => x }
+  if (dups.nonEmpty) {
+    sys.error(s"StructType cannot have duplicated field names: ${dups.mkString(", ")}")
+  }
 
   val size: Int = fields.size
 

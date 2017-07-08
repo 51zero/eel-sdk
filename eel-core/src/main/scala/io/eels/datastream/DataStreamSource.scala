@@ -96,9 +96,9 @@ trait Subscriber[T] {
   // notifies the subscriber that the publisher is about to begin
   // the given cancellable can be used to stop the publisher
   def starting(c: Cancellable)
-  def completed()
   def error(t: Throwable)
   def next(t: T)
+  def completed()
 }
 
 class DelegateSubscriber[T](delegate: Subscriber[T]) extends Subscriber[T] {

@@ -143,6 +143,32 @@ trait DataStream extends Logging {
     }
   }
 
+  def dropWhile(p: Row => Boolean): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      val dropping = new AtomicBoolean(true)
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+
+        var cancellable: Cancellable = null
+        override def starting(c: Cancellable): Unit = cancellable = c
+
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.filter { row =>
+            val skip = dropping.get && p(row)
+            if (skip) false
+            else {
+              dropping.set(false)
+              true
+            }
+          }
+          subscriber.next(ts)
+        }
+      })
+    }
+  }
+
+  def dropWhile(fieldName: String, p: Any => Boolean): DataStream = dropWhile(row => p(row.get(fieldName)))
+
   // allows aggregations on the entire dataset
   def aggregated(): GroupedDataStream = new GroupedDataStream {
     override def source: DataStream = self
@@ -288,8 +314,27 @@ trait DataStream extends Logging {
     * datastream as the receiver.
     */
   def join(key: String, other: DataStream): DataStream = new DataStream {
-    override def schema: StructType = ???
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ???
+    override def schema: StructType = {
+      val a = self.schema
+      val b = other.schema.removeField(key)
+      a.concat(b)
+    }
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+
+        val _schema = schema
+        val keyIndex = _schema.indexOf(key)
+        // this is a map of the key value to the original row with the key removed
+        val map = other.collect.map { row => row(keyIndex) -> row.values.patch(keyIndex, Nil, 1) }.toMap
+
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.map { row =>
+            Row(_schema, row.values ++ map(row(key)))
+          }
+          subscriber.next(ts)
+        }
+      })
+    }
   }
 
   def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
@@ -419,7 +464,21 @@ trait DataStream extends Logging {
   def union(other: DataStream): DataStream = new DataStream {
     // todo check schemas are compatible
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ???
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new Subscriber[Seq[Row]] {
+        override def starting(c: Cancellable): Unit = subscriber.starting(c)
+        override def next(t: Seq[Row]): Unit = subscriber.next(t)
+        override def error(t: Throwable): Unit = subscriber.error(t)
+        override def completed(): Unit = {
+          other.subscribe(new Subscriber[Seq[Row]] {
+            override def next(t: Seq[Row]): Unit = subscriber.next(t)
+            override def error(t: Throwable): Unit = subscriber.error(t)
+            override def starting(c: Cancellable): Unit = ()
+            override def completed(): Unit = subscriber.completed()
+          })
+        }
+      })
+    }
   }
 
   def projectionExpression(expr: String): DataStream = projection(expr.split(',').map(_.trim()))
