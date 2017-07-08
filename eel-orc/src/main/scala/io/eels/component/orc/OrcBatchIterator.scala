@@ -61,7 +61,7 @@ object OrcBatchIterator extends Logging {
         val values = deserializer.readFromVector(rowIndex, vector)
         val row = Row(schema, values)
         if (rowLevelFilter && predicate.isDefined) {
-          if (predicate.get.apply(row)) {
+          if (predicate.get.eval(row)) {
             rows += row
           }
         } else {

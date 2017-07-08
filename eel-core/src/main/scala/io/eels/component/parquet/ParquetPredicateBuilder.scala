@@ -1,11 +1,18 @@
 package io.eels.component.parquet
 
-import io.eels._
-import org.apache.parquet.filter2.predicate.{FilterApi, FilterPredicate}
+import io.eels.{AndPredicate, EqualsPredicate, GroupStats, GtPredicate, GtePredicate, LtPredicate, LtePredicate, NotEqualsPredicate, NotPredicate, OrPredicate, Predicate, PredicateBuilder}
+import org.apache.parquet.filter2.predicate.{FilterApi, FilterPredicate, UserDefinedPredicate}
 import org.apache.parquet.io.api.Binary
+import org.apache.parquet.filter2.predicate.{Statistics => Stats}
 
 // builds parquet predicates from eel predicates
 object ParquetPredicateBuilder extends PredicateBuilder[FilterPredicate] {
+
+  def udp[T](u: io.eels.UserDefinedPredicate[T]): UserDefinedPredicate[T] with Serializable = new UserDefinedPredicate[T] with Serializable {
+    override def canDrop(stats: Stats[T]): Boolean = u.canDropGroup(GroupStats[T](stats.getMin, stats.getMax))
+    override def inverseCanDrop(stats: Stats[T]): Boolean = u.canDropGroup(GroupStats[T](stats.getMin, stats.getMax))
+    override def keep(value: T): Boolean = u.keep(value)
+  }
 
   override def build(predicate: Predicate): FilterPredicate = {
     predicate match {
@@ -14,6 +21,8 @@ object ParquetPredicateBuilder extends PredicateBuilder[FilterPredicate] {
       case AndPredicate(predicates) => predicates.map(build).reduceLeft((a, b) => FilterApi.and(a, b))
 
       case NotPredicate(inner) => FilterApi.not(build(inner))
+
+      case u: io.eels.UserDefinedPredicate[_] => FilterApi.userDefined(FilterApi.binaryColumn(u.name), udp[Binary](u.asInstanceOf[io.eels.UserDefinedPredicate[Binary]]))
 
       case NotEqualsPredicate(name: String, value: String) => FilterApi.notEq(FilterApi.binaryColumn(name), Binary.fromConstantByteArray(value.toString().getBytes))
       case NotEqualsPredicate(name: String, value: Long) => FilterApi.notEq(FilterApi.longColumn(name), java.lang.Long.valueOf(value))
