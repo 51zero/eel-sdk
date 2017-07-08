@@ -1,6 +1,6 @@
 package io.eels.datastream
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 import java.util.concurrent.{Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.Logging
@@ -24,27 +24,52 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
 
     val finished = new AtomicLong(0)
     val parts = source.parts()
+    val running = new AtomicBoolean(true)
+
+    val cancellable = new Cancellable {
+      override def cancel(): Unit = running.set(false)
+    }
+
+    s.starting(cancellable)
+
+    class PartSubscriber(name: String) extends Subscriber[Seq[Row]] {
+
+      var cancellable: Cancellable = null
+
+      override def starting(c: Cancellable): Unit = {
+        logger.debug(s"Starting reads for part $name")
+        cancellable = c
+      }
+
+      override def completed(): Unit = {
+        logger.debug(s"Part $name has finished")
+        if (finished.incrementAndGet == parts.size)
+          queue.put(Row.Sentinel)
+      }
+
+      override def error(t: Throwable): Unit = {
+        logger.error(s"Error reading part $name", t)
+        cancellable.cancel()
+        if (finished.incrementAndGet == parts.size)
+          queue.put(Row.Sentinel)
+      }
+
+      override def next(t: Seq[Row]): Unit = {
+        queue.put(t)
+        // if we've been told to stop running, then we'll cancel downstream
+        if (!running.get) {
+          logger.debug(s"Cancelling part $name", t)
+          cancellable.cancel()
+        }
+      }
+    }
 
     // each part should be read in its own io thread
     parts.zipWithIndex.foreach { case (part, k) =>
       ExecutorInstances.io.execute(new Runnable {
         override def run(): Unit = {
           try {
-            part.subscribe(new Subscriber[Seq[Row]] {
-              logger.debug(s"Starting reads for part $k")
-              override def next(t: Seq[Row]): Unit = queue.put(t)
-              override def started(c: Cancellable): Unit = ()
-              override def completed(): Unit = {
-                logger.debug(s"Part $k has finished")
-                if (finished.incrementAndGet == parts.size)
-                  queue.put(Row.Sentinel)
-              }
-              override def error(t: Throwable): Unit = {
-                logger.error(s"Error reading part $k", t)
-                if (finished.incrementAndGet == parts.size)
-                  queue.put(Row.Sentinel)
-              }
-            })
+            part.subscribe(new PartSubscriber(k.toString))
           } catch {
             case t: Throwable =>
               logger.error(s"Error subscribing to part $k", t)
@@ -68,14 +93,16 @@ trait Cancellable {
 }
 
 trait Subscriber[T] {
-  def started(c: Cancellable)
+  // notifies the subscriber that the publisher is about to begin
+  // the given cancellable can be used to stop the publisher
+  def starting(c: Cancellable)
   def completed()
   def error(t: Throwable)
   def next(t: T)
 }
 
 class DelegateSubscriber[T](delegate: Subscriber[T]) extends Subscriber[T] {
-  override def started(c: Cancellable): Unit = delegate.started(c)
+  override def starting(c: Cancellable): Unit = delegate.starting(c)
   override def completed(): Unit = delegate.completed()
   override def error(t: Throwable): Unit = delegate.error(t)
   override def next(t: T): Unit = delegate.next(t)

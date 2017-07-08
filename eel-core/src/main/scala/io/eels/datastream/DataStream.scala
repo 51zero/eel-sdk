@@ -150,8 +150,8 @@ trait DataStream extends Logging {
             // todo need to then cancel the subscription
           }
         }
-        override def started(s: Cancellable): Unit = {
-          subscriber.started(s)
+        override def starting(s: Cancellable): Unit = {
+          subscriber.starting(s)
           try {
             _listener.started()
           } catch {
@@ -451,7 +451,7 @@ trait DataStream extends Logging {
     val vector = Vector.newBuilder[Row]
     subscribe(new Subscriber[Seq[Row]] {
       override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
-      override def started(subscription: Cancellable): Unit = ()
+      override def starting(subscription: Cancellable): Unit = ()
       override def completed(): Unit = ()
       override def error(t: Throwable): Unit = ()
     })
@@ -487,7 +487,7 @@ trait DataStream extends Logging {
     val latch = new CountDownLatch(1)
     subscribe(new Subscriber[Seq[Row]] {
       override def next(t: Seq[Row]): Unit = count = count + t.size
-      override def started(subscription: Cancellable): Unit = ()
+      override def starting(subscription: Cancellable): Unit = ()
       override def completed(): Unit = latch.countDown()
       override def error(t: Throwable): Unit = ()
     })

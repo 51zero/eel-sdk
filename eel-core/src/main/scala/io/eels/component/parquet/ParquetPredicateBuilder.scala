@@ -8,7 +8,7 @@ import org.apache.parquet.filter2.predicate.{Statistics => Stats}
 // builds parquet predicates from eel predicates
 object ParquetPredicateBuilder extends PredicateBuilder[FilterPredicate] {
 
-  def udp[T](u: io.eels.UserDefinedPredicate[T]): UserDefinedPredicate[T] with Serializable = new UserDefinedPredicate[T] with Serializable {
+  def udp[T <: Comparable[T]](u: io.eels.UserDefinedPredicate[T]): UserDefinedPredicate[T] with Serializable = new UserDefinedPredicate[T] with Serializable {
     override def canDrop(stats: Stats[T]): Boolean = u.canDropGroup(GroupStats[T](stats.getMin, stats.getMax))
     override def inverseCanDrop(stats: Stats[T]): Boolean = u.canDropGroup(GroupStats[T](stats.getMin, stats.getMax))
     override def keep(value: T): Boolean = u.keep(value)

@@ -62,7 +62,7 @@ class HiveFilePart(val dialect: HiveDialect,
         }
         subscriber.next(aligned)
       }
-      override def started(c: Cancellable): Unit = subscriber.started(c)
+      override def starting(c: Cancellable): Unit = subscriber.starting(c)
       override def completed(): Unit = subscriber.completed()
       override def error(t: Throwable): Unit = subscriber.error(t)
     })

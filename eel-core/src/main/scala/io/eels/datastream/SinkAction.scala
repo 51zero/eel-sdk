@@ -44,7 +44,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     }
 
     ds.subscribe(new Subscriber[Seq[Row]] {
-      override def started(s: Cancellable): Unit = ()
+      override def starting(s: Cancellable): Unit = ()
       override def next(t: Seq[Row]): Unit = {
         queue.put(t)
       }
