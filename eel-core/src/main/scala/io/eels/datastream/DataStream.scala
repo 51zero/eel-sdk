@@ -3,6 +3,7 @@ package io.eels.datastream
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 import java.util.concurrent.{CountDownLatch, Executor}
 
+import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{Listener, Row, Sink}
 
@@ -26,7 +27,7 @@ import scala.language.implicitConversions
   * to individual files, again allowing parallelization.
   *
   */
-trait DataStream {
+trait DataStream extends Logging {
   self =>
 
   def schema: StructType
@@ -144,7 +145,9 @@ trait DataStream {
           try {
             t.foreach(_listener.onNext)
           } catch {
-            case t: Throwable => _listener.onError(t)
+            case t: Throwable =>
+              subscriber.error(t)
+              _listener.onError(t)
             // todo need to then cancel the subscription
           }
         }
@@ -153,7 +156,9 @@ trait DataStream {
           try {
             _listener.started()
           } catch {
-            case t: Throwable => _listener.onError(t)
+            case t: Throwable =>
+              subscriber.error(t)
+              _listener.onError(t)
             // todo need to then cancel the subscription
           }
         }

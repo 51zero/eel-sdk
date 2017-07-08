@@ -8,6 +8,8 @@ import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.datastream.Subscriber
 import io.eels.{Part, Row}
 
+import scala.collection.mutable.ArrayBuffer
+
 class JdbcPart(connFn: () => Connection,
                query: String,
                bindFn: (PreparedStatement) => Unit = stmt => (),
@@ -30,19 +32,24 @@ class JdbcPart(connFn: () => Connection,
 
         val schema = schemaFor(dialect, rs)
 
-        val iterator = new Iterator[Row] {
-          override def hasNext: Boolean = rs.next()
-          override def next(): Row = {
-            val values = schema.fieldNames().map { name =>
-              val raw = rs.getObject(name)
-              dialect.sanitize(raw)
-            }
-            Row(schema, values)
+        val buffer = new ArrayBuffer[Row](1000)
+        while (rs.next) {
+          val values = schema.fieldNames().map { name =>
+            val raw = rs.getObject(name)
+            dialect.sanitize(raw)
+          }
+          buffer append Row(schema, values)
+          if (buffer.size == 1000) {
+            subscriber.next(buffer.toVector)
+            buffer.clear()
           }
         }
 
-        iterator.grouped(1000).foreach(subscriber.next)
+        if (buffer.nonEmpty)
+          subscriber.next(buffer.toVector)
+
         subscriber.completed()
+
       } catch {
         case t: Throwable => subscriber.error(t)
       }

@@ -12,11 +12,10 @@ import io.eels.schema.{Field, StructType}
 object JdbcSchemaFns extends Logging {
 
   def fromJdbcResultset(rs: ResultSet, dialect: JdbcDialect): StructType = {
-    logger.debug("Building frame schema from resultset")
 
     val md = rs.getMetaData
     val columnCount = md.getColumnCount
-    logger.debug(s"Resultset column count is $columnCount")
+    logger.trace(s"Resultset column count is $columnCount")
 
     val cols = (1 to columnCount).map { k =>
       Field(
