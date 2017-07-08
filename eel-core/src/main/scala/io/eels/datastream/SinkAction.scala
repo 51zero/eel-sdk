@@ -17,6 +17,8 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val latch = new CountDownLatch(parallelism)
     val queue = new LinkedBlockingQueue[Seq[Row]](1000)
 
+    var failure: Throwable = null
+
     sink.open(schema, parallelism).zipWithIndex.foreach { case (stream, k) =>
       ExecutorInstances.io.submit(new Runnable {
         logger.debug(s"Starting output stream $k")
@@ -29,7 +31,9 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
               }
             }
           } catch {
-            case t: Throwable => logger.error("Error writing out", t)
+            case t: Throwable =>
+              logger.error("Error writing to stream", t)
+              failure = t
           } finally {
             logger.debug(s"Closing output stream $k")
             stream.close()
@@ -57,6 +61,8 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     // queue has been emptied by the io threads
     latch.await()
     logger.info(s"Sink has written ${adder.sum} rows")
+    if (failure != null)
+      throw failure
     adder.sum()
   }
 }
