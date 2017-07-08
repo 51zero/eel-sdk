@@ -46,7 +46,7 @@ class ParquetHiveDialect extends HiveDialect with Logging {
 
       private val _records = new AtomicInteger(0)
       logger.debug(s"Creating parquet writer at $path with schema $schema")
-      private val writer = RowParquetWriterFn(path, schema, metadata)
+      private val writer = RowParquetWriterFn(path, schema, metadata, true)
 
       override def write(row: Row) {
         require(row.values.nonEmpty, "Attempting to write an empty row")
