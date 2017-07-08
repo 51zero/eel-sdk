@@ -15,7 +15,8 @@ import org.apache.parquet.schema.MessageType
 class ParquetPart(path: Path,
                   predicate: Option[Predicate],
                   projection: Seq[String],
-                  caseSensitive: Boolean)
+                  caseSensitive: Boolean,
+                  dictionaryFiltering: Boolean)
                  (implicit conf: Configuration) extends Part with Logging with Using {
 
   def readSchema: Option[MessageType] = {
@@ -41,7 +42,7 @@ class ParquetPart(path: Path,
   }
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-    using(RowParquetReaderFn(path, predicate, readSchema)) { reader =>
+    using(RowParquetReaderFn(path, predicate, readSchema, dictionaryFiltering)) { reader =>
       try {
         ParquetIterator(reader).grouped(1000).foreach(subscriber.next)
         subscriber.completed()

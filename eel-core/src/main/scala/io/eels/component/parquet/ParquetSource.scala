@@ -24,12 +24,14 @@ object ParquetSource {
 case class ParquetSource(pattern: FilePattern,
                          predicate: Option[Predicate] = None,
                          projection: Seq[String] = Nil,
+                         dictionaryFiltering: Boolean = true,
                          caseSensitive: Boolean = true)
                         (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
   logger.debug(s"Created parquet source with pattern=$pattern")
 
   lazy val paths: List[Path] = pattern.toPaths()
 
+  def withDictionaryFiltering(dictionary: Boolean): ParquetSource = copy(dictionaryFiltering = dictionary)
   def withCaseSensitivity(caseSensitive: Boolean): ParquetSource = copy(caseSensitive = caseSensitive)
   def withPredicate(pred: => Predicate): ParquetSource = copy(predicate = pred.some)
   def withProjection(first: String, rest: String*): ParquetSource = withProjection(first +: rest)
@@ -48,7 +50,7 @@ case class ParquetSource(pattern: FilePattern,
 
   // todo should take the merged schema from all files
   lazy val schema: StructType = {
-    using(RowParquetReaderFn(paths.head, None, None)) { reader =>
+    using(RowParquetReaderFn(paths.head, None, None, false)) { reader =>
       val row = Option(reader.read).getOrElse {
         sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
       }
@@ -78,7 +80,7 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts(): List[Part] = {
     logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
-    paths.map { it => new ParquetPart(it, predicate, projection, caseSensitive) }
+    paths.map { it => new ParquetPart(it, predicate, projection, caseSensitive, dictionaryFiltering) }
   }
 
   def footers(): List[Footer] = {

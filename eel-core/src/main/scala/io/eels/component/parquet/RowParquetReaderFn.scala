@@ -26,7 +26,8 @@ object RowParquetReaderFn extends Logging {
     */
   def apply(path: Path,
             predicate: Option[Predicate],
-            readSchema: Option[Type])(implicit conf: Configuration): ParquetReader[Row] = {
+            readSchema: Option[Type],
+            dictionaryFiltering: Boolean)(implicit conf: Configuration): ParquetReader[Row] = {
     logger.debug(s"Opening parquet reader for $path")
 
     // The parquet reader can use a projection by setting a projected schema onto the supplied conf object
@@ -35,7 +36,7 @@ object RowParquetReaderFn extends Logging {
       readSchema.foreach { it =>
         newconf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
-      newconf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, "true")
+      newconf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, dictionaryFiltering.toString)
       newconf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
       newconf
     }

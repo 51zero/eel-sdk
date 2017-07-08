@@ -9,10 +9,12 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 case class ParquetSink(path: Path,
                        overwrite: Boolean = false,
                        permission: Option[FsPermission] = None,
+                       dictionary: Boolean = true,
                        inheritPermissions: Option[Boolean] = None,
                        metadata: Map[String, String] = Map.empty)
                       (implicit fs: FileSystem) extends Sink with Logging {
 
+  def withDictionary(dictionary: Boolean): ParquetSink = copy(dictionary = dictionary)
   def withMetaData(map: Map[String, String]): ParquetSink = copy(metadata = map)
   def withOverwrite(overwrite: Boolean): ParquetSink = copy(overwrite = overwrite)
   def withPermission(permission: FsPermission): ParquetSink = copy(permission = Option(permission))
@@ -23,7 +25,7 @@ case class ParquetSink(path: Path,
     if (overwrite && fs.exists(path))
       fs.delete(path, false)
 
-    val writer = RowParquetWriterFn(path, schema, metadata)
+    val writer = RowParquetWriterFn(path, schema, metadata, dictionary)
 
     override def write(row: Row): Unit = {
       writer.write(row)

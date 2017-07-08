@@ -92,9 +92,11 @@ case class GtePredicate(name: String, value: Any) extends NamedPredicate(name) {
 
 object Predicate {
 
+  def not(predicate: Predicate) = NotPredicate(predicate)
   def or(left: Predicate, right: Predicate) = OrPredicate(Seq(left, right))
   def and(left: Predicate, right: Predicate) = AndPredicate(Seq(left, right))
   def equals(name: String, value: Any) = EqualsPredicate(name, value)
+  def notEquals(name: String, value: Any) = NotEqualsPredicate(name, value)
   def gt(name: String, value: Any) = GtPredicate(name, value)
   def gte(name: String, value: Any) = GtePredicate(name, value)
   def lt(name: String, value: Any) = LtPredicate(name, value)

@@ -4,6 +4,7 @@ import io.eels.Row
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
+import org.apache.parquet.column.ParquetProperties
 import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.hadoop.{ParquetFileWriter, ParquetWriter}
 import org.apache.parquet.schema.MessageType
@@ -25,15 +26,16 @@ object RowParquetWriterFn {
     override def self(): RowParquetWriterBuilder = this
   }
 
-  def apply(path: Path, schema: StructType, metadata: Map[String, String]): ParquetWriter[Row] = {
+  def apply(path: Path, schema: StructType, metadata: Map[String, String], dictionary: Boolean): ParquetWriter[Row] = {
     val config = ParquetWriterConfig()
     val messageType = ParquetSchemaFns.toParquetMessageType(schema)
     new RowParquetWriterBuilder(path, messageType, metadata)
       .withCompressionCodec(config.compressionCodec)
-      .withDictionaryEncoding(config.enableDictionary)
+      .withDictionaryEncoding(dictionary)
       .withRowGroupSize(config.blockSize)
       .withPageSize(config.pageSize)
       .withWriteMode(ParquetFileWriter.Mode.CREATE)
+      .withWriterVersion(ParquetProperties.DEFAULT_WRITER_VERSION)
       .withValidation(config.validating)
       .build()
   }
