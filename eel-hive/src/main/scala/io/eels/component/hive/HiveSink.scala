@@ -12,13 +12,11 @@ import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
 
 object HiveSink {
-  val CaseErrorMsg = "Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase all the values. This might lead to subtle case bugs. It is recommended, but not required, that you explicitly convert schemas to lower case before serializing to hive"
-
   val config: Config = ConfigFactory.load()
   val bufferSize = config.getInt("eel.hive.bufferSize")
   val schemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
   val dynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
-  val errorOnUpperCase = config.getBoolean("eel.hive.sink.errorOnUpperCase")
+  val upperCaseAction = config.getString("eel.hive.sink.upper-case-action")
 }
 
 case class HiveSink(dbName: String,
@@ -82,8 +80,17 @@ case class HiveSink(dbName: String,
     login()
 
     if (containsUpperCase(schema)) {
-      if (errorOnUpperCase) sys.error(HiveSink.CaseErrorMsg)
-      else logger.warn(HiveSink.CaseErrorMsg)
+      upperCaseAction match {
+        case "error" =>
+          sys.error("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase the fields, which could lead to subtle case sensitivity bugs. " +
+            "It is recommended that you lower case the schema before writing (eg, datastream.withLowerCaseSchema). " +
+            "To disable this exception, set eel.hive.sink.upper-case-action=warn or eel.hive.sink.upper-case-action=none")
+        case "warn" =>
+          logger.warn("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase the fields, which could lead to subtle case sensitivity bugs. " +
+            "It is recommended that you lower case the schema before writing (eg, datastream.withLowerCaseSchema). " +
+          "To disable this warning, set eel.hive.sink.upper-case-action=none")
+        case _ =>
+      }
     }
 
     if (createTable) {
@@ -104,6 +111,7 @@ case class HiveSink(dbName: String,
     }
 
     val metastoreSchema = ops.schema(dbName, tableName)
+    logger.trace("Metastore schema" + metastoreSchema)
 
     new HiveRowOutputStream(
       schema,

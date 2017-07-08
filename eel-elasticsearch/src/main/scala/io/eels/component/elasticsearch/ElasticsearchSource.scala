@@ -5,10 +5,13 @@ import com.sksamuel.elastic4s.http.search.SearchIterator
 import io.eels.datastream.Subscriber
 import io.eels.schema.{Field, StructType}
 import io.eels.{Part, Row, Source}
+import scala.concurrent.duration._
 
 class ElasticsearchSource(index: String)(implicit client: HttpClient) extends Source {
 
   import com.sksamuel.elastic4s.http.ElasticDsl._
+
+  implicit val duration = 5.minutes
 
   override def schema: StructType = {
     val resp = client.execute {
@@ -24,6 +27,8 @@ class ElasticsearchSource(index: String)(implicit client: HttpClient) extends So
 class ElasticsearchPart(index: String)(implicit client: HttpClient) extends Part {
 
   import com.sksamuel.elastic4s.http.ElasticDsl._
+
+  implicit val duration = 5.minutes
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
