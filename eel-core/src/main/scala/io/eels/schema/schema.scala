@@ -153,7 +153,9 @@ case class StructType(fields: Vector[Field]) extends DataType {
   }
 
   def field(pos: Int): Field = fields.apply(pos)
-  def field(name: String): Option[Field] = fields.find(_.name == name)
+  def field(name: String, caseSensitive: Boolean = true): Option[Field] = {
+    if (caseSensitive) fields.find(_.name == name) else fields.find(_.name.toLowerCase == name.toLowerCase)
+  }
 
   def toLowerCase(): StructType = copy(fields = fields.map(_.toLowerCase()))
 

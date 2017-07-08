@@ -25,7 +25,7 @@ class ParquetHiveDialect extends HiveDialect with Logging {
       // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
       try {
         val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
-        val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
+        val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)
         val iterator = ParquetIterator(reader)
         iterator.grouped(1000).foreach(subscriber.next)
         subscriber.completed()

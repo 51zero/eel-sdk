@@ -5,10 +5,8 @@ import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
-import org.apache.parquet.filter2.predicate
-import org.apache.parquet.filter2.predicate.UserDefinedPredicate
-import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
 import org.apache.parquet.hadoop.api.ReadSupport
+import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
 import org.apache.parquet.schema.Type
 
 /**
@@ -46,12 +44,6 @@ object RowParquetReaderFn extends Logging {
     def filter(): FilterCompat.Filter = predicate.map(ParquetPredicateBuilder.build)
       .map(FilterCompat.get)
       .getOrElse(FilterCompat.NOOP)
-
-    val pred = new UserDefinedPredicate[String] {
-      override def canDrop(statistics: org.apache.parquet.filter2.predicate.Statistics[String]): Boolean = false
-      override def inverseCanDrop(statistics: org.apache.parquet.filter2.predicate.Statistics[String]): Boolean = false
-      override def keep(value: String): Boolean = value == "sammy"
-    }
 
     ParquetReader.builder(new RowReadSupport, path)
       .withConf(configuration())

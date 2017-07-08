@@ -23,12 +23,14 @@ object ParquetSource {
 
 case class ParquetSource(pattern: FilePattern,
                          predicate: Option[Predicate] = None,
-                         projection: Seq[String] = Nil)
+                         projection: Seq[String] = Nil,
+                         caseSensitive: Boolean = true)
                         (implicit fs: FileSystem, conf: Configuration) extends Source with Logging with Using {
   logger.debug(s"Created parquet source with pattern=$pattern")
 
   lazy val paths: List[Path] = pattern.toPaths()
 
+  def withCaseSensitivity(caseSensitive: Boolean): ParquetSource = copy(caseSensitive = caseSensitive)
   def withPredicate(pred: => Predicate): ParquetSource = copy(predicate = pred.some)
   def withProjection(first: String, rest: String*): ParquetSource = withProjection(first +: rest)
   def withProjection(fields: Seq[String]): ParquetSource = {
@@ -76,7 +78,7 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts(): List[Part] = {
     logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
-    paths.map { it => new ParquetPart(it, predicate, projection) }
+    paths.map { it => new ParquetPart(it, predicate, projection, caseSensitive) }
   }
 
   def footers(): List[Footer] = {

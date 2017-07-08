@@ -14,16 +14,29 @@ import org.apache.parquet.schema.MessageType
 
 class ParquetPart(path: Path,
                   predicate: Option[Predicate],
-                  projection: Seq[String])
+                  projection: Seq[String],
+                  caseSensitive: Boolean)
                  (implicit conf: Configuration) extends Part with Logging with Using {
 
   def readSchema: Option[MessageType] = {
     if (projection.isEmpty) None
     else {
-      val messageType = ParquetFileReader.open(conf, path).getFileMetaData.getSchema
-      val structType = ParquetSchemaFns.fromParquetMessageType(messageType)
-      val projected = StructType(structType.fields.filter(field => projection.contains(field.name)))
-      ParquetSchemaFns.toParquetMessageType(projected).some
+
+      val fileSchema = ParquetFileReader.open(conf, path).getFileMetaData.getSchema
+      val structType = ParquetSchemaFns.fromParquetMessageType(fileSchema)
+
+      if (caseSensitive) {
+        assert(
+          structType.fieldNames.toSet.size == structType.fieldNames.map(_.toLowerCase).toSet.size,
+          "Cannot use case sensitive = true when this would result in a clash of field names"
+        )
+      }
+
+      val projectionSchema = StructType(projection.map { field =>
+        structType.field(field, caseSensitive).getOrError(s"Requested field $field does not exist in the parquet schema")
+      })
+
+      ParquetSchemaFns.toParquetMessageType(projectionSchema).some
     }
   }
 
