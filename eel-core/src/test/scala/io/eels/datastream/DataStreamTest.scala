@@ -63,7 +63,7 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.projection" should {
     "support column projection" in {
-      val frame = DataStream.fromValues(
+      val ds = DataStream.fromValues(
         StructType("name", "location"),
         Vector(
           List("sam", "aylesbury"),
@@ -71,12 +71,12 @@ class DataStreamTest extends WordSpec with Matchers {
           List("ham", "buckingham")
         )
       )
-      val f = frame.projection("location")
+      val f = ds.projection("location")
       f.head.values shouldBe Seq("aylesbury")
       f.schema shouldBe StructType("location")
     }
     "support column projection expressions" in {
-      val frame = DataStream.fromValues(
+      val ds = DataStream.fromValues(
         StructType("name", "location"),
         Vector(
           List("sam", "aylesbury"),
@@ -84,12 +84,12 @@ class DataStreamTest extends WordSpec with Matchers {
           List("ham", "buckingham")
         )
       )
-      val f = frame.projectionExpression("location,name")
+      val f = ds.projectionExpression("location,name")
       f.head.values shouldBe Vector("aylesbury", "sam")
       f.schema shouldBe StructType("location", "name")
     }
     "support column projection re-ordering" in {
-      val frame = DataStream.fromValues(
+      val ds = DataStream.fromValues(
         StructType("name", "location"),
         Vector(
           List("sam", "aylesbury"),
@@ -97,7 +97,7 @@ class DataStreamTest extends WordSpec with Matchers {
           List("ham", "buckingham")
         )
       )
-      val f = frame.projection("location", "name")
+      val f = ds.projection("location", "name")
       f.schema shouldBe StructType("location", "name")
       f.head.values shouldBe Vector("aylesbury", "sam")
     }
@@ -286,16 +286,16 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
-  "Frame.stripFromFieldNames" should {
+  "DataStream.stripCharsFromFieldNames" should {
     "remove offending characters" in {
-      val frame = DataStream.fromValues(
+      val ds = DataStream.fromValues(
         StructType("name", "#location", "!postcode"),
         Vector(
           List("sam", "aylesbury", "hp22"),
           List("ham", "buckingham", "mk10")
         )
       )
-      frame.stripCharsFromFieldNames(Seq('#', '!', 'p')).schema shouldBe
+      ds.stripCharsFromFieldNames(Seq('#', '!', 'p')).schema shouldBe
         StructType("name", "location", "ostcode")
     }
   }

@@ -8,7 +8,7 @@ import scala.util.Random
 
 class RangePartitionStrategyTest extends WordSpec with Matchers {
 
-  private val conn = DriverManager.getConnection("jdbc:h2:mem:test")
+  private val conn = DriverManager.getConnection("jdbc:h2:mem:rangetest")
   conn.createStatement().executeUpdate("create table bucket_test (a integer)")
   for (k <- 0 until 20) {
     conn.createStatement().executeUpdate(s"insert into bucket_test (a) values (${Random.nextInt(10000)})")
@@ -23,12 +23,12 @@ class RangePartitionStrategyTest extends WordSpec with Matchers {
       RangePartitionStrategy("a", 6, 1, 29).ranges shouldBe List((1, 5), (6, 10), (11, 15), (16, 20), (21, 25), (26, 29))
     }
     "return correct number of ranges" in {
-      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test"), "select * from bucket_test")
+      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:rangetest"), "select * from bucket_test")
         .withPartitionStrategy(RangePartitionStrategy("a", 4, 0, 10000))
         .parts().size shouldBe 4
     }
     "return full and non overlapping data" in {
-      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test"), "select * from bucket_test")
+      JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:rangetest"), "select * from bucket_test")
         .withPartitionStrategy(RangePartitionStrategy("a", 4, 0, 10000))
         .toDataStream().collect.size shouldBe 20
     }

@@ -13,6 +13,7 @@ import org.apache.kafka.common.serialization.{Deserializer, Serializer}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 class KafkaSinkTest extends FlatSpec with Matchers with BeforeAndAfterAll {
 
@@ -20,14 +21,16 @@ class KafkaSinkTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     kafkaPort = 6001,
     zooKeeperPort = 6000
   )
-  EmbeddedKafka.start()
+  Try {
+    EmbeddedKafka.start()
+  }
 
   val schema = StructType(
     Field("name", StringType, nullable = true),
     Field("location", StringType, nullable = true)
   )
 
-  val frame = DataStream.fromValues(
+  val ds = DataStream.fromValues(
     schema,
     Seq(
       Vector("clint eastwood", UUID.randomUUID().toString),
@@ -35,13 +38,9 @@ class KafkaSinkTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     )
   )
 
-  override def afterAll(): Unit = {
-    EmbeddedKafka.stop()
-  }
-
   "KafkaSink" should "support default implicits" ignore {
 
-    val topic = "mytopic"
+    val topic = "mytopic-" + System.currentTimeMillis()
 
     val properties = new Properties()
     properties.put("bootstrap.servers", s"localhost:${kafkaConfig.kafkaPort}")
@@ -54,11 +53,11 @@ class KafkaSinkTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     val consumer = new KafkaConsumer[String, String](properties, StringDeserializer, StringDeserializer)
     consumer.subscribe(util.Arrays.asList(topic))
 
-    frame.to(sink)
+    ds.to(sink)
     producer.close()
 
     val records = consumer.poll(4000)
-    records.iterator().asScala.map(_.value).toList shouldBe frame.collect.map {
+    records.iterator().asScala.map(_.value).toList shouldBe ds.collect.map {
       case Row(_, values) => values.mkString(",")
     }.toList
   }

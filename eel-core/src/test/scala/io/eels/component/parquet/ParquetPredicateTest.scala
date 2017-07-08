@@ -87,5 +87,7 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
 
     source.withPredicate(Predicate.notEquals("price", BigInt(10052)))
       .toDataStream().collect.map(_.values.head) shouldBe Vector("tsla")
+
+    fs.delete(path, false)
   }
 }

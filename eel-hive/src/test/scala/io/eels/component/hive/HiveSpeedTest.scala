@@ -53,17 +53,17 @@ object HiveSpeedTest extends App with Timed {
   )
 
   val rows = List.fill(3000000)(data(Random.nextInt(data.length)))
-  val frame = DataStream.fromValues(StructType("artist", "album", "year"), rows)
+  val ds = DataStream.fromValues(StructType("artist", "album", "year"), rows)
     .addField("bibble", "myvalue")
     .addField("timestamp", System.currentTimeMillis.toString)
-  println(frame.schema.show())
+  println(ds.schema.show())
 
   while (true) {
 
     new HiveOps(client).createTable(
       Database,
       Table,
-      frame.schema,
+      ds.schema,
       List("artist"),
       format = HiveFormat.Parquet,
       overwrite = true
@@ -71,7 +71,7 @@ object HiveSpeedTest extends App with Timed {
 
     timed("writing data") {
       val sink = HiveSink(Database, Table).withPermission(new FsPermission("700"))
-      frame.to(sink)
+      ds.to(sink)
       logger.info("Write complete")
     }
 

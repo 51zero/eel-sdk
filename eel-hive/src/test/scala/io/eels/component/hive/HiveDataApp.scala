@@ -89,7 +89,7 @@ object HiveDataApp extends App with Timed {
 
   val sink = HiveSink(Database, Table)
     .withDynamicPartitioning(true)
-    .withCreateTable(true, true, Seq("state", "incorporated"))
+    .withCreateTable(true, Seq("state", "incorporated"))
   DataStream(cities).to(sink)
 
   logger.info("Write complete")

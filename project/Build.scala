@@ -17,7 +17,7 @@ object Build extends Build {
   val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
   val JacksonVersion = "2.8.9"
-  val KafkaVersion = "0.10.2.1"
+  val KafkaVersion = "0.11.0.0"
   val KuduVersion = "1.4.0"
   val Log4jVersion = "2.7"
   val MetricsVersion = "3.1.2"
@@ -49,7 +49,7 @@ object Build extends Build {
   val kafkaSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
-      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.13.1"     % "test"
+      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.15.0"     % "test"
     )
   )
 
@@ -67,8 +67,8 @@ object Build extends Build {
 
   val rootSettings = Seq(
     organization := org,
-    scalaVersion := "2.11.11",
-    crossScalaVersions := Seq("2.11.11"),
+    scalaVersion := "2.12.2",
+    crossScalaVersions := Seq("2.11.11", "2.12.2"),
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
     publishArtifact in Test := false,
@@ -99,7 +99,7 @@ object Build extends Build {
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
-      "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
+//      "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-core"              % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % Log4jVersion             % "test",
