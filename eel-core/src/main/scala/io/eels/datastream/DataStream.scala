@@ -5,7 +5,7 @@ import java.util.concurrent.{CountDownLatch, Executor}
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{DataTable, Listener, Row, Sink}
+import io.eels.{DataTable, Listener, Record, Row, Sink}
 
 import scala.collection.immutable.VectorIterator
 import scala.language.implicitConversions
@@ -513,7 +513,7 @@ trait DataStream extends Logging {
   def toVector: Vector[Row] = collect
   def toSet: Set[Row] = collect.toSet
 
-  def toDataTable: DataTable = DataTable(schema, collect.map(_.values))
+  def toDataTable: DataTable = DataTable(schema, collect.map(_.values).map(Record.apply))
 }
 
 object DataStream {
