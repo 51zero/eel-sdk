@@ -1,25 +1,29 @@
 package io.eels.component.parquet.avro
 
 import com.sksamuel.exts.Logging
-import io.eels.component.FlowableIterator
+import com.sksamuel.exts.io.Using
 import io.eels.component.avro.AvroDeserializer
 import io.eels.component.parquet.util.ParquetIterator
+import io.eels.datastream.Subscriber
 import io.eels.{Part, Predicate, Row}
-import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
 class AvroParquetPart(path: Path,
-                      predicate: Option[Predicate])(implicit conf: Configuration) extends Part with Logging {
+                      predicate: Option[Predicate])(implicit conf: Configuration)
+  extends Part with Logging with Using {
 
-  /**
-    * Returns the data contained in this part in the form of an iterator. This function should return a new
-    * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
-    */
-  override def open(): Flowable[Row] = {
-    val reader = AvroParquetReaderFn(path, predicate, None)
-    val deser = new AvroDeserializer()
-    val iterator = ParquetIterator(reader).map(deser.toRow)
-    FlowableIterator(iterator, reader.close _)
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    using(AvroParquetReaderFn(path, predicate, None)) { reader =>
+      try {
+        val deser = new AvroDeserializer()
+        val iterator = ParquetIterator(reader).map(deser.toRow)
+
+        iterator.grouped(1000).foreach(subscriber.next)
+        subscriber.completed()
+      } catch {
+        case t: Throwable => subscriber.error(t)
+      }
+    }
   }
 }

@@ -3,7 +3,6 @@ package io.eels.datastream
 import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-import io.reactivex.Flowable
 
 object GroupedDataStream {
   val FullDatasetKeyFn: Row => Any = { _ => 0 }
@@ -60,7 +59,7 @@ trait GroupedDataStream {
     //
     //      Seq(Flow(rows))
     //    }
-    override def flowable: Flowable[Row] = ???
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ???
   }
 
   def aggregation(agg: Aggregation): GroupedDataStream = new GroupedDataStream {

@@ -1,8 +1,9 @@
 package io.eels.component.hive
 
+import com.sksamuel.exts.io.Using
+import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.schema.{Partition, StructType}
 import io.eels.{Predicate, _}
-import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
 
@@ -16,7 +17,7 @@ import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
   *                         some file schemas can read data more efficiently if they know they can omit some fields (eg Parquet).
   * @param predicate        predicate for filtering rows, is pushed down to the parquet reader for efficiency if
   *                         the predicate can operate on the files.
-  * @param partition       a list of partition key-values for this file. We require this to repopulate the partition
+  * @param partition        a list of partition key-values for this file. We require this to repopulate the partition
   *                         values when creating the final Row.
   */
 class HiveFilePart(val dialect: HiveDialect,
@@ -25,10 +26,10 @@ class HiveFilePart(val dialect: HiveDialect,
                    val projectionSchema: StructType,
                    val predicate: Option[Predicate],
                    val partition: Partition)
-                  (implicit fs: FileSystem, conf: Configuration) extends Part {
+                  (implicit fs: FileSystem, conf: Configuration) extends Part with Using {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
-  override def open(): Flowable[Row] = {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
     val partitionMap: Map[String, Any] = partition.entries.map { it => (it.key, it.value) }.toMap
 
@@ -48,15 +49,22 @@ class HiveFilePart(val dialect: HiveDialect,
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema
-    dialect.read(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate).map(new io.reactivex.functions.Function[Row, Row] {
-      override def apply(row: Row): Row = {
-        if (projectionFields.isEmpty) {
-          val values = projectionSchema.fieldNames().map(partitionMap.apply)
-          Row(projectionSchema, values.toVector)
-        } else {
-          RowUtils.rowAlign(row, projectionSchema, partitionMap)
+    val publisher = dialect.publisher(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
+    publisher.subscribe(new Subscriber[Seq[Row]] {
+      override def next(chunk: Seq[Row]): Unit = {
+        val aligned = chunk.map { row =>
+          if (projectionFields.isEmpty) {
+            val values = projectionSchema.fieldNames().map(partitionMap.apply)
+            Row(projectionSchema, values.toVector)
+          } else {
+            RowUtils.rowAlign(row, projectionSchema, partitionMap)
+          }
         }
+        subscriber.next(aligned)
       }
+      override def started(c: Cancellable): Unit = subscriber.started(c)
+      override def completed(): Unit = subscriber.completed()
+      override def error(t: Throwable): Unit = subscriber.error(t)
     })
   }
 }

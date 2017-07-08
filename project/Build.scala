@@ -88,7 +88,6 @@ object Build extends Build {
       "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
       "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion,
       "com.h2database"              % "h2"                                  % H2Version,
-      "io.reactivex.rxjava2"        % "rxjavafx"                            % RxJavaVersion,
       "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
@@ -140,7 +139,7 @@ object Build extends Build {
       hive,
       kafka,
       kudu)
-   
+
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
     .settings(name := "eel-core")

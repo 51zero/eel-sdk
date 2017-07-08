@@ -4,31 +4,34 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
-import io.eels.component.FlowableIterator
-import io.eels.component.hive.{HiveDialect, HiveWriter}
+import io.eels.component.hive.{HiveDialect, HiveWriter, Publisher}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
+import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
-import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 class ParquetHiveDialect extends HiveDialect with Logging {
 
-  override def read(path: Path,
-                    metastoreSchema: StructType,
-                    projectionSchema: StructType,
-                    predicate: Option[Predicate])
-                   (implicit fs: FileSystem, conf: Configuration): Flowable[Row] = {
-
-    // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
-    val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
-    FlowableIterator.create {
-      val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
-      val iterator = ParquetIterator(reader)
-      (iterator, reader.close)
+  override def publisher(path: Path,
+                         metastoreSchema: StructType,
+                         projectionSchema: StructType,
+                         predicate: Option[Predicate])
+                        (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
+      try {
+        val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
+        val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some)
+        val iterator = ParquetIterator(reader)
+        iterator.grouped(1000).foreach(subscriber.next)
+        subscriber.completed()
+      } catch {
+        case t: Throwable => subscriber.error(t)
+      }
     }
   }
 

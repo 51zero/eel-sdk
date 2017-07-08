@@ -4,7 +4,7 @@ import java.io.File
 
 import com.sksamuel.exts.metrics.Timed
 import io.eels.component.parquet.util.ParquetLogMute
-import io.eels.datastream.{DataStream, DataStream2}
+import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import io.eels.{FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
@@ -32,7 +32,7 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
   new File(dir.toString).mkdirs()
 
   timed("Insertion") {
-    val ds = DataStream2.fromIterator(schema, Iterator.continually(createRow).take(size))
+    val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
     new File(dir.toString).listFiles().foreach(_.delete)
     ds.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
   }
@@ -40,17 +40,8 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
   for (_ <- 1 to 25) {
     assert(count == FilePattern("parquet-speed-test/*").toPaths().size)
 
-    timed("Reading with ParquetSource ds1") {
+    timed("Reading with ParquetSource") {
       val actual = ParquetSource("parquet-speed-test/*").toDataStream().map { row => row }.filter(_ => true).size
-      assert(actual == size, s"Expected $size but was $actual")
-    }
-
-    println("")
-    println("---------")
-    println("")
-
-    timed("Reading with ParquetSource ds2") {
-      val actual = ParquetSource("parquet-speed-test/*").toDataStream2.map { row => row }.filter(_ => true).size
       assert(actual == size, s"Expected $size but was $actual")
     }
 

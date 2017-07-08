@@ -1,10 +1,10 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
-import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
-import io.reactivex.Flowable
+import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
+import io.eels.datastream.Subscriber
+import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -13,8 +13,6 @@ import org.apache.hadoop.hive.metastore.api.Table
 trait HiveDialect extends Logging {
 
   /**
-    * Creates a Flux[Row] that will read from the given hadoop path.
-    *
     * @param path where to load the data from
     *
     * @param metastoreSchema the schema as present in the metastore and used to match up with the raw data in dialects
@@ -35,11 +33,11 @@ trait HiveDialect extends Logging {
     * The readerSchema is the schema required by the caller which may be the same as the written data, or
     * it may be a subset if a projection pushdown is being used.
     */
-  def read(path: Path,
-           metastoreSchema: StructType,
-           projectionSchema: StructType,
-           predicate: Option[Predicate])
-          (implicit fs: FileSystem, conf: Configuration): Flowable[Row]
+  def publisher(path: Path,
+                metastoreSchema: StructType,
+                projectionSchema: StructType,
+                predicate: Option[Predicate])
+               (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]]
 
   /**
     * Creates a new writer ready to do the bidding of the hive sink.
@@ -74,4 +72,8 @@ object HiveDialect extends Logging {
     logger.debug(s"HiveDialect is $dialect")
     dialect
   }
+}
+
+trait Publisher[T] {
+  def subscribe(subscriber: Subscriber[T])
 }

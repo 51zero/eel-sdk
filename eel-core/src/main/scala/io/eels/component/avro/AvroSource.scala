@@ -5,9 +5,8 @@ import java.io.File
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.component.FlowableIterator
+import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
-import io.reactivex.Flowable
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -26,20 +25,15 @@ case class AvroSource(path: Path)
 
 case class AvroSourcePart(path: Path)
                          (implicit conf: Configuration, fs: FileSystem) extends Part with Logging {
-  /**
-    * Returns the data contained in this part in the form of an iterator. This function should return a new
-    * iterator on each invocation. The iterator can be lazily initialized to the first read if required.
-    */
-  override def open(): Flowable[Row] = {
-
-    val deserializer = new AvroDeserializer()
-    val reader = AvroReaderFns.createAvroReader(path)
-
-    val iterator: Iterator[Row] = AvroRecordIterator(reader).map { record =>
-      deserializer.toRow(record)
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    try {
+      val deserializer = new AvroDeserializer()
+      val reader = AvroReaderFns.createAvroReader(path)
+      AvroRecordIterator(reader).map(deserializer.toRow).grouped(1000).foreach(subscriber.next)
+      subscriber.completed()
+    } catch {
+      case t: Throwable => subscriber.error(t)
     }
-
-    FlowableIterator(iterator, reader.close _)
   }
 }
 

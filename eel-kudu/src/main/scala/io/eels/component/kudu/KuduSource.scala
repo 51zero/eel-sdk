@@ -1,11 +1,11 @@
 package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
-import io.eels.component.FlowableIterator
+import com.sksamuel.exts.io.Using
+import io.eels.datastream.Subscriber
 import io.eels.schema._
 import io.eels.{Part, Row, Source}
-import io.reactivex.Flowable
-import org.apache.kudu.client.{KuduClient, RowResultIterator}
+import org.apache.kudu.client.{KuduClient, KuduScanner, RowResultIterator}
 
 import scala.collection.JavaConverters._
 
@@ -18,31 +18,26 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
   override def parts(): Seq[Part] = Seq(new KuduPart(tableName))
 
-  class KuduPart(tableName: String) extends Part {
+  class KuduPart(tableName: String) extends Part with Using {
 
-    override def open(): Flowable[Row] = {
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
       val projectColumns = schema.fieldNames()
       val table = client.openTable(tableName)
 
       val scanner = client.newScannerBuilder(table)
         .setProjectedColumnNames(projectColumns.asJava)
-        .build()
+        .build
 
-      val iterator = new Iterator[Row] {
-        var iter: Iterator[Row] = Iterator.empty
-        override def hasNext: Boolean = iter.hasNext || {
-          if (scanner.hasMoreRows) {
-            iter = ResultsIterator(schema, scanner.nextRows)
-            iter.hasNext
-          } else {
-            false
-          }
-        }
-        override def next(): Row = iter.next()
+      try {
+        val iterator = new ScannerIterator(scanner, schema)
+        iterator.grouped(1000).foreach(subscriber.next)
+        subscriber.completed()
+      } catch {
+        case t: Throwable => subscriber.error(t)
+      } finally {
+        scanner.close()
       }
-
-      FlowableIterator(iterator, () => scanner.close)
     }
   }
 }
@@ -71,6 +66,19 @@ object ResultsIterator {
       Row(schema, values)
     }
   }
+}
+
+class ScannerIterator(scanner: KuduScanner, schema: StructType) extends Iterator[Row] {
+  var iter: Iterator[Row] = Iterator.empty
+  override def hasNext: Boolean = iter.hasNext || {
+    if (scanner.hasMoreRows) {
+      iter = ResultsIterator(schema, scanner.nextRows)
+      iter.hasNext
+    } else {
+      false
+    }
+  }
+  override def next(): Row = iter.next()
 }
 
 object KuduSource {

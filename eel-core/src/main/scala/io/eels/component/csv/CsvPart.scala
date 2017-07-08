@@ -2,15 +2,10 @@ package io.eels.component.csv
 
 import com.sksamuel.exts.{Logging, TryOrLog}
 import com.univocity.parsers.csv.CsvParser
-import io.eels.component.FlowableIterator
 import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
-import io.reactivex.Flowable
-import io.reactivex.disposables.Disposable
 import org.apache.hadoop.fs.{FileSystem, Path}
-
-import scala.util.Try
 
 class CsvPart(val createParser: () => CsvParser,
               val path: Path,
@@ -46,25 +41,5 @@ class CsvPart(val createParser: () => CsvParser,
         input.close()
       }
     }
-  }
-
-  override def open(): Flowable[Row] = {
-
-    val parser = createParser()
-    val input = fs.open(path)
-    parser.beginParsing(input)
-
-    val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
-      Row(schema, records.toVector)
-    }
-
-    val disposable = new Disposable {
-      override def dispose(): Unit = Try {
-
-      }
-      override def isDisposed: Boolean = false
-    }
-
-    FlowableIterator(iterator, disposable)
   }
 }

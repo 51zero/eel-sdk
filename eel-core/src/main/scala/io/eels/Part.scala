@@ -1,7 +1,6 @@
 package io.eels
 
 import io.eels.datastream.Subscriber
-import io.reactivex.Flowable
 
 /**
  * A Part represents part of the source data. Eg a single file in a multi-file source, or a single table
@@ -10,12 +9,5 @@ import io.reactivex.Flowable
  * A single part is always read by a single thread.
   */
 trait Part {
-
-  /**
-    * Returns the data contained in this part in the form of a Flowable. This function should
-    * return a new Flowable on each invocation.
-    */
-  def open(): Flowable[Row]
-
-  def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ()
+  def subscribe(subscriber: Subscriber[Seq[Row]]): Unit
 }
