@@ -31,8 +31,9 @@ case class Row(schema: StructType, values: Seq[Any]) {
   def replaceSchema(newSchema: StructType): Row = Row(newSchema, values)
 
   def apply(k: Int): Any = get(k)
-  def get(k: Int): Any = values(k)
+  def apply(name: String): Any = get(name)
 
+  def get(k: Int): Any = values(k)
   def get(name: String, caseInsensitive: Boolean = false): Any = {
     val index = schema.indexOf(name, caseInsensitive)
     if (index < 0)

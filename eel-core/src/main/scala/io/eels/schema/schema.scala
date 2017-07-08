@@ -204,7 +204,7 @@ case class StructType(fields: Vector[Field]) extends DataType {
   }
 
 
-  def join(other: StructType): StructType = {
+  def concat(other: StructType): StructType = {
     require(
       fields.map(_.name).intersect(other.fields.map(_.name)).isEmpty,
       "Cannot join two structs which have common field names"

@@ -1,7 +1,7 @@
 package io.eels.datastream
 
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
-import java.util.concurrent.{CountDownLatch, Executor}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong}
+import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.{DataType, Field, StringType, StructType}
@@ -83,6 +83,34 @@ trait DataStream extends Logging {
   }
 
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
+
+  def takeWhile(p: Row => Boolean): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      val continue = new AtomicBoolean(true)
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+
+        var cancellable: Cancellable = null
+        override def starting(c: Cancellable): Unit = cancellable = c
+
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.filter { row =>
+            val satisified = continue.get && p(row)
+            if (satisified) true
+            else {
+              continue.set(false)
+              // we're done with the downstream so can cancel it
+              cancellable.cancel()
+              false
+            }
+          }
+          subscriber.next(ts)
+        }
+      })
+    }
+  }
+
+  def takeWhile(fieldName: String, p: Any => Boolean): DataStream = takeWhile(row => p(row.get(fieldName)))
 
   def take(n: Int): DataStream = new DataStream {
     override def schema: StructType = self.schema
@@ -208,14 +236,46 @@ trait DataStream extends Logging {
 
   /**
     * Combines two datastreams together such that the fields from this datastream are joined with the fields
-    * of the given datastream. Eg, if this datastream has A,B and the given datastream has C,D then the result will
-    * be A,B,C,D
+    * of the given datastream. Eg, if this datastream has fields A,B and the given datastream has fields C,D
+    * then the result will have fields A,B,C,D
     *
     * This operation requires an executor, as it must buffer rows to ensure an even distribution.
     */
-  def join(other: DataStream, executor: Executor): DataStream = new DataStream {
-    override def schema: StructType = ???
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ???
+  def concat(other: DataStream): DataStream = new DataStream {
+    override def schema: StructType = self.schema.concat(other.schema)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+
+      val queue = new LinkedBlockingQueue[Row](1000)
+      val _schema = schema
+      val sentinel = Row(StructType(Field("________sentinal")), Seq(null))
+
+      val executor = Executors.newSingleThreadExecutor()
+      executor.submit(new Runnable {
+        override def run(): Unit = {
+          other.subscribe(new Subscriber[Seq[Row]] {
+            override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
+            override def completed(): Unit = queue.put(sentinel)
+            override def error(t: Throwable): Unit = queue.put(sentinel)
+            override def starting(c: Cancellable): Unit = ()
+          })
+        }
+      })
+      executor.shutdown()
+
+      self.subscribe(new Subscriber[Seq[Row]] {
+        // foreach item we receive, we need to marry it up with one from the other subscriber
+        override def next(t: Seq[Row]): Unit = {
+          val ts = t.map { a =>
+            val b = queue.take()
+            Row(_schema, a.values ++ b.values)
+          }
+          subscriber.next(ts)
+        }
+        override def completed(): Unit = subscriber.completed()
+        override def error(t: Throwable): Unit = subscriber.error(t)
+        override def starting(c: Cancellable): Unit = subscriber.starting(c)
+      })
+    }
   }
 
   /**
@@ -352,9 +412,8 @@ trait DataStream extends Logging {
   }
 
   /**
-    * Joins two streams together, such that the elements of the given frame are appended to the
-    * end of this streams. This operation is the same as a concat operation.
-    * This results in having numPartitions(a) + numPartitions(b)
+    * Joins two streams together, such that the elements of the given datastream are appended to the
+    * end of this datastream.
     */
   def ++(other: DataStream): DataStream = union(other)
   def union(other: DataStream): DataStream = new DataStream {

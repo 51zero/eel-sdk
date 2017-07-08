@@ -13,14 +13,7 @@
 //  val schema = StructType("a", "b")
 //  val frame = Frame.fromValues(schema, Vector("1", "2"), Vector("3", "4"))
 //
-//  "Frame.withLowerCaseSchema" should {
-//    "return same values but with lower case schema" in {
-//      val schema = StructType("A", "B", "c")
-//      val f = Frame.fromValues(schema, Vector("x", "Y", null)).withLowerCaseSchema()
-//      f.schema shouldBe StructType("a", "b", "c")
-//      f.collect() shouldBe List(Row(f.schema, Vector("x", "Y", null)))
-//    }
-//  }
+
 //
 //  "Frame.addFieldIfNotExists" should {
 //    "not add column if already exists" in {
