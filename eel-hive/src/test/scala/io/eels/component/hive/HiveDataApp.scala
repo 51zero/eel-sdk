@@ -81,6 +81,9 @@ object HiveDataApp extends App with Timed {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
+  val ops = HiveTable(Database, Table)
+  ops.drop()
+
   case class City(id: String, name: String, state: String, population: Int, incorporated: Boolean)
   val cities = List.fill(30000) {
     City(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean)
@@ -89,18 +92,18 @@ object HiveDataApp extends App with Timed {
 
   val sink = HiveSink(Database, Table)
     .withDynamicPartitioning(true)
-    .withCreateTable(true, Seq("state", "incorporated"))
+    .withCreateTable(true)
   DataStream(cities).to(sink)
 
   logger.info("Write complete")
 
   val table = new HiveOps(client).tablePath(Database, Table)
-  println(table)
+  println("table:" + table)
 
   println(HiveSource(Database, Table).partitions)
 
   val partitions = new HiveOps(client).hivePartitions(Database, Table)
-  println(partitions)
+  println("Partitions:" + partitions)
 
 
 }

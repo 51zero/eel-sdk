@@ -5,8 +5,8 @@ import java.util.concurrent._
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.partition.{PartitionPathStrategy, RowPartitionFn}
-import io.eels.schema.StructType
-import io.eels.util.{HdfsMkpath, RowNormalizerFn}
+import io.eels.schema.{Partition, StructType}
+import io.eels.util.{HdfsMkdir, RowNormalizerFn}
 import io.eels.{Row, RowOutputStream}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -43,7 +43,7 @@ class HiveRowOutputStream(sourceSchema: StructType,
 
   private val hiveOps = new HiveOps(client)
   private val tablePath = hiveOps.tablePath(dbName, tableName)
-  private val lock = new AnyRef()
+  require(tablePath != null, "Table path returned as null")
 
   // these will be in lower case
   private val partitionKeyNames = hiveOps.partitionKeys(dbName, tableName)
@@ -69,7 +69,7 @@ class HiveRowOutputStream(sourceSchema: StructType,
   private val writers = TrieMap.empty[Path, HiveWriter]
 
   // this contains all the partitions we've checked.
-  private val createdPartitions = new ConcurrentSkipListSet[String]
+  private val extantPartitions = new ConcurrentSkipListSet[Path]
 
   logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning")
 
@@ -105,48 +105,64 @@ class HiveRowOutputStream(sourceSchema: StructType,
     writers.values.foreach(_.close)
   }
 
+  private def ensurePartitionExists(partition: Partition, path: Path): Unit = {
+    // if dynamic partitioning is enabled then we will update the hive metastore with new partitions
+    if (partitionKeyNames.nonEmpty && dynamicPartitioning) {
+      if (partition.entries.nonEmpty) {
+        if (!extantPartitions.contains(path)) {
+          hiveOps.createPartitionIfNotExists(dbName, tableName, partition, partitionPathStrategy)
+          extantPartitions.add(path)
+        }
+      }
+    } else if (!hiveOps.partitionExists(dbName, tableName, partition)) {
+      sys.error(s"Partition $path does not exist and dynamicPartitioning = false")
+    }
+  }
+
+  private def createPartitionWriter(partition: Partition, partitionPath: Path): HiveWriter = {
+    ensurePartitionExists(partition, partitionPath)
+    // ensure the partition path is created, with permissions from parent if applicable
+    HdfsMkdir(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
+    createWriter(partitionPath)
+  }
+
+  private def createWriter(location: Path): HiveWriter = try {
+    logger.debug(s"Creating new HiveWriter for location $location")
+
+    val filePath = outputPath(location)
+    logger.debug(s"HiveWriter will write to file $filePath")
+    fileListener.onFileCreated(filePath)
+
+    dialect.writer(fileSchema, filePath, permission, metadata)
+  } catch {
+    case NonFatal(e) =>
+      logger.error(s"Error getting or creating the hive writer for $location", e)
+      throw e
+  }
+
+  private def outputPath(partitionPath: Path): Path = {
+    val filename = filenameStrategy.filename(discriminator)
+    if (writeToTempDirectory) {
+      val temp = new Path(partitionPath, filenameStrategy.tempdir)
+      new Path(temp, filename)
+    } else {
+      new Path(partitionPath, filename)
+    }
+  }
+
   def getOrCreateHiveWriter(row: Row): HiveWriter = {
 
     // we need a a writer per partition (as each partition is written to a different directory)
-    val partition = RowPartitionFn(row, partitionKeyNames)
-    val partitionPath = new Path(tablePath, partitionPathStrategy.name(partition))
+    // if we don't have partitions then we only need a writer for the table
+    if (partitionKeyNames.isEmpty) {
+      writers.getOrElseUpdate(tablePath, createWriter(tablePath))
+    } else {
 
-    // we cache the writer so that we don't keep opening and closing loads of writers
-    writers.getOrElseUpdate(partitionPath, try {
-      logger.debug(s"Creating new HiveWriter for partition $partitionPath")
+      val partition = RowPartitionFn(row, partitionKeyNames)
+      val partitionPath = new Path(tablePath, partitionPathStrategy.name(partition))
 
-      // if dynamic partition is enabled then we will create any partitions and
-      // update the hive metastore
-      if (dynamicPartitioning) {
-        if (partition.entries.nonEmpty) {
-          if (!createdPartitions.contains(partitionPath.toString)) {
-            hiveOps.createPartitionIfNotExists(dbName, tableName, partition, partitionPathStrategy)
-            createdPartitions.add(partitionPath.toString)
-          }
-        }
-      } else if (!hiveOps.partitionExists(dbName, tableName, partition)) {
-        sys.error(s"Partition $partitionPath does not exist and dynamicPartitioning = false")
-      }
-
-      // ensure the part path is created, with permissions from parent if applicable
-      HdfsMkpath(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
-
-      val filename = filenameStrategy.filename(discriminator)
-      val filePath = if (writeToTempDirectory) {
-        val temp = new Path(partitionPath, filenameStrategy.tempdir)
-        new Path(temp, filename)
-      } else {
-        new Path(partitionPath, filename)
-      }
-
-      logger.debug(s"HiveWriter wil write to file $filePath")
-      fileListener.onFileCreated(filePath)
-
-      dialect.writer(fileSchema, filePath, permission, metadata)
-    } catch {
-      case NonFatal(e) =>
-        logger.error(s"Error getting or creating the hive writer for $partitionPath", e)
-        throw e
-    })
+      // we cache the writer so that we don't keep opening and closing loads of writers
+      writers.getOrElseUpdate(partitionPath, createPartitionWriter(partition, partitionPath))
+    }
   }
 }

@@ -2,7 +2,7 @@ package io.eels.util
 
 import org.apache.hadoop.fs.{FileSystem, Path}
 
-object HdfsMkpath {
+object HdfsMkdir {
   def apply(path: Path, inheritPermissionsDefault: Boolean)(implicit fs: FileSystem): Unit = {
     if (!fs.exists(path)) {
       // iterate through the parents until we hit a parent that exists, then take that, which will give

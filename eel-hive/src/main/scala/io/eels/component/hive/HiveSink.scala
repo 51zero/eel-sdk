@@ -41,7 +41,7 @@ case class HiveSink(dbName: String,
   implicit val conf = fs.getConf
   val ops = new HiveOps(client)
 
-  def withCreateTable(createTable: Boolean, partitionFields: Seq[String]): HiveSink =
+  def withCreateTable(createTable: Boolean, partitionFields: Seq[String] = Nil): HiveSink =
     copy(createTable = createTable, partitionFields = partitionFields, overwrite = overwrite)
 
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
