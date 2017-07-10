@@ -142,10 +142,9 @@ case class HiveTable(dbName: String,
     )
   }
 
-  // deletes partition along with data
-  def deletePartition(partition: Partition): Unit = {
+  def deletePartition(partition: Partition, deleteData: Boolean): Unit = {
     logger.debug(s"Deleting partition ${partition.pretty}")
-    client.dropPartition(dbName, tableName, partition.values.asJava, true)
+    client.dropPartition(dbName, tableName, partition.values.asJava, deleteData)
   }
 
   def drop(): Unit = {
@@ -153,9 +152,13 @@ case class HiveTable(dbName: String,
     client.dropTable(dbName, tableName, true, true)
   }
 
-  def truncate(): Unit = {
+  def truncate(removePartitions: Boolean): Unit = {
     logger.debug(s"Truncating table $dbName:$tableName")
-    new HiveOps(client).partitions(dbName, tableName).foreach(deletePartition)
+    if (removePartitions)
+      new HiveOps(client).partitions(dbName, tableName).foreach(deletePartition(_, true))
+    else {
+      files().values.foreach(_.foreach(path => fs.delete(path, false)))
+    }
   }
 
   def login(principal: String, keytabPath: java.nio.file.Path): Unit = {

@@ -5,6 +5,10 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.JavaConverters._
 
+class HiveContext(implicit fs: FileSystem, client: IMetaStoreClient) {
+  def databases: Seq[HiveDatabase] = client.getAllDatabases.asScala.map { dbName => HiveDatabase(dbName) }
+}
+
 case class HiveDatabase(dbName: String)(implicit fs: FileSystem, client: IMetaStoreClient) {
 
   def tables(): List[HiveSource] = {
