@@ -15,6 +15,7 @@ import scala.util.Random
 /**
   * v1.2.0-snapshot
   * 5m rows random contents; 20 parts using reactivex flows; reading parquet=2700
+  * 5m rows random contents; 20 parts using eels subscriber; reading parquet=1200
   */
 object ParquetMultipleFileSpeedTest extends App with Timed {
   ParquetLogMute()

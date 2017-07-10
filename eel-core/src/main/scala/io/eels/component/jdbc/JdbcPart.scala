@@ -32,14 +32,14 @@ class JdbcPart(connFn: () => Connection,
 
         val schema = schemaFor(dialect, rs)
 
-        val buffer = new ArrayBuffer[Row](1000)
+        val buffer = new ArrayBuffer[Row](100)
         while (rs.next) {
           val values = schema.fieldNames().map { name =>
             val raw = rs.getObject(name)
             dialect.sanitize(raw)
           }
           buffer append Row(schema, values)
-          if (buffer.size == 1000) {
+          if (buffer.size == 100) {
             subscriber.next(buffer.toVector)
             buffer.clear()
           }

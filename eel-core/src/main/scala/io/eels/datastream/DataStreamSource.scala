@@ -20,7 +20,7 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
 
   override def subscribe(s: Subscriber[Seq[Row]]): Unit = {
 
-    val queue = new LinkedBlockingQueue[Seq[Row]](1000)
+    val queue = new LinkedBlockingQueue[Seq[Row]](100)
 
     val finished = new AtomicLong(0)
     val parts = source.parts()

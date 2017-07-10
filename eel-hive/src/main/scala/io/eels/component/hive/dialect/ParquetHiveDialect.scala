@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
-import io.eels.component.hive.{HiveDialect, HiveWriter, Publisher}
+import io.eels.component.hive.{HiveDialect, HiveOps, HiveWriter, Publisher}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.datastream.Subscriber
@@ -13,14 +13,20 @@ import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.hive.conf.HiveConf
+import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 class ParquetHiveDialect extends HiveDialect with Logging {
 
   override def publisher(path: Path,
-                         metastoreSchema: StructType,
+                         ignore: StructType,
                          projectionSchema: StructType,
                          predicate: Option[Predicate])
                         (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+
+    val client = new HiveMetaStoreClient(new HiveConf)
+    val ops = new HiveOps(client)
+
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
       try {
@@ -45,7 +51,7 @@ class ParquetHiveDialect extends HiveDialect with Logging {
       ParquetLogMute()
 
       private val _records = new AtomicInteger(0)
-      logger.debug(s"Creating parquet writer at $path with schema $schema")
+      logger.debug(s"Creating parquet writer at $path")
       private val writer = RowParquetWriterFn(path, schema, metadata, true)
 
       override def write(row: Row) {

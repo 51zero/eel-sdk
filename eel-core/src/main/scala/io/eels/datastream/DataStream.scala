@@ -271,7 +271,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema.concat(other.schema)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
-      val queue = new LinkedBlockingQueue[Row](1000)
+      val queue = new LinkedBlockingQueue[Row](100)
       val _schema = schema
       val sentinel = Row(StructType(Field("________sentinal")), Seq(null))
 

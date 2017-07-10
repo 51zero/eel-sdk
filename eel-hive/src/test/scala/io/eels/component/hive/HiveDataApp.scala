@@ -3,7 +3,9 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.{Listener, Row}
 import io.eels.datastream.DataStream
+import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
@@ -84,16 +86,30 @@ object HiveDataApp extends App with Timed {
   val ops = HiveTable(Database, Table)
   ops.drop()
 
-  case class City(id: String, name: String, state: String, population: Int, incorporated: Boolean)
-  val cities = List.fill(30000) {
-    City(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean)
-  }
-  logger.info(s"Generated ${cities.size} rows")
+  val schema = StructType(
+    Field("id", StringType),
+    Field("name", StringType),
+    Field("state", StringType),
+    Field("population", IntType.Signed),
+    Field("incorporated", BooleanType)
+  )
+  def createRow = Row(schema, Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean))
 
   val sink = HiveSink(Database, Table)
     .withDynamicPartitioning(true)
     .withCreateTable(true)
-  DataStream(cities).to(sink)
+
+  DataStream.fromIterator(
+    schema,
+    Iterator.continually(createRow).take(10000000)
+  ).listener(new Listener {
+    var count = 0
+    override def onNext(row: Row): Unit = {
+      count = count + 1
+      if (count % 10000 == 0) println(count)
+    }
+  })
+    .to(sink)
 
   logger.info("Write complete")
 
