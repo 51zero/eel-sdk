@@ -24,66 +24,71 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
 
     val finished = new AtomicLong(0)
     val parts = source.parts()
-    val running = new AtomicBoolean(true)
 
+    val running = new AtomicBoolean(true)
     val cancellable = new Cancellable {
       override def cancel(): Unit = running.set(false)
     }
 
     s.starting(cancellable)
 
-    class PartSubscriber(name: String) extends Subscriber[Seq[Row]] {
+    if (parts.isEmpty) {
+      logger.info("No parts for this source; immediate completion")
+      s.completed()
+    } else {
+      class PartSubscriber(name: String) extends Subscriber[Seq[Row]] {
 
-      var cancellable: Cancellable = null
+        var cancellable: Cancellable = null
 
-      override def starting(c: Cancellable): Unit = {
-        logger.debug(s"Starting reads for part $name")
-        cancellable = c
-      }
-
-      override def completed(): Unit = {
-        logger.debug(s"Part $name has finished")
-        if (finished.incrementAndGet == parts.size)
-          queue.put(Row.Sentinel)
-      }
-
-      override def error(t: Throwable): Unit = {
-        logger.error(s"Error reading part $name", t)
-        cancellable.cancel()
-        if (finished.incrementAndGet == parts.size)
-          queue.put(Row.Sentinel)
-      }
-
-      override def next(t: Seq[Row]): Unit = {
-        queue.put(t)
-        // if we've been told to stop running, then we'll cancel downstream
-        if (!running.get) {
-          logger.debug(s"Cancelling part $name", t)
-          cancellable.cancel()
+        override def starting(c: Cancellable): Unit = {
+          logger.debug(s"Starting reads for part $name")
+          cancellable = c
         }
-      }
-    }
 
-    // each part should be read in its own io thread
-    parts.zipWithIndex.foreach { case (part, k) =>
-      ExecutorInstances.io.execute(new Runnable {
-        override def run(): Unit = {
-          try {
-            part.subscribe(new PartSubscriber(k.toString))
-          } catch {
-            case t: Throwable =>
-              logger.error(s"Error subscribing to part $k", t)
-              queue.put(Row.Sentinel)
+        override def completed(): Unit = {
+          logger.debug(s"Part $name has finished")
+          if (finished.incrementAndGet == parts.size)
+            queue.put(Row.Sentinel)
+        }
+
+        override def error(t: Throwable): Unit = {
+          logger.error(s"Error reading part $name", t)
+          cancellable.cancel()
+          if (finished.incrementAndGet == parts.size)
+            queue.put(Row.Sentinel)
+        }
+
+        override def next(t: Seq[Row]): Unit = {
+          queue.put(t)
+          // if we've been told to stop running, then we'll cancel downstream
+          if (!running.get) {
+            logger.debug(s"Cancelling part $name", t)
+            cancellable.cancel()
           }
         }
-      })
-    }
+      }
 
-    try {
-      BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach(s.next)
-      s.completed()
-    } catch {
-      case t: Throwable => s.error(t)
+      // each part should be read in its own io thread
+      parts.zipWithIndex.foreach { case (part, k) =>
+        ExecutorInstances.io.execute(new Runnable {
+          override def run(): Unit = {
+            try {
+              part.subscribe(new PartSubscriber(k.toString))
+            } catch {
+              case t: Throwable =>
+                logger.error(s"Error subscribing to part $k", t)
+                queue.put(Row.Sentinel)
+            }
+          }
+        })
+      }
+
+      try {
+        BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach(s.next)
+        s.completed()
+      } catch {
+        case t: Throwable => s.error(t)
+      }
     }
   }
 }
