@@ -14,6 +14,8 @@ case class Partition(entries: Seq[PartitionEntry]) {
   def get(key: String): Option[PartitionEntry] = entries.find(_.key == key)
 
   def value(key: String): Option[String] = get(key).map(_.value)
+
+  def containsKey(key: String): Boolean = entries.exists(_.key == key)
 }
 
 object Partition {

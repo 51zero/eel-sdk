@@ -216,7 +216,7 @@ case class HiveSource(dbName: String,
   /**
     * Returns true if the currently set projection is for partition only fields.
     */
-  def isPartitionOnlyProjection(): Boolean = {
+  def isPartitionOnlyProjection: Boolean = {
     val partitionKeyNames = ops.partitionKeys(dbName, tableName)
     projection.nonEmpty && projection.map { it => it.toLowerCase() }.forall { it => partitionKeyNames.contains(it) }
   }
@@ -235,8 +235,7 @@ case class HiveSource(dbName: String,
 
     // if we requested only partition columns, then we can get this information by scanning the metatstore
     // to see which partitions have been created.
-    // if we have a predicate we have to go down to the files
-    if (isPartitionOnlyProjection() && predicate.isEmpty) {
+    if (isPartitionOnlyProjection) {
       logger.info("Requested projection only uses partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       List(new HivePartitionPart(dbName, tableName, schema, partitionKeys, dialect))

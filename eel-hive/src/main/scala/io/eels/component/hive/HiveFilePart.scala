@@ -20,12 +20,12 @@ import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
   * @param partition        a list of partition key-values for this file. We require this to repopulate the partition
   *                         values when creating the final Row.
   */
-class HiveFilePart(val dialect: HiveDialect,
-                   val file: LocatedFileStatus,
-                   val metastoreSchema: StructType,
-                   val projectionSchema: StructType,
-                   val predicate: Option[Predicate],
-                   val partition: Partition)
+class HiveFilePart(dialect: HiveDialect,
+                   file: LocatedFileStatus,
+                   metastoreSchema: StructType,
+                   projectionSchema: StructType,
+                   predicate: Option[Predicate],
+                   partition: Partition)
                   (implicit fs: FileSystem, conf: Configuration) extends Part with Using {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
@@ -33,19 +33,11 @@ class HiveFilePart(val dialect: HiveDialect,
 
     val partitionMap: Map[String, Any] = partition.entries.map { it => (it.key, it.value) }.toMap
 
-    // the schema we send to the dialect must have any partitions removed, because those fields won't exist
-    // in the data files. This is because partitions are not written and instead inferred from the hive meta store.
-    val projectionFields = projectionSchema.fields.filterNot { it => partitionMap.contains(it.name) }
-
-    // after removing the partitions, we might have an empty projection, which won't work
-    // in parquet, so we can ask for the simplest projection which is just a single field (which we'll then throw
-    // away once the results come back and replace with the partition values)
-    val projectionWithoutPartitions = {
-      if (projectionFields.isEmpty)
-        StructType(metastoreSchema.fields.head)
-      else
-        StructType(projectionFields)
-    }
+    // the schema we send to the dialect must have any partition fields removed, because those
+    // fields won't exist in the data files. This is because partitions are not always written
+    // and instead inferred from the partition itself.
+    val projectionFields = projectionSchema.fields.filterNot(field => partition.containsKey(field.name))
+    val projectionWithoutPartitions = StructType(projectionFields)
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema

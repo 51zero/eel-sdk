@@ -31,17 +31,18 @@ class HivePartitionPart(dbName: String,
   private val partitionPartFileCheck = config.getBoolean("eel.hive.source.checkDataForPartitionOnlySources")
   logger.info(s"eel.hive.source.checkDataForPartitionOnlySources=$partitionPartFileCheck")
 
+  // returns true if the partition exists on disk
   private def isPartitionPhysical(part: org.apache.hadoop.hive.metastore.api.Partition): Boolean = {
     val location = new Path(part.getSd.getLocation)
     logger.debug(s"Checking that partition $location has been created on disk...")
     try {
-      val x = fs.exists(location)
-      if (x) {
+      val exists = fs.exists(location)
+      if (exists) {
         logger.debug("...exists")
       } else {
         logger.debug("...not found")
       }
-      x
+      exists
     } catch {
       case NonFatal(e) =>
         logger.warn(s"Error reading $location", e)
