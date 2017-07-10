@@ -4,6 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
+import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema.{Partition, PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
@@ -74,6 +75,11 @@ case class HiveSource(dbName: String,
     * Returns all the partitions used by this hive source.
     */
   def partitions(): Seq[Partition] = ops.partitions(dbName, tableName)
+
+  /**
+    * Returns all the partitions along with extra meta data per partition, eg location, creation time.
+    */
+  def partitionMetaData(): Seq[PartitionMetaData] = ops.partitionsMetaData(dbName, tableName)
 
   /**
     * Returns a list of all files used by this hive source.
