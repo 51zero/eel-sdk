@@ -1,8 +1,8 @@
 package io.eels.component
 
-import io.eels.Source
+import io.eels.{Sink, Source}
 
 trait Component {
-  // Creates a new Source using the parameter map to set parameters
-  def source(path: String, params: Map[String, String], registry: EelRegistry): Source
+  def source(): Source
+  def sink(): Sink
 }
