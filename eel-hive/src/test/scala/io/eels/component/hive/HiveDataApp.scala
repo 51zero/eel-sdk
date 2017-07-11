@@ -101,7 +101,7 @@ object HiveDataApp extends App with Timed {
 
   DataStream.fromIterator(
     schema,
-    Iterator.continually(createRow).take(10000000)
+    Iterator.continually(createRow).take(100000)
   ).listener(new Listener {
     var count = 0
     override def onNext(row: Row): Unit = {

@@ -89,7 +89,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   }
 
   override def close(): Unit = {
-    logger.info("Closing hive row writer")
+    logger.info("Closing hive sink writer")
 
     logger.debug(s"Closing ${streams.size} hive output stream(s)")
     streams.values.foreach(_.close)
@@ -143,6 +143,7 @@ class HiveSinkWriter(sourceSchema: StructType,
 
     val filePath = outputPath(location)
     logger.debug(s"Hive output stream will write to file $filePath")
+    assert(filePath.isAbsolute, s"Output stream path must be absolute (was $filePath)")
     fileListener.onOutputFile(filePath)
 
     dialect.output(fileSchema, filePath, permission, metadata)

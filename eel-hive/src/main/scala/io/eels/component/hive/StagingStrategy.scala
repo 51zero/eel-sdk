@@ -44,6 +44,6 @@ trait CommitCallback {
 
 object DefaultStagingStrategy extends StagingStrategy {
   override def staging: Boolean = true
-  override def stagingDirectory(parent: Path): Option[Path] = new Path(".eelstaging_" + UUID.randomUUID).some
+  override def stagingDirectory(parent: Path): Option[Path] = new Path(parent, ".eelstaging_" + UUID.randomUUID).some
   override def commit: Boolean = true
 }
