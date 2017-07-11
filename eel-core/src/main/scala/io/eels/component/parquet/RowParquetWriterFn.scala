@@ -9,6 +9,8 @@ import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.hadoop.{ParquetFileWriter, ParquetWriter}
 import org.apache.parquet.schema.MessageType
 
+import scala.math.BigDecimal.RoundingMode.RoundingMode
+
 /**
   * Helper function to create a native ParquetWriter for Row objects using the apache parquet library.
   * Uses config keys to support compression codec, page size, and block size.
@@ -20,16 +22,23 @@ import org.apache.parquet.schema.MessageType
   */
 object RowParquetWriterFn {
 
-  class RowParquetWriterBuilder(path: Path, schema: MessageType, metadata: Map[String, String])
+  class RowParquetWriterBuilder(path: Path,
+                                schema: MessageType,
+                                roundingMode: RoundingMode,
+                                metadata: Map[String, String])
     extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {
-    override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema, metadata)
+    override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema, roundingMode, metadata)
     override def self(): RowParquetWriterBuilder = this
   }
 
-  def apply(path: Path, schema: StructType, metadata: Map[String, String], dictionary: Boolean): ParquetWriter[Row] = {
+  def apply(path: Path,
+            schema: StructType,
+            metadata: Map[String, String],
+            dictionary: Boolean,
+            roundingMode: RoundingMode): ParquetWriter[Row] = {
     val config = ParquetWriterConfig()
     val messageType = ParquetSchemaFns.toParquetMessageType(schema)
-    new RowParquetWriterBuilder(path, messageType, metadata)
+    new RowParquetWriterBuilder(path, messageType, roundingMode, metadata)
       .withCompressionCodec(config.compressionCodec)
       .withDictionaryEncoding(dictionary)
       .withRowGroupSize(config.blockSize)

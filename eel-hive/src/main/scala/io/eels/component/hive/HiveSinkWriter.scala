@@ -15,6 +15,8 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 import scala.collection.concurrent.TrieMap
+import scala.math.BigDecimal.RoundingMode
+import scala.math.BigDecimal.RoundingMode.RoundingMode
 import scala.util.control.NonFatal
 
 class HiveSinkWriter(sourceSchema: StructType,
@@ -34,10 +36,12 @@ class HiveSinkWriter(sourceSchema: StructType,
                      permission: Option[FsPermission],
                      fileListener: FileListener,
                      callbacks: Seq[CommitCallback],
+                     roundingMode: RoundingMode = RoundingMode.UNNECESSARY,
                      metadata: Map[String, String])
                     (implicit fs: FileSystem,
                      conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
+  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning")
 
   private val config = ConfigFactory.load()
   private val sinkConfig = HiveSinkConfig()
@@ -73,7 +77,6 @@ class HiveSinkWriter(sourceSchema: StructType,
   // this contains all the partitions we've checked.
   private val extantPartitions = new ConcurrentSkipListSet[Path]
 
-  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning")
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
@@ -146,7 +149,7 @@ class HiveSinkWriter(sourceSchema: StructType,
     assert(filePath.isAbsolute, s"Output stream path must be absolute (was $filePath)")
     fileListener.onOutputFile(filePath)
 
-    dialect.output(fileSchema, filePath, permission, metadata)
+    dialect.output(fileSchema, filePath, permission, roundingMode, metadata)
 
   } catch {
     case NonFatal(e) =>

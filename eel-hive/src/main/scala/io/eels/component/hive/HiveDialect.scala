@@ -10,6 +10,8 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.api.Table
 
+import scala.math.BigDecimal.RoundingMode.RoundingMode
+
 trait HiveDialect extends Logging {
 
   /**
@@ -51,6 +53,7 @@ trait HiveDialect extends Logging {
   def output(schema: StructType, // schema without partition information
              path: Path,
              permission: Option[FsPermission],
+             roundingMode: RoundingMode,
              metadata: Map[String, String])
             (implicit fs: FileSystem, conf: Configuration): HiveOutputStream
 }

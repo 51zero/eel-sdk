@@ -5,11 +5,14 @@ import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.component.hive.partition.{DefaultHivePathStrategy, PartitionPathStrategy}
 import io.eels.schema.StructType
-import io.eels.{SinkWriter, Sink}
+import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
+
+import scala.math.BigDecimal.RoundingMode
+import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 object HiveSink {
   val config: Config = ConfigFactory.load()
@@ -34,6 +37,7 @@ case class HiveSink(dbName: String,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
                     callbacks: Seq[CommitCallback] = Nil,
+                    roundingMode: RoundingMode = RoundingMode.UNNECESSARY,
                     metadata: Map[String, String] = Map.empty)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
@@ -53,6 +57,7 @@ case class HiveSink(dbName: String,
   def withFilenameStrategy(filenameStrategy: FilenameStrategy): HiveSink = copy(filenameStrategy = filenameStrategy)
   def withPartitionPathStrategy(strategy: PartitionPathStrategy): HiveSink = copy(partitionPathStrategy = strategy)
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
+  def withRoundingMode(mode: RoundingMode): HiveSink = copy(roundingMode = mode)
 
   /**
     * Add a callback that will be invoked when commit operations are taking place.
@@ -134,6 +139,7 @@ case class HiveSink(dbName: String,
       permission,
       fileListener,
       callbacks,
+      roundingMode,
       metadata
     )
   }

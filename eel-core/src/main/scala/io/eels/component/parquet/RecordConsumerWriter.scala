@@ -9,6 +9,8 @@ import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, D
 import io.eels.schema._
 import org.apache.parquet.io.api.{Binary, RecordConsumer}
 
+import scala.math.BigDecimal.RoundingMode.RoundingMode
+
 // accepts a scala/java value and writes it out to a record consumer as
 // the appropriate parquet type
 trait RecordConsumerWriter {
@@ -16,23 +18,25 @@ trait RecordConsumerWriter {
 }
 
 object RecordConsumerWriter {
-  def apply(dataType: DataType): RecordConsumerWriter = {
+  def apply(dataType: DataType, roundingMode: RoundingMode): RecordConsumerWriter = {
     dataType match {
-      case ArrayType(elementType) => new ArrayParquetWriter(RecordConsumerWriter(elementType))
+      case ArrayType(elementType) =>
+        new ArrayParquetWriter(RecordConsumerWriter(elementType, roundingMode))
       case BinaryType => BinaryParquetWriter
       case BigIntType => BigIntRecordConsumerWriter
       case BooleanType => BooleanRecordConsumerWriter
       case CharType(_) => StringRecordConsumerWriter
       case DateType => DateRecordConsumerWriter
-      case DecimalType(precision, scale) => new DecimalWriter(precision, scale)
+      case DecimalType(precision, scale) => new DecimalWriter(precision, scale, roundingMode)
       case DoubleType => DoubleRecordConsumerWriter
       case FloatType => FloatRecordConsumerWriter
       case _: IntType => IntRecordConsumerWriter
       case _: LongType => LongRecordConsumerWriter
       case _: ShortType => ShortParquetWriter
-      case mapType@MapType(keyType, valueType) => new MapParquetWriter(mapType, apply(keyType), apply(valueType))
+      case mapType@MapType(keyType, valueType) =>
+        new MapParquetWriter(mapType, apply(keyType, roundingMode), apply(valueType, roundingMode))
       case StringType => StringRecordConsumerWriter
-      case struct: StructType => new StructWriter(struct, true)
+      case struct: StructType => new StructWriter(struct, roundingMode, true)
       case TimeMillisType => TimeRecordConsumerWriter
       case TimestampMillisType => TimestampRecordConsumerWriter
       case VarcharType(_) => StringRecordConsumerWriter
@@ -88,10 +92,11 @@ class ArrayParquetWriter(nested: RecordConsumerWriter) extends RecordConsumerWri
 }
 
 class StructWriter(structType: StructType,
+                   roundingMode: RoundingMode,
                    nested: Boolean // nested groups, ie not the outer record, must be handled differently
                   ) extends RecordConsumerWriter with Logging {
 
-  val writers = structType.fields.map(_.dataType).map(RecordConsumerWriter.apply)
+  val writers = structType.fields.map(_.dataType).map(RecordConsumerWriter.apply(_, roundingMode))
 
   override def write(record: RecordConsumer, value: Any): Unit = {
     require(record != null)
@@ -124,14 +129,14 @@ object BinaryParquetWriter extends RecordConsumerWriter {
 }
 
 // The scale stores the number of digits of that value that are to the right of the decimal point,
-// and the precision stores the maximum number of digits supported in the unscaled value.
-class DecimalWriter(precision: Precision, scale: Scale) extends RecordConsumerWriter {
+// and the precision stores the maximum number of sig digits supported in the unscaled value.
+class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMode) extends RecordConsumerWriter {
 
   private val bits = ParquetSchemaFns.byteSizeForPrecision(precision.value)
 
   override def write(record: RecordConsumer, value: Any): Unit = {
     val bd = BigDecimalCoercer.coerce(value)
-      .setScale(scale.value)
+      .setScale(scale.value, roundingMode)
       .underlying()
       .unscaledValue()
     val padded = bd.toByteArray.reverse.padTo(bits, 0: Byte).reverse

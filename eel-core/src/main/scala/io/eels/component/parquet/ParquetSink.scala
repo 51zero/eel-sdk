@@ -6,11 +6,15 @@ import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
+import scala.math.BigDecimal.RoundingMode
+import scala.math.BigDecimal.RoundingMode.RoundingMode
+
 case class ParquetSink(path: Path,
                        overwrite: Boolean = false,
                        permission: Option[FsPermission] = None,
                        dictionary: Boolean = true,
                        inheritPermissions: Option[Boolean] = None,
+                       roundingMode: RoundingMode = RoundingMode.UNNECESSARY,
                        metadata: Map[String, String] = Map.empty)
                       (implicit fs: FileSystem) extends Sink with Logging {
 
@@ -19,13 +23,13 @@ case class ParquetSink(path: Path,
   def withOverwrite(overwrite: Boolean): ParquetSink = copy(overwrite = overwrite)
   def withPermission(permission: FsPermission): ParquetSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): ParquetSink = copy(inheritPermissions = Option(inheritPermissions))
-
+  def withRoundingMode(mode: RoundingMode): ParquetSink = copy(roundingMode = mode)
   private def create(schema: StructType, path: Path): SinkWriter = new SinkWriter {
 
     if (overwrite && fs.exists(path))
       fs.delete(path, false)
 
-    val writer = RowParquetWriterFn(path, schema, metadata, dictionary)
+    val writer = RowParquetWriterFn(path, schema, metadata, dictionary, roundingMode)
 
     override def write(row: Row): Unit = {
       writer.write(row)

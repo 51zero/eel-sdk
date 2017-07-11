@@ -16,6 +16,8 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
+import scala.math.BigDecimal.RoundingMode.RoundingMode
+
 class ParquetHiveDialect extends HiveDialect with Logging {
 
   override def input(path: Path,
@@ -44,6 +46,7 @@ class ParquetHiveDialect extends HiveDialect with Logging {
   override def output(schema: StructType,
                       path: Path,
                       permission: Option[FsPermission],
+                      roundingMode: RoundingMode,
                       metadata: Map[String, String])
                      (implicit fs: FileSystem, conf: Configuration): HiveOutputStream = {
     val path_x = path
@@ -52,7 +55,7 @@ class ParquetHiveDialect extends HiveDialect with Logging {
 
       private val _records = new AtomicInteger(0)
       logger.debug(s"Creating parquet writer at $path")
-      private val writer = RowParquetWriterFn(path, schema, metadata, true)
+      private val writer = RowParquetWriterFn(path, schema, metadata, true, roundingMode)
 
       override def write(row: Row) {
         require(row.values.nonEmpty, "Attempting to write an empty row")

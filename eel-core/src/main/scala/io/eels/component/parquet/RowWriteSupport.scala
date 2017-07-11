@@ -9,9 +9,11 @@ import org.apache.parquet.io.api.RecordConsumer
 import org.apache.parquet.schema.MessageType
 
 import scala.collection.JavaConverters._
+import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 // implementation of WriteSupport for Row's used by the native ParquetWriter
 class RowWriteSupport(schema: MessageType,
+                      roundingMode: RoundingMode,
                       metadata: Map[String, String]) extends WriteSupport[Row] with Logging {
   logger.trace(s"Created parquet row write support for schema message type $schema")
 
@@ -24,7 +26,7 @@ class RowWriteSupport(schema: MessageType,
   }
 
   def prepareForWrite(record: RecordConsumer) {
-    writer = new RowWriter(record)
+    writer = new RowWriter(record, roundingMode)
   }
 
   def write(row: Row) {
@@ -32,11 +34,11 @@ class RowWriteSupport(schema: MessageType,
   }
 }
 
-class RowWriter(record: RecordConsumer) {
+class RowWriter(record: RecordConsumer, roundingMode: RoundingMode) {
 
   def write(row: Row): Unit = {
     record.startMessage()
-    val writer = new StructWriter(row.schema, false)
+    val writer = new StructWriter(row.schema, roundingMode, false)
     writer.write(record, row.values)
     record.endMessage()
   }
