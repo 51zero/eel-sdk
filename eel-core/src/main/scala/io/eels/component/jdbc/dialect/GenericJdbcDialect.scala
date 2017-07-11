@@ -22,7 +22,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
     case FloatType => "float"
     case EnumType(_, _) => "varchar(255)"
     case IntType(_) => "int"
-    case LongType(_) => "int"
+    case LongType(_) => "bigint"
     case ShortType(_) => "smallint"
     case StringType => "text"
     case TimestampMillisType => "timestamp"
