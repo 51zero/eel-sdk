@@ -231,7 +231,7 @@ trait DataStream extends Logging {
     * Returns the same data but with an updated schema. The field that matches
     * the given name will have its datatype set to the given datatype.
     */
-  def updateFieldType(fieldName: String, datatype: DataType): DataStream = new DataStream {
+  def replaceFieldType(fieldName: String, datatype: DataType): DataStream = new DataStream {
     override def schema: StructType = self.schema.updateFieldType(fieldName, datatype)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val updatedSchema = schema
@@ -243,7 +243,7 @@ trait DataStream extends Logging {
     }
   }
 
-  def updateField(name: String, field: Field): DataStream = new DataStream {
+  def replaceField(name: String, field: Field): DataStream = new DataStream {
     override def schema: StructType = self.schema.replaceField(name, field)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val updatedSchema = schema
@@ -447,7 +447,7 @@ trait DataStream extends Logging {
       val counter = new AtomicLong(0)
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
         override def next(t: Seq[Row]): Unit = {
-          subscriber next t.filter { row =>
+          subscriber next t.filter { _ =>
             if (counter.getAndIncrement % k == 0) false
             else true
           }
@@ -562,19 +562,6 @@ trait DataStream extends Logging {
     }
   }
 
-  /**
-    * Action which results in all the rows being returned in memory as a Vector.
-    */
-  def collect: Vector[Row] = {
-    val vector = Vector.newBuilder[Row]
-    subscribe(new Subscriber[Seq[Row]] {
-      override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
-      override def starting(subscription: Cancellable): Unit = ()
-      override def completed(): Unit = ()
-      override def error(t: Throwable): Unit = ()
-    })
-    vector.result()
-  }
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = self.schema
@@ -587,6 +574,7 @@ trait DataStream extends Logging {
     }
   }
 
+  // changes all fields that use the from datatype to using the to datatype
   def replaceFieldType(from: DataType, toType: DataType): DataStream = new DataStream {
     override def schema: StructType = self.schema.replaceFieldType(from, toType)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
@@ -597,6 +585,20 @@ trait DataStream extends Logging {
         }
       })
     }
+  }
+
+  /**
+    * Action which results in all the rows being returned in memory as a Vector.
+    */
+  def collect: Vector[Row] = {
+    val vector = Vector.newBuilder[Row]
+    subscribe(new Subscriber[Seq[Row]] {
+      override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
+      override def starting(subscription: Cancellable): Unit = ()
+      override def completed(): Unit = ()
+      override def error(t: Throwable): Unit = ()
+    })
+    vector.result()
   }
 
   def count: Long = size
