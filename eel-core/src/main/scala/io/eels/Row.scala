@@ -5,7 +5,8 @@ import io.eels.schema.{Field, StringType, StructType}
 object Row {
   val Sentinel = List(Row(StructType(Field("__sentinel__", StringType)), Array(null)))
   def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
-  def apply(schema: StructType, array: Seq[Any]) = new Row(schema, array)
+  // this is needed so that apply(first,rest) doesn't override the apply from the case class
+  def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
 }
 
 case class Row(schema: StructType, values: Seq[Any]) {

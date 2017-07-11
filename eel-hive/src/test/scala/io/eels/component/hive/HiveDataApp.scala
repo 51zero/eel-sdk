@@ -116,8 +116,6 @@ object HiveDataApp extends App with Timed {
   val table = new HiveOps(client).tablePath(Database, Table)
   println("table:" + table)
 
-  println(HiveSource(Database, Table).partitions)
-
   val partitions = new HiveOps(client).hivePartitions(Database, Table)
   println("Partitions:" + partitions)
 
