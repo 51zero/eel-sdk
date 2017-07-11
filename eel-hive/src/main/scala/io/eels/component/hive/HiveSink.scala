@@ -5,7 +5,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.component.hive.partition.{DefaultHivePathStrategy, PartitionPathStrategy}
 import io.eels.schema.StructType
-import io.eels.{RowOutputStream, Sink}
+import io.eels.{SinkWriter, Sink}
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
@@ -29,10 +29,11 @@ case class HiveSink(dbName: String,
                     partitionFields: Seq[String] = Nil,
                     partitionPathStrategy: PartitionPathStrategy = DefaultHivePathStrategy,
                     filenameStrategy: FilenameStrategy = DefaultEelFilenameStrategy,
+                    stagingStrategy: StagingStrategy = DefaultStagingStrategy,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
-                    overwrite: Boolean = false,
+                    callbacks: Seq[CommitCallback] = Nil,
                     metadata: Map[String, String] = Map.empty)
                    (implicit fs: FileSystem, client: IMetaStoreClient) extends Sink with Logging {
 
@@ -42,7 +43,7 @@ case class HiveSink(dbName: String,
   val ops = new HiveOps(client)
 
   def withCreateTable(createTable: Boolean, partitionFields: Seq[String] = Nil): HiveSink =
-    copy(createTable = createTable, partitionFields = partitionFields, overwrite = overwrite)
+    copy(createTable = createTable, partitionFields = partitionFields)
 
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
   def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
@@ -52,6 +53,11 @@ case class HiveSink(dbName: String,
   def withFilenameStrategy(filenameStrategy: FilenameStrategy): HiveSink = copy(filenameStrategy = filenameStrategy)
   def withPartitionPathStrategy(strategy: PartitionPathStrategy): HiveSink = copy(partitionPathStrategy = strategy)
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
+
+  /**
+    * Add a callback that will be invoked when commit operations are taking place.
+    */
+  def addCommitCallback(callback: CommitCallback): HiveSink = copy(callbacks = callbacks :+ callback)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSink = {
     login()
@@ -73,10 +79,10 @@ case class HiveSink(dbName: String,
 
   def containsUpperCase(schema: StructType): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
-  override def open(schema: StructType, n: Int): Seq[RowOutputStream] = List.tabulate(n) { k => open(schema, Some(k.toString)) }
-  override def open(schema: StructType): RowOutputStream = open(schema, None)
+  override def open(schema: StructType, n: Int): Seq[SinkWriter] = List.tabulate(n) { k => open(schema, Some(k.toString)) }
+  override def open(schema: StructType): SinkWriter = open(schema, None)
 
-  def open(schema: StructType, discriminator: Option[String]): RowOutputStream = {
+  def open(schema: StructType, discriminator: Option[String]): SinkWriter = {
     login()
 
     if (containsUpperCase(schema)) {
@@ -94,10 +100,9 @@ case class HiveSink(dbName: String,
     }
 
     if (createTable) {
-      if (overwrite || !ops.tableExists(dbName, tableName)) {
+      if (!ops.tableExists(dbName, tableName)) {
         ops.createTable(dbName, tableName, schema,
           partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
-          overwrite = overwrite,
           format = HiveFormat.Parquet,
           props = Map.empty,
           tableType = TableType.MANAGED_TABLE
@@ -113,7 +118,7 @@ case class HiveSink(dbName: String,
     val metastoreSchema = ops.schema(dbName, tableName)
     logger.trace("Metastore schema" + metastoreSchema)
 
-    new HiveRowOutputStream(
+    new HiveSinkWriter(
       schema,
       metastoreSchema,
       dbName,
@@ -123,10 +128,12 @@ case class HiveSink(dbName: String,
       dynamicPartitioning.contains(true) || dynamicPartitioningDefault,
       partitionPathStrategy,
       filenameStrategy,
+      stagingStrategy,
       bufferSize,
       inheritPermissions,
       permission,
       fileListener,
+      callbacks,
       metadata
     )
   }

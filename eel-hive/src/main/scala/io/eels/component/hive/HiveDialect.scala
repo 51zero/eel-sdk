@@ -33,11 +33,11 @@ trait HiveDialect extends Logging {
     * The readerSchema is the schema required by the caller which may be the same as the written data, or
     * it may be a subset if a projection pushdown is being used.
     */
-  def publisher(path: Path,
-                metastoreSchema: StructType,
-                projectionSchema: StructType,
-                predicate: Option[Predicate])
-               (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]]
+  def input(path: Path,
+            metastoreSchema: StructType,
+            projectionSchema: StructType,
+            predicate: Option[Predicate])
+           (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]]
 
   /**
     * Creates a new writer ready to do the bidding of the hive sink.
@@ -48,11 +48,11 @@ trait HiveDialect extends Logging {
     * @param permission optional permission to set on the file once completed
     * @param metadata   any metadata we wish to include in the file, this might not be supported by all filetypes
     */
-  def writer(schema: StructType, // schema without partition information
+  def output(schema: StructType, // schema without partition information
              path: Path,
              permission: Option[FsPermission],
              metadata: Map[String, String])
-            (implicit fs: FileSystem, conf: Configuration): HiveWriter
+            (implicit fs: FileSystem, conf: Configuration): HiveOutputStream
 }
 
 object HiveDialect extends Logging {

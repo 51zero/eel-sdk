@@ -4,10 +4,10 @@ import org.apache.hadoop.fs.Path
 
 object FileListener {
   val noop = new FileListener {
-    override def onFileCreated(path: Path): Unit = ()
+    override def onOutputFile(path: Path): Unit = ()
   }
 }
 
 trait FileListener {
-  def onFileCreated(path: Path)
+  def onOutputFile(path: Path)
 }

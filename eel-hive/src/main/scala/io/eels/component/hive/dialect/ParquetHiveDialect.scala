@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
-import io.eels.component.hive.{HiveDialect, HiveOps, HiveWriter, Publisher}
+import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream, Publisher}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.datastream.Subscriber
@@ -18,11 +18,11 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 class ParquetHiveDialect extends HiveDialect with Logging {
 
-  override def publisher(path: Path,
-                         ignore: StructType,
-                         projectionSchema: StructType,
-                         predicate: Option[Predicate])
-                        (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+  override def input(path: Path,
+                     ignore: StructType,
+                     projectionSchema: StructType,
+                     predicate: Option[Predicate])
+                    (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
 
     val client = new HiveMetaStoreClient(new HiveConf)
     val ops = new HiveOps(client)
@@ -41,13 +41,13 @@ class ParquetHiveDialect extends HiveDialect with Logging {
     }
   }
 
-  override def writer(schema: StructType,
+  override def output(schema: StructType,
                       path: Path,
                       permission: Option[FsPermission],
                       metadata: Map[String, String])
-                     (implicit fs: FileSystem, conf: Configuration): HiveWriter = {
+                     (implicit fs: FileSystem, conf: Configuration): HiveOutputStream = {
     val path_x = path
-    new HiveWriter {
+    new HiveOutputStream {
       ParquetLogMute()
 
       private val _records = new AtomicInteger(0)

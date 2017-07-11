@@ -3,7 +3,7 @@ package io.eels.component.kudu
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels.schema._
-import io.eels.{Row, Sink, RowOutputStream}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.kudu.client.{CreateTableOptions, KuduClient}
 
 import scala.collection.JavaConverters._
@@ -19,7 +19,7 @@ case class KuduSinkConfig(writeMode: WriteMode)
 case class KuduSink(tableName: String,
                     config: KuduSinkConfig)(implicit client: KuduClient) extends Sink with Logging {
 
-  override def open(structType: StructType): RowOutputStream = new RowOutputStream {
+  override def open(structType: StructType): SinkWriter = new SinkWriter {
 
     val schema = KuduSchemaFns.toKuduSchema(structType)
 

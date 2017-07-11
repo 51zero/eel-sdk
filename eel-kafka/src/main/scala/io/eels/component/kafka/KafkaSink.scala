@@ -2,7 +2,7 @@ package io.eels.component.kafka
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import io.eels.{Row, RowOutputStream, Sink}
+import io.eels.{Row, SinkWriter, Sink}
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 
 /**
@@ -71,9 +71,9 @@ case class KafkaSink[K, V](topic: String,
                            converter: KafkaRowConverter[V],
                            keygen: KafkaKeyGen[K]) extends Sink with Logging {
 
-  def open(schema: StructType): RowOutputStream = {
+  def open(schema: StructType): SinkWriter = {
 
-    new RowOutputStream {
+    new SinkWriter {
       override def write(row: Row): Unit = {
         val key = keygen.gen(row)
         val value = converter.convert(row)

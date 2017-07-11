@@ -5,33 +5,31 @@ import io.eels.schema.StructType
 
 trait Sink extends Using {
 
-  def write(rows: Seq[Row]): Unit = {
-    require(rows.nonEmpty)
-    using(open(rows.head.schema)) { writer =>
-      rows.foreach(writer.write)
-    }
-  }
-
-  // opens up n output streams. This allows the sink to optimize the cases when it knows it will be
+  // opens up n writers. This allows the sink to optimize the cases when it knows it will be
   // writing multiple files. For example, in hive, it can create separate output streams that can
   // safely write into the same partitions.
-  def open(schema: StructType, n: Int): Seq[RowOutputStream] = List.fill(n) {
+  def open(schema: StructType, n: Int): Seq[SinkWriter] = List.fill(n) {
     open(schema)
   }
 
-  def open(schema: StructType): RowOutputStream
+  def open(schema: StructType): SinkWriter
 }
 
 /**
-  * A RowOutputStream writes Row data to some storage.
+  * A RowWriter writes `Row`s to some storage area.
   *
-  * It does not need to be thread safe, callers will guarantee that only a single thread
-  * will invoke a particular output stream at a time.
+  * It does not need to be thread safe, callers must guarantee that only a single thread
+  * will invoke a particular writer at a time.
   *
-  * RowOutputStream's can be implemented as lazy if required, so that file handles, etc, are not
+  * `RowWriter`s can be implemented as lazy if required, so that file handles, etc, are not
   * opened until the first record is written.
   */
-trait RowOutputStream {
+trait SinkWriter {
+
   def write(row: Row): Unit
+
+  // closes this writer and performs any other "completion" actions
+  // if multiple writers have been opened, then close should be called on them all at the same time
+  // for instance, in case they are committing files from a staging area to a public area
   def close(): Unit
 }

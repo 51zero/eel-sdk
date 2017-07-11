@@ -1,6 +1,6 @@
 package io.eels.datastream
 
-import io.eels.{Row, RowOutputStream, Sink}
+import io.eels.{Row, SinkWriter, Sink}
 import io.eels.schema.{Field, StructType}
 import org.scalatest.{Matchers, WordSpec}
 
@@ -11,7 +11,7 @@ class SinkActionTest extends WordSpec with Matchers {
 
       intercept[RuntimeException] {
         class ErrorSink extends Sink {
-          override def open(schema: StructType): RowOutputStream = sys.error("boom")
+          override def open(schema: StructType): SinkWriter = sys.error("boom")
         }
 
         val ds = DataStream.fromValues(StructType(Field("name")), Seq(Seq("sam"), Seq("bob")))
@@ -24,7 +24,7 @@ class SinkActionTest extends WordSpec with Matchers {
 
       intercept[RuntimeException] {
         class ErrorSink extends Sink {
-          override def open(schema: StructType): RowOutputStream = new RowOutputStream {
+          override def open(schema: StructType): SinkWriter = new SinkWriter {
             override def close(): Unit = closed = true
             override def write(row: Row): Unit = sys.error("boom")
           }

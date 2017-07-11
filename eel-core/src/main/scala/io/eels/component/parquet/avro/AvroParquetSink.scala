@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.avro.{AvroSchemaFns, RecordSerializer}
 import io.eels.schema.StructType
-import io.eels.{Row, Sink, RowOutputStream}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object AvroParquetSink {
@@ -15,7 +15,7 @@ case class AvroParquetSink(path: Path, overwrite: Boolean = false)(implicit fs: 
 
   def withOverwrite(overwrite: Boolean): AvroParquetSink = copy(overwrite = overwrite)
 
-  override def open(schema: StructType): RowOutputStream = new RowOutputStream {
+  override def open(schema: StructType): SinkWriter = new SinkWriter {
 
     private val config = ConfigFactory.load()
     private val caseSensitive = config.getBoolean("eel.parquet.caseSensitive")

@@ -3,11 +3,12 @@ package io.eels.component.hive
 import java.util.concurrent._
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.partition.{PartitionPathStrategy, RowPartitionFn}
 import io.eels.schema.{Partition, StructType}
 import io.eels.util.{HdfsMkdir, RowNormalizerFn}
-import io.eels.{Row, RowOutputStream}
+import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -16,29 +17,30 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
-class HiveRowOutputStream(sourceSchema: StructType,
-                          metastoreSchema: StructType,
-                          dbName: String,
-                          tableName: String,
-                          // a discriminator for the file names, needed when we are writing to the same table
-                          // with multiple threads
-                          discriminator: Option[String],
-                          dialect: HiveDialect,
-                          dynamicPartitioning: Boolean,
-                          partitionPathStrategy: PartitionPathStrategy,
-                          filenameStrategy: FilenameStrategy,
-                          bufferSize: Int,
-                          inheritPermissions: Option[Boolean],
-                          permission: Option[FsPermission],
-                          fileListener: FileListener,
-                          metadata: Map[String, String])
-                         (implicit fs: FileSystem,
-                          conf: Configuration,
-                          client: IMetaStoreClient) extends RowOutputStream with Logging {
+class HiveSinkWriter(sourceSchema: StructType,
+                     metastoreSchema: StructType,
+                     dbName: String,
+                     tableName: String,
+                     // a discriminator for the file names, needed when we are writing to the same table
+                     // with multiple threads
+                     discriminator: Option[String],
+                     dialect: HiveDialect,
+                     dynamicPartitioning: Boolean,
+                     partitionPathStrategy: PartitionPathStrategy,
+                     filenameStrategy: FilenameStrategy,
+                     stagingStrategy: StagingStrategy,
+                     bufferSize: Int,
+                     inheritPermissions: Option[Boolean],
+                     permission: Option[FsPermission],
+                     fileListener: FileListener,
+                     callbacks: Seq[CommitCallback],
+                     metadata: Map[String, String])
+                    (implicit fs: FileSystem,
+                     conf: Configuration,
+                     client: IMetaStoreClient) extends SinkWriter with Logging {
 
   private val config = ConfigFactory.load()
   private val sinkConfig = HiveSinkConfig()
-  private val writeToTempDirectory = config.getBoolean("eel.hive.sink.writeToTempFiles")
   private val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
   private val hiveOps = new HiveOps(client)
@@ -66,7 +68,7 @@ class HiveRowOutputStream(sourceSchema: StructType,
 
   // Since the data can come in unordered, we want to keep the streams for each partition open
   // otherwise we would be opening and closing streams frequently.
-  private val writers = TrieMap.empty[Path, HiveWriter]
+  private val streams = TrieMap.empty[Path, HiveOutputStream]
 
   // this contains all the partitions we've checked.
   private val extantPartitions = new ConcurrentSkipListSet[Path]
@@ -77,32 +79,42 @@ class HiveRowOutputStream(sourceSchema: StructType,
 
   // returns a Map consisting of each path written, the size of the file, and the number of records in that file
   def writeStats(): Seq[WriteStatus] = {
-    writers.values.map { writer => WriteStatus(writer.path, fs.getFileStatus(writer.path).getLen, writer.records) }
+    streams.values.map { writer => WriteStatus(writer.path, fs.getFileStatus(writer.path).getLen, writer.records) }
   }.toVector
 
   override def write(row: Row): Unit = {
-    val writer = getOrCreateHiveWriter(row)
+    val stream = getOrCreateHiveWriter(row)
     // need to strip out any partition information from the written data and possibly pad
-    writer.write(normalizer(row))
+    stream.write(normalizer(row))
   }
 
   override def close(): Unit = {
-    logger.info("Closing hive output stream")
-    if (writeToTempDirectory) {
-      logger.info("Moving files from temp dir to public")
+    logger.info("Closing hive row writer")
 
-      // move table/.temp/file to table/file
-      writers.values.foreach { writer =>
-        fs.rename(writer.path, new Path(writer.path.getParent.getParent, writer.path.getName))
+    logger.debug(s"Closing ${streams.size} hive output stream(s)")
+    streams.values.foreach(_.close)
+
+    if (stagingStrategy.staging) {
+      logger.info("Staging was enabled, committing staging files to public")
+
+      // move files from the staging area into the public area
+      streams.foreach { case (location, writer) =>
+        val stagingPath = writer.path
+        val finalPath = new Path(location, stagingPath.getName)
+        logger.debug(s"Committing file $stagingPath => $finalPath")
+        fs.rename(stagingPath, finalPath)
+        callbacks.foreach(_.onCommit(stagingPath, finalPath))
       }
 
-      logger.debug("Deleting temp dirs")
-      writers.values.foreach { writer =>
-        fs.delete(writer.path, true)
+      streams.values.foreach { writer =>
+        val stagingDir = writer.path.getParent
+        logger.debug(s"Deleting staging directory $stagingDir")
+        fs.delete(stagingDir, true)
       }
+
+      logger.info("Commit completed")
+      callbacks.foreach(_.onCommitComplete)
     }
-    logger.debug(s"Closing ${writers.size} hive writers")
-    writers.values.foreach(_.close)
   }
 
   private def ensurePartitionExists(partition: Partition, path: Path): Unit = {
@@ -119,50 +131,56 @@ class HiveRowOutputStream(sourceSchema: StructType,
     }
   }
 
-  private def createPartitionWriter(partition: Partition, partitionPath: Path): HiveWriter = {
+  private def createPartitionWriter(partition: Partition, partitionPath: Path): HiveOutputStream = {
     ensurePartitionExists(partition, partitionPath)
     // ensure the partition path is created, with permissions from parent if applicable
     HdfsMkdir(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
     createWriter(partitionPath)
   }
 
-  private def createWriter(location: Path): HiveWriter = try {
-    logger.debug(s"Creating new HiveWriter for location $location")
+  private def createWriter(location: Path): HiveOutputStream = try {
+    logger.debug(s"Creating new hive output stream for location $location")
 
     val filePath = outputPath(location)
-    logger.debug(s"HiveWriter will write to file $filePath")
-    fileListener.onFileCreated(filePath)
+    logger.debug(s"Hive output stream will write to file $filePath")
+    fileListener.onOutputFile(filePath)
 
-    dialect.writer(fileSchema, filePath, permission, metadata)
+    dialect.output(fileSchema, filePath, permission, metadata)
+
   } catch {
     case NonFatal(e) =>
-      logger.error(s"Error getting or creating the hive writer for $location", e)
+      logger.error(s"Error getting or creating the hive output stream for $location", e)
       throw e
   }
 
   private def outputPath(partitionPath: Path): Path = {
-    val filename = filenameStrategy.filename(discriminator)
-    if (writeToTempDirectory) {
-      val temp = new Path(partitionPath, filenameStrategy.tempdir)
+    val filename = filenameStrategy.filename + discriminator.getOrElse("")
+    if (stagingStrategy.staging) {
+      val stagingDirectory = stagingStrategy.stagingDirectory(partitionPath)
+        .getOrError("Staging strategy returned None, but staging was enabled. This is a bug in the staging strategy.")
+      val temp = new Path(stagingDirectory, filename)
       new Path(temp, filename)
     } else {
       new Path(partitionPath, filename)
     }
   }
 
-  def getOrCreateHiveWriter(row: Row): HiveWriter = {
+  // if partitioning is used, inspects the row to see which partition it should live in
+  // and returns an output stream for that partition
+  // if partitioning is not used then will return the same table stream for all rows
+  private def getOrCreateHiveWriter(row: Row): HiveOutputStream = {
 
     // we need a a writer per partition (as each partition is written to a different directory)
     // if we don't have partitions then we only need a writer for the table
     if (partitionKeyNames.isEmpty) {
-      writers.getOrElseUpdate(tablePath, createWriter(tablePath))
+      streams.getOrElseUpdate(tablePath, createWriter(tablePath))
     } else {
 
       val partition = RowPartitionFn(row, partitionKeyNames)
       val partitionPath = new Path(tablePath, partitionPathStrategy.name(partition))
 
       // we cache the writer so that we don't keep opening and closing loads of writers
-      writers.getOrElseUpdate(partitionPath, createPartitionWriter(partition, partitionPath))
+      streams.getOrElseUpdate(partitionPath, createPartitionWriter(partition, partitionPath))
     }
   }
 }

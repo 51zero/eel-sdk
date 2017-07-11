@@ -41,7 +41,7 @@ class HiveFilePart(dialect: HiveDialect,
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema
-    val publisher = dialect.publisher(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
+    val publisher = dialect.input(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
     publisher.subscribe(new Subscriber[Seq[Row]] {
       override def next(chunk: Seq[Row]): Unit = {
         val aligned = chunk.map { row =>

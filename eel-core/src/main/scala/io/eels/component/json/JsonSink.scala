@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import io.eels.schema.StructType
-import io.eels.{Row, Sink, RowOutputStream}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class JsonSink(path: Path)(implicit fs: FileSystem) extends Sink {
 
-  override def open(schema: StructType): RowOutputStream = new RowOutputStream {
+  override def open(schema: StructType): SinkWriter = new SinkWriter {
 
     private val lock = new AnyRef()
     private val out = fs.create(path)

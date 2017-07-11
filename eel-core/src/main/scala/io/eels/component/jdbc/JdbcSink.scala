@@ -44,5 +44,5 @@ case class JdbcSink(connFn: () => Connection,
   def withDialect(dialect: JdbcDialect): JdbcSink = copy(dialect = dialect.some)
 
   override def open(schema: StructType) =
-    new JdbcWriter(schema, connFn, table, createTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, batchesPerCommit, autoCommit, bufferSize)
+    new JdbcSinkWriter(schema, connFn, table, createTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, batchesPerCommit, autoCommit, bufferSize)
 }

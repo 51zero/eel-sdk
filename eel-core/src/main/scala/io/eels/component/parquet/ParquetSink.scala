@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import io.eels.{Row, RowOutputStream, Sink}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -20,7 +20,7 @@ case class ParquetSink(path: Path,
   def withPermission(permission: FsPermission): ParquetSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): ParquetSink = copy(inheritPermissions = Option(inheritPermissions))
 
-  private def create(schema: StructType, path: Path): RowOutputStream = new RowOutputStream {
+  private def create(schema: StructType, path: Path): SinkWriter = new SinkWriter {
 
     if (overwrite && fs.exists(path))
       fs.delete(path, false)
@@ -44,10 +44,10 @@ case class ParquetSink(path: Path,
     }
   }
 
-  override def open(schema: StructType, n: Int): Seq[RowOutputStream] = {
+  override def open(schema: StructType, n: Int): Seq[SinkWriter] = {
     if (n == 1) Seq(create(schema, path))
     else List.tabulate(n) { k => create(schema, new Path(path.getParent, path.getName + "_" + k)) }
   }
 
-  override def open(schema: StructType): RowOutputStream = create(schema, path)
+  override def open(schema: StructType): SinkWriter = create(schema, path)
 }
