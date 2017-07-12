@@ -1,23 +1,24 @@
 package io.eels.component.json
 
+import java.io.InputStream
+import java.nio.file.Files
+
 import com.sksamuel.exts.io.Using
 import io.eels._
 import io.eels.datastream.Subscriber
 import io.eels.schema.{Field, StructType}
-import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
 
 import scala.collection.JavaConverters._
 
-case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with Using {
-  require(fs.exists(path), s"$path must exist")
+// the stream must be repeatable. That is, the input function may be called multiple times.
+case class JsonSource(inputFn: () => InputStream) extends Source with Using {
 
   private val reader: ObjectReader = new ObjectMapper().reader(classOf[JsonNode])
 
-  private def createInputStream(path: Path): FSDataInputStream = fs.open(path)
-
-  lazy val schema: StructType = using(createInputStream(path)) { in =>
+  lazy val schema: StructType = using(inputFn()) { in =>
     val roots = reader.readValues[JsonNode](in)
     assert(roots.hasNext, "Cannot read schema, no data in file")
     val node = roots.next()
@@ -25,11 +26,11 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
     StructType(fields)
   }
 
-  override def parts(): List[Part] = List(new JsonPart(path))
+  override def parts(): List[Part] = List(new JsonPart(inputFn))
 
-  class JsonPart(val path: Path) extends Part {
+  class JsonPart(inputFn: () => InputStream) extends Part {
 
-    def nodeToValue(node: JsonNode): Any = {
+    private def nodeToValue(node: JsonNode): Any = {
       if (node.isArray) {
         node.getElements.asScala.map(nodeToValue).toVector
       } else if (node.isObject) {
@@ -53,13 +54,13 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
       }
     }
 
-    def nodeToRow(node: JsonNode): Row = {
+    private def nodeToRow(node: JsonNode): Row = {
       val values = node.getElements.asScala.map(nodeToValue).toArray
       Row(schema, values)
     }
 
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      using(createInputStream(path)) { input =>
+      using(inputFn()) { input =>
         try {
           val iterator = reader.readValues[JsonNode](input).asScala.map(nodeToRow)
           iterator.grouped(1000).foreach(subscriber.next)
@@ -72,5 +73,15 @@ case class JsonSource(path: Path)(implicit fs: FileSystem) extends Source with U
   }
 }
 
+object JsonSource {
 
+  def apply(path: Path)(implicit fs: FileSystem): JsonSource = {
+    require(fs.exists(path), s"$path must exist")
+    JsonSource(() => fs.open(path))
+  }
 
+  def apply(path: java.nio.file.Path): JsonSource = {
+    require(path.toFile.exists, s"$path must exist")
+    JsonSource(() => Files.newInputStream(path))
+  }
+}
