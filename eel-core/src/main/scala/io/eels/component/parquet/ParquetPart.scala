@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Part, Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -44,7 +44,11 @@ class ParquetPart(path: Path,
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     using(RowParquetReaderFn(path, predicate, readSchema, dictionaryFiltering)) { reader =>
       try {
-        ParquetIterator(reader).grouped(1000).foreach(subscriber.next)
+        var cancelled = false
+        subscriber.starting(new Cancellable {
+          override def cancel(): Unit = cancelled = true
+        })
+        ParquetIterator(reader).takeWhile(_ => !cancelled).grouped(1000).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)
