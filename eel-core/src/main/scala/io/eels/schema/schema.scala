@@ -1,6 +1,7 @@
 package io.eels.schema
 
 import scala.language.implicitConversions
+import scala.util.matching.Regex
 
 sealed trait DataType {
   def canonicalName: String = getClass.getSimpleName.toLowerCase.stripSuffix("$").stripSuffix("type")
@@ -118,6 +119,7 @@ object Scale {
 }
 
 case class StructType(fields: Vector[Field]) extends DataType {
+
   require(fields.nonEmpty, "StructType cannot be empty")
   val dups = fields.map(_.name).groupBy(identity).collect { case (x, list) if list.size > 1 => x }
   if (dups.nonEmpty) {
@@ -151,6 +153,13 @@ case class StructType(fields: Vector[Field]) extends DataType {
   def replaceFieldType(from: DataType, to: DataType): StructType = {
     StructType(fields.map {
       case field if field.dataType.matches(from) => field.copy(dataType = to)
+      case field => field
+    })
+  }
+
+  def replaceFieldType(regex: Regex, datatype: DataType): StructType = {
+    StructType(fields.map {
+      case field if regex.pattern.matcher(field.name).matches() => field.copy(dataType = datatype)
       case field => field
     })
   }

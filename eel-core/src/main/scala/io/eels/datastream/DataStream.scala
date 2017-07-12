@@ -9,6 +9,7 @@ import io.eels.{DataTable, Listener, Record, Row, Sink}
 
 import scala.collection.immutable.VectorIterator
 import scala.language.implicitConversions
+import scala.util.matching.Regex
 
 /**
   * A DataStream is kind of like a table of data. It has fields (like columns) and rows of data. Each row
@@ -575,8 +576,15 @@ trait DataStream extends Logging {
   }
 
   // changes all fields that use the from datatype to using the to datatype
-  def replaceFieldType(from: DataType, toType: DataType): DataStream = new DataStream {
-    override def schema: StructType = self.schema.replaceFieldType(from, toType)
+  def replaceFieldType(from: DataType, to: DataType): DataStream =
+    withSchema(schema => schema.replaceFieldType(from, to))
+
+  // changes all fields that match the regex to use the given datatype
+  def replaceFieldType(regex: Regex, datatype: DataType): DataStream =
+    withSchema(schema => schema.replaceFieldType(regex, datatype))
+
+  private def withSchema(fn: StructType => StructType): DataStream = new DataStream {
+    override def schema: StructType = fn(self.schema)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val updatedSchema = schema
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {

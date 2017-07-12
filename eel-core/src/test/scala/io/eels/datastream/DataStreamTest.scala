@@ -268,6 +268,16 @@ class DataStreamTest extends WordSpec with Matchers {
       ds2.schema shouldBe StructType(Field("a", BooleanType), Field("b", LongType(true)))
       ds2.collect.map(_.values) shouldBe Seq(Vector("a", 1), Vector("b", 2))
     }
+    "accept regex" in {
+      val schema = StructType(Field("aaa", StringType), Field("aab", LongType(true)))
+      val ds1 = DataStream.fromValues(schema, Vector(Vector("a", 1), Vector("b", 2)))
+
+      val ds2 = ds1.replaceFieldType("aa.".r, BooleanType)
+      ds2.schema shouldBe StructType(Field("aaa", BooleanType), Field("aab", BooleanType))
+
+      val ds3 = ds1.replaceFieldType(".*b".r, BooleanType)
+      ds3.schema shouldBe StructType(Field("aaa", StringType), Field("aab", BooleanType))
+    }
   }
 
   "DataStream.addField" should {
