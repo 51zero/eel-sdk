@@ -13,6 +13,7 @@ import com.sksamuel.exts.OptionImplicits._
 import io.eels.util.HdfsIterator
 
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 
 case class HiveTable(dbName: String,
                      tableName: String)
@@ -59,6 +60,18 @@ case class HiveTable(dbName: String,
     } else {
       files
     }
+  }
+
+  /**
+    * Returns a list of all files used by this hive table that match the given regex.
+    * The full path of the file will be used when matching against the regex.
+    *
+    * @param includePartitionDirs if true then the partition directories will be included
+    * @param includeTableDir      if true then the main table directory will be included
+    * @return paths of all files and directories
+    */
+  def paths(includePartitionDirs: Boolean = false, includeTableDir: Boolean = false, regex: Regex): List[Path] = {
+    paths(includePartitionDirs, includeTableDir).filter { path => regex.pattern.matcher(path.toString).matches }
   }
 
   /**
