@@ -155,6 +155,9 @@ case class HiveTable(dbName: String,
     )
   }
 
+  // returns the location of this table as a hadoop Path
+  def location(): Path = new Path(spec().location)
+
   def deletePartition(partition: Partition, deleteData: Boolean): Unit = {
     logger.debug(s"Deleting partition ${partition.pretty}")
     client.dropPartition(dbName, tableName, partition.values.asJava, deleteData)
@@ -177,6 +180,8 @@ case class HiveTable(dbName: String,
   def login(principal: String, keytabPath: java.nio.file.Path): Unit = {
     UserGroupInformation.loginUserFromKeytab(principal, keytabPath.toString)
   }
+
+  def toHdfsSource = HdfsSource(FilePattern(location.toString + "/*"))
 
   def source = HiveSource(dbName, tableName)
   def sink = HiveSink(dbName, tableName)

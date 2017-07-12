@@ -13,9 +13,12 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import scala.util.Random
 
 /**
-  * v1.2.0-snapshot
+  * v1.2.0-M6
   * 5m rows random contents; 20 parts using reactivex flows; reading parquet=2700
+  * v1.2.0-M10
   * 5m rows random contents; 20 parts using eels subscriber; reading parquet=1200
+  * v1.2.0-M11
+  * 5m rows random contents; 20 parts using eels subscriber; reading parquet=1400
   */
 object ParquetMultipleFileSpeedTest extends App with Timed {
   ParquetLogMute()
