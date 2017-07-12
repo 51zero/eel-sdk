@@ -51,5 +51,7 @@ case class Row(schema: StructType, values: Seq[Any]) {
     copy(values = newValues)
   }
 
+  def containsValue(value: Any): Boolean = values.contains(value)
+
   def add(name: String, value: Any): Row = copy(schema = schema.addField(name), values = values :+ value)
 }

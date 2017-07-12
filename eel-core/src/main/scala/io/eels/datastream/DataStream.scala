@@ -391,6 +391,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val index = schema.indexOf(fieldName)
+      if (index < 0) throw new IllegalArgumentException(s"Unknown field $fieldName")
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
         override def next(t: Seq[Row]): Unit = {
           subscriber next t.map { row =>
@@ -410,6 +411,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val index = schema.indexOf(fieldName)
+      if (index < 0) throw new IllegalArgumentException(s"Unknown field $fieldName")
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
         override def next(t: Seq[Row]): Unit = {
           subscriber next t.map { row =>
@@ -426,7 +428,7 @@ trait DataStream extends Logging {
   }
 
   /**
-    * Foreach row, any values that match "from" will be replaced with "target".
+    * For each row, any values that match "from" will be replaced with "target".
     * This operation applies to all values for all rows.
     */
   def replace(from: String, target: Any): DataStream = map { row =>
@@ -626,10 +628,23 @@ trait DataStream extends Logging {
   def head: Row = collect.head
 
   // -- actions --
-  def fold[A](initial: A)(fn: (A, Row) => A): A = ??? // rows().foldLeft(initial)(fn)
-  def forall(p: (Row) => Boolean): Boolean = ??? // ForallAction.execute(this, p)
-  def exists(p: (Row) => Boolean): Boolean = ??? // ExistsAction.execute(this, p)
-  def find(p: (Row) => Boolean): Option[Row] = ??? //  FindAction.execute(this, p)
+  def exists(p: (Row) => Boolean): Boolean = {
+    val sub = new ExistsSubscriber(p)
+    subscribe(sub)
+    sub.result.get match {
+      case Left(t) => throw t
+      case Right(exists) => exists
+    }
+  }
+
+  def find(p: (Row) => Boolean): Option[Row] = {
+    val sub = new FindSubscriber(p)
+    subscribe(sub)
+    sub.result.get match {
+      case Left(t) => throw t
+      case Right(value) => value
+    }
+  }
 
   def to(sink: Sink): Long = to(sink, 1)
   def to(sink: Sink, parallelism: Int): Long = SinkAction(this, sink, parallelism).execute()

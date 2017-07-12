@@ -46,13 +46,16 @@ class DataStreamTest extends WordSpec with Matchers {
     Field("gender")
   )
   val ds3 = DataStream.fromRows(schema3,
-    Row(schema2, Vector("Elton John", "m")),
-    Row(schema2, Vector("Kate Bush", "f"))
+    Row(schema3, Vector("Elton John", "m")),
+    Row(schema3, Vector("Kate Bush", "f"))
   )
 
   "DataStream.filter" should {
     "return only matching rows" in {
       source.toDataStream().filter(row => row.values.contains("Kent")).collect.size shouldBe 22
+    }
+    "support row filtering by column name and fn" in {
+      ds3.filter("gender", _ == "f").size shouldBe 1
     }
     "throw if the column does not exist" in {
       intercept[RuntimeException] {
@@ -168,6 +171,92 @@ class DataStreamTest extends WordSpec with Matchers {
           Vector("Kate Bush", "f"),
           Vector("Kate Bush", "f")
         )
+    }
+  }
+
+  "DataStream.replace" should {
+    "work!" in {
+      val ds1 = DataStream.fromValues(
+        StructType("name", "location"),
+        Seq(
+          List("sam", "aylesbury"),
+          List("ham", "buckingham")
+        )
+      )
+      ds1.replace("sam", "jam").toSet shouldBe {
+        Set(
+          Row(ds1.schema, "jam", "aylesbury"),
+          Row(ds1.schema, "ham", "buckingham")
+        )
+      }
+    }
+    "support replace by field" in {
+      val ds1 = DataStream.fromValues(
+        StructType("a", "b"),
+        Seq(
+          List("sam", "sam"),
+          List("ham", "jam")
+        )
+      )
+      ds1.replace("a", "sam", "ram").toSet shouldBe {
+        Set(
+          Row(ds1.schema, "ram", "sam"),
+          Row(ds1.schema, "ham", "jam")
+        )
+      }
+    }
+    "support replace by field with function" in {
+      val ds = DataStream.fromValues(
+        StructType("a", "b"),
+        Seq(
+          List("sam", "sam"),
+          List("ham", "jam")
+        )
+      )
+      val fn: Any => Any = any => any.toString.reverse
+      ds.replace("a", fn).toSet shouldBe
+        Set(
+          Row(ds.schema, "mas", "sam"),
+          Row(ds.schema, "mah", "jam")
+        )
+    }
+    "throw exception if field does not exist" in {
+      intercept[IllegalArgumentException] {
+        ds3.replace("wibble", "a", "b").collect
+      }
+      intercept[IllegalArgumentException] {
+        val fn: Any => Any = x => x
+        ds3.replace("wibble", fn).collect
+      }
+    }
+  }
+
+  "DataStream.exists" should {
+    "return true when a row matches the predicate" in {
+      ds3.exists(row => row.containsValue("Elton John")) shouldBe true
+      ds3.exists(row => row.containsValue("Jack Bruce")) shouldBe false
+    }
+  }
+
+  "DataStream.find" should {
+    "return Option[Row] when a row matches the predicate" in {
+      ds3.find(row => row.containsValue("Elton John")) shouldBe Option(Row(ds3.schema, Seq("Elton John", "m")))
+    }
+    "return None when no row matches the predicate" in {
+      ds3.find(row => row.containsValue("Jack Bruce")) shouldBe None
+    }
+  }
+
+  "DataStream.dropNullRows" should {
+    "work" in {
+      val ds1 = DataStream.fromValues(
+        StructType("name", "location"),
+        Seq(
+          List("sam", null),
+          List("ham", "buckingham")
+        )
+      )
+      ds1.dropNullRows.collect shouldBe List(Row(ds1.schema, "ham", "buckingham"))
     }
   }
 
@@ -309,4 +398,63 @@ class DataStreamTest extends WordSpec with Matchers {
         StructType("name", "location", "ostcode")
     }
   }
+
+  "DataStream.removeField" should {
+    "remove column" in {
+      val ds1 = DataStream.fromValues(
+        StructType("name", "location", "postcode"),
+        Seq(
+          List("sam", "aylesbury", "hp22"),
+          List("ham", "buckingham", "mk10")
+        )
+      )
+      val ds2 = ds1.removeField("location")
+      ds2.schema shouldBe StructType("name", "postcode")
+      ds2.toSet shouldBe Set(Row(ds2.schema, "sam", "hp22"), Row(ds2.schema, "ham", "mk10"))
+    }
+    "not remove column if case is different" in {
+      val ds1 = DataStream.fromValues(
+        StructType("name", "location", "postcode"),
+        Seq(
+          List("sam", "aylesbury", "hp22"),
+          List("ham", "buckingham", "mk10")
+        )
+      )
+      val ds2 = ds1.removeField("POSTcode")
+      ds2.schema shouldBe StructType("name", "location", "postcode")
+      ds2.toSet shouldBe Set(Row(ds1.schema, "sam", "aylesbury", "hp22"), Row(ds1.schema, "ham", "buckingham", "mk10"))
+    }
+    "remove column with ignore case" in {
+      val ds1 = DataStream.fromValues(
+        StructType("name", "location", "postcode"),
+        Seq(
+          List("sam", "aylesbury", "hp22"),
+          List("ham", "buckingham", "mk10")
+        )
+      )
+      val ds2 = ds1.removeField("locATION", false)
+      ds2.schema shouldBe StructType("name", "postcode")
+      ds2.toSet shouldBe Set(Row(ds2.schema, "sam", "hp22"), Row(ds2.schema, "ham", "mk10"))
+    }
+  }
+
+  "DataStream.apply" should {
+    "convert from a Seq[T<:Product]" in {
+
+      val s1 = Student("name1", 2, 1.2, true)
+      val s2 = Student("name2", 3, 11.2, true)
+      val students = Seq(s1, s2)
+
+      val ds = DataStream(students)
+
+      val rows = ds.collect
+      rows.size shouldBe 2
+      rows shouldBe Seq(
+        Row(ds.schema, s1.productIterator.toSeq),
+        Row(ds.schema, s2.productIterator.toSeq)
+      )
+    }
+  }
 }
+
+case class Student(name: String, age: Int, height: Double, hungary: Boolean)
