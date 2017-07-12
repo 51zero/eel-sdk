@@ -58,6 +58,7 @@ case class HiveSink(dbName: String,
   def withPartitionPathStrategy(strategy: PartitionPathStrategy): HiveSink = copy(partitionPathStrategy = strategy)
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
   def withRoundingMode(mode: RoundingMode): HiveSink = copy(roundingMode = mode)
+  def withStagingStrategy(strategy: StagingStrategy): HiveSink = copy(stagingStrategy = strategy)
 
   /**
     * Add a callback that will be invoked when commit operations are taking place.
