@@ -24,3 +24,4 @@ big.csv
 metastore_db
 parquet-par-test
 parquet-speed-test
+.eelstaging*
