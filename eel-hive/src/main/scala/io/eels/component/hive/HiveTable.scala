@@ -43,7 +43,7 @@ case class HiveTable(dbName: String,
     * @param includeTableDir      if true then the main table directory will be included
     * @return paths of all files and directories
     */
-  def paths(includePartitionDirs: Boolean = false, includeTableDir: Boolean = false): List[Path] = {
+  def paths(includePartitionDirs: Boolean, includeTableDir: Boolean): List[Path] = {
 
     val files = ops.hivePartitions(dbName, tableName).flatMap { partition =>
       val location = partition.getSd.getLocation
@@ -70,7 +70,7 @@ case class HiveTable(dbName: String,
     * @param includeTableDir      if true then the main table directory will be included
     * @return paths of all files and directories
     */
-  def paths(includePartitionDirs: Boolean = false, includeTableDir: Boolean = false, regex: Regex): List[Path] = {
+  def paths(includePartitionDirs: Boolean, includeTableDir: Boolean, regex: Regex): List[Path] = {
     paths(includePartitionDirs, includeTableDir).filter { path => regex.pattern.matcher(path.toString).matches }
   }
 
