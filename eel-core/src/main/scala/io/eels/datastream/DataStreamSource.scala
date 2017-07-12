@@ -63,7 +63,8 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
           // if we've been told to stop running, then we'll cancel downstream
           if (!running.get) {
             logger.debug(s"Cancelling part $name", t)
-            cancellable.cancel()
+            if (cancellable != null)
+              cancellable.cancel()
           }
         }
       }

@@ -5,7 +5,7 @@ import java.sql.{Connection, PreparedStatement}
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.{Part, Row}
 
 import scala.collection.mutable.ArrayBuffer
@@ -30,10 +30,16 @@ class JdbcPart(connFn: () => Connection,
           stmt.executeQuery()
         }
 
+        var cancelled = false
+
+        subscriber.starting(new Cancellable {
+          override def cancel(): Unit = cancelled = true
+        })
+
         val schema = schemaFor(dialect, rs)
 
         val buffer = new ArrayBuffer[Row](100)
-        while (rs.next) {
+        while (rs.next && !cancelled) {
           val values = schema.fieldNames().map { name =>
             val raw = rs.getObject(name)
             dialect.sanitize(raw)
