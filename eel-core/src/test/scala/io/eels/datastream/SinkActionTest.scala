@@ -18,7 +18,7 @@ class SinkActionTest extends WordSpec with Matchers {
         ds.to(new ErrorSink)
       }
     }
-    "handle errors when writing" in {
+    "close stream when errored" in {
 
       var closed = false
 
@@ -32,8 +32,24 @@ class SinkActionTest extends WordSpec with Matchers {
 
         val ds = DataStream.fromValues(StructType(Field("name")), Seq(Seq("sam"), Seq("bob")))
         ds.to(new ErrorSink)
+      }
 
-        closed shouldBe true
+      closed shouldBe true
+    }
+    "return successfully when an error stops the writer writing" in {
+
+      val schema = StructType(Field("a"))
+      val ds = DataStream.fromIterator(schema, Iterator.continually(Row(schema, Seq("a"))))
+
+      intercept[RuntimeException] {
+        class ErrorSink extends Sink {
+          override def open(schema: StructType): SinkWriter = new SinkWriter {
+            override def close(): Unit = ()
+            override def write(row: Row): Unit = sys.error("boom")
+          }
+        }
+
+        ds.to(new ErrorSink)
       }
     }
   }
