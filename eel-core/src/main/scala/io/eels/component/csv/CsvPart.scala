@@ -8,14 +8,12 @@ import com.univocity.parsers.csv.CsvParser
 import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
-import org.apache.hadoop.fs.FileSystem
 
 class CsvPart(createParser: () => CsvParser,
               inputFn: () => InputStream,
               header: Header,
               skipBadRows: Boolean,
-              schema: StructType)
-             (implicit fs: FileSystem) extends Part with Logging with Using {
+              schema: StructType) extends Part with Logging with Using {
 
   val rowsToSkip: Int = header match {
     case Header.FirstRow => 1

@@ -6,7 +6,7 @@ import java.nio.file.Files
 import com.sksamuel.exts.io.Using
 import io.eels._
 import io.eels.datastream.Subscriber
-import io.eels.schema.{Field, StructType}
+import io.eels.schema.{ArrayType, DataType, Field, StructType}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.codehaus.jackson.JsonNode
 import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
@@ -14,16 +14,38 @@ import org.codehaus.jackson.map.{ObjectMapper, ObjectReader}
 import scala.collection.JavaConverters._
 
 // the stream must be repeatable. That is, the input function may be called multiple times.
-case class JsonSource(inputFn: () => InputStream) extends Source with Using {
+case class JsonSource(inputFn: () => InputStream,
+                      inferrer: SchemaInferrer = StringInferrer) extends Source with Using {
+
+  def withSchemaInferrer(inferrer: SchemaInferrer): JsonSource = copy(inferrer = inferrer)
 
   private val reader: ObjectReader = new ObjectMapper().reader(classOf[JsonNode])
 
+  private def field(name: String, node: JsonNode): Field = {
+    node match {
+      case obj if obj.isObject => Field(name, struct(obj))
+      case arr if arr.isArray => Field(name, ArrayType(datatype(name, arr.iterator().next)))
+      case _ => inferrer.infer(name)
+    }
+  }
+
+  private def datatype(name: String, node: JsonNode): DataType = {
+    node match {
+      case obj if obj.isObject => struct(obj)
+      case arr if arr.isArray => ArrayType(datatype(name, arr.iterator().next))
+      case _ => inferrer.infer(name).dataType
+    }
+  }
+
+  private def struct(obj: JsonNode): StructType = StructType(obj.getFields.asScala.map { entry =>
+    field(entry.getKey, entry.getValue)
+  }.toVector)
+
+  // we take the schema from the first entry only if there are several
   lazy val schema: StructType = using(inputFn()) { in =>
     val roots = reader.readValues[JsonNode](in)
     assert(roots.hasNext, "Cannot read schema, no data in file")
-    val node = roots.next()
-    val fields = node.getFieldNames.asScala.map(name => Field(name)).toList
-    StructType(fields)
+    struct(roots.next)
   }
 
   override def parts(): List[Part] = List(new JsonPart(inputFn))

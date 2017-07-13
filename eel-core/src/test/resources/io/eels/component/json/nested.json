@@ -1,0 +1,10 @@
+{
+  "name": "kal-el",
+  "alias": "superman",
+  "friends": [
+    {
+      "name": "batman",
+      "location": "gotham"
+    }
+  ]
+}

@@ -3,30 +3,30 @@ package io.eels
 import io.eels.schema._
 
 trait SchemaInferrer {
-  def schemaOf(headers: List[String]): StructType
+  def infer(name: String): Field
+  def struct(headers: List[String]): StructType
+}
+
+class BasicSchemaInferrer(default: DataType, rules: Seq[DataTypeRule]) extends SchemaInferrer {
+
+  override def struct(headers: List[String]): StructType = {
+    val fields = headers.map(infer)
+    StructType(fields)
+  }
+
+  override def infer(name: String): Field = {
+    rules.foldLeft(None: Option[Field]) { case (field, rule) =>
+      field.orElse(rule(name))
+    }.getOrElse(Field(name, default))
+  }
 }
 
 object SchemaInferrer {
   def apply(default: DataType, first: DataTypeRule, rest: DataTypeRule*): SchemaInferrer = apply(default, first +: rest)
-  def apply(default: DataType, rules: Seq[DataTypeRule]): SchemaInferrer = new SchemaInferrer {
-    override def schemaOf(headers: List[String]): StructType = {
-
-      val fields = headers.map { header =>
-        rules.foldLeft(None: Option[Field]) { case (field, rule) =>
-          field.orElse(rule(header))
-        }.getOrElse(Field(header, default))
-      }
-
-      StructType(fields)
-    }
-  }
+  def apply(default: DataType, rules: Seq[DataTypeRule]): SchemaInferrer = new BasicSchemaInferrer(default, rules)
 }
 
-object StringInferrer extends SchemaInferrer {
-  override def schemaOf(headers: List[String]): StructType = StructType(headers.map { header =>
-    Field(header, StringType, true)
-  })
-}
+object StringInferrer extends BasicSchemaInferrer(StringType, Nil)
 
 case class DataTypeRule(pattern: String, dataType: DataType, nullable: Boolean = true) {
   def apply(header: String): Option[Field] = {

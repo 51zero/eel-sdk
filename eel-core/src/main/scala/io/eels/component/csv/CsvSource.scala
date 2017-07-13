@@ -7,6 +7,7 @@ import com.sksamuel.exts.io.Using
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels._
 import io.eels.schema.StructType
+import org.apache.hadoop.fs.{FileSystem, Path}
 
 case class CsvSource(inputFn: () => InputStream,
                      overrideSchema: Option[StructType] = None,
@@ -75,7 +76,7 @@ case class CsvSource(inputFn: () => InputStream,
       case Header.FirstRow => parser.parseNext().toList
     }
     parser.stopParsing()
-    inferrer.schemaOf(headers)
+    inferrer.struct(headers)
   }
 
   override def parts(): List[Part] = {
@@ -85,7 +86,7 @@ case class CsvSource(inputFn: () => InputStream,
 }
 
 object CsvSource {
-  def apply(input: InputStream): CsvSource = apply(() => input)
+  def apply(path: Path)(implicit fs: FileSystem): CsvSource = apply(() => fs.open(path))
   def apply(file: File): CsvSource = apply(file.toPath)
   def apply(path: java.nio.file.Path): CsvSource = CsvSource(() => Files.newInputStream(path))
 }
