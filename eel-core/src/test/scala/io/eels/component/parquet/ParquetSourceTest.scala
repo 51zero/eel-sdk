@@ -61,6 +61,9 @@ class ParquetSourceTest extends WordSpec with Matchers {
         Vector("elton john", "musician", "pinner")
       )
     }
+    "support iteration from multiple sources" in {
+      ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().iterator.toSeq.size shouldBe 4
+    }
     // todo add merge to parquet source
     "merge schemas" ignore {
 

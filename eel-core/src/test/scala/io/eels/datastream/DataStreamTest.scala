@@ -450,6 +450,12 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.iterator" should {
+    "allow iteration over the values" in {
+      ds1.iterator.toSeq.size shouldBe 10
+    }
+  }
+
   "DataStream.apply" should {
     "convert from a Seq[T<:Product]" in {
 
