@@ -14,6 +14,8 @@ import scala.collection.JavaConverters._
 
 object ParquetSource {
 
+  def apply(string: String)(implicit fs: FileSystem, conf: Configuration): ParquetSource = apply(FilePattern(string))
+
   def apply(uri: java.net.URI)(implicit fs: FileSystem, conf: Configuration): ParquetSource = apply(FilePattern(new Path(uri.toString)))
 
   def apply(path: java.nio.file.Path)(implicit fs: FileSystem, conf: Configuration): ParquetSource = apply(FilePattern(path))

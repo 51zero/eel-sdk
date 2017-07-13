@@ -1,14 +1,13 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong, AtomicReference}
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
+import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{DataTable, Listener, Record, Row, Sink}
 
-import scala.collection.immutable.VectorIterator
 import scala.language.implicitConversions
 import scala.util.matching.Regex
 
@@ -189,7 +188,18 @@ trait DataStream extends Logging {
     override def aggregations: Vector[Aggregation] = Vector.empty
   }
 
-  def iterator: VectorIterator[Row] = collect.iterator
+  def iterator: Iterator[Row] = {
+    val queue = new LinkedBlockingQueue[Row]()
+    val executor = Executors.newSingleThreadExecutor()
+    self.subscribe(new Subscriber[Seq[Row]] {
+      override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
+      override def completed(): Unit = queue.put(Row.SentinelSingle)
+      override def error(t: Throwable): Unit = queue.put(Row.SentinelSingle)
+      override def starting(c: Cancellable): Unit = ()
+    })
+    executor.shutdown()
+    BlockingQueueConcurrentIterator(queue, Row.SentinelSingle)
+  }
 
   def listener(_listener: Listener): DataStream = new DataStream {
     override def schema: StructType = self.schema
