@@ -7,11 +7,12 @@ trait SchemaInferrer {
 }
 
 object SchemaInferrer {
-  def apply(default: DataType, first: DataTypeRule, rest: DataTypeRule*): SchemaInferrer = new SchemaInferrer {
+  def apply(default: DataType, first: DataTypeRule, rest: DataTypeRule*): SchemaInferrer = apply(default, first +: rest)
+  def apply(default: DataType, rules: Seq[DataTypeRule]): SchemaInferrer = new SchemaInferrer {
     override def schemaOf(headers: List[String]): StructType = {
 
       val fields = headers.map { header =>
-        (first +: rest).foldLeft(None: Option[Field]) { case (field, rule) =>
+        rules.foldLeft(None: Option[Field]) { case (field, rule) =>
           field.orElse(rule(header))
         }.getOrElse(Field(header, default))
       }
