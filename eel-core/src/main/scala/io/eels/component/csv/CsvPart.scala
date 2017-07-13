@@ -1,18 +1,21 @@
 package io.eels.component.csv
 
-import com.sksamuel.exts.{Logging, TryOrLog}
+import java.io.InputStream
+
+import com.sksamuel.exts.Logging
+import com.sksamuel.exts.io.Using
 import com.univocity.parsers.csv.CsvParser
 import io.eels.datastream.Subscriber
 import io.eels.schema.StructType
 import io.eels.{Part, Row}
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.FileSystem
 
-class CsvPart(val createParser: () => CsvParser,
-              val path: Path,
-              val header: Header,
-              val skipBadRows: Boolean,
-              val schema: StructType)
-             (implicit fs: FileSystem) extends Part with Logging {
+class CsvPart(createParser: () => CsvParser,
+              inputFn: () => InputStream,
+              header: Header,
+              skipBadRows: Boolean,
+              schema: StructType)
+             (implicit fs: FileSystem) extends Part with Logging with Using {
 
   val rowsToSkip: Int = header match {
     case Header.FirstRow => 1
@@ -20,11 +23,12 @@ class CsvPart(val createParser: () => CsvParser,
   }
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-    TryOrLog {
+    using(inputFn()) { input =>
+
       val parser = createParser()
-      val input = fs.open(path)
 
       try {
+
         parser.beginParsing(input)
 
         val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>

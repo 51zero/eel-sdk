@@ -1,15 +1,14 @@
 package io.eels.component.csv
 
-import java.io.File
+import java.io.{File, InputStream}
+import java.nio.file.Files
 
 import com.sksamuel.exts.io.Using
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels._
 import io.eels.schema.StructType
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
 
-case class CsvSource(path: Path,
+case class CsvSource(inputFn: () => InputStream,
                      overrideSchema: Option[StructType] = None,
                      format: CsvFormat = CsvFormat(),
                      inferrer: SchemaInferrer = StringInferrer,
@@ -21,8 +20,7 @@ case class CsvSource(path: Path,
                      skipBadRows: Option[Boolean] = None,
                      header: Header = Header.FirstRow,
                      skipRows:Option[Long] = None,
-                     selectedColumns:Seq[String] = Seq.empty)
-                    (implicit fs: FileSystem) extends Source with Using {
+                     selectedColumns: Seq[String] = Seq.empty) extends Source with Using {
 
   val config: Config = ConfigFactory.load()
   val defaultSkipBadRows = config.getBoolean("eel.csv.skipBadRows")
@@ -47,24 +45,22 @@ case class CsvSource(path: Path,
   def withSkipEmptyLines(skipEmptyLines: Boolean): CsvSource = copy(skipEmptyLines = skipEmptyLines)
   def withIgnoreLeadingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreLeadingWhitespaces = ignore)
   def withIgnoreTrailingWhitespaces(ignore: Boolean): CsvSource = copy(ignoreTrailingWhitespaces = ignore)
-  def withSkipRows(count:Long):CsvSource = copy(skipRows=Some(count))
+  def withSkipRows(count: Long): CsvSource = copy(skipRows = Some(count))
 
-  private def createParser() =
-    {
-      CsvSupport.createParser(format,
-        ignoreLeadingWhitespaces,
-        ignoreTrailingWhitespaces,
-        skipEmptyLines,
-        emptyCellValue,
-        nullValue,
-        skipRows,
-        selectedColumns)
-    }
+  private def createParser() = {
+    CsvSupport.createParser(format,
+      ignoreLeadingWhitespaces,
+      ignoreTrailingWhitespaces,
+      skipEmptyLines,
+      emptyCellValue,
+      nullValue,
+      skipRows,
+      selectedColumns)
+  }
 
   override def schema: StructType = overrideSchema.getOrElse {
     val parser = createParser()
-    val input = fs.open(path)
-    parser.beginParsing(input)
+    parser.beginParsing(inputFn())
     val headers = header match {
       case Header.None =>
         // read the first row just to get the count of columns, then we'll call them column 1,2,3,4 etc
@@ -83,12 +79,13 @@ case class CsvSource(path: Path,
   }
 
   override def parts(): List[Part] = {
-    val part = new CsvPart(() => createParser, path, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
+    val part = new CsvPart(createParser, inputFn, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
     List(part)
   }
 }
 
 object CsvSource {
+  def apply(input: InputStream): CsvSource = apply(() => input)
   def apply(file: File): CsvSource = apply(file.toPath)
-  def apply(path: java.nio.file.Path): CsvSource = CsvSource(new Path(path.toString))(FileSystem.getLocal(new Configuration))
+  def apply(path: java.nio.file.Path): CsvSource = CsvSource(() => Files.newInputStream(path))
 }
