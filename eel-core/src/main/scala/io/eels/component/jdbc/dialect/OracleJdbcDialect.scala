@@ -37,12 +37,14 @@ class OracleJdbcDialect extends GenericJdbcDialect with Logging {
     val scale = metadata.getScale(column)
     require(scale <= precision, "Scale must be less than precision")
 
-    precision match {
+    (precision, scale) match {
       // Jdbc returns precision == 0 and scale == -127 for NUMBER fields which have no precision/scale
       // http://stackoverflow.com/questions/593197/what-is-the-default-precision-and-scale-for-a-number-in-oracle
-      case 0 => DecimalType(config.defaultPrecision, config.defaultScale)
-      case _ if scale == -127L => DecimalType(config.defaultPrecision, config.defaultScale)
-      case _ => DecimalType(Precision(precision), Scale(scale))
+      case (0, _) => DecimalType(config.defaultPrecision, config.defaultScale)
+      case (_, -127L) => DecimalType(config.defaultPrecision, config.defaultScale)
+      case (x, 0) if x > 9 => LongType.Signed
+      case (_, 0) => IntType.Signed
+      case (_, _) => DecimalType(Precision(precision), Scale(scale))
     }
   }
 
