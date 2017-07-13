@@ -399,6 +399,18 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.multiplex" should {
+    "return multiple independant branches of the stream" in {
+      val ds = DataStream.fromIterator(
+        StructType("a"),
+        Iterator.tabulate(5)(k => Row(StructType("a"), Seq(k.toString)))
+      )
+      val multis = ds.multiplex(2)
+      multis.head.take(2).collect.map(_.values) shouldBe Vector(List("0"), List("1"))
+      multis.last.drop(2).collect.map(_.values) shouldBe Vector(List("2"), List("3"), List("4"))
+    }
+  }
+
   "DataStream.removeField" should {
     "remove column" in {
       val ds1 = DataStream.fromValues(

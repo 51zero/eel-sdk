@@ -1,9 +1,10 @@
 package io.eels.datastream
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong, AtomicReference}
 import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{DataTable, Listener, Record, Row, Sink}
 
@@ -646,6 +647,72 @@ trait DataStream extends Logging {
     }
   }
 
+  def multiplex(count: Int): Seq[DataStream] = {
+
+    def subscribeDownstream(queues: Array[LinkedBlockingQueue[Seq[Row]]],
+                            latch: CountDownLatch,
+                            cancellable: AtomicReference[Cancellable]): Unit = {
+      logger.debug("Subscribing to multiplexed parent")
+      val executor = Executors.newSingleThreadExecutor()
+      executor.submit(new Runnable {
+        override def run(): Unit = {
+          self.subscribe(new Subscriber[Seq[Row]] {
+            override def starting(c: Cancellable): Unit = {
+              logger.debug("Multiplexed parent has started")
+              cancellable.set(c)
+              latch.countDown()
+            }
+            override def next(t: Seq[Row]): Unit = queues.foreach(_.put(t))
+            override def completed(): Unit = {
+              logger.debug("Multiplexed parent has completed")
+              queues.foreach(_.put(Row.Sentinel))
+            }
+            override def error(t: Throwable): Unit = {
+              logger.error("Error in subscriber; shutting down multiplexed streams", t)
+              queues.foreach(_.put(Row.Sentinel))
+            }
+          })
+        }
+      })
+      executor.shutdown()
+    }
+
+    val queues = Array.fill(count) {
+      new LinkedBlockingQueue[Seq[Row]](100)
+    }
+
+    val subscribed = new AtomicBoolean(false)
+    val latch = new CountDownLatch(1)
+    val cancellable = new AtomicReference[Cancellable](null)
+
+    Seq.tabulate(count) { k =>
+      new DataStream {
+        override def schema: StructType = self.schema
+
+        // when someone calls subscribe on one of the multiplex streams,
+        // we'll have to subscribe to this stream and then block if the other multiplexed
+        // streams are not keeping up
+        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+
+          if (subscribed.compareAndSet(false, true)) {
+            subscribeDownstream(queues, latch, cancellable)
+          }
+
+          // all subscribers will block until it has started downstream
+          latch.await()
+
+          try {
+            subscriber.starting(cancellable.get)
+            BlockingQueueConcurrentIterator(queues(k), Row.Sentinel).foreach(subscriber.next)
+            subscriber.completed()
+          } catch {
+            case t: Throwable => subscriber.error(t)
+          }
+        }
+      }
+    }
+  }
+
   def to(sink: Sink): Long = to(sink, 1)
   def to(sink: Sink, parallelism: Int): Long = SinkAction(this, sink, parallelism).execute()
 
@@ -667,7 +734,11 @@ object DataStream {
     override def schema: StructType = _schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       try {
-        rows.grouped(1000).foreach(subscriber.next)
+        var running = true
+        subscriber.starting(new Cancellable {
+          override def cancel(): Unit = running = false
+        })
+        rows.grouped(1000).takeWhile(_ => running).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)
@@ -692,7 +763,11 @@ object DataStream {
     override def schema: StructType = _schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       try {
-        rows.grouped(1000).foreach(subscriber.next)
+        var running = true
+        subscriber.starting(new Cancellable {
+          override def cancel(): Unit = running = false
+        })
+        rows.grouped(1000).takeWhile(_ => running).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)

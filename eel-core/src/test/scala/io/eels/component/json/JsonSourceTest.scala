@@ -43,7 +43,7 @@ class JsonSourceTest extends WordSpec with Matchers {
         )
     }
     "support arrays" in {
-      val schema = StructType(Field("name"), Field("skills"))
+      val schema = StructType(Field("name"), Field("skills", ArrayType(StringType)))
       JsonSource(() => getClass.getResourceAsStream("/io/eels/component/json/arrays.json")).toDataStream().toSet shouldBe
         Set(
           Row(schema, Seq("sammy", Seq("karate", "chess", "running")))
