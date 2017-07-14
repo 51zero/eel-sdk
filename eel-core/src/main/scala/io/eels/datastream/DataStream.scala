@@ -188,6 +188,33 @@ trait DataStream extends Logging {
     override def aggregations: Vector[Aggregation] = Vector.empty
   }
 
+  /**
+    * Returns a new DataStream which is the result of joining every row in this datastream
+    * with every row in the given datastream.
+    *
+    * The given datastream will be materialized before it is used.
+    *
+    * For example, if this datastream has rows [a,b], [c,d] and [e,f] and the given datastream
+    * has [1,2] and [3,4] then the result will be [a,b,1,2], [a,b,3,4], [c,d,1,2], [c,d,3,4], [e,f,1,2] and [e,f,3,4].
+    */
+  def cartesian(other: DataStream): DataStream = new DataStream {
+    override def schema: StructType = self.schema.concat(other.schema)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      val materialized = other.collect
+      val schema = self.schema.concat(other.schema)
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          val rows = t.flatMap { left =>
+            materialized.map { right =>
+              Row(schema, left.values ++ right.values)
+            }
+          }
+          subscriber.next(rows)
+        }
+      })
+    }
+  }
+
   def iterator: Iterator[Row] = {
     val queue = new LinkedBlockingQueue[Row]()
     val executor = Executors.newSingleThreadExecutor()

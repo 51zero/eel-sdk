@@ -456,6 +456,19 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.cartesian" should {
+    "create the cartesian join of two ds" in {
+      val schema = ds2.schema.concat(ds3.schema)
+      ds2.cartesian(ds3).collect shouldBe
+      Seq(
+        Row(schema, Seq("Pizza", "Italy", "Elton John", "m")),
+        Row(schema, Seq("Pizza", "Italy", "Kate Bush", "f")),
+        Row(schema, Seq("Foie Gras", "France", "Elton John", "m")),
+        Row(schema, Seq("Foie Gras", "France", "Kate Bush", "f"))
+      )
+    }
+  }
+
   "DataStream.apply" should {
     "convert from a Seq[T<:Product]" in {
 
