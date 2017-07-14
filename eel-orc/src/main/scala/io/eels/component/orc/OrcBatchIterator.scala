@@ -23,7 +23,7 @@ object OrcBatchIterator extends Logging {
       val fields = projection.flatMap(name => fileSchema.field(name))
       StructType(fields)
     }
-    logger.info(s"Orc read will use projection=$schema")
+    logger.trace(s"Orc read will use projection=$schema")
 
     // a projection is column index based, so the given projection columns must be
     // resolved against the file schema to work out which column indices are required

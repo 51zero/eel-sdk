@@ -51,7 +51,14 @@ case class OrcSink(path: Path,
   def withPermission(permission: FsPermission): OrcSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): OrcSink = copy(inheritPermissions = Option(inheritPermissions))
 
-  override def open(schema: StructType): SinkWriter = new SinkWriter {
+  override def open(schema: StructType, n: Int): Seq[SinkWriter] = {
+    if (n == 1) Seq(create(schema, path))
+    else List.tabulate(n) { k => create(schema, new Path(path.getParent, path.getName + "_" + k)) }
+  }
+
+  override def open(schema: StructType): SinkWriter = create(schema, path)
+
+  private def create(schema: StructType, path: Path): SinkWriter = new SinkWriter {
 
     if (overwrite && fs.exists(path))
       fs.delete(path, false)

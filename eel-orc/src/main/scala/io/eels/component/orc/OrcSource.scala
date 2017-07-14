@@ -3,20 +3,26 @@ package io.eels.component.orc
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.orc.OrcFile.ReaderOptions
 import org.apache.orc._
 
 import scala.collection.JavaConverters._
 
-case class OrcSource(path: Path,
-                     projection: Seq[String] = Nil,
-                     predicate: Option[Predicate] = None)(implicit conf: Configuration) extends Source with Using {
+object OrcSource {
+  def apply(path: Path)(implicit fs: FileSystem, conf: Configuration): OrcSource = apply(FilePattern(path))
+  def apply(str: String)(implicit fs: FileSystem, conf: Configuration): OrcSource = apply(FilePattern(str))
+}
 
-  override def parts(): List[Part] = List(new OrcPart(path, projection, predicate))
+case class OrcSource(pattern: FilePattern,
+                     projection: Seq[String] = Nil,
+                     predicate: Option[Predicate] = None)
+                    (implicit fs: FileSystem, conf: Configuration) extends Source with Using {
+
+  override def parts(): Seq[Part] = pattern.toPaths().map(new OrcPart(_, projection, predicate))
 
   def withPredicate(predicate: Predicate): OrcSource = copy(predicate = predicate.some)
   def withProjection(first: String, rest: String*): OrcSource = withProjection(first +: rest)
@@ -26,14 +32,14 @@ case class OrcSource(path: Path,
   }
 
   override def schema: StructType = {
-    val reader = OrcFile.createReader(path, new ReaderOptions(conf).maxLength(1))
+    val reader = OrcFile.createReader(pattern.toPaths().head, new ReaderOptions(conf).maxLength(1))
     val schema = reader.getSchema()
     OrcSchemaFns.fromOrcType(schema).asInstanceOf[StructType]
   }
 
   private def reader() = {
     val options = new ReaderOptions(conf)
-    OrcFile.createReader(path, options)
+    OrcFile.createReader(pattern.toPaths().head, options)
   }
 
   def count(): Long = reader().getNumberOfRows
@@ -48,10 +54,14 @@ class OrcPart(path: Path,
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
+      var running = true
+      subscriber.starting(new Cancellable {
+        override def cancel(): Unit = running = false
+      })
       val reader = OrcFile.createReader(path, new ReaderOptions(conf))
       val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
       val iterator: Iterator[Row] = OrcBatchIterator(reader, fileSchema, projection, predicate).flatten
-      iterator.grouped(1000).foreach(subscriber.next)
+      iterator.grouped(1000).takeWhile(_ => running).foreach(subscriber.next)
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

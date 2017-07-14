@@ -24,6 +24,7 @@ case class ParquetSink(path: Path,
   def withPermission(permission: FsPermission): ParquetSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): ParquetSink = copy(inheritPermissions = Option(inheritPermissions))
   def withRoundingMode(mode: RoundingMode): ParquetSink = copy(roundingMode = mode)
+
   private def create(schema: StructType, path: Path): SinkWriter = new SinkWriter {
 
     if (overwrite && fs.exists(path))

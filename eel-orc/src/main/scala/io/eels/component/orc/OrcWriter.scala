@@ -23,7 +23,7 @@ class OrcWriter(path: Path,
                 config: OrcSinkConfig)(implicit conf: Configuration) extends Logging {
 
   private val schema: TypeDescription = OrcSchemaFns.toOrcSchema(structType)
-  logger.debug(s"Creating orc writer for schema $schema")
+  logger.trace(s"Creating orc writer for schema $schema")
 
   private val batchSize = {
     val size = ConfigFactory.load().getInt("eel.orc.sink.batchSize")
@@ -87,7 +87,6 @@ class OrcWriter(path: Path,
     })
     buffer.clear()
     batch.reset()
-
   }
 
   def close(): Long = {
