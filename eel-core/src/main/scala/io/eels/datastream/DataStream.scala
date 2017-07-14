@@ -1,7 +1,7 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicLong, AtomicReference}
-import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue, TimeUnit}
+import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
@@ -548,6 +548,16 @@ trait DataStream extends Logging {
           }
           subscriber.next(ts)
         }
+      })
+    }
+  }
+
+  def substract(stream: DataStream): DataStream = new DataStream {
+    def schema: StructType = self.schema
+    def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        val rhs = stream.collect
+        override def next(t: Seq[Row]): Unit = subscriber next t.filterNot(rhs.contains)
       })
     }
   }

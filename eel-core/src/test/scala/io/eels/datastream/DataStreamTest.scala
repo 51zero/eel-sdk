@@ -469,6 +469,15 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.subtract" should {
+    "keep only the rows in the lhd that don't exist in the rhs" in {
+      ds2.substract(ds2.take(1)).collect shouldBe
+        Seq(
+          Row(ds2.schema, Seq("Foie Gras", "France"))
+        )
+    }
+  }
+
   "DataStream.apply" should {
     "convert from a Seq[T<:Product]" in {
 
