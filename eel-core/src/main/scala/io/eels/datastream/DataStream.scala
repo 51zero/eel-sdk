@@ -562,6 +562,16 @@ trait DataStream extends Logging {
     }
   }
 
+  def intersection(stream: DataStream): DataStream = new DataStream {
+    def schema: StructType = self.schema
+    def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        val rhs = stream.collect
+        override def next(t: Seq[Row]): Unit = subscriber next t.filter(rhs.contains)
+      })
+    }
+  }
+
   def replaceNullValues(defaultValue: String): DataStream = new DataStream {
     override def schema: StructType = self.schema
 
