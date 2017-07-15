@@ -95,7 +95,7 @@ object HiveBenchmarkApp extends App with Timed {
 
   logger.info("Table created")
 
-  val sink = HiveSink("sam", "people").withDynamicPartitioning(true)
+  val sink = HiveSink("sam", "people")
   DataStream.fromValues(schema, rows).to(sink)
 
   logger.info("Write complete")

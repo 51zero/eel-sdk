@@ -176,7 +176,7 @@ case class HiveTable(dbName: String,
   def location(): Path = new Path(spec().location)
 
   def deletePartition(partition: Partition, deleteData: Boolean): Unit = {
-    logger.debug(s"Deleting partition ${partition.pretty}")
+    logger.debug(s"Deleting partition ${partition.unquoted}")
     client.dropPartition(dbName, tableName, partition.values.asJava, deleteData)
   }
 

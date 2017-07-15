@@ -9,7 +9,7 @@ import scala.util.control.NonFatal
 object RowPartitionFn extends Logging {
 
   /**
-    * Will return a Partition created from the values of a row, based on the schema.
+    * Will return a Partition created from the values of a row, based on the schema fields.
     */
   def apply(row: Row): Partition = apply(row, row.schema.partitions.map(_.name))
 

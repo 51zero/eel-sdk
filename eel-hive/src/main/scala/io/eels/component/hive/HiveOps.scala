@@ -2,13 +2,14 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import io.eels.Constants
-import io.eels.component.hive.partition.{PartitionMetaData, PartitionPathStrategy}
+import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.schema._
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, SerDeInfo, StorageDescriptor, Table, Partition => HivePartition}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
+import com.sksamuel.exts.OptionImplicits._
 
 // client for operating at a low level on the metastore
 // methods in this class will accept/return eel classes, and convert
@@ -56,23 +57,11 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   }
 
   /**
-    * Creates a new partition in Hive in the given database.table in the default location, which will be
-    * a subdirectory of the table location.
-    * The supplied partition path strategy will be used to generate the partition name.
-    */
-  def createPartition(dbName: String, tableName: String, partition: Partition, strategy: PartitionPathStrategy): Unit = {
-    val table = client.getTable(dbName, tableName)
-    val location = new Path(table.getSd.getLocation, strategy.name(partition))
-    createPartition(dbName, tableName, location, partition.values)
-  }
-
-  /**
     * Creates a new partition in Hive in the given database.table. The location of the partition must be
-    * specified. If you want to use the default location then use the other variant that doesn't require the
-    * location path. The values for the serialization formats are taken from the values for the table.
+    * specified. The values for the serialization formats are taken from the values for the table.
     */
-  def createPartition(dbName: String, tableName: String, location: Path, values: Seq[String]): Unit = {
-    logger.info(s"Creating partition ${values.mkString(",")} on $dbName.$tableName at location=$location")
+  def createPartition(dbName: String, tableName: String, location: Path, partition: Partition): Unit = {
+    logger.info(s"Creating partition ${partition.values.mkString(",")} on $dbName.$tableName at location=$location")
 
     // we fetch the table so we can copy the serde/format values from the table. It makes no sense
     // to store a partition with different serialization formats to other partitions.
@@ -82,7 +71,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
 
     // the hive partition requires the values of the entries
     val hivePartition = new HivePartition(
-      values.asJava,
+      partition.values.asJava,
       dbName,
       tableName,
       createTimeAsInt(),
@@ -117,6 +106,11 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
       )
     }
   }
+
+  def partitionMetaData(dbName: String, tableName: String, partition: Partition): PartitionMetaData = {
+    partitionsMetaData(dbName, tableName).find(_.partition == partition).getOrError("Unknown partition $partition")
+  }
+
   def createTimeAsInt(): Int = (System.currentTimeMillis() / 1000).toInt
 
   /**
@@ -177,23 +171,21 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     }
   }
 
-  // creates (if not existing) the given partition, using the supplied partition path strategy,
-  // to determine the format of the path
+  // creates (if not existing) the given partition
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
                                  partition: Partition,
-                                 partitionPathStrategy: PartitionPathStrategy): Unit = {
+                                 path: Path): Boolean = {
     logger.debug(s"Ensuring partition exists '$partition'")
 
-    val exists = try {
+    try {
       client.getPartition(dbName, tableName, partition.values.asJava) != null
+      true
     } catch {
       // exception is thrown if the partition doesn't exist, quickest way to find out if it exists
-      case _: Throwable => false
-    }
-
-    if (!exists) {
-      createPartition(dbName, tableName, partition, partitionPathStrategy)
+      case _: Throwable =>
+        createPartition(dbName, tableName, path, partition)
+        false
     }
   }
 

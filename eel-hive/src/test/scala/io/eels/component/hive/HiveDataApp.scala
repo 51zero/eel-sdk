@@ -96,7 +96,6 @@ object HiveDataApp extends App with Timed {
   def createRow = Row(schema, Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean))
 
   val sink = HiveSink(Database, Table)
-    .withDynamicPartitioning(true)
     .withCreateTable(true)
 
   val size = 100000

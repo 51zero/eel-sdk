@@ -1,12 +1,10 @@
 package io.eels.component.hive
 
-import java.util.concurrent._
-
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
-import io.eels.component.hive.partition.{PartitionPathStrategy, RowPartitionFn}
-import io.eels.schema.{Partition, StructType}
+import io.eels.component.hive.partition.{PartitionStrategy, RowPartitionFn}
+import io.eels.schema.StructType
 import io.eels.util.HdfsMkdir
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
@@ -23,16 +21,17 @@ class HiveSinkWriter(sourceSchema: StructType,
                      metastoreSchema: StructType,
                      dbName: String,
                      tableName: String,
+                     partitionKeys: Seq[String],
                      // a discriminator for the file names, needed when we are writing to the same table
                      // with multiple threads
                      discriminator: Option[String],
                      dialect: HiveDialect,
-                     dynamicPartitioning: Boolean,
-                     partitionPathStrategy: PartitionPathStrategy,
+                     partitionStrategy: PartitionStrategy,
                      filenameStrategy: FilenameStrategy,
                      stagingStrategy: StagingStrategy,
                      evolutionStrategy: EvolutionStrategy,
                      alignStrategy: AlignmentStrategy,
+                     outputSchemaStrategy: OutputSchemaStrategy,
                      inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission],
                      fileListener: FileListener,
@@ -42,38 +41,16 @@ class HiveSinkWriter(sourceSchema: StructType,
                     (implicit fs: FileSystem,
                      conf: Configuration,
                      client: IMetaStoreClient) extends SinkWriter with Logging {
-  logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning")
-
-  private val config = ConfigFactory.load()
-  private val includePartitionsInData = ConfigFactory.load.getBoolean("eel.hive.sink.include-partitions-in-data")
-  private val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
   private val hiveOps = new HiveOps(client)
-  private val tablePath = hiveOps.tablePath(dbName, tableName)
-  require(tablePath != null, "Table path returned as null")
-
-  // these will be in lower case
-  private val partitionKeyNames = hiveOps.partitionKeys(dbName, tableName)
-
-  // the file schema is the metastore schema with the partition columns removed. This is because the
-  // partition columns are not written to the file (they are taken from the partition itself)
-  // this can be overriden with the includePartitionsInData option in which case the partitions will
-  // be kept in the file
-  private val fileSchema = {
-    if (includePartitionsInData || partitionKeyNames.isEmpty)
-      metastoreSchema
-    else
-      partitionKeyNames.foldLeft(metastoreSchema) { (schema, name) =>
-        schema.removeField(name, caseSensitive = false)
-      }
-  }
+  private val config = ConfigFactory.load()
+  private val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
   // Since the data can come in unordered, we want to keep the streams for each partition open
   // otherwise we would be opening and closing streams frequently.
   private val streams = TrieMap.empty[Path, HiveOutputStream]
 
-  // this contains all the partitions we've checked.
-  private val extantPartitions = new ConcurrentSkipListSet[Path]
+  private val writeSchema = outputSchemaStrategy.resolve(metastoreSchema, partitionKeys, client)
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
@@ -84,12 +61,12 @@ class HiveSinkWriter(sourceSchema: StructType,
 
   override def write(row: Row): Unit = {
     val stream = getOrCreateHiveWriter(row)
-    // need to ensure the row is compatible with the metastore
-    stream.write(alignStrategy.align(row, metastoreSchema))
+    // need to ensure the row is compatible with the write schema
+    stream.write(alignStrategy.align(row, writeSchema))
   }
 
   override def close(): Unit = {
-    logger.info("Closing hive sink writer")
+    logger.debug("Closing hive sink writer")
 
     logger.debug(s"Closing ${streams.size} hive output stream(s)")
     streams.values.foreach(_.close)
@@ -115,27 +92,8 @@ class HiveSinkWriter(sourceSchema: StructType,
       logger.info("Commit completed")
       callbacks.foreach(_.onCommitComplete)
     }
-  }
 
-  private def ensurePartitionExists(partition: Partition, path: Path): Unit = {
-    // if dynamic partitioning is enabled then we will update the hive metastore with new partitions
-    if (partitionKeyNames.nonEmpty && dynamicPartitioning) {
-      if (partition.entries.nonEmpty) {
-        if (!extantPartitions.contains(path)) {
-          hiveOps.createPartitionIfNotExists(dbName, tableName, partition, partitionPathStrategy)
-          extantPartitions.add(path)
-        }
-      }
-    } else if (!hiveOps.partitionExists(dbName, tableName, partition)) {
-      sys.error(s"Partition $path does not exist and dynamicPartitioning = false")
-    }
-  }
-
-  private def createPartitionWriter(partition: Partition, partitionPath: Path): HiveOutputStream = {
-    ensurePartitionExists(partition, partitionPath)
-    // ensure the partition path is created, with permissions from parent if applicable
-    HdfsMkdir(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
-    createWriter(partitionPath)
+    logger.info("Hive write completed")
   }
 
   private def createWriter(location: Path): HiveOutputStream = try {
@@ -146,7 +104,7 @@ class HiveSinkWriter(sourceSchema: StructType,
     assert(filePath.isAbsolute, s"Output stream path must be absolute (was $filePath)")
     fileListener.onOutputFile(filePath)
 
-    dialect.output(fileSchema, filePath, permission, roundingMode, metadata)
+    dialect.output(writeSchema, filePath, permission, roundingMode, metadata)
 
   } catch {
     case NonFatal(e) =>
@@ -169,19 +127,18 @@ class HiveSinkWriter(sourceSchema: StructType,
   // if partitioning is used, inspects the row to see which partition it should live in
   // and returns an output stream for that partition
   // if partitioning is not used then will return the same table stream for all rows
+  // we cache the writer so that we don't keep opening and closing loads of writers
   private def getOrCreateHiveWriter(row: Row): HiveOutputStream = {
-
     // we need a a writer per partition (as each partition is written to a different directory)
     // if we don't have partitions then we only need a writer for the table
-    if (partitionKeyNames.isEmpty) {
+    if (partitionKeys.isEmpty) {
+      val tablePath = hiveOps.tablePath(dbName, tableName)
       streams.getOrElseUpdate(tablePath, createWriter(tablePath))
     } else {
-
-      val partition = RowPartitionFn(row, partitionKeyNames)
-      val partitionPath = new Path(tablePath, partitionPathStrategy.name(partition))
-
-      // we cache the writer so that we don't keep opening and closing loads of writers
-      streams.getOrElseUpdate(partitionPath, createPartitionWriter(partition, partitionPath))
+      val partition = RowPartitionFn(row, partitionKeys)
+      val partitionPath = partitionStrategy.ensurePartition(partition, dbName, tableName, client)
+      HdfsMkdir(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
+      streams.getOrElseUpdate(partitionPath, createWriter(partitionPath))
     }
   }
 }
