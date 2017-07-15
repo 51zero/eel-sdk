@@ -1,7 +1,6 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.Row
 import io.eels.schema.StructType
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
@@ -10,33 +9,14 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
   * given target schema.
   *
   * For example, a strategy may choose to alter the table to add any missing columns. It may
-  * choose to abort a write by throwing an exception. Or it may choose to leave the schema as is,
-  * and then strip the superfluous columns from the rows.
+  * choose to abort a write by throwing an exception. Or it may choose to leave the schema as is.
   */
 trait EvolutionStrategy {
-
-  /**
-    * Given details about a table, evolve the schema to match.
-    */
   def evolve(dbName: String,
              tableName: String,
              metastoreSchema: StructType,
              targetSchema: StructType,
              client: IMetaStoreClient): Unit
-
-  /**
-    * Given a row that is to be persisted to hive, returns a row that matches the required schema.
-    */
-  def align(row: Row, metastoreSchema: StructType): Row
-}
-
-object MustMatchEvolutionStrategy extends EvolutionStrategy {
-
-  override def evolve(dbName: String, tableName: String, metastoreSchema: StructType, targetSchema: StructType, client: IMetaStoreClient): Unit = {
-    require(metastoreSchema.fieldNames == targetSchema.fieldNames)
-  }
-
-  override def align(row: Row, metastoreSchema: StructType): Row = row
 }
 
 /**
@@ -66,15 +46,5 @@ object DefaultEvolutionStrategy extends EvolutionStrategy with Logging {
     }
     table.getSd.setCols(cols)
     client.alter_table(dbName, tableName, table)
-  }
-
-  def align(row: Row, metastoreSchema: StructType): Row = {
-    val map = row.schema.fieldNames().zip(row.values).toMap
-    // for each field in the metastore, get the field from the input row, and use that
-    // if the input map does not have it, then pad it with a default or null
-    val values = metastoreSchema.fields.map { field =>
-      map.getOrElse(field.name, field.default)
-    }
-    Row(metastoreSchema, values)
   }
 }

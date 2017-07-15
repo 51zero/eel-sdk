@@ -32,6 +32,7 @@ class HiveSinkWriter(sourceSchema: StructType,
                      filenameStrategy: FilenameStrategy,
                      stagingStrategy: StagingStrategy,
                      evolutionStrategy: EvolutionStrategy,
+                     alignStrategy: AlignmentStrategy,
                      inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission],
                      fileListener: FileListener,
@@ -84,7 +85,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   override def write(row: Row): Unit = {
     val stream = getOrCreateHiveWriter(row)
     // need to ensure the row is compatible with the metastore
-    stream.write(evolutionStrategy.align(row, metastoreSchema))
+    stream.write(alignStrategy.align(row, metastoreSchema))
   }
 
   override def close(): Unit = {

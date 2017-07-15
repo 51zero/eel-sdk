@@ -32,6 +32,7 @@ case class HiveSink(dbName: String,
                     filenameStrategy: FilenameStrategy = DefaultFilenameStrategy,
                     stagingStrategy: StagingStrategy = DefaultStagingStrategy,
                     evolutionStrategy: EvolutionStrategy = DefaultEvolutionStrategy,
+                    alignStrategy: AlignmentStrategy = DefaultAlignmentStrategy,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
@@ -58,6 +59,7 @@ case class HiveSink(dbName: String,
   def withRoundingMode(mode: RoundingMode): HiveSink = copy(roundingMode = mode)
   def withStagingStrategy(strategy: StagingStrategy): HiveSink = copy(stagingStrategy = strategy)
   def withEvolutionStrategy(strategy: EvolutionStrategy): HiveSink = copy(evolutionStrategy = strategy)
+  def withAlignmentStrategy(strategy: AlignmentStrategy): HiveSink = copy(alignStrategy = strategy)
 
   /**
     * Add a callback that will be invoked when commit operations are taking place.
@@ -134,6 +136,7 @@ case class HiveSink(dbName: String,
       filenameStrategy,
       stagingStrategy,
       evolutionStrategy,
+      alignStrategy,
       inheritPermissions,
       permission,
       fileListener,
