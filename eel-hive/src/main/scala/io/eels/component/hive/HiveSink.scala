@@ -16,7 +16,6 @@ import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 object HiveSink {
   val config: Config = ConfigFactory.load()
-  val bufferSize = config.getInt("eel.hive.bufferSize")
   val schemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
   val dynamicPartitioningDefault = config.getBoolean("eel.hive.sink.dynamicPartitioning")
   val upperCaseAction = config.getString("eel.hive.sink.upper-case-action")
@@ -135,7 +134,6 @@ case class HiveSink(dbName: String,
       filenameStrategy,
       stagingStrategy,
       evolutionStrategy,
-      bufferSize,
       inheritPermissions,
       permission,
       fileListener,
