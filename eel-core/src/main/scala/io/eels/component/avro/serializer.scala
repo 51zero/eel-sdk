@@ -1,9 +1,13 @@
 package io.eels.component.avro
 
+import java.util
+import java.util.function.Consumer
+
 import com.sksamuel.exts.Logging
 import io.eels.Row
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericData, GenericRecord}
+
 import scala.collection.JavaConverters._
 
 /**
@@ -35,7 +39,7 @@ object AvroSerializer extends Logging {
       case Schema.Type.INT => IntSerializer
       case Schema.Type.LONG => LongSerializer
       case Schema.Type.MAP => new MapSerializer(AvroSerializer(schema.getValueType))
-      case Schema.Type.RECORD => new RecordSerializer(schema)
+      case Schema.Type.RECORD => new RowSerializer(schema)
       case Schema.Type.STRING => StringSerializer
       case Schema.Type.UNION =>
         val nonNullType = schema.getTypes.asScala.find(_.getType != Schema.Type.NULL).getOrElse(sys.error("Bug"))
@@ -53,7 +57,7 @@ object AvroSerializer extends Logging {
   * @param schema the schema to be used in the record. Each input value must
   *               provide all the fields listed in the schema.
   */
-class RecordSerializer(schema: Schema) extends AvroSerializer {
+class RowSerializer(schema: Schema) extends AvroSerializer {
 
   private val fields: Seq[Schema.Field] = schema.getFields.asScala
   private val serializers = fields.map { it => AvroSerializer(it.schema) }
@@ -117,11 +121,23 @@ object BytesSerializer extends AvroSerializer {
 }
 
 class ArraySerializer(serializer: AvroSerializer) extends AvroSerializer {
-  override def serialize(value: Any): Any = value match {
-    case seq: Iterable[_] => seq.map(serializer.serialize).toArray[Any]
-    case list: List[_] => list.map(serializer.serialize).toArray[Any]
-    case col: java.lang.Iterable[_] => serialize(col.asScala)
-    case array: Array[_] => array.map(serializer.serialize)
+
+  def convert(traversable: Traversable[Any]): java.util.List[Any] = {
+    val list = new util.ArrayList[Any]
+    traversable.foreach(list add serializer.serialize(_))
+    list
+  }
+
+  override def serialize(value: Any): java.util.List[Any] = value match {
+    case seq: Iterable[_] => convert(seq)
+    case list: List[_] => convert(list)
+    case array: Array[_] => convert(array)
+    case col: java.lang.Iterable[_] =>
+      val list = new util.ArrayList[Any]()
+      col.forEach(new Consumer[Any] {
+        override def accept(value: Any): Unit = list add serializer.serialize(value)
+      })
+      list
   }
 }
 

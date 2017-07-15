@@ -1,7 +1,8 @@
 package io.eels.component.avro
 
+import io.eels.Row
 import io.eels.datastream.DataStream
-import io.eels.schema.StructType
+import io.eels.schema.{ArrayType, Field, MapType, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{Matchers, WordSpec}
@@ -33,6 +34,36 @@ class AvroSinkTest extends WordSpec with Matchers {
       ds.to(AvroSink(path))
       ds.to(AvroSink(path).withOverwrite(true))
       fs.delete(path, false)
+    }
+    "write lists and maps" in {
+      val ds = DataStream.fromValues(
+        StructType(
+          Field("name"),
+          Field("movies", ArrayType(StringType)),
+          Field("characters", MapType(StringType, StringType))
+        ),
+        Seq(
+          List(
+            "clint eastwood",
+            List("fistful of dollars", "high plains drifters"),
+            Map("preacher" -> "high plains", "no name" -> "good bad ugly")
+          )
+        )
+      )
+
+      val path = new Path("array_map_avro", ".avro")
+      fs.delete(path, false)
+      ds.to(AvroSink(path))
+      AvroSource(path).toDataStream().collect shouldBe Seq(
+        Row(
+          ds.schema,
+          Seq(
+            "clint eastwood",
+            List("fistful of dollars", "high plains drifters"),
+            Map("preacher" -> "high plains", "no name" -> "good bad ugly")
+          )
+        )
+      )
     }
   }
 }
