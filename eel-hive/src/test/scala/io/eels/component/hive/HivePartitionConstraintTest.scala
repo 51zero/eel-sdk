@@ -10,8 +10,6 @@ import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.scalatest.{FunSuite, Matchers, Tag}
 
-object HiveIsAvailable extends Tag("eel.Hive")
-
 class HivePartitionConstraintTest extends FunSuite with Matchers {
 
   val dbname = "sam"

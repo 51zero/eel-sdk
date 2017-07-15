@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import com.sksamuel.exts.Logging
 import io.eels.Row
 import io.eels.schema.StructType
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -29,6 +30,15 @@ trait EvolutionStrategy {
   def align(row: Row, metastoreSchema: StructType): Row
 }
 
+object MustMatchEvolutionStrategy extends EvolutionStrategy {
+
+  override def evolve(dbName: String, tableName: String, metastoreSchema: StructType, targetSchema: StructType, client: IMetaStoreClient): Unit = {
+    require(metastoreSchema.fieldNames == targetSchema.fieldNames)
+  }
+
+  override def align(row: Row, metastoreSchema: StructType): Row = row
+}
+
 /**
   * The DefaultEvolutionStrategy will add missing fields to the schema in the hive metastore.
   * It will not check that any existing fields are of the same type as in the metastore.
@@ -39,7 +49,7 @@ trait EvolutionStrategy {
   * default value, or null (if the field is nullable). If the field has no default and is not nullable
   * then an exception will be thrown.
   */
-object DefaultEvolutionStrategy extends EvolutionStrategy {
+object DefaultEvolutionStrategy extends EvolutionStrategy with Logging {
 
   override def evolve(dbName: String,
                       tableName: String,
@@ -47,9 +57,11 @@ object DefaultEvolutionStrategy extends EvolutionStrategy {
                       targetSchema: StructType,
                       client: IMetaStoreClient): Unit = {
     val missing = targetSchema.fields.filterNot(field => metastoreSchema.fieldNames().contains(field.name))
+    logger.debug("Hive metastore is missing the following fields: " + missing.mkString(", "))
     val table = client.getTable(dbName, tableName)
     val cols = table.getSd.getCols
     missing.foreach { field =>
+      logger.info(s"Adding new column to hive table [$field]")
       cols.add(HiveSchemaFns.toHiveField(field))
     }
     table.getSd.setCols(cols)

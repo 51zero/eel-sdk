@@ -1,9 +1,6 @@
 package io.eels.component.hive
 
-import java.util.UUID
-
-import com.sksamuel.exts.OptionImplicits._
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
 
 trait StagingStrategy {
 
@@ -25,7 +22,7 @@ trait StagingStrategy {
     *
     * If staging is disabled then return None.
     */
-  def stagingDirectory(parent: Path): Option[Path]
+  def stagingDirectory(parent: Path, fs: FileSystem): Option[Path]
 
   /**
     * Returns true if eel should move written data from the staging directory
@@ -44,6 +41,8 @@ trait CommitCallback {
 
 object DefaultStagingStrategy extends StagingStrategy {
   override def staging: Boolean = true
-  override def stagingDirectory(parent: Path): Option[Path] = new Path(parent, ".eelstaging_" + UUID.randomUUID).some
+  override def stagingDirectory(parent: Path, fs: FileSystem): Option[Path] = {
+    Iterator.from(1).map(k => new Path(parent, s".eel_staging_$k")).dropWhile(fs.exists).take(1).toList.headOption
+  }
   override def commit: Boolean = true
 }

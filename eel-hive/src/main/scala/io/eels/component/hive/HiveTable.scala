@@ -36,6 +36,23 @@ case class HiveTable(dbName: String,
     ops.schema(dbName, tableName)
   }
 
+  def create(schema: StructType,
+             partitionFields: Seq[String] = Nil,
+             tableType: TableType = TableType.MANAGED_TABLE,
+             format: HiveFormat = HiveFormat.Parquet,
+             props: Map[String, String] = Map.empty): Unit = {
+    if (!ops.tableExists(dbName, tableName)) {
+      ops.createTable(dbName,
+        tableName,
+        schema,
+        partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
+        format = format,
+        props = props,
+        tableType = tableType
+      )
+    }
+  }
+
   /**
     * Returns a list of all files used by this hive table.
     *

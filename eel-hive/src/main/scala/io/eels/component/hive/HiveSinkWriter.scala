@@ -31,7 +31,7 @@ class HiveSinkWriter(sourceSchema: StructType,
                      partitionPathStrategy: PartitionPathStrategy,
                      filenameStrategy: FilenameStrategy,
                      stagingStrategy: StagingStrategy,
-                     evolutionStrategy: EvolutionStrategy = DefaultEvolutionStrategy,
+                     evolutionStrategy: EvolutionStrategy,
                      bufferSize: Int,
                      inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission],
@@ -157,10 +157,10 @@ class HiveSinkWriter(sourceSchema: StructType,
   private def outputPath(partitionPath: Path): Path = {
     val filename = filenameStrategy.filename + discriminator.getOrElse("")
     if (stagingStrategy.staging) {
-      val stagingDirectory = stagingStrategy.stagingDirectory(partitionPath)
+      val stagingDirectory = stagingStrategy.stagingDirectory(partitionPath, fs)
         .getOrError("Staging strategy returned None, but staging was enabled. This is a bug in the staging strategy.")
-      val temp = new Path(stagingDirectory, filename)
-      new Path(temp, filename)
+      logger.debug(s"Staging strategy has returned staging directory $stagingDirectory")
+      new Path(stagingDirectory, filename)
     } else {
       new Path(partitionPath, filename)
     }
