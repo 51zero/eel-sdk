@@ -99,9 +99,11 @@ object HiveDataApp extends App with Timed {
     .withDynamicPartitioning(true)
     .withCreateTable(true)
 
+  val size = 100000
+
   DataStream.fromIterator(
     schema,
-    Iterator.continually(createRow).take(100000)
+    Iterator.continually(createRow).take(size)
   ).listener(new Listener {
     var count = 0
     override def onNext(row: Row): Unit = {
@@ -120,6 +122,8 @@ object HiveDataApp extends App with Timed {
   println("Partitions:" + partitions)
 
   val rows = HiveSource(Database, Table).toDataStream().collect
-  println(rows)
+  println(rows.take(20))
+
+  assert(rows.size == size)
 
 }

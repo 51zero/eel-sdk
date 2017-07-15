@@ -7,7 +7,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.partition.{PartitionPathStrategy, RowPartitionFn}
 import io.eels.schema.{Partition, StructType}
-import io.eels.util.{HdfsMkdir, RowNormalizerFn}
+import io.eels.util.HdfsMkdir
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -31,6 +31,7 @@ class HiveSinkWriter(sourceSchema: StructType,
                      partitionPathStrategy: PartitionPathStrategy,
                      filenameStrategy: FilenameStrategy,
                      stagingStrategy: StagingStrategy,
+                     evolutionStrategy: EvolutionStrategy = DefaultEvolutionStrategy,
                      bufferSize: Int,
                      inheritPermissions: Option[Boolean],
                      permission: Option[FsPermission],
@@ -44,7 +45,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   logger.debug(s"HiveSinkWriter created; dynamicPartitioning=$dynamicPartitioning")
 
   private val config = ConfigFactory.load()
-  private val sinkConfig = HiveSinkConfig()
+  private val includePartitionsInData = ConfigFactory.load.getBoolean("eel.hive.sink.include-partitions-in-data")
   private val inheritPermissionsDefault = config.getBoolean("eel.hive.sink.inheritPermissions")
 
   private val hiveOps = new HiveOps(client)
@@ -59,7 +60,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   // this can be overriden with the includePartitionsInData option in which case the partitions will
   // be kept in the file
   private val fileSchema = {
-    if (sinkConfig.includePartitionsInData || partitionKeyNames.isEmpty)
+    if (includePartitionsInData || partitionKeyNames.isEmpty)
       metastoreSchema
     else
       partitionKeyNames.foldLeft(metastoreSchema) { (schema, name) =>
@@ -67,16 +68,12 @@ class HiveSinkWriter(sourceSchema: StructType,
       }
   }
 
-  // the normalizer takes care of making sure the row is aligned with the file schema
-  private val normalizer = new RowNormalizerFn(fileSchema, ConfigFactory.load().getBoolean("eel.hive.sink.pad-with-null"))
-
   // Since the data can come in unordered, we want to keep the streams for each partition open
   // otherwise we would be opening and closing streams frequently.
   private val streams = TrieMap.empty[Path, HiveOutputStream]
 
   // this contains all the partitions we've checked.
   private val extantPartitions = new ConcurrentSkipListSet[Path]
-
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
@@ -87,8 +84,8 @@ class HiveSinkWriter(sourceSchema: StructType,
 
   override def write(row: Row): Unit = {
     val stream = getOrCreateHiveWriter(row)
-    // need to strip out any partition information from the written data and possibly pad
-    stream.write(normalizer(row))
+    // need to ensure the row is compatible with the metastore
+    stream.write(evolutionStrategy.align(row, metastoreSchema))
   }
 
   override def close(): Unit = {

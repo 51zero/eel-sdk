@@ -25,7 +25,6 @@ object HiveSink {
 case class HiveSink(dbName: String,
                     tableName: String,
                     dynamicPartitioning: Option[Boolean] = None,
-                    schemaEvolution: Option[Boolean] = None,
                     permission: Option[FsPermission] = None,
                     inheritPermissions: Option[Boolean] = None,
                     principal: Option[String] = None,
@@ -33,6 +32,7 @@ case class HiveSink(dbName: String,
                     partitionPathStrategy: PartitionPathStrategy = DefaultHivePathStrategy,
                     filenameStrategy: FilenameStrategy = DefaultFilenameStrategy,
                     stagingStrategy: StagingStrategy = DefaultStagingStrategy,
+                    evolutionStrategy: EvolutionStrategy = DefaultEvolutionStrategy,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
@@ -50,7 +50,6 @@ case class HiveSink(dbName: String,
     copy(createTable = createTable, partitionFields = partitionFields)
 
   def withDynamicPartitioning(partitioning: Boolean): HiveSink = copy(dynamicPartitioning = Some(partitioning))
-  def withSchemaEvolution(schemaEvolution: Boolean): HiveSink = copy(schemaEvolution = Some(schemaEvolution))
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
   def withFileListener(listener: FileListener): HiveSink = copy(fileListener = listener)
@@ -59,6 +58,7 @@ case class HiveSink(dbName: String,
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
   def withRoundingMode(mode: RoundingMode): HiveSink = copy(roundingMode = mode)
   def withStagingStrategy(strategy: StagingStrategy): HiveSink = copy(stagingStrategy = strategy)
+  def withEvolutionStrategy(strategy: EvolutionStrategy): HiveSink = copy(evolutionStrategy = strategy)
 
   /**
     * Add a callback that will be invoked when commit operations are taking place.
@@ -116,13 +116,12 @@ case class HiveSink(dbName: String,
       }
     }
 
-    if (schemaEvolution.contains(true) || schemaEvolutionDefault) {
-      // HiveSchemaEvolve(dbName, tableName, schema)
-      throw new UnsupportedOperationException("Schema evolution is not yet implemented")
-    }
-
     val metastoreSchema = ops.schema(dbName, tableName)
     logger.trace("Metastore schema" + metastoreSchema)
+
+    // call the evolve method on the evolution strategy to ensure the metastore is good to go
+    logger.debug("Invoking evolution strategy to align metastore schema")
+    evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
 
     new HiveSinkWriter(
       schema,
@@ -135,6 +134,7 @@ case class HiveSink(dbName: String,
       partitionPathStrategy,
       filenameStrategy,
       stagingStrategy,
+      evolutionStrategy,
       bufferSize,
       inheritPermissions,
       permission,
