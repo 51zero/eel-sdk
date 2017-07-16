@@ -53,24 +53,24 @@ The Kite API and CLI are very similar in functionality to EEL but there are some
 - A dataset is essentially a Hive table - the upcoming *EEL 1.2* release you will be able to create Hive tables from the CLI - at the moment it’s possible generate the Hive DDL with EEL API using *io.eels.component.hive.HiveDDL$#showDDL*.
 - For writing directly to **AVRO** or **Parquet** storage formats you must provide an **AVRO** schema – EEL dynamically infers a schema from the underlying source, for example a JDBC Query or CSV headers.
 - Support for ingesting from storage formats (other than **AVRO** and **Parquet**) is be achieved by *transforming* each record/row with another module named **Kite Morphlines** - it uses another intermediate record format and is another **API** to learn.
-- EEL supports transformations using regular Scala functions by invoking the *map* method on the Source’s underlying *Frame*, e.g. *source.toFrame.map(f: (Row) => Row)* – the *map* function returns a new row object.
+- EEL supports transformations using regular Scala functions by invoking the *map* method on the Source’s underlying *DataStream*, e.g. *source.toDataStream.map(f: (Row) => Row)* – the *map* function returns a new row object.
 - Kite has direct support for *HBase* but EEL doesn’t – will do with the upcoming *EEL 1.2* release
 - Kite currently **doesn’t** support Kudo – EEL does.
 - Kite stores additional metadata on disk (**HDFS**) to be deemed a valid Kite dataset – if you externally change the Schema outside of Kite, i.e. through *DDL* then it can cause a dataset to be *out-of-synch* and potentially *malfunction* - EEL functions normally in this scenario as there is no additional metadata required.
-- Kite handles Hive partitioning by specifying a partition strategies – there are a few *out-of-the-box* strategies derived from the current payload – with **EEL** this works auto-magically by virture of providing the same column on the source row, alternatively you can add a partition key column with  **addField** on the fly on the source’s frame or use **map** transformation function.
+- Kite handles Hive partitioning by specifying a partition strategies – there are a few *out-of-the-box* strategies derived from the current payload – with **EEL** this works auto-magically by virture of providing the same column on the source row, alternatively you can add a partition key column with  **addField** on the fly on the source’s DataStream or use **map** transformation function.
 
 ## Introduction to the API
 
-The core data structure in Eel is the `Frame`. A frame consists of a `Schema`, and zero or more `Row`s which contain values for each field in the schema. 
-A frame is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. 
+The core data structure in Eel is the `DataStream`. A DataStream consists of a `Schema`, and zero or more `Row`s which contain values for each field in the schema. 
+A DataStream is conceptually similar to a table in a relational database, or a dataframe in Spark, or a dataset in Flink. 
 
-Frames can be read from a `Source` such as hive tables, jdbc databases, or even programatically from Scala or Java collections.
-Frames can be written out to a `Sink` such as a hive table or parquet file.
+DataStreams can be read from a `Source` such as hive tables, jdbc databases, or even programatically from Scala or Java collections.
+DataStreams can be written out to a `Sink` such as a hive table or parquet file.
 
 The current set of sources and sinks include: *Apache Avro*, *Apache Parquet*, *Apache Orc*, *CSV*, *Kafka* (sink only), *HDFS*, *Kudu*, *JDBC*, *Hive*, *Json Files*.
 
-Once you have a reference to a frame, the frame can be manipulated in a similar way to regular Scala collections - many of the methods
-share the same name, such as `map`, `filter`, `take`, `drop`, etc. All operations on a frame are lazy - they will only be executed
+Once you have a reference to a DataStream, the DataStream can be manipulated in a similar way to regular Scala collections - many of the methods
+share the same name, such as `map`, `filter`, `take`, `drop`, etc. All operations on a DataStream are lazy - they will only be executed
 once an _action_ takes place such as `collect`, `count`, or `save`.
 
 For example, you could load data from a CSV file, drop rows that don't match a predicate, and then save the data back out to a Parquet file
@@ -79,7 +79,7 @@ all in a couple of lines of code.
 ```scala
 val source = CsvSource(new Path("input.csv"))
 val sink = ParquetSink(new Path("output.pq"))
-source.toFrame().filter(_.get("location") == "London").save(sink)
+source.toDataStream().filter(_.get("location") == "London").to(sink)
 ```
 
 ### Types Supported
@@ -180,7 +180,7 @@ Time taken: 1.474 seconds
     implicit val hiveMetaStoreClient = new HiveMetaStoreClient(new HiveConf())
     JdbcSource(() => dataSource.getConnection, query)
       .withFetchSize(10)
-      .toFrame
+      .toDataStream
       .withLowerCaseSchema
       // Transformation - add title to row
       .map { row => 
@@ -250,14 +250,14 @@ The 1.2 release for the **HiveSource** using **Parquet** and **Orc** storage **f
     implicit val hadoopFileSystem = FileSystem.get(new Configuration())
     implicit val hiveMetaStoreClient = new HiveMetaStoreClient(new HiveConf())
     HiveSource("eel_test", "person")
-      .toFrame()
-      .collect()
+      .toDataStream()
+      .collect
       .foreach(row => println(row))
 ```
 1. *hadoopFileSystem* is a *Hadoop File System* object scala implicit required by the HiveSource
 2. *hiveMetaStoreClient* is a *Hive metastore client* object scala implicit required by the HiveSource
 3. *HiveSource* specifies arguments for the Hive *database* and *table* respectively.
-4. To get the collection of rows you need to perform the action **collect** on the source's underlying **frame**:  *toFrame().collect()*, then iterate over each row and print it out using *foreach(row => println(row))*
+4. To get the collection of rows you need to perform the action **collect** on the source's underlying **DataStream**:  *toDataStream().collect()*, then iterate over each row and print it out using *foreach(row => println(row))*
 
 Here are the results of the read:
 ```
@@ -275,7 +275,7 @@ You can query data via the **HiveSource** using simple **and**/**or** predicates
     implicit val hiveMetaStoreClient = new HiveMetaStoreClient(new HiveConf())
     HiveSource("eel_test", "person")
       .withPredicate(Predicate.or(Predicate.equals("name", "Alice"), Predicate.equals("name", "Gary")))
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -301,7 +301,7 @@ If you have simple filtering requirements on relatively small datasets then this
     HiveSource("eel_test", "person")
       .withPredicate(Predicate.or(Predicate.equals("name", "Alice"), Predicate.equals("name", "Gary")))
       .withPartitionConstraint(PartitionConstraint.equals("title", "Mr"))
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -326,7 +326,7 @@ The result is as follows:
   val parquetFilePath = new Path("hdfs://nameservice1/client/eel/person.parquet")
   implicit val hadoopFileSystem = FileSystem.get(new Configuration()) // This is required
   JdbcSource(() => dataSource.getConnection, query).withFetchSize(10)
-    .toFrame.to(ParquetSink(parquetFilePath))
+    .toDataStream.to(ParquetSink(parquetFilePath))
 ```
 1. The **JDBCSource** takes a connection function and a SQL query - it will execute the SQL and derive the EEL schema from it - also notice the **withFetchSize** which caches the number of rows per fetch reducing the number RPC calls to the database server.
 2. **parquetFilePath** is the **ParquetSink** file path pointing to a **HDFS** path - alternatively this could be a local file path if you qualify it with the *file:* scheme 
@@ -348,14 +348,14 @@ message row {
     implicit val hadoopConfiguration = new Configuration()
     implicit val hadoopFileSystem = FileSystem.get(hadoopConfiguration) // This is required
     ParquetSource(parquetFilePath)
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
 
 1. **parquetFilePath** is the **ParquetSource** file path pointing to a **HDFS** path - alternatively this could be a local file path if you qualify it with the *file:* scheme 
 2. **hadoopConfiguration** and **hadoopFileSystem** are scala implicits required by the **ParquetSource**
-3. To get the collection of rows you need to perform the action **collect** on the source's underlying **frame**:  *toFrame().collect()*, then iterate over each row and print it out using *foreach(row => println(row))*
+3. To get the collection of rows you need to perform the action **collect** on the source's underlying **DataStream**:  *toDataStream().collect()*, then iterate over each row and print it out using *foreach(row => println(row))*
 4. Here are the results of the read:
 ```
 [NAME = Fred,AGE = 50,SALARY = 50000.99000,CREATION_TIME = 2017-01-23 14:53:51.862]
@@ -374,7 +374,7 @@ You can query data via the **ParquetSource** using simple and/or predicates with
     implicit val hadoopFileSystem = FileSystem.get(hadoopConfiguration) // This is required
     ParquetSource(parquetFilePath)
       .withPredicate(Predicate.or(Predicate.equals("NAME", "Alice"), Predicate.equals("NAME", "Gary")))
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -397,8 +397,8 @@ The result is as follows:
     ParquetSource(parquetFilePath)
       .withProjection("NAME", "SALARY")
       .withPredicate(Predicate.or(Predicate.equals("NAME", "Alice"), Predicate.equals("NAME", "Gary")))
-      .toFrame()
-      .collect()
+      .toDataStream()
+      .collect
       .foreach(row => println(row))
 ```
 The above **ParquetSource** projection (**withProjection**) is equivalent to the SQL select:
@@ -420,7 +420,7 @@ The result is as follows:
     val orcFilePath = new Path("hdfs://nameservice1/client/eel/person.orc")
     implicit val hadoopConfiguration = new Configuration()
     JdbcSource(() => dataSource.getConnection, query).withFetchSize(10)
-      .toFrame
+      .toDataStream
       .to(OrcSink(orcFilePath))
 ```
 2. Reading back the data via **OrcSource** and printing to the console:
@@ -428,7 +428,7 @@ The result is as follows:
     val orcFilePath = new Path("hdfs://nameservice1/client/eel/person.orc")
     implicit val hadoopConfiguration = new Configuration()
     OrcSource(orcFilePath)
-      .toFrame().collect().foreach(row => println(row))
+      .toDataStream.collect().foreach(row => println(row))
 ```
 ## JdbcSource To KudoSink
 
@@ -442,7 +442,7 @@ The result is as follows:
     val avroFilePath = Paths.get(s"${sys.props("user.home")}/person.avro")
     JdbcSource(() => dataSource.getConnection, query)
       .withFetchSize(10)
-      .toFrame
+      .toDataStream
       .replaceFieldType(DecimalType.Wildcard, DoubleType)
       .replaceFieldType(TimestampMillisType, StringType)
       .to(AvroSink(avroFilePath))
@@ -480,13 +480,13 @@ $ avro-tools getschema person.avro
 ```scala
     val avroFilePath = Paths.get(s"${sys.props("user.home")}/person.avro")
     AvroSource(avroFilePath)
-      .toFrame()
-      .collect()
+      .toDataStream()
+      .collect
       .foreach(row => println(row))
 ```
 
 1. **avroFilePath** is the **AvroSource** file path pointing to a path on the local file system 
-2. To get the collection of rows you need to perform the action **collect** on the source's underlying **frame**:  *toFrame().collect()*, then iterate over each row and print it out using *foreach(row => println(row))*
+2. To get the collection of rows you need to perform the action **collect** on the source's underlying **DataStream**:  *toDataStream().collect*, then iterate over each row and print it out using *foreach(row => println(row))*
 4. Here are the results of the read:
 ```
 [NAME = Fred,AGE = 50,SALARY = 50000.99,CREATION_TIME = 2017-01-24 16:13:07.524]
@@ -504,7 +504,7 @@ $ avro-tools getschema person.avro
     implicit val hadoopConfiguration = new Configuration()
     implicit val hadoopFileSystem = FileSystem.get(new Configuration()) // This is required
     JdbcSource(() => dataSource.getConnection, query).withFetchSize(10)
-      .toFrame
+      .toDataStream
       .to(CsvSink(csvFilePath))
 ```
 2. Reading back the data via **CsvSource** and printing to the console:
@@ -512,15 +512,15 @@ $ avro-tools getschema person.avro
     val csvFilePath = new Path("hdfs://nameservice1/client/eel/person.csv")
     implicit val hadoopConfiguration = new Configuration()
     implicit val hadoopFileSystem = FileSystem.get(hadoopConfiguration) // This is required
-    CsvSource(csvFilePath).toFrame().schema.fields.foreach(f => println(f))
+    CsvSource(csvFilePath).toDataStream().schema.fields.foreach(f => println(f))
     CsvSource(csvFilePath)
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
 Note by default the **CsvSource** converts all types to a string - the following code prints out the fields in the schema:
 ```scala
-    CsvSource(csvFilePath).toFrame().schema.fields.foreach(f => println(f))
+    CsvSource(csvFilePath).toDataStream().schema.fields.foreach(f => println(f))
 ```
 You can enforce the types on the **CSVSource** by supplying *SchemaInferrer*:
 ```scala
@@ -532,7 +532,7 @@ You can enforce the types on the **CSVSource** by supplying *SchemaInferrer*:
       DataTypeRule("SALARY", DecimalType.Wildcard),
       DataTypeRule(".*\\_TIME", TimeMillisType))
     CsvSource(csvFilePath).withSchemaInferrer(schemaInferrer)
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -589,7 +589,7 @@ struct PERSON_DETAILS {
 
 #### Step 4:  Write the rows using the ParquetSink
 ```scala
-    Frame.fromValues(schema, rows)
+    DataStream.fromValues(schema, rows)
       .to(ParquetSink(parquetFilePath))
 ```
 
@@ -609,7 +609,7 @@ message row {
 #### Step 5:  Read back the rows using the ParquetSource
 ```scala
     ParquetSource(parquetFilePath)
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -623,7 +623,7 @@ message row {
 ```scala
     ParquetSource(parquetFilePath)
       .withPredicate(Predicate.or(Predicate.equals("PERSON_DETAILS.NAME", "Alice"), Predicate.equals("PERSON_DETAILS.NAME", "Gary")))
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -706,7 +706,7 @@ EEL supports *Parquet* **ARRAYS** of any *primitive* type including *structs*.  
       Vector(Vector("Alice", 50, BigDecimal("99999.98000"), new Timestamp(System.currentTimeMillis())), Vector("534", "129"))
     )
    // Write the rows
-    Frame.fromValues(schema, rows)
+    DataStream.fromValues(schema, rows)
       .to(ParquetSink(parquetFilePath))
 ```
 If you have the **parquet-tools** installed on your system you can look at its native schema like so:
@@ -726,7 +726,7 @@ message row {
 #### Read back the rows via ParquetSource
 ```scala
     ParquetSource(parquetFilePath)
-      .toFrame()
+      .toDataStream()
       .collect()
       .foreach(row => println(row))
 ```
@@ -825,7 +825,7 @@ because parquet is able to skip whole chunks of the file that do not match the p
 To use a predicate, simply add an instance of `Predicate` to the Parquet source class.
 
 ```scala
-val frame = ParquetSource(path).withPredicate(Predicate.equals("location", "westeros")).toFrame()
+val ds = ParquetSource(path).withPredicate(Predicate.equals("location", "westeros")).toDataStream()
 ```
 
 Multiple predicates can be grouped together using `Predicate.or` and `Predicate.and`.
@@ -839,7 +839,7 @@ in the file making parquet extremely fast at this kind of operation.
 To use a projection, simply use `withProjection` on the Parquet source with the fields to keep.
 
 ```scala
-val frame = ParquetSource(path).withProjection("amount", "type").toFrame()
+val ds = ParquetSource(path).withProjection("amount", "type").toDataStream()
 ```
 
 
@@ -868,9 +868,9 @@ To configure a Hive Sink, you specify the Hive database, the table to write to, 
 
 **Example**
 
-Simple example of writing to a Hive database `frame.to(HiveSink("mydb", "mytable"))`
+Simple example of writing to a Hive database `ds.to(HiveSink("mydb", "mytable"))`
 
-We can specify the number of concurrent writes, by using the ioThreads parameter `frame.to(HiveSink("mydb", "mytable").withIOThreads(4))`
+We can specify the number of concurrent writes, by using the ioThreads parameter `ds.to(HiveSink("mydb", "mytable").withIOThreads(4))`
  
 Csv Source
 ----
