@@ -132,6 +132,7 @@ class ArraySerializer(serializer: AvroSerializer) extends AvroSerializer {
     case seq: Iterable[_] => convert(seq)
     case list: List[_] => convert(list)
     case array: Array[_] => convert(array)
+    case set: Set[_] => convert(set)
     case col: java.lang.Iterable[_] =>
       val list = new util.ArrayList[Any]()
       col.forEach(new Consumer[Any] {
