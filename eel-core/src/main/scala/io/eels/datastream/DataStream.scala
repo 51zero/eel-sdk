@@ -787,7 +787,7 @@ object DataStream {
 
   import scala.reflect.runtime.universe._
 
-  def fromIterator(_schema: StructType, rows: Iterator[Row]): DataStream = new DataStream {
+  def fromIterator(_schema: StructType, _iterator: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       try {
@@ -795,8 +795,11 @@ object DataStream {
         subscriber.starting(new Cancellable {
           override def cancel(): Unit = running = false
         })
-        rows.grouped(1000).takeWhile(_ => running).foreach(subscriber.next)
+        _iterator.grouped(1000).takeWhile(_ => running).foreach { chunk =>
+          subscriber.next(chunk)
+        }
         subscriber.completed()
+        logger.debug("Iterator based publisher has completed")
       } catch {
         case t: Throwable => subscriber.error(t)
       }
@@ -824,8 +827,12 @@ object DataStream {
         subscriber.starting(new Cancellable {
           override def cancel(): Unit = running = false
         })
-        rows.grouped(1000).takeWhile(_ => running).foreach(subscriber.next)
+        rows.grouped(1000).takeWhile(_ => running).foreach { chunk =>
+          logger.debug("Seq based publisher is publishing a chunk")
+          subscriber.next(chunk)
+        }
         subscriber.completed()
+        logger.debug("Seq based publisher has completed")
       } catch {
         case t: Throwable => subscriber.error(t)
       }

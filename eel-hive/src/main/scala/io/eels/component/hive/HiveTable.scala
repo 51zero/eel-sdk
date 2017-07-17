@@ -172,6 +172,15 @@ case class HiveTable(dbName: String,
     )
   }
 
+  def dialect = io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
+
+  def stats(): HiveStats = {
+    val _dialect = dialect
+    val fileCounts = HiveFileScanner(location, false).map { file => _dialect.stats(file.getPath) }
+    val rows = if (fileCounts.isEmpty) 0 else fileCounts.sum
+    HiveStats(dbName, tableName, rows, Map.empty)
+  }
+
   // returns the location of this table as a hadoop Path
   def location(): Path = new Path(spec().location)
 

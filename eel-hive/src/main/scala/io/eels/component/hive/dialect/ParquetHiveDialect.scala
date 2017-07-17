@@ -15,6 +15,8 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+import org.apache.parquet.format.converter.ParquetMetadataConverter
+import org.apache.parquet.hadoop.ParquetFileReader
 
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
@@ -74,5 +76,11 @@ class ParquetHiveDialect extends HiveDialect with Logging {
       override def records: Int = _records.get()
       override def path: Path = path_x
     }
+  }
+
+  override def stats(path: Path)(implicit fs: FileSystem): Long = {
+    import scala.collection.JavaConverters._
+    val blocks = ParquetFileReader.readFooter(fs.getConf, path, ParquetMetadataConverter.NO_FILTER).getBlocks.asScala
+    blocks.map(_.getRowCount).sum
   }
 }

@@ -215,7 +215,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     }
 
     if (!tableExists(databaseName, tableName)) {
-      logger.info(s"Creating table $databaseName.$tableName with partitionKeys=${partitionKeys.mkString(",")}")
+      logger.info(s"Creating table $databaseName.$tableName; partitionKeys=${if (partitionKeys.isEmpty) "None" else partitionKeys.mkString(",")}")
 
       // we will normalize all our columns as lower case, which is how hive treats them
       val lowerPartitionKeys = partitionKeys.map(_.toLowerCase)

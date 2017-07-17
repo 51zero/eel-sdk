@@ -32,14 +32,16 @@ object AdditionEvolutionStrategy extends EvolutionStrategy with Logging {
                       targetSchema: StructType,
                       client: IMetaStoreClient): Unit = {
     val missing = targetSchema.fields.filterNot(field => metastoreSchema.fieldNames().contains(field.name))
-    logger.debug("Hive metastore is missing the following fields: " + missing.mkString(", "))
-    val table = client.getTable(dbName, tableName)
-    val cols = table.getSd.getCols
-    missing.foreach { field =>
-      logger.info(s"Adding new column to hive table [$field]")
-      cols.add(HiveSchemaFns.toHiveField(field))
+    if (missing.nonEmpty) {
+      logger.debug("Hive metastore is missing the following fields: " + missing.mkString(", "))
+      val table = client.getTable(dbName, tableName)
+      val cols = table.getSd.getCols
+      missing.foreach { field =>
+        logger.info(s"Adding new column to hive table [$field]")
+        cols.add(HiveSchemaFns.toHiveField(field))
+      }
+      table.getSd.setCols(cols)
+      client.alter_table(dbName, tableName, table)
     }
-    table.getSd.setCols(cols)
-    client.alter_table(dbName, tableName, table)
   }
 }

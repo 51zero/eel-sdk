@@ -5,7 +5,6 @@ import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.schema.{Partition, PartitionConstraint}
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
-import org.apache.hadoop.hive.metastore.api.Table
 
 /**
   * Locates files for a given table.
@@ -15,7 +14,9 @@ import org.apache.hadoop.hive.metastore.api.Table
 object HiveTableFilesFn extends Logging {
 
   // for a given table returns hadoop paths that match the partition constraints
-  def apply(table: Table,
+  def apply(dbName: String,
+            tableName: String,
+            tableLocation: Path,
             partitionKeys: List[String],
             partitionConstraint: Option[PartitionConstraint])
            (implicit fs: FileSystem, client: IMetaStoreClient): Seq[(LocatedFileStatus, Partition)] = {
@@ -24,8 +25,7 @@ object HiveTableFilesFn extends Logging {
 
     // when we have no partitions, this will scan just the table folder directly for files
     def rootScan(): Seq[(LocatedFileStatus, Partition)] = {
-      val location = new Path(table.getSd.getLocation)
-      HiveFileScanner(location).map { it =>
+      HiveFileScanner(tableLocation, false).map { it =>
         (it, Partition.empty)
       }
     }
@@ -42,9 +42,9 @@ object HiveTableFilesFn extends Logging {
     // 2. If we do not have partitions then we can simply scan the table root.
 
     // we go to the metastore as we need the locations of the partitions not the values
-    val partitions = ops.partitionsMetaData(table.getDbName, table.getTableName)
+    val partitions = ops.partitionsMetaData(dbName, tableName)
     if (partitions.isEmpty) {
-      logger.debug(s"No partitions for ${table.getTableName}; performing root table scan")
+      logger.debug(s"No partitions for $tableName; performing root table scan")
       rootScan
     } else partitionsScan(partitions)
   }

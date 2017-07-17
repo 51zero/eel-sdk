@@ -107,7 +107,7 @@ object HiveDataApp extends App with Timed {
     var count = 0
     override def onNext(row: Row): Unit = {
       count = count + 1
-      if (count % 10000 == 0) println(count)
+      if (count % 10000 == 0) logger.info("Count=" + count)
     }
   })
     .to(sink)
@@ -115,14 +115,16 @@ object HiveDataApp extends App with Timed {
   logger.info("Write complete")
 
   val table = new HiveOps(client).tablePath(Database, Table)
-  println("table:" + table)
+  logger.info("table:" + table)
 
   val partitions = new HiveOps(client).hivePartitions(Database, Table)
-  println("Partitions:" + partitions)
+  logger.info("Partitions:" + partitions)
 
   val rows = HiveSource(Database, Table).toDataStream().collect
   println(rows.take(20))
 
   assert(rows.size == size)
+
+  logger.info("Row count from stats: " + HiveTable(Database, Table).stats())
 
 }

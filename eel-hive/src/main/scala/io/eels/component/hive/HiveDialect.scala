@@ -16,16 +16,13 @@ trait HiveDialect extends Logging {
 
   /**
     * @param path where to load the data from
-    *
     * @param metastoreSchema the schema as present in the metastore and used to match up with the raw data in dialects
     * where the schema is not present. For example with a CSV format in Hive, the metastoreSchema is required
     * in order to know what each column represents. We can't use the projection schema for this because the projection
     * schema might be in a different order.
-    *
     * @param projectionSchema the schema required to read. This might not be the full schema present in the data
     * but is required here because some file schemas can read data more efficiently
     * if they know they can omit some fields (eg Parquet).
-    *
     * @param predicate used by some implementations to filter data at a file read level (eg Parquet)
     *
     * The dataSchema represents the schema that was written for the data files. This won't necessarily be the same
@@ -56,6 +53,8 @@ trait HiveDialect extends Logging {
              roundingMode: RoundingMode,
              metadata: Map[String, String])
             (implicit fs: FileSystem, conf: Configuration): HiveOutputStream
+
+  def stats(getPath: Path)(implicit fs: FileSystem): Long = throw new UnsupportedOperationException
 }
 
 object HiveDialect extends Logging {

@@ -20,10 +20,12 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val writers = new ConcurrentLinkedQueue[SinkWriter](sink.open(schema, parallelism).asJava)
     val executor = Executors.newFixedThreadPool(parallelism)
 
-    class WriteTask(chunk: Seq[Row]) extends Runnable {
+    class WriteTask(chunk: Seq[Row], k: Int) extends Runnable {
       override def run(): Unit = {
         // this cannot return null, as we created enough writers for everyone
         val writer = writers.poll()
+        if (writer == null)
+          logger.error("Bug: Writer was null")
         try {
           chunk.foreach { row =>
             writer.write(row)
@@ -36,23 +38,33 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
             executor.shutdownNow()
             failure = t
         } finally {
+          logger.debug(s"Chunk $k has completed")
           writers.add(writer)
         }
       }
     }
 
     ds.subscribe(new Subscriber[Seq[Row]] {
-      override def starting(s: Cancellable): Unit = ()
+      var cancellable: Cancellable = null
+      var count = 1
+      override def starting(c: Cancellable): Unit = {
+        logger.debug(s"Sink writer is starting [cancellable=$c]")
+        this.cancellable = c
+      }
       override def next(chunk: Seq[Row]): Unit = {
         // each time our subscriber gets a chunk it can queue a task to process that chunk
         // avoiding the need for a blocking queue
-        executor.submit(new WriteTask(chunk))
+        executor.submit(new WriteTask(chunk, count))
+        count = count + 1
       }
       override def completed(): Unit = {
+        logger.debug("Sink action has received all chunks")
         executor.shutdown()
       }
       override def error(t: Throwable): Unit = {
-        // if we have an error from downstream, we'll exit immediately
+        // if we have an error from downstream, we'll exit immediately and cancel downstream
+        if (cancellable != null)
+          cancellable.cancel()
         executor.shutdownNow()
         failure = t
       }

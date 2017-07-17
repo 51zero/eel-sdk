@@ -41,7 +41,7 @@ class HivePartitionScanner(implicit fs: FileSystem) extends Logging {
 
     // next we grab all the data files from each of these partitions
     exantPartitions.flatMap { meta =>
-      HiveFileScanner(meta.location).map { status =>
+      HiveFileScanner(meta.location, false).map { status =>
         (status, meta)
       }
     }

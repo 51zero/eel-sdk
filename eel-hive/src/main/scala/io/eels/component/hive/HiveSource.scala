@@ -100,8 +100,7 @@ case class HiveSource(dbName: String,
   override def parts(): Seq[Part] = {
     login()
 
-    val table = client.getTable(dbName, tableName)
-    val dialect = io.eels.component.hive.HiveDialect(table)
+    val dialect = table.dialect
     val partitionKeys = ops.partitionKeys(dbName, tableName)
 
     // a predicate cannot operate on partitions, as a predicate is pushed down into the files
@@ -117,7 +116,7 @@ case class HiveSource(dbName: String,
       List(new HivePartitionPart(dbName, tableName, schema, partitionKeys, dialect))
     } else {
 
-      val filesandpartitions = HiveTableFilesFn(table, partitionKeys, partitionConstraint)
+      val filesandpartitions = HiveTableFilesFn(dbName, tableName, table.location(), partitionKeys, partitionConstraint)
       logger.debug(s"Found ${filesandpartitions.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema

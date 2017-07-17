@@ -5,7 +5,6 @@ import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.partition.{PartitionStrategy, RowPartitionFn}
 import io.eels.schema.StructType
-import io.eels.util.HdfsMkdir
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -49,7 +48,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   // Since the data can come in unordered, we want to keep the streams for each partition open
   // otherwise we would be opening and closing streams frequently.
   private val streams = TrieMap.empty[Path, HiveOutputStream]
-
+  private val tablePath = hiveOps.tablePath(dbName, tableName)
   private val writeSchema = outputSchemaStrategy.resolve(metastoreSchema, partitionKeys, client)
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
@@ -97,7 +96,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   }
 
   private def createWriter(location: Path): HiveOutputStream = try {
-    logger.debug(s"Creating new hive output stream for location $location")
+    logger.debug(s"Requesting new hive output stream for location $location")
 
     val filePath = outputPath(location)
     logger.debug(s"Hive output stream will write to file $filePath")
@@ -132,12 +131,10 @@ class HiveSinkWriter(sourceSchema: StructType,
     // we need a a writer per partition (as each partition is written to a different directory)
     // if we don't have partitions then we only need a writer for the table
     if (partitionKeys.isEmpty) {
-      val tablePath = hiveOps.tablePath(dbName, tableName)
       streams.getOrElseUpdate(tablePath, createWriter(tablePath))
     } else {
       val partition = RowPartitionFn(row, partitionKeys)
-      val partitionPath = partitionStrategy.ensurePartition(partition, dbName, tableName, client)
-      HdfsMkdir(partitionPath, inheritPermissions.getOrElse(inheritPermissionsDefault))
+      val partitionPath = partitionStrategy.ensurePartition(partition, dbName, tableName, inheritPermissions.getOrElse(inheritPermissionsDefault), client)
       streams.getOrElseUpdate(partitionPath, createWriter(partitionPath))
     }
   }
