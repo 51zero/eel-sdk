@@ -4,6 +4,7 @@ package io.eels.schema
 // eg key1=value1,key2=value2,key3=value3 is a partition
 case class Partition(entries: Seq[PartitionEntry]) {
 
+  def name: String = unquoted
   def unquoted: String = entries.map(_.unquoted).mkString("/")
 
   def keys: Seq[String] = entries.map(_.key)

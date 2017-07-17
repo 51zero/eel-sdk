@@ -12,6 +12,7 @@ import org.apache.hadoop.security.UserGroupInformation
 import com.sksamuel.exts.OptionImplicits._
 import io.eels.util.HdfsIterator
 
+import scala.annotation.meta
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 
@@ -176,9 +177,19 @@ case class HiveTable(dbName: String,
 
   def stats(): HiveStats = {
     val _dialect = dialect
-    val fileCounts = HiveFileScanner(location, false).map { file => _dialect.stats(file.getPath) }
-    val rows = if (fileCounts.isEmpty) 0 else fileCounts.sum
-    HiveStats(dbName, tableName, rows, Map.empty)
+    val partitions = partitionMetaData()
+    if (partitions.isEmpty) {
+      val fileCounts = HiveFileScanner(location, false).map { file => _dialect.stats(file.getPath) }
+      val rows = if (fileCounts.isEmpty) 0 else fileCounts.sum
+      HiveStats(dbName, tableName, rows, Map.empty)
+    } else {
+      val pstats = new HivePartitionScanner().scan(partitions).map { case (meta, files) =>
+        val count = files.map { file => _dialect.stats(file.getPath) }.sum
+        meta.partition -> PartitionStats(count)
+      }
+      val total = pstats.values.map(_.rows).sum
+      HiveStats(dbName, tableName, total, pstats)
+    }
   }
 
   // returns the location of this table as a hadoop Path

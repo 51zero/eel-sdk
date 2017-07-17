@@ -8,6 +8,7 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
 /**
   * Locates files for a given table.
+  *
   * Connects to the hive metastore to get the partitions list (or if no partitions then just root)
   * and scans those directories.
   */
@@ -31,7 +32,11 @@ object HiveTableFilesFn extends Logging {
     }
 
     def partitionsScan(partitions: Seq[PartitionMetaData]): Seq[(LocatedFileStatus, Partition)] = {
-      new HivePartitionScanner().scan(partitions, partitionConstraint).map { case (file, meta) => (file, meta.partition) }
+      new HivePartitionScanner().scan(partitions, partitionConstraint).flatMap { case (meta, files) =>
+        files.map { file =>
+          file -> meta.partition
+        }
+      }.toSeq
     }
 
     // the table may or may not have partitions.

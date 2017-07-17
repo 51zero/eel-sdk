@@ -14,7 +14,7 @@ import org.scalatest.{FunSuite, Matchers}
 class HiveEvolutionTest extends FunSuite with Matchers {
 
   val dbname = "sam"
-  val table = "evolution_test"
+  val table = "evolution_test_" + System.currentTimeMillis()
 
   implicit val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))

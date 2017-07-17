@@ -13,7 +13,7 @@ class HivePartitionScanner(implicit fs: FileSystem) extends Logging {
   private val missingPartitionAction: String = config.getString("eel.hive.source.missingPartitionAction")
 
   def scan(partitionMeta: Seq[PartitionMetaData],
-           constraint: Option[PartitionConstraint]): Seq[(LocatedFileStatus, PartitionMetaData)] = {
+           constraint: Option[PartitionConstraint] = None): Map[PartitionMetaData, Seq[LocatedFileStatus]] = {
     logger.debug(s"Scanning partitions for applicable files: ${partitionMeta.map(_.location).mkString(", ")}")
 
     // first we filter out if a partition constraint is set
@@ -40,10 +40,8 @@ class HivePartitionScanner(implicit fs: FileSystem) extends Logging {
     }
 
     // next we grab all the data files from each of these partitions
-    exantPartitions.flatMap { meta =>
-      HiveFileScanner(meta.location, false).map { status =>
-        (status, meta)
-      }
-    }
+    exantPartitions.map { meta =>
+      meta -> HiveFileScanner(meta.location, false)
+    }.toMap
   }
 }
