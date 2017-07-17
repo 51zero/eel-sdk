@@ -3,17 +3,13 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.{Listener, Row}
 import io.eels.datastream.DataStream
 import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+import io.eels.{Listener, Row}
 
 import scala.util.Random
 
-object HiveDataApp extends App with Timed {
+object HiveDataApp extends App with HiveConfig with Timed {
 
   private val Database = "sam"
   private val Table = "cities"
@@ -70,22 +66,6 @@ object HiveDataApp extends App with Timed {
     "Wisconsin",
     "Wyoming").map(_.replace(' ', '_').toLowerCase)
 
-  val conf = new Configuration
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.reloadConfiguration()
-
-  implicit val fs = FileSystem.get(conf)
-
-  implicit val hiveConf = new HiveConf()
-  hiveConf.addResource(new Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
-  hiveConf.reloadConfiguration()
-
-  implicit val client = new HiveMetaStoreClient(hiveConf)
-
-  val ops = HiveTable(Database, Table)
-  ops.drop()
-
   val schema = StructType(
     Field("id", StringType),
     Field("name", StringType),
@@ -95,24 +75,41 @@ object HiveDataApp extends App with Timed {
   )
   def createRow = Row(schema, Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean))
 
-  val sink = HiveSink(Database, Table)
-    .withCreateTable(true)
+  val size = 1000000
 
-  val size = 100000
+  for (_ <- 1 to 5) {
+    timed("Orc write complete") {
+      HiveTable(Database, Table).drop()
 
-  DataStream.fromIterator(
-    schema,
-    Iterator.continually(createRow).take(size)
-  ).listener(new Listener {
-    var count = 0
-    override def onNext(row: Row): Unit = {
-      count = count + 1
-      if (count % 10000 == 0) logger.info("Count=" + count)
+      val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Orc)
+
+      DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
+        var count = 0
+        override def onNext(row: Row): Unit = {
+          count = count + 1
+          if (count % 10000 == 0) logger.info("Count=" + count)
+        }
+      }).to(sink, 4)
+
+      Thread.sleep(1000)
     }
-  })
-    .to(sink)
 
-  logger.info("Write complete")
+    timed("Parquet write complete") {
+      HiveTable(Database, Table).drop()
+
+      val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Parquet)
+
+      DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
+        var count = 0
+        override def onNext(row: Row): Unit = {
+          count = count + 1
+          if (count % 10000 == 0) logger.info("Count=" + count)
+        }
+      }).to(sink, 4)
+
+      Thread.sleep(1000)
+    }
+  }
 
   val table = new HiveOps(client).tablePath(Database, Table)
   logger.info("table:" + table)

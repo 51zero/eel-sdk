@@ -25,6 +25,7 @@ case class HiveSink(dbName: String,
                     permission: Option[FsPermission] = None,
                     inheritPermissions: Option[Boolean] = None,
                     principal: Option[String] = None,
+                    format: Option[HiveFormat] = None,
                     partitionFields: Seq[String] = Nil,
                     partitionStrategy: PartitionStrategy = DynamicPartitionStrategy,
                     filenameStrategy: FilenameStrategy = DefaultFilenameStrategy,
@@ -44,9 +45,12 @@ case class HiveSink(dbName: String,
 
   implicit private val conf = fs.getConf
   private val ops = new HiveOps(client)
+  private val DefaultHiveFormat = HiveFormat.Parquet
 
-  def withCreateTable(createTable: Boolean, partitionFields: Seq[String] = Nil): HiveSink =
-    copy(createTable = createTable, partitionFields = partitionFields)
+  def withCreateTable(createTable: Boolean,
+                      partitionFields: Seq[String] = Nil,
+                      format: HiveFormat = DefaultHiveFormat): HiveSink =
+    copy(createTable = createTable, partitionFields = partitionFields, format = format.some)
 
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
@@ -112,9 +116,11 @@ case class HiveSink(dbName: String,
 
     if (createTable) {
       if (!ops.tableExists(dbName, tableName)) {
-        ops.createTable(dbName, tableName, schema,
+        ops.createTable(dbName,
+          tableName,
+          schema,
           partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
-          format = HiveFormat.Parquet,
+          format = format.getOrElse(DefaultHiveFormat),
           props = Map.empty,
           tableType = TableType.MANAGED_TABLE
         )
