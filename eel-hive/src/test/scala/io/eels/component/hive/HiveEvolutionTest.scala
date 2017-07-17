@@ -1,33 +1,19 @@
 package io.eels.component.hive
 
 import java.io.File
+import java.nio.file.Paths
 
+import com.sksamuel.exts.io.RecursiveDelete
 import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.scalatest.{FunSuite, Matchers}
 
-class HiveEvolutionTest extends FunSuite with Matchers {
+class HiveEvolutionTest extends FunSuite with Matchers with HiveConfig {
 
   val dbname = "sam"
   val table = "evolution_test_" + System.currentTimeMillis()
-
-  implicit val conf = new Configuration
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.reloadConfiguration()
-
-  implicit val fs = FileSystem.get(conf)
-
-  implicit val hiveConf = new HiveConf()
-  hiveConf.addResource(new Path("/home/sam/development/hive-2.1.0-bin/conf/hive-site.xml"))
-  hiveConf.reloadConfiguration()
-
-  implicit val client = new HiveMetaStoreClient(hiveConf)
+  RecursiveDelete(Paths.get("metastore_db"))
 
   test("allow columns to be added to a hive table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
