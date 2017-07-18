@@ -19,7 +19,7 @@ object HiveTableFilesFn extends Logging {
             tableName: String,
             tableLocation: Path,
             partitionKeys: List[String],
-            partitionConstraint: Option[PartitionConstraint])
+            partitionConstraints: Seq[PartitionConstraint])
            (implicit fs: FileSystem, client: IMetaStoreClient): Seq[(LocatedFileStatus, Partition)] = {
 
     val ops = new HiveOps(client)
@@ -32,7 +32,7 @@ object HiveTableFilesFn extends Logging {
     }
 
     def partitionsScan(partitions: Seq[PartitionMetaData]): Seq[(LocatedFileStatus, Partition)] = {
-      new HivePartitionScanner().scan(partitions, partitionConstraint).flatMap { case (meta, files) =>
+      new HivePartitionScanner().scan(partitions, partitionConstraints).flatMap { case (meta, files) =>
         files.map { file =>
           file -> meta.partition
         }

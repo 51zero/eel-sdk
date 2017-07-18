@@ -12,13 +12,13 @@ class HivePartitionScanner(implicit fs: FileSystem) extends Logging {
   private val config: Config = ConfigFactory.load()
   private val missingPartitionAction: String = config.getString("eel.hive.source.missingPartitionAction")
 
-  def scan(partitionMeta: Seq[PartitionMetaData],
-           constraint: Option[PartitionConstraint] = None): Map[PartitionMetaData, Seq[LocatedFileStatus]] = {
-    logger.debug(s"Scanning partitions for applicable files: ${partitionMeta.map(_.location).mkString(", ")}")
+  def scan(partitions: Seq[PartitionMetaData],
+           constraints: Seq[PartitionConstraint] = Nil): Map[PartitionMetaData, Seq[LocatedFileStatus]] = {
+    logger.debug(s"Scanning partitions for applicable files: ${partitions.map(_.location).mkString(", ")}")
 
-    // first we filter out if a partition constraint is set
-    val filteredPartitions = constraint.fold(partitionMeta) { it =>
-      partitionMeta.filter { meta => it.eval(meta.partition) }
+    // first we filter out any partitions not matching the constraints
+    val filteredPartitions = partitions.filter { meta =>
+      constraints.forall(_.eval(meta.partition))
     }
     logger.debug(s"Filtered partitions: ${filteredPartitions.map(_.location).mkString(", ")})")
 

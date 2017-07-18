@@ -21,7 +21,7 @@ case class HiveSource(dbName: String,
                       tableName: String,
                       projection: List[String] = Nil,
                       predicate: Option[Predicate] = None,
-                      partitionConstraint: Option[PartitionConstraint] = None,
+                      partitionConstraints: Seq[PartitionConstraint] = Nil,
                       principal: Option[String] = None,
                       keytabPath: Option[java.nio.file.Path] = None)
                      (implicit fs: FileSystem,
@@ -38,7 +38,10 @@ case class HiveSource(dbName: String,
   }
 
   def withPredicate(predicate: Predicate): HiveSource = copy(predicate = predicate.some)
-  def withPartitionConstraint(constraint: PartitionConstraint): HiveSource = copy(partitionConstraint = constraint.some)
+
+  def withPartitionConstraints(constraints: Seq[PartitionConstraint]): HiveSource = copy(partitionConstraints = constraints)
+  def addPartitionConstraint(constraint: PartitionConstraint): HiveSource =
+    copy(partitionConstraints = partitionConstraints :+ constraint)
 
   def withKeytabFile(principal: String, keytabPath: java.nio.file.Path): HiveSource = {
     login()
@@ -116,7 +119,7 @@ case class HiveSource(dbName: String,
       List(new HivePartitionPart(dbName, tableName, schema, partitionKeys, dialect))
     } else {
 
-      val filesandpartitions = HiveTableFilesFn(dbName, tableName, table.location(), partitionKeys, partitionConstraint)
+      val filesandpartitions = HiveTableFilesFn(dbName, tableName, table.location(), partitionKeys, partitionConstraints)
       logger.debug(s"Found ${filesandpartitions.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema
