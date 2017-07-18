@@ -53,7 +53,11 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
 
         override def error(t: Throwable): Unit = {
           logger.error(s"Error reading part $name", t)
-          cancellable.cancel()
+          if (cancellable != null)
+            cancellable.cancel()
+          else {
+            logger.warn("Cancellable was null")
+          }
           if (finished.incrementAndGet == parts.size)
             queue.put(Row.Sentinel)
         }
