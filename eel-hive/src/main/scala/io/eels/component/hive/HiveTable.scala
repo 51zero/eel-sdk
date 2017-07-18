@@ -1,24 +1,31 @@
 package io.eels.component.hive
 
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.sksamuel.exts.Logging
-import io.eels.FilePattern
+import com.sksamuel.exts.OptionImplicits._
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
+import io.eels.{FilePattern, Row}
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.hive.partition.PartitionMetaData
+import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.schema.{Partition, StringType, StructType}
+import io.eels.util.HdfsIterator
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 import org.apache.hadoop.security.UserGroupInformation
-import com.sksamuel.exts.OptionImplicits._
-import io.eels.util.HdfsIterator
 
-import scala.annotation.meta
 import scala.collection.JavaConverters._
+import scala.math.BigDecimal.RoundingMode
 import scala.util.matching.Regex
 
 case class HiveTable(dbName: String,
                      tableName: String)
                     (implicit fs: FileSystem,
+                     conf: Configuration,
                      client: IMetaStoreClient) extends Logging {
 
   lazy val ops = new HiveOps(client)
@@ -61,20 +68,26 @@ case class HiveTable(dbName: String,
     * @param includeTableDir      if true then the main table directory will be included
     * @return paths of all files and directories
     */
-  def paths(includePartitionDirs: Boolean, includeTableDir: Boolean): List[Path] = {
+  def paths(includePartitionDirs: Boolean, includeTableDir: Boolean): Seq[Path] = {
 
-    val files = ops.hivePartitions(dbName, tableName).flatMap { partition =>
-      val location = partition.getSd.getLocation
-      val files = FilePattern(s"$location/*").toPaths()
-      if (includePartitionDirs) {
-        files :+ new Path(location)
-      } else {
-        files
+    val _location = location
+
+    val partitions = partitionMetaData
+    val files = if (partitions.isEmpty) {
+      HiveFileScanner(_location, false).map(_.getPath)
+    } else {
+      partitions.flatMap { partition =>
+        val files = FilePattern(s"${partition.location}/*").toPaths()
+        if (includePartitionDirs) {
+          files :+ partition.location
+        } else {
+          files
+        }
       }
     }
+
     if (includeTableDir) {
-      val location = spec().location
-      files :+ new Path(location)
+      files :+ _location
     } else {
       files
     }
@@ -88,7 +101,7 @@ case class HiveTable(dbName: String,
     * @param includeTableDir      if true then the main table directory will be included
     * @return paths of all files and directories
     */
-  def paths(includePartitionDirs: Boolean, includeTableDir: Boolean, regex: Regex): List[Path] = {
+  def paths(includePartitionDirs: Boolean, includeTableDir: Boolean, regex: Regex): Seq[Path] = {
     paths(includePartitionDirs, includeTableDir).filter { path => regex.pattern.matcher(path.toString).matches }
   }
 
@@ -153,7 +166,7 @@ case class HiveTable(dbName: String,
   def spec(): TableSpec = {
     val table = client.getTable(dbName, tableName)
     val tableType = TableType.values().find(_.name.toLowerCase == table.getTableType.toLowerCase)
-      .getOrElse(sys.error("Hive table type is not supported by this version of hive"))
+      .getOrError("Hive table type is not supported by this version of hive")
     val params = table.getParameters.asScala.toMap ++ table.getSd.getParameters.asScala.toMap
     TableSpec(
       tableName,
@@ -176,10 +189,11 @@ case class HiveTable(dbName: String,
   def dialect = io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
 
   def stats(): HiveStats = {
-    val _dialect = dialect
+    val _spec = spec
+    val _dialect = io.eels.component.hive.HiveDialect(_spec.inputFormat)
     val partitions = partitionMetaData()
     if (partitions.isEmpty) {
-      val fileCounts = HiveFileScanner(location, false).map { file => _dialect.stats(file.getPath) }
+      val fileCounts = HiveFileScanner(new Path(_spec.location), false).map { file => _dialect.stats(file.getPath) }
       val rows = if (fileCounts.isEmpty) 0 else fileCounts.sum
       HiveStats(dbName, tableName, rows, Map.empty)
     } else {
@@ -189,6 +203,36 @@ case class HiveTable(dbName: String,
       }
       val total = pstats.values.map(_.rows).sum
       HiveStats(dbName, tableName, total, pstats)
+    }
+  }
+
+  // will compact all the files in each partitions into a single file
+  def compact(finalFilename: String = "eel_compacted_" + System.nanoTime): Unit = {
+    val _schema = schema
+    val _dialect = dialect
+    HiveTableFilesFn(dbName, tableName, location, Nil).filter(_._2.nonEmpty).foreach { case (partition, files) =>
+      logger.info(s"Starting compact for $partition")
+      val queue = new LinkedBlockingQueue[Seq[Row]]
+      val done = new AtomicInteger(0)
+      files.foreach { file =>
+        _dialect.input(file.getPath, _schema, _schema, None).subscribe(new Subscriber[Seq[Row]] {
+          override def next(t: Seq[Row]): Unit = queue.put(t)
+          override def completed(): Unit = if (done.incrementAndGet == files.size) {
+            queue.put(Row.Sentinel)
+          }
+          override def error(t: Throwable): Unit = {
+            logger.error(s"Error compacting $partition", t)
+            queue.put(Row.Sentinel)
+          }
+          override def starting(c: Cancellable): Unit = ()
+        })
+      }
+      val output = _dialect.output(_schema, new Path(files.head.getPath.getParent, finalFilename), None, RoundingMode.UNNECESSARY, Map.empty)
+      BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { rows =>
+        rows.foreach(output.write)
+      }
+      output.close()
+      logger.info(s"Finished compact for $partition")
     }
   }
 

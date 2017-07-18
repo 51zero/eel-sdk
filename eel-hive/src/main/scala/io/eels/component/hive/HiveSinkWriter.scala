@@ -5,6 +5,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.partition.{PartitionStrategy, RowPartitionFn}
 import io.eels.schema.StructType
+import io.eels.util.HdfsIterator
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
@@ -82,10 +83,13 @@ class HiveSinkWriter(sourceSchema: StructType,
         callbacks.foreach(_.onCommit(stagingPath, finalPath))
       }
 
+      // check if the staging directories are empty and if so, nuke'em
       streams.values.foreach { writer =>
         val stagingDir = writer.path.getParent
-        logger.debug(s"Deleting staging directory $stagingDir")
-        fs.delete(stagingDir, true)
+        if (HdfsIterator.remote(fs.listFiles(stagingDir, false)).isEmpty) {
+          logger.debug(s"Deleting staging directory $stagingDir")
+          fs.delete(stagingDir, false)
+        }
       }
 
       logger.info("Commit completed")

@@ -42,7 +42,7 @@ class HivePartitionConstraintTest extends FunSuite with Matchers {
     )).to(HiveSink(dbname, table).withCreateTable(true, Seq("state")))
 
     HiveSource(dbname, table)
-      .withPartitionConstraint(PartitionConstraint.equals("state", "pa"))
+      .addPartitionConstraint(PartitionConstraint.equals("state", "pa"))
       .toDataStream()
       .collect.size shouldBe 0
   }

@@ -5,6 +5,9 @@ import com.typesafe.config.ConfigFactory
 import io.eels.util.HdfsIterator
 import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus, Path}
 
+// given a hadoop path, will look for files inside that path that match the
+// configured settings for hidden files
+// does not return directories
 object HiveFileScanner extends Logging {
 
   private val config = ConfigFactory.load()
@@ -16,10 +19,7 @@ object HiveFileScanner extends Logging {
     file.getLen == 0L || ignoreHiddenFiles && file.getPath.getName.matches(hiddenFilePattern)
   }
 
-  // given a hadoop path, will look for files inside that path that match the
-  // configured settings for hidden files
-  // does not return directories
-  def apply(path: Path, recursive: Boolean)(implicit fs: FileSystem): List[LocatedFileStatus] = {
+  def apply(path: Path, recursive: Boolean)(implicit fs: FileSystem): Seq[LocatedFileStatus] = {
     logger.debug(s"Scanning $path, filtering=$ignoreHiddenFiles, pattern=$hiddenFilePattern")
     val files: List[LocatedFileStatus] = if (fs.exists(path)) {
       val files = fs.listFiles(path, recursive)

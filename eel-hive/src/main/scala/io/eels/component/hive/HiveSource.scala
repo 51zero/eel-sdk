@@ -119,13 +119,15 @@ case class HiveSource(dbName: String,
       List(new HivePartitionPart(dbName, tableName, schema, partitionKeys, dialect))
     } else {
 
-      val filesandpartitions = HiveTableFilesFn(dbName, tableName, table.location(), partitionKeys, partitionConstraints)
+      val filesandpartitions = HiveTableFilesFn(dbName, tableName, table.location(), partitionConstraints)
       logger.debug(s"Found ${filesandpartitions.size} visible hive files from all locations for $dbName:$tableName")
 
       // for each seperate hive file part we must pass in the metastore schema
-      filesandpartitions.map { case (file, partition) =>
-        new HiveFilePart(dialect, file, metastoreSchema, schema, predicate, partition)
-      }
+      filesandpartitions.flatMap { case (partition, files) =>
+        files.map { file =>
+          new HiveFilePart(dialect, file, metastoreSchema, schema, predicate, partition)
+        }
+      }.toSeq
     }
   }
 }

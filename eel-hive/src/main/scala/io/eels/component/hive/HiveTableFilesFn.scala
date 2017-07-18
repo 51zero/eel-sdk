@@ -11,32 +11,29 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
   *
   * Connects to the hive metastore to get the partitions list (or if no partitions then just root)
   * and scans those directories.
+  *
+  * Returns a Map of each partition to the files in that partition.
+  *
+  * If partition constraints are specified then those partitions are filtered out.
   */
 object HiveTableFilesFn extends Logging {
 
-  // for a given table returns hadoop paths that match the partition constraints
   def apply(dbName: String,
             tableName: String,
             tableLocation: Path,
-            partitionKeys: List[String],
             partitionConstraints: Seq[PartitionConstraint])
-           (implicit fs: FileSystem, client: IMetaStoreClient): Seq[(LocatedFileStatus, Partition)] = {
+           (implicit fs: FileSystem, client: IMetaStoreClient): Map[Partition, Seq[LocatedFileStatus]] = {
 
     val ops = new HiveOps(client)
 
     // when we have no partitions, this will scan just the table folder directly for files
-    def rootScan(): Seq[(LocatedFileStatus, Partition)] = {
-      HiveFileScanner(tableLocation, false).map { it =>
-        (it, Partition.empty)
-      }
+    def rootScan(): Map[Partition, Seq[LocatedFileStatus]] = {
+      Map(Partition.empty -> HiveFileScanner(tableLocation, false))
     }
 
-    def partitionsScan(partitions: Seq[PartitionMetaData]): Seq[(LocatedFileStatus, Partition)] = {
-      new HivePartitionScanner().scan(partitions, partitionConstraints).flatMap { case (meta, files) =>
-        files.map { file =>
-          file -> meta.partition
-        }
-      }.toSeq
+    def partitionsScan(partitions: Seq[PartitionMetaData]): Map[Partition, Seq[LocatedFileStatus]] = {
+      new HivePartitionScanner().scan(partitions, partitionConstraints)
+        .map { case (key, value) => key.partition -> value }
     }
 
     // the table may or may not have partitions.
