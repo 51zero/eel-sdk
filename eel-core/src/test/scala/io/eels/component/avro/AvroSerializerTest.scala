@@ -4,6 +4,7 @@ import io.eels.schema.{ArrayType, Field, IntType, StructType}
 import io.eels.Row
 import org.apache.avro.SchemaBuilder
 import org.scalatest.{Matchers, WordSpec}
+import scala.collection.JavaConverters._
 
 class AvroSerializerTest extends WordSpec with Matchers {
 
@@ -52,38 +53,28 @@ class AvroSerializerTest extends WordSpec with Matchers {
       record.get("s") shouldBe "true"
     }
     "support arrays" in {
-      val schema = StructType(Field("a", ArrayType(IntType(true))))
+      val schema = StructType(Field("a", ArrayType(IntType.Signed)))
       val serializer = new RecordSerializer(AvroSchemaFns.toAvroSchema(schema))
       val record = serializer.serialize(Row(schema, Array(1, 2)))
-      record.get("a").asInstanceOf[Array[_]].toList shouldBe List(1, 2)
+      record.get("a").asInstanceOf[java.util.List[_]].asScala.toList shouldBe List(1, 2)
     }
     "support lists" in {
-      val schema = StructType(Field("a", ArrayType(IntType(true))))
+      val schema = StructType(Field("a", ArrayType(IntType.Signed)))
       val serializer = new RecordSerializer(AvroSchemaFns.toAvroSchema(schema))
       val record = serializer.serialize(Row(schema, Array(1, 2)))
-      record.get("a") shouldBe List(1, 2)
+      record.get("a").asInstanceOf[java.util.List[_]].asScala.toList shouldBe List(1, 2)
     }
     "support sets" in {
       val schema = StructType(Field("a", ArrayType(IntType(true))))
       val serializer = new RecordSerializer(AvroSchemaFns.toAvroSchema(schema))
       val record = serializer.serialize(Row(schema, Set(1, 2)))
-      record.get("a").asInstanceOf[Array[_]].toSet shouldBe Set(1, 2)
+      record.get("a").asInstanceOf[java.util.List[_]].asScala.toList shouldBe List(1, 2)
     }
     "support iterables" in {
       val schema = StructType(Field("a", ArrayType(IntType(true))))
       val serializer = new RecordSerializer(AvroSchemaFns.toAvroSchema(schema))
       val record = serializer.serialize(Row(schema, Iterable(1, 2)))
-      record.get("a").asInstanceOf[Array[_]].toList shouldBe List(1, 2)
+      record.get("a").asInstanceOf[java.util.List[_]].asScala.toList shouldBe List(1, 2)
     }
   }
 }
-
-//    "AvroRecordFn" should
-//        in {
-//          "replace missing values if flag set" in in {
-//            val schema = Schema(Column("a"), Column("b"), Column("c"))
-//            toRecord(listOf("1", "3"), schema, Schema(Column("a"), Column("c")), config).toString shouldBe
-//                """{"a": "1", "b": null, "c": "3"}"""
-//          }
-//          }
-//
