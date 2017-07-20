@@ -6,12 +6,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
-import io.eels.{FilePattern, Row}
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.schema.{Partition, StringType, StructType}
 import io.eels.util.HdfsIterator
+import io.eels.{FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -39,6 +39,13 @@ case class HiveTable(dbName: String,
     * Returns all the partitions along with extra meta data per partition, eg location, creation time.
     */
   def partitionMetaData(): Seq[PartitionMetaData] = ops.partitionsMetaData(dbName, tableName)
+
+  /**
+    * Returns just the values for the given partition key
+    */
+  def partitionValues(key: String): Seq[String] = partitions.map(_.get(key)).collect {
+    case Some(entry) => entry.value
+  }
 
   def schema: StructType = {
     ops.schema(dbName, tableName)
