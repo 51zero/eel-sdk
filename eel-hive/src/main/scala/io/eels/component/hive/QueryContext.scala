@@ -11,10 +11,10 @@ import com.sksamuel.exts.OptionImplicits._
 
 trait QueryContext {
   def constraints: Seq[PartitionConstraint]
-  // returns the maximum value of this field in the partitions that match the constraints
-  def maxLong(field: String): Long
   // returns the minimum value of this field in the partitions that match the constraints
-  def minLong(field: String): Long
+  def min(field: String): Any
+  // returns the maximum value of this field in the partitions that match the constraints
+  def max(field: String): Any
 }
 
 class ParquetQueryContext(dbName: String,
@@ -26,22 +26,29 @@ class ParquetQueryContext(dbName: String,
 
   private val ops = new HiveOps(client)
 
-  private def minmax(field: String): Seq[(Any, Any)] = {
-    val location = new Path(ops.location(dbName, tableName))
-    HiveTableFilesFn(dbName, tableName, location, constraints).flatMap { case (partition, files) =>
-      files.flatMap { file =>
-        val footer = ParquetFileReader.readFooter(conf, file, ParquetMetadataConverter.NO_FILTER)
-        footer.getBlocks.asScala.map { block =>
-          val column = block.getColumns.asScala.find(_.getPath.toDotString == field).getOrError(s"Unknown column $field")
-          (column.getStatistics.genericGetMin, column.getStatistics.genericGetMax)
+  private def minmax(field: String): (Any, Any) = {
+    def stats[T]: (Any, Any) = {
+      def min(ts: Seq[Comparable[T]]): Any = ts.reduceLeft { (a, b) => if (a.compareTo(b.asInstanceOf[T]) <= 0) a else b }
+      def max(ts: Seq[Comparable[T]]): Any = ts.reduceLeft { (a, b) => if (a.compareTo(b.asInstanceOf[T]) >= 0) a else b }
+      val location = new Path(ops.location(dbName, tableName))
+      val (mins, maxes) = HiveTableFilesFn(dbName, tableName, location, constraints).toSeq.flatMap { case (_, files) =>
+        files.flatMap { file =>
+          val footer = ParquetFileReader.readFooter(conf, file, ParquetMetadataConverter.NO_FILTER)
+          footer.getBlocks.asScala.map { block =>
+            val column = block.getColumns.asScala.find(_.getPath.toDotString == field).getOrError(s"Unknown column $field")
+            val min = column.getStatistics.genericGetMin.asInstanceOf[Comparable[T]]
+            val max = column.getStatistics.genericGetMax.asInstanceOf[Comparable[T]]
+            (min, max)
+          }
         }
-      }
-    }.toSeq
+      }.unzip
+      (min(mins), max(maxes))
+    }
+    stats[Any]
   }
 
-  // returns the maximum value of this field in the partitions that match the constraints
-  override def maxLong(field: String): Long = minmax(field).unzip._2.map(_.toString.toLong).max
-
   // returns the minimum value of this field in the partitions that match the constraints
-  override def minLong(field: String): Long = minmax(field).unzip._1.map(_.toString.toLong).max
+  override def min(field: String): Any = minmax(field)._1
+  // returns the maximum value of this field in the partitions that match the constraints
+  override def max(field: String): Any = minmax(field)._2
 }

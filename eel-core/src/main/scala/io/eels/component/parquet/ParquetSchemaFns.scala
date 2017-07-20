@@ -187,7 +187,7 @@ object ParquetSchemaFns {
       // spark doesn't annotate timestamps, just uses int96, so same here
       case TimestampMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, name)
       case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
-      case VarcharType(size) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
+      case VarcharType(_) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
     }
   }
 }

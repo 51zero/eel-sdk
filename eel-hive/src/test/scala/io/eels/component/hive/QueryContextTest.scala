@@ -20,7 +20,7 @@ class QueryContextTest extends FunSuite with Matchers with HiveConfig {
     RecursiveDelete(Paths.get("metastore_db"))
   }
 
-  test("allow columns to be added to a hive table") {
+  test("return min and max") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
 
     val schema = StructType(
@@ -34,7 +34,27 @@ class QueryContextTest extends FunSuite with Matchers with HiveConfig {
 
     DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink, 10)
 
-    HiveTable(dbname, table).queryContext(Nil).maxLong("b") shouldBe 5
-    HiveTable(dbname, table).queryContext(Nil).minLong("b") shouldBe 1
+    HiveTable(dbname, table).queryContext(Nil).max("b") shouldBe 5
+    HiveTable(dbname, table).queryContext(Nil).min("b") shouldBe 1
+  }
+
+  ignore("return min and max for strings") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+
+    HiveTable(dbname, table).drop()
+
+    val schema = StructType(
+      Field("a", StringType),
+      Field("b", StringType)
+    )
+    def createRow = Row(schema, Seq(Random.shuffle(List("a", "b", "c")).head, Random.shuffle(List("a", "z")).head))
+
+    val sink = HiveSink(dbname, table).withCreateTable(true)
+    val size = 10000
+
+    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink, 10)
+
+    HiveTable(dbname, table).queryContext(Nil).max("b") shouldBe 5
+    HiveTable(dbname, table).queryContext(Nil).min("b") shouldBe 1
   }
 }

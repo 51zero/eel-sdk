@@ -28,7 +28,8 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
       }
 
       override def next(chunk: Seq[Row]): Unit = {
-        queue.put(chunk)
+        if (failure.get == null)
+          queue.put(chunk)
       }
 
       override def completed(): Unit = {
@@ -37,15 +38,23 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
       }
 
       override def error(t: Throwable): Unit = {
+        logger.error("Sink subscriber has received error", t)
         // if we have an error from downstream
-        executor.shutdownNow()
         failure.set(t)
+        // clear the queue on error so always room for the sentinel
+        queue.clear()
+        queue.put(Row.Sentinel)
+        executor.shutdownNow()
+        if (dscancellable != null)
+          dscancellable.cancel()
       }
     }
 
     val writers = sink.open(schema, parallelism)
-    writers.zipWithIndex.foreach { case (writer, k) =>
-      executor.submit(new Runnable {
+    logger.debug(s"Opened up ${writers.size} writers from sink $sink")
+
+    val tasks = writers.zipWithIndex.map { case (writer, k) =>
+      new Runnable {
         override def run(): Unit = {
           logger.info(s"Starting thread writer $k")
           try {
@@ -58,15 +67,18 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
             }
           } catch {
             case t: Throwable =>
-              logger.error(s"Error writing chunk ${completed.incrementAndGet}", t)
+              logger.error(s"Error writing chunk ${completed.incrementAndGet}: ${t.getMessage}; cancelling upstream")
+              queue.clear()
+              queue.put(Row.Sentinel)
               failure.set(t)
-              // if we have an error writing, we'll exit immediately by cancelling the downstream
               dscancellable.cancel()
           }
           logger.info(s"Ending thread writer $k")
         }
-      })
+      }
     }
+
+    tasks.foreach(executor.execute)
     executor.shutdown()
 
     ds.subscribe(subscriber)
@@ -85,6 +97,8 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     if (failure.get != null)
       throw failure.get
 
-    adder.sum()
+    val sum = adder.sum()
+    logger.info(s"Sink wrote $sum records")
+    sum
   }
 }

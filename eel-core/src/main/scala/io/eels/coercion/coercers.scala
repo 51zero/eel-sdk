@@ -78,6 +78,7 @@ object LongCoercer extends Coercer[Long] {
     case i: Int => i
     case s: Short => s
     case s: String => s.toLong
+    case t: Timestamp => t.getTime
   }
 }
 

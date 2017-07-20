@@ -23,6 +23,7 @@ trait EvolutionStrategy {
 /**
   * The AdditionEvolutionStrategy will add any missing fields to the schema in the hive metastore.
   * It will not check that any existing fields are of the same type as in the metastore.
+  * The new fields cannot be added as partition fields.
   */
 object AdditionEvolutionStrategy extends EvolutionStrategy with Logging {
 
