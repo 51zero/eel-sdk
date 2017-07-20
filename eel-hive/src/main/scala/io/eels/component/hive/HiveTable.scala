@@ -40,11 +40,23 @@ case class HiveTable(dbName: String,
     */
   def partitionMetaData(): Seq[PartitionMetaData] = ops.partitionsMetaData(dbName, tableName)
 
+  def partitionMetaData(partition: Partition): PartitionMetaData =
+    partitionMetaData().find(_.partition == partition).getOrError(s"Partition not found $partition")
+
   /**
     * Returns just the values for the given partition key
     */
   def partitionValues(key: String): Seq[String] = partitions.map(_.get(key)).collect {
     case Some(entry) => entry.value
+  }
+
+  def truncatePartition(partition: Partition): Unit = {
+    logger.info(s"Truncating partition $partition")
+    val meta = partitionMetaData(partition)
+    new HivePartitionScanner().scan(Seq(meta), Nil).foreach { case (_, files) =>
+      logger.debug(s"Deleting partition files ${files.map(_.getPath).mkString(",")}")
+      files.map(_.getPath).foreach(fs.delete(_, false))
+    }
   }
 
   def schema: StructType = {
