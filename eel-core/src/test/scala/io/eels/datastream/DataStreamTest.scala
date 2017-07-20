@@ -399,6 +399,22 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.addField with function" should {
+    "invoke function for each row to return new row" in {
+      val ds = DataStream.fromValues(
+        StructType("a", "b"),
+        Vector(
+          List("1", "2"),
+          List("3", "4")
+        )
+      )
+      ds.addField(Field("c"), (row: Row) => row("b").toString.toInt + 1).collect shouldBe Seq(
+        Row(ds.schema.addField("c"), List("1", "2", 3)),
+        Row(ds.schema.addField("c"), List("3", "4", 5))
+      )
+    }
+  }
+
   "DataStream.multiplex" should {
     "return multiple independant branches of the stream" in {
       val ds = DataStream.fromIterator(

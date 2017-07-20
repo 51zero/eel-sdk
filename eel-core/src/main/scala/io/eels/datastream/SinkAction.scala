@@ -49,7 +49,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
         override def run(): Unit = {
           logger.info(s"Starting thread writer $k")
           try {
-            BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => failure.get == null).foreach { chunk =>
+            BlockingQueueConcurrentIterator(queue, Row.Sentinel).foreach { chunk =>
               chunk.foreach { row =>
                 writer.write(row)
                 adder.increment()

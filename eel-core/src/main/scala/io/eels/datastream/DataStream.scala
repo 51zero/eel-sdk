@@ -634,6 +634,22 @@ trait DataStream extends Logging {
   }
 
   /**
+    * Returns a new DataStream which a new field added.
+    * The value for the field is taken from the function which is invoked for each row.
+    */
+  def addField(field: Field, fn: Row => Any): DataStream = new DataStream {
+    override def schema: StructType = self.schema.addField(field)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        val _schema = schema
+        override def next(t: Seq[Row]): Unit = {
+          subscriber next t.map { row => Row(_schema, row.values :+ fn(row)) }
+        }
+      })
+    }
+  }
+
+  /**
     * Returns a new DataStream with the new field of type String added at the end. The value of
     * this field for each Row is specified by the default value.
     */
