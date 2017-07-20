@@ -20,7 +20,7 @@ object AvroSchemaMerge {
     schemas.foreach { schema =>
       schema.getFields.asScala.filterNot { field => fields.exists(_.name() == field.name) }.foreach { field =>
         // avro is funny about sharing fields, so need to copy it
-        val copy = new Schema.Field(field.name(), field.schema(), StringOption(field.doc).orNull, field.defaultValue())
+        val copy = new Schema.Field(field.name(), field.schema(), StringOption(field.doc).orNull, field.defaultVal)
         fields.append(copy)
       }
     }

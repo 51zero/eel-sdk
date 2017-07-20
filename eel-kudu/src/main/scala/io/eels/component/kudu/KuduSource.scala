@@ -61,6 +61,9 @@ object ResultsIterator {
           case _: LongType => LongValueReader.read(next, index)
           case _: ShortType => ShortValueReader.read(next, index)
           case StringType => StringValueReader.read(next, index)
+          case TimeMicrosType => LongValueReader.read(next, index)
+          case TimeMillisType => LongValueReader.read(next, index)
+          case TimestampMillisType => LongValueReader.read(next, index)
         }
       }
       Row(schema, values)

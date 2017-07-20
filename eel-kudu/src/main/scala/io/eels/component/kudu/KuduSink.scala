@@ -56,15 +56,18 @@ case class KuduSink(tableName: String,
           partial.setNull(index)
         } else {
           field.dataType match {
-            case StringType => KuduStringWriter.write(partial, index, value)
-            case _: LongType => KuduLongWriter.write(partial, index, value)
-            case _: IntType => KuduIntWriter.write(partial, index, value)
-            case _: ShortType => KuduShortWriter.write(partial, index, value)
-            case _: ByteType => KuduByteWriter.write(partial, index, value)
-            case BooleanType => KuduBooleanWriter.write(partial, index, value)
-            case FloatType => KuduFloatWriter.write(partial, index, value)
-            case DoubleType => KuduDoubleWriter.write(partial, index, value)
             case BinaryType => KuduBinaryWriter.write(partial, index, value)
+            case BooleanType => KuduBooleanWriter.write(partial, index, value)
+            case _: ByteType => KuduByteWriter.write(partial, index, value)
+            case DoubleType => KuduDoubleWriter.write(partial, index, value)
+            case FloatType => KuduFloatWriter.write(partial, index, value)
+            case _: IntType => KuduIntWriter.write(partial, index, value)
+            case _: LongType => KuduLongWriter.write(partial, index, value)
+            case _: ShortType => KuduShortWriter.write(partial, index, value)
+            case StringType => KuduStringWriter.write(partial, index, value)
+            case TimeMicrosType => KuduLongWriter.write(partial, index, value)
+            case TimeMillisType => KuduLongWriter.write(partial, index, value)
+            case TimestampMillisType => KuduLongWriter.write(partial, index, value)
           }
         }
       }

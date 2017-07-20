@@ -154,7 +154,9 @@ object ParquetSchemaFns {
         new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 20, name, OriginalType.DECIMAL, metadata, id)
       case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name)
       case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, name)
-      case CharType(size) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
+      case ByteType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_8)
+      case ByteType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_8)
+      case CharType(_) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
       case DateType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.DATE)
       // https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md#decimal
       // The scale stores the number of digits of that value that are to the right of the decimal point,
@@ -165,7 +167,7 @@ object ParquetSchemaFns {
         val id = new Type.ID(1)
         new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, byteSize, name, OriginalType.DECIMAL, metadata, id)
       case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, name)
-      case EnumType(enumName, values) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, enumName, OriginalType.ENUM)
+      case EnumType(enumName, _) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, enumName, OriginalType.ENUM)
       case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, name)
       case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name)
       case IntType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_32)

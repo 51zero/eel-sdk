@@ -86,7 +86,6 @@ object HiveSchemaFns extends Logging {
     case _: ShortType => "smallint"
     case StringType => "string"
     case TimestampMillisType => "timestamp"
-    case TimestampMillisType => "timestamp"
     case VarcharType(size) => s"varchar($size)"
     case _ => sys.error(s"No conversion from eel type [$dataType] to hive type")
   }

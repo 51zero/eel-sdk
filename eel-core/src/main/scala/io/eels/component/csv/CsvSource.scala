@@ -80,7 +80,7 @@ case class CsvSource(inputFn: () => InputStream,
   }
 
   override def parts(): List[Part] = {
-    val part = new CsvPart(createParser, inputFn, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
+    val part = new CsvPart(createParser _, inputFn, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
     List(part)
   }
 }
