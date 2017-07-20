@@ -4,10 +4,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
+import com.sksamuel.exts.io.Using
 import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream, Publisher}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Cancellable, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -18,9 +19,10 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.ParquetFileReader
 
+import scala.collection.mutable.ArrayBuffer
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
-class ParquetHiveDialect extends HiveDialect with Logging {
+class ParquetHiveDialect extends HiveDialect with Logging with Using {
 
   override def input(path: Path,
                      ignore: StructType,
@@ -35,10 +37,24 @@ class ParquetHiveDialect extends HiveDialect with Logging {
       // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
       try {
         val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
-        val reader = RowParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)
-        val iterator = ParquetIterator(reader)
-        iterator.grouped(1000).foreach(subscriber.next)
-        subscriber.completed()
+        using(RowParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)) { reader =>
+          val cancellable = new Cancellable {
+            override def cancel(): Unit = reader.close()
+          }
+          subscriber.starting(cancellable)
+          val iterator = ParquetIterator(reader)
+          val buffer = new ArrayBuffer[Row](1000)
+          while (iterator.hasNext) {
+            buffer.append(iterator.next)
+            if (buffer.size == 1000) {
+              subscriber.next(buffer.toVector)
+              buffer.clear()
+            }
+          }
+          if (buffer.nonEmpty)
+            subscriber.next(buffer.toVector)
+          subscriber.completed()
+        }
       } catch {
         case t: Throwable => subscriber.error(t)
       }

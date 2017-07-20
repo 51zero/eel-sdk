@@ -49,6 +49,8 @@ class PartSubscriber(name: String,
 // an implementation of DataStream that provides a subscribe powered by constitent parts
 class DataStreamSource(source: Source) extends DataStream with Using with Logging {
 
+  private val bufferSize = 100
+
   override def schema: StructType = source.schema
 
   override def subscribe(s: Subscriber[Seq[Row]]): Unit = {
@@ -62,7 +64,7 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
 
     } else {
 
-      val queue = new LinkedBlockingQueue[Seq[Row]](100)
+      val queue = new LinkedBlockingQueue[Seq[Row]](bufferSize)
       val outstanding = new AtomicInteger(parts.size)
 
       // create a subscriber for each part
