@@ -16,7 +16,7 @@ object JdbcSource {
 case class JdbcSource(connFn: () => Connection,
                       query: String,
                       bindFn: (PreparedStatement) => Unit = stmt => (),
-                      fetchSize: Int = 100,
+                      fetchSize: Int = 200,
                       providedSchema: Option[StructType] = None,
                       providedDialect: Option[JdbcDialect] = None,
                       partitionStrategy: JdbcPartitionStrategy = SinglePartitionStrategy)

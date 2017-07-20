@@ -13,6 +13,7 @@ object HiveDataApp extends App with HiveConfig with Timed {
 
   private val Database = "sam"
   private val Table = "cities"
+  private val Table2 = "cities2"
 
   val states = List(
     "Alabama",
@@ -75,41 +76,42 @@ object HiveDataApp extends App with HiveConfig with Timed {
   )
   def createRow = Row(schema, Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean))
 
-  val size = 1000000
+  val size = 1000 * 1000 * 100
 
-  for (_ <- 1 to 5) {
-    timed("Orc write complete") {
-      HiveTable(Database, Table).drop()
+  //  for (_ <- 1 to 5) {
+  //    timed("Orc write complete") {
+  //      HiveTable(Database, Table).drop()
+  //
+  //      val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Orc)
+  //
+  //      DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
+  //        var count = 0
+  //        override def onNext(row: Row): Unit = {
+  //          count = count + 1
+  //          if (count % 10000 == 0) logger.info("Count=" + count)
+  //        }
+  //      }).to(sink, 4)
+  //
+  //      Thread.sleep(1000)
+  //    }
 
-      val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Orc)
-
-      DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
-        var count = 0
-        override def onNext(row: Row): Unit = {
-          count = count + 1
-          if (count % 10000 == 0) logger.info("Count=" + count)
-        }
-      }).to(sink, 4)
-
-      Thread.sleep(1000)
-    }
-
-    timed("Parquet write complete") {
-      HiveTable(Database, Table).drop()
-
-      val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Parquet)
-
-      DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
-        var count = 0
-        override def onNext(row: Row): Unit = {
-          count = count + 1
-          if (count % 10000 == 0) logger.info("Count=" + count)
-        }
-      }).to(sink, 4)
-
-      Thread.sleep(1000)
-    }
-  }
+//  timed("Parquet write complete") {
+//    HiveTable(Database, Table).drop()
+//
+//
+//    val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Parquet)
+//
+//    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
+//      var count = 0
+//      override def onNext(row: Row): Unit = {
+//        count = count + 1
+//        if (count % 10000 == 0) logger.info("Count=" + count)
+//      }
+//    }).to(sink, 4)
+//
+//    Thread.sleep(1000)
+//  }
+  //  }
 
   val table = new HiveOps(client).tablePath(Database, Table)
   logger.info("table:" + table)
@@ -117,11 +119,10 @@ object HiveDataApp extends App with HiveConfig with Timed {
   val partitions = new HiveOps(client).hivePartitions(Database, Table)
   logger.info("Partitions:" + partitions)
 
-  val rows = HiveSource(Database, Table).toDataStream().collect
-  println(rows.take(20))
+  HiveTable(Database, Table2).drop()
+  HiveSource(Database, Table).toDataStream.to(HiveSink(Database, Table2).withCreateTable(true))
 
-  assert(rows.size == size)
-
-  logger.info("Row count from stats: " + HiveTable(Database, Table).stats())
+  logger.info("Row count from stats: " + HiveTable(Database, Table).stats)
+  logger.info("Row count from stats: " + HiveTable(Database, Table2).stats)
 
 }

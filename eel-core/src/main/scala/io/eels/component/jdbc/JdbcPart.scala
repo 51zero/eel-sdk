@@ -12,53 +12,54 @@ import scala.collection.mutable.ArrayBuffer
 
 class JdbcPart(connFn: () => Connection,
                query: String,
-               bindFn: (PreparedStatement) => Unit = stmt => (),
-               fetchSize: Int = 100,
+               bindFn: (PreparedStatement) => Unit,
+               fetchSize: Int,
                dialect: JdbcDialect
               ) extends Part with Timed with JdbcPrimitives with Using {
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-    using(connFn()) { conn =>
+    try {
+      using(connFn()) { conn =>
 
-      try {
+        logger.debug(s"Preparing query $query")
+        using(conn.prepareStatement(query)) { stmt =>
 
-        val stmt = conn.prepareStatement(query)
-        stmt.setFetchSize(fetchSize)
-        bindFn(stmt)
+          stmt.setFetchSize(fetchSize)
+          bindFn(stmt)
 
-        val rs = timed(s"Executing query $query") {
-          stmt.executeQuery()
-        }
+          logger.debug(s"Executing query $query")
+          using(stmt.executeQuery()) { rs =>
 
-        var cancelled = false
+            var cancelled = false
 
-        subscriber.starting(new Cancellable {
-          override def cancel(): Unit = cancelled = true
-        })
+            subscriber.starting(new Cancellable {
+              override def cancel(): Unit = cancelled = true
+            })
 
-        val schema = schemaFor(dialect, rs)
+            val schema = schemaFor(dialect, rs)
 
-        val buffer = new ArrayBuffer[Row](100)
-        while (rs.next && !cancelled) {
-          val values = schema.fieldNames().map { name =>
-            val raw = rs.getObject(name)
-            dialect.sanitize(raw)
+            val buffer = new ArrayBuffer[Row](fetchSize)
+            while (rs.next && !cancelled) {
+              val values = schema.fieldNames().map { name =>
+                val raw = rs.getObject(name)
+                dialect.sanitize(raw)
+              }
+              buffer append Row(schema, values)
+              if (buffer.size == fetchSize) {
+                subscriber.next(buffer.toVector)
+                buffer.clear()
+              }
+            }
+
+            if (buffer.nonEmpty)
+              subscriber.next(buffer.toVector)
+
+            subscriber.completed()
           }
-          buffer append Row(schema, values)
-          if (buffer.size == 100) {
-            subscriber.next(buffer.toVector)
-            buffer.clear()
-          }
         }
-
-        if (buffer.nonEmpty)
-          subscriber.next(buffer.toVector)
-
-        subscriber.completed()
-
-      } catch {
-        case t: Throwable => subscriber.error(t)
       }
+    } catch {
+      case t: Throwable => subscriber.error(t)
     }
   }
 }
