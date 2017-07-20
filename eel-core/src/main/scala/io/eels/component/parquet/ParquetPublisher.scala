@@ -4,20 +4,20 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.datastream.{Cancellable, Subscriber}
+import io.eels.datastream.{Cancellable, Publisher, Subscriber}
 import io.eels.schema.StructType
-import io.eels.{Part, Predicate, Row}
+import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.ParquetFileReader
 import org.apache.parquet.schema.MessageType
 
-class ParquetPart(path: Path,
-                  predicate: Option[Predicate],
-                  projection: Seq[String],
-                  caseSensitive: Boolean,
-                  dictionaryFiltering: Boolean)
-                 (implicit conf: Configuration) extends Part with Logging with Using {
+class ParquetPublisher(path: Path,
+                       predicate: Option[Predicate],
+                       projection: Seq[String],
+                       caseSensitive: Boolean,
+                       dictionaryFiltering: Boolean)
+                      (implicit conf: Configuration) extends Publisher[Seq[Row]] with Logging with Using {
 
   def readSchema: Option[MessageType] = {
     if (projection.isEmpty) None

@@ -1,9 +1,9 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.component.avro.{AvroSourcePart, AvroWriter}
-import io.eels.component.hive.{HiveDialect, HiveOutputStream, Publisher}
-import io.eels.datastream.Subscriber
+import io.eels.component.avro.{AvroSourcePublisher, AvroWriter}
+import io.eels.component.hive.{HiveDialect, HiveOutputStream}
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -19,7 +19,7 @@ object AvroHiveDialect extends HiveDialect with Logging {
                      projectionSchema: StructType,
                      predicate: Option[Predicate])
                     (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = AvroSourcePart(path).subscribe(subscriber)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = AvroSourcePublisher(path).subscribe(subscriber)
   }
 
   override def output(schema: StructType,

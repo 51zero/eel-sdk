@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.io.Using
-import io.eels.datastream.{Cancellable, Subscriber}
+import io.eels.datastream.{Cancellable, Publisher, Subscriber}
 import io.eels.schema.{Partition, StructType}
 import io.eels.{Predicate, _}
 import org.apache.hadoop.conf.Configuration
@@ -20,13 +20,13 @@ import org.apache.hadoop.fs.{FileSystem, LocatedFileStatus}
   * @param partition        a list of partition key-values for this file. We require this to repopulate the partition
   *                         values when creating the final Row.
   */
-class HiveFilePart(dialect: HiveDialect,
-                   file: LocatedFileStatus,
-                   metastoreSchema: StructType,
-                   projectionSchema: StructType,
-                   predicate: Option[Predicate],
-                   partition: Partition)
-                  (implicit fs: FileSystem, conf: Configuration) extends Part with Using {
+class HiveFilePublisher(dialect: HiveDialect,
+                        file: LocatedFileStatus,
+                        metastoreSchema: StructType,
+                        projectionSchema: StructType,
+                        predicate: Option[Predicate],
+                        partition: Partition)
+                       (implicit fs: FileSystem, conf: Configuration) extends Publisher[Seq[Row]] with Using {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {

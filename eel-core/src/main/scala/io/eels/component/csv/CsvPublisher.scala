@@ -5,15 +5,15 @@ import java.io.InputStream
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.univocity.parsers.csv.CsvParser
-import io.eels.datastream.Subscriber
+import io.eels.Row
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
-import io.eels.{Part, Row}
 
-class CsvPart(createParser: () => CsvParser,
-              inputFn: () => InputStream,
-              header: Header,
-              skipBadRows: Boolean,
-              schema: StructType) extends Part with Logging with Using {
+class CsvPublisher(createParser: () => CsvParser,
+                   inputFn: () => InputStream,
+                   header: Header,
+                   skipBadRows: Boolean,
+                   schema: StructType) extends Publisher[Seq[Row]] with Logging with Using {
 
   val rowsToSkip: Int = header match {
     case Header.FirstRow => 1

@@ -5,7 +5,7 @@ import java.io.File
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -20,11 +20,11 @@ case class AvroSource(path: Path)
     }
   }
 
-  override def parts(): List[Part] = List(AvroSourcePart(path))
+  override def parts(): Seq[Publisher[Seq[Row]]] = Seq(AvroSourcePublisher(path))
 }
 
-case class AvroSourcePart(path: Path)
-                         (implicit conf: Configuration, fs: FileSystem) extends Part with Logging {
+case class AvroSourcePublisher(path: Path)
+                              (implicit conf: Configuration, fs: FileSystem) extends Publisher[Seq[Row]] with Logging {
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
       val deserializer = new AvroDeserializer()

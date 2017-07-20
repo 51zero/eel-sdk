@@ -4,8 +4,9 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetLogMute
+import io.eels.datastream.Publisher
 import io.eels.schema.{PartitionConstraint, StructType}
-import io.eels.{Part, Predicate, Source}
+import io.eels.{Predicate, Row, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -100,7 +101,7 @@ case class HiveSource(dbName: String,
     projection.nonEmpty && projection.map { it => it.toLowerCase() }.forall { it => partitionKeyNames.contains(it) }
   }
 
-  override def parts(): Seq[Part] = {
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
     login()
 
     val dialect = table.dialect
@@ -116,7 +117,7 @@ case class HiveSource(dbName: String,
     if (isPartitionOnlyProjection) {
       logger.info("Requested projection only uses partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
-      List(new HivePartitionPart(dbName, tableName, schema, partitionKeys, dialect))
+      List(new HivePartitionPublisher(dbName, tableName, schema, partitionKeys, dialect))
     } else {
 
       val filesandpartitions = HiveTableFilesFn(dbName, tableName, table.location(), partitionConstraints)
@@ -125,7 +126,7 @@ case class HiveSource(dbName: String,
       // for each seperate hive file part we must pass in the metastore schema
       filesandpartitions.flatMap { case (partition, files) =>
         files.map { file =>
-          new HiveFilePart(dialect, file, metastoreSchema, schema, predicate, partition)
+          new HiveFilePublisher(dialect, file, metastoreSchema, schema, predicate, partition)
         }
       }.toSeq
     }

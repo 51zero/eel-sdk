@@ -3,7 +3,7 @@ package io.eels.component.sequence
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -13,10 +13,10 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
   logger.debug(s"Creating sequence source from $path")
 
   override def schema: StructType = SequenceSupport.schema(path)
-  override def parts(): List[Part] = List(new SequencePart(path))
+  override def parts(): Seq[Publisher[Seq[Row]]] = List(new SequencePublisher(path))
 }
 
-class SequencePart(val path: Path)(implicit conf: Configuration) extends Part with Logging with Using {
+class SequencePublisher(val path: Path)(implicit conf: Configuration) extends Publisher[Seq[Row]] with Logging with Using {
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     using(SequenceSupport.createReader(path)) { reader =>

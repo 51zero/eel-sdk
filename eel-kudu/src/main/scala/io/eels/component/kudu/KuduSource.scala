@@ -2,9 +2,9 @@ package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema._
-import io.eels.{Part, Row, Source}
+import io.eels.{Row, Source}
 import org.apache.kudu.client.{KuduClient, KuduScanner, RowResultIterator}
 
 import scala.collection.JavaConverters._
@@ -16,9 +16,9 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
     KuduSchemaFns.fromKuduSchema(schema)
   }
 
-  override def parts(): Seq[Part] = Seq(new KuduPart(tableName))
+  override def parts(): Seq[Publisher[Seq[Row]]] = Seq(new KuduPublisher(tableName))
 
-  class KuduPart(tableName: String) extends Part with Using {
+  class KuduPublisher(tableName: String) extends Publisher[Seq[Row]] with Using {
 
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 

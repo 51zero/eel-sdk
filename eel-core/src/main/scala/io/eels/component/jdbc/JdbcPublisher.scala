@@ -4,18 +4,18 @@ import java.sql.{Connection, PreparedStatement}
 
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
+import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.datastream.{Cancellable, Subscriber}
-import io.eels.{Part, Row}
+import io.eels.datastream.{Cancellable, Publisher, Subscriber}
 
 import scala.collection.mutable.ArrayBuffer
 
-class JdbcPart(connFn: () => Connection,
-               query: String,
-               bindFn: (PreparedStatement) => Unit,
-               fetchSize: Int,
-               dialect: JdbcDialect
-              ) extends Part with Timed with JdbcPrimitives with Using {
+class JdbcPublisher(connFn: () => Connection,
+                    query: String,
+                    bindFn: (PreparedStatement) => Unit,
+                    fetchSize: Int,
+                    dialect: JdbcDialect
+              ) extends Publisher[Seq[Row]] with Timed with JdbcPrimitives with Using {
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {

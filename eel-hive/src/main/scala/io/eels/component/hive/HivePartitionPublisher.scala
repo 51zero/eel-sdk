@@ -2,9 +2,9 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.datastream.Subscriber
+import io.eels.Row
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
-import io.eels.{Part, Row}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
 
@@ -14,14 +14,14 @@ import scala.util.control.NonFatal
   * A Hive Part that can read values from the metastore, rather than reading values from files.
   * This can be used only when the requested fields are all partition keys.
   */
-class HivePartitionPart(dbName: String,
-                        tableName: String,
-                        projectionSchema: StructType,
-                        partitionKeys: List[String], // partition keys for this table, used to map the partition values back to a map
-                        dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true
-                       )
-                       (implicit fs: FileSystem,
-                        client: IMetaStoreClient) extends Part with Logging {
+class HivePartitionPublisher(dbName: String,
+                             tableName: String,
+                             projectionSchema: StructType,
+                             partitionKeys: List[String], // partition keys for this table, used to map the partition values back to a map
+                             dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true
+                            )
+                            (implicit fs: FileSystem,
+                             client: IMetaStoreClient) extends Publisher[Seq[Row]] with Logging {
 
   private val config = ConfigFactory.load()
 

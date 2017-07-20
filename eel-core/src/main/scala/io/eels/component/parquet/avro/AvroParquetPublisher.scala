@@ -4,14 +4,14 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels.component.avro.AvroDeserializer
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.datastream.Subscriber
-import io.eels.{Part, Predicate, Row}
+import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
-class AvroParquetPart(path: Path,
-                      predicate: Option[Predicate])(implicit conf: Configuration)
-  extends Part with Logging with Using {
+class AvroParquetPublisher(path: Path,
+                           predicate: Option[Predicate])(implicit conf: Configuration)
+  extends Publisher[Seq[Row]] with Logging with Using {
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     using(AvroParquetReaderFn(path, predicate, None)) { reader =>

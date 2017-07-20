@@ -3,7 +3,7 @@ package io.eels.component.orc
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{Cancellable, Subscriber}
+import io.eels.datastream.{Cancellable, Publisher, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -22,7 +22,7 @@ case class OrcSource(pattern: FilePattern,
                      predicate: Option[Predicate] = None)
                     (implicit fs: FileSystem, conf: Configuration) extends Source with Using {
 
-  override def parts(): Seq[Part] = pattern.toPaths().map(new OrcPart(_, projection, predicate))
+  override def parts(): Seq[Publisher[Seq[Row]]] = pattern.toPaths().map(new OrcPublisher(_, projection, predicate))
 
   def withPredicate(predicate: Predicate): OrcSource = copy(predicate = predicate.some)
   def withProjection(first: String, rest: String*): OrcSource = withProjection(first +: rest)
@@ -48,9 +48,9 @@ case class OrcSource(pattern: FilePattern,
   def stripeStatistics(): Seq[StripeStatistics] = reader().getStripeStatistics.asScala
 }
 
-class OrcPart(path: Path,
-              projection: Seq[String],
-              predicate: Option[Predicate])(implicit conf: Configuration) extends Part {
+class OrcPublisher(path: Path,
+                   projection: Seq[String],
+                   predicate: Option[Predicate])(implicit conf: Configuration) extends Publisher[Seq[Row]] {
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {

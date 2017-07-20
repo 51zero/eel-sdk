@@ -2,9 +2,10 @@ package io.eels.component.elasticsearch
 
 import com.sksamuel.elastic4s.http.HttpClient
 import com.sksamuel.elastic4s.http.search.SearchIterator
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.{Field, StructType}
-import io.eels.{Part, Row, Source}
+import io.eels.{Row, Source}
+
 import scala.concurrent.duration._
 
 class ElasticsearchSource(index: String)(implicit client: HttpClient) extends Source {
@@ -21,10 +22,10 @@ class ElasticsearchSource(index: String)(implicit client: HttpClient) extends So
     StructType(fields)
   }
 
-  override def parts(): Seq[Part] = Seq(new ElasticsearchPart(index))
+  override def parts(): Seq[Publisher[Seq[Row]]] = Seq(new ElasticsearchPublisher(index))
 }
 
-class ElasticsearchPart(index: String)(implicit client: HttpClient) extends Part {
+class ElasticsearchPublisher(index: String)(implicit client: HttpClient) extends Publisher[Seq[Row]] {
 
   import com.sksamuel.elastic4s.http.ElasticDsl._
 

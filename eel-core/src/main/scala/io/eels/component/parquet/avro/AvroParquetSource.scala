@@ -5,10 +5,12 @@ import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.avro.{AvroSchemaFns, AvroSchemaMerge}
 import io.eels.component.parquet._
+import io.eels.datastream.Publisher
 import io.eels.schema.StructType
 import io.eels.{FilePattern, Predicate, _}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.{Footer, ParquetFileReader}
 
 import scala.collection.JavaConverters._
@@ -56,7 +58,7 @@ case class AvroParquetSource(pattern: FilePattern,
     if (paths.isEmpty) Statistics.Empty
     else {
       paths.foldLeft(Statistics.Empty) { (stats, path) =>
-        val footer = ParquetFileReader.readFooter(conf, path)
+        val footer = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER)
         footer.getBlocks.asScala.foldLeft(stats) { (stats, block) =>
           stats.copy(
             count = stats.count + block.getRowCount,
@@ -68,9 +70,9 @@ case class AvroParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts(): List[Part] = {
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
     logger.debug(s"AvroParquetSource source has ${paths.size} files: $paths")
-    paths.map { it => new AvroParquetPart(it, predicate) }
+    paths.map { it => new AvroParquetPublisher(it, predicate) }
   }
 
   def footers(): List[Footer] = {

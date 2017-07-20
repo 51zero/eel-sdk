@@ -5,10 +5,10 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
-import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream, Publisher}
+import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
-import io.eels.datastream.{Cancellable, Subscriber}
+import io.eels.datastream.{Cancellable, Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration

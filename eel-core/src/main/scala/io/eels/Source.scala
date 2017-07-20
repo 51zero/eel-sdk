@@ -1,7 +1,7 @@
 package io.eels
 
 import com.sksamuel.exts.Logging
-import io.eels.datastream.{DataStream, DataStreamSource}
+import io.eels.datastream.{DataStream, DataStreamSource, Publisher}
 import io.eels.schema.StructType
 import io.eels.util.{JacksonSupport, JsonRow}
 
@@ -23,7 +23,7 @@ trait Source extends Logging {
 
   def schema: StructType
 
-  def parts(): Seq[Part]
+  def parts(): Seq[Publisher[Seq[Row]]]
 
   def load[T: Manifest]: Seq[T] = {
     toDataStream.collect.map { row =>

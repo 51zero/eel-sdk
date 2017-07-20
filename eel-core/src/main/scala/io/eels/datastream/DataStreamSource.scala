@@ -117,6 +117,10 @@ object Cancellable {
   }
 }
 
+trait Publisher[T] {
+  def subscribe(subscriber: Subscriber[T])
+}
+
 trait Subscriber[T] {
   // notifies the subscriber that the publisher is about to begin
   // the given cancellable can be used to stop the publisher

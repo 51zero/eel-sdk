@@ -2,8 +2,9 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
 
-import io.eels.Part
+import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
+import io.eels.datastream.Publisher
 
 case class BucketPartitionStrategy(columnName: String,
                                    values: Set[String]) extends JdbcPartitionStrategy {
@@ -12,11 +13,11 @@ case class BucketPartitionStrategy(columnName: String,
                      query: String,
                      bindFn: (PreparedStatement) => Unit,
                      fetchSize: Int,
-                     dialect: JdbcDialect): Seq[Part] = {
+                     dialect: JdbcDialect): Seq[Publisher[Seq[Row]]] = {
 
     values.map { value =>
       val partitionedQuery = s""" SELECT * FROM ( $query ) WHERE $columnName = '$value' """
-      new JdbcPart(connFn, partitionedQuery, bindFn, fetchSize, dialect)
+      new JdbcPublisher(connFn, partitionedQuery, bindFn, fetchSize, dialect)
     }.toSeq
   }
 }

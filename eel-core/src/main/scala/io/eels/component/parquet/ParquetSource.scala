@@ -3,6 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
+import io.eels.datastream.Publisher
 import io.eels.{Predicate, _}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
@@ -80,9 +81,9 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts(): List[Part] = {
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
     logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
-    paths.map { it => new ParquetPart(it, predicate, projection, caseSensitive, dictionaryFiltering) }
+    paths.map { it => new ParquetPublisher(it, predicate, projection, caseSensitive, dictionaryFiltering) }
   }
 
   def footers(): List[Footer] = {

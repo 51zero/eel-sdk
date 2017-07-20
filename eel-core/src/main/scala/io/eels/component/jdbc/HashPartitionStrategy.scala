@@ -2,8 +2,9 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
 
-import io.eels.Part
+import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
+import io.eels.datastream.Publisher
 
 case class HashPartitionStrategy(hashExpression: String,
                                  numberOfPartitions: Int) extends JdbcPartitionStrategy {
@@ -15,10 +16,10 @@ case class HashPartitionStrategy(hashExpression: String,
                      query: String,
                      bindFn: (PreparedStatement) => Unit,
                      fetchSize: Int,
-                     dialect: JdbcDialect): Seq[Part] = {
+                     dialect: JdbcDialect): Seq[Publisher[Seq[Row]]] = {
 
     for (k <- 0 until numberOfPartitions) yield {
-      new JdbcPart(connFn, partitionedQuery(k, query), bindFn, fetchSize, dialect)
+      new JdbcPublisher(connFn, partitionedQuery(k, query), bindFn, fetchSize, dialect)
     }
   }
 }

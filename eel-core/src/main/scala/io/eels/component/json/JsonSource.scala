@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.Subscriber
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.{ArrayType, DataType, Field, StructType}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.codehaus.jackson.JsonNode
@@ -48,9 +48,9 @@ case class JsonSource(inputFn: () => InputStream,
     struct(roots.next)
   }
 
-  override def parts(): List[Part] = List(new JsonPart(inputFn))
+  override def parts(): Seq[Publisher[Seq[Row]]] = List(new JsonPublisher(inputFn))
 
-  class JsonPart(inputFn: () => InputStream) extends Part {
+  class JsonPublisher(inputFn: () => InputStream) extends Publisher[Seq[Row]] {
 
     private def nodeToValue(node: JsonNode): Any = {
       if (node.isArray) {

@@ -1,9 +1,9 @@
 package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
-import io.eels.component.hive.{HiveDialect, HiveOutputStream, Publisher}
-import io.eels.component.orc.{OrcPart, OrcSinkConfig, OrcWriter}
-import io.eels.datastream.Subscriber
+import io.eels.component.hive.{HiveDialect, HiveOutputStream}
+import io.eels.component.orc.{OrcPublisher, OrcSinkConfig, OrcWriter}
+import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -20,7 +20,7 @@ class OrcHiveDialect extends HiveDialect with Logging {
                      predicate: Option[Predicate])
                     (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      new OrcPart(path, projectionSchema.fieldNames(), predicate).subscribe(subscriber)
+      new OrcPublisher(path, projectionSchema.fieldNames(), predicate).subscribe(subscriber)
     }
   }
 

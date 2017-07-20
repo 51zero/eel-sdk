@@ -6,6 +6,7 @@ import java.nio.file.Files
 import com.sksamuel.exts.io.Using
 import com.typesafe.config.{Config, ConfigFactory}
 import io.eels._
+import io.eels.datastream.Publisher
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -79,8 +80,8 @@ case class CsvSource(inputFn: () => InputStream,
     inferrer.struct(headers)
   }
 
-  override def parts(): List[Part] = {
-    val part = new CsvPart(createParser _, inputFn, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
+    val part = new CsvPublisher(createParser _, inputFn, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
     List(part)
   }
 }
