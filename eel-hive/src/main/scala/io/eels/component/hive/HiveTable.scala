@@ -9,7 +9,7 @@ import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.datastream.{Cancellable, Subscriber}
-import io.eels.schema.{Partition, StringType, StructType}
+import io.eels.schema.{Partition, PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
@@ -50,6 +50,8 @@ case class HiveTable(dbName: String,
   def schema: StructType = {
     ops.schema(dbName, tableName)
   }
+
+  def queryContext(constraints: Seq[PartitionConstraint]) = new ParquetQueryContext(dbName, tableName, constraints)
 
   def create(schema: StructType,
              partitionFields: Seq[String] = Nil,

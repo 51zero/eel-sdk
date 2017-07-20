@@ -76,7 +76,7 @@ case class HiveSink(dbName: String,
     copy(principal = principal.some, keytabPath = keytabPath.option)
   }
 
-  private def dialect(): HiveDialect = {
+  private def detectDialect(): HiveDialect = {
     login()
     val format = ops.tableFormat(dbName, tableName)
     logger.debug(s"Table format is $format; detecting dialect...")
@@ -91,26 +91,9 @@ case class HiveSink(dbName: String,
 
   def containsUpperCase(schema: StructType): Boolean = schema.fieldNames().exists(name => name.exists(Character.isUpperCase))
 
-  override def open(schema: StructType, n: Int): Seq[SinkWriter] = List.tabulate(n) { k => open(schema, Some(k.toString)) }
-  override def open(schema: StructType): SinkWriter = open(schema, None)
+  override def open(schema: StructType): SinkWriter = open(schema, 1).head
 
-  private def upperCaseCheck(schema: StructType): Unit = {
-    if (containsUpperCase(schema)) {
-      upperCaseAction match {
-        case "error" =>
-          sys.error("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase the fields, which could lead to subtle case sensitivity bugs. " +
-            "It is recommended that you lower case the schema before writing (eg, datastream.withLowerCaseSchema). " +
-            "To disable this exception, set eel.hive.sink.upper-case-action=warn or eel.hive.sink.upper-case-action=none")
-        case "warn" =>
-          logger.warn("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase the fields, which could lead to subtle case sensitivity bugs. " +
-            "It is recommended that you lower case the schema before writing (eg, datastream.withLowerCaseSchema). " +
-            "To disable this warning, set eel.hive.sink.upper-case-action=none")
-        case _ =>
-      }
-    }
-  }
-
-  def open(schema: StructType, discriminator: Option[String]): SinkWriter = {
+  override def open(schema: StructType, n: Int): Seq[SinkWriter] = {
     login()
     upperCaseCheck(schema)
 
@@ -134,28 +117,48 @@ case class HiveSink(dbName: String,
     logger.debug("Invoking evolution strategy to align metastore schema")
     evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
 
-    val partitionKeyNames = ops.partitionKeys(dbName, tableName)
+    List.tabulate(n) { k =>
 
-    new HiveSinkWriter(
-      schema,
-      metastoreSchema,
-      dbName,
-      tableName,
-      partitionKeyNames,
-      discriminator,
-      dialect(),
-      partitionStrategy,
-      filenameStrategy,
-      stagingStrategy,
-      evolutionStrategy,
-      alignStrategy,
-      outputSchemaStrategy,
-      inheritPermissions,
-      permission,
-      fileListener,
-      callbacks,
-      roundingMode,
-      metadata
-    )
+      val partitionKeyNames = ops.partitionKeys(dbName, tableName)
+      val dialect = detectDialect
+
+      new HiveSinkWriter(
+        schema,
+        metastoreSchema,
+        dbName,
+        tableName,
+        partitionKeyNames,
+        Some(k.toString),
+        dialect,
+        partitionStrategy,
+        filenameStrategy,
+        stagingStrategy,
+        evolutionStrategy,
+        alignStrategy,
+        outputSchemaStrategy,
+        inheritPermissions,
+        permission,
+        fileListener,
+        callbacks,
+        roundingMode,
+        metadata
+      )
+    }
+  }
+
+  private def upperCaseCheck(schema: StructType): Unit = {
+    if (containsUpperCase(schema)) {
+      upperCaseAction match {
+        case "error" =>
+          sys.error("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase the fields, which could lead to subtle case sensitivity bugs. " +
+            "It is recommended that you lower case the schema before writing (eg, datastream.withLowerCaseSchema). " +
+            "To disable this exception, set eel.hive.sink.upper-case-action=warn or eel.hive.sink.upper-case-action=none")
+        case "warn" =>
+          logger.warn("Writing to hive with a schema that contains upper case characters is discouraged because Hive will lowercase the fields, which could lead to subtle case sensitivity bugs. " +
+            "It is recommended that you lower case the schema before writing (eg, datastream.withLowerCaseSchema). " +
+            "To disable this warning, set eel.hive.sink.upper-case-action=none")
+        case _ =>
+      }
+    }
   }
 }
