@@ -46,9 +46,9 @@ case class HiveTable(dbName: String,
   /**
     * Returns just the values for the given partition key
     */
-  def partitionValues(key: String): Seq[String] = partitions.map(_.get(key)).collect {
+  def partitionValues(key: String): Set[String] = partitions.map(_.get(key)).collect {
     case Some(entry) => entry.value
-  }
+  }.toSet
 
   def truncatePartition(partition: Partition): Unit = {
     logger.info(s"Truncating partition $partition")
