@@ -36,6 +36,7 @@ case class Row(schema: StructType, values: Seq[Any]) {
   def apply(name: String): Any = get(name)
 
   def get(k: Int): Any = values(k)
+  def getAs[T](name: String, caseInsensitive: Boolean = false): T = get(name, caseInsensitive).asInstanceOf[T]
   def get(name: String, caseInsensitive: Boolean = false): Any = {
     val index = schema.indexOf(name, caseInsensitive)
     if (index < 0)

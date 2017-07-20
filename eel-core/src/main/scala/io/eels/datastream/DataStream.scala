@@ -406,6 +406,44 @@ trait DataStream extends Logging {
     }
   }
 
+  def minBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
+    var minRow: Row = null
+    var cancellable: Cancellable = null
+    self.subscribe(new Subscriber[Seq[Row]] {
+      override def next(chunk: Seq[Row]): Unit = {
+        chunk.foreach { row =>
+          val t = fn(row)
+          if (minRow == null || ordering.lt(t, fn(minRow))) {
+            minRow = row
+          }
+        }
+      }
+      override def completed(): Unit = ()
+      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel
+      override def starting(c: Cancellable): Unit = cancellable = c
+    })
+    minRow
+  }
+
+  def maxBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
+    var maxRow: Row = null
+    var cancellable: Cancellable = null
+    self.subscribe(new Subscriber[Seq[Row]] {
+      override def next(chunk: Seq[Row]): Unit = {
+        chunk.foreach { row =>
+          val t = fn(row)
+          if (maxRow == null || ordering.gt(t, fn(maxRow))) {
+            maxRow = row
+          }
+        }
+      }
+      override def completed(): Unit = ()
+      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel
+      override def starting(c: Cancellable): Unit = cancellable = c
+    })
+    maxRow
+  }
+
   /**
     * Invoking this method returns two DataStreams.
     * The first is the original datastream which will continue as is.

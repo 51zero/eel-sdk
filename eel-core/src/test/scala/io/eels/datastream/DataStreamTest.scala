@@ -260,6 +260,36 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.minBy" should {
+    "return smallest value for the stream" in {
+      val ds = DataStream.fromValues(
+        StructType("a", "b"),
+        Seq(
+          List("a", 1),
+          List("b", 4),
+          List("c", 3),
+          List("d", 1)
+        )
+      )
+      ds.minBy(_.getAs[Int]("b"))(Ordering.Int) shouldBe Row(ds.schema, Seq("a", 1))
+    }
+  }
+
+  "DataStream.maxBy" should {
+    "return largest value for the stream" in {
+      val ds = DataStream.fromValues(
+        StructType("a", "b"),
+        Seq(
+          List("a", 1),
+          List("b", 4),
+          List("c", 3),
+          List("d", 1)
+        )
+      )
+      ds.maxBy(_.getAs[Int]("b"))(Ordering.Int) shouldBe Row(ds.schema, Seq("b", 4))
+    }
+  }
+
   "DataStream.replaceNullValues" should {
     "replace null values" in {
       val ds = DataStream.fromValues(
