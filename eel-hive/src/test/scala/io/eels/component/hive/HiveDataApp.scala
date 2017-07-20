@@ -3,9 +3,8 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.datastream.DataStream
+import io.eels.Row
 import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
-import io.eels.{Listener, Row}
 
 import scala.util.Random
 
