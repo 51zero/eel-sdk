@@ -407,6 +407,40 @@ trait DataStream extends Logging {
   }
 
   /**
+    * Invoking this method returns two DataStreams.
+    * The first is the original datastream which will continue as is.
+    * The second is a DataStream which is fed by rows generated from the given function.
+    * The function is invoked for each row that passes through this stream.
+    * Errors or cancellation requests in the tee'd datastream do not propagate back to the original stream.
+    */
+  def tee(fn: Row => Seq[Row]): (DataStream, DataStream) = {
+    val teed = new DataStreamPublisher(() => self.schema)
+    val original = new DataStream {
+      override def schema: StructType = self.schema
+      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        self.subscribe(new Subscriber[Seq[Row]] {
+          override def next(chunk: Seq[Row]): Unit = {
+            subscriber.next(chunk)
+            teed.publish(chunk)
+          }
+          override def completed(): Unit = {
+            subscriber.completed()
+            teed.close()
+          }
+          override def error(t: Throwable): Unit = {
+            subscriber.error(t)
+            teed.close()
+          }
+          override def starting(c: Cancellable): Unit = {
+            subscriber.starting(c)
+          }
+        })
+      }
+    }
+    (original, teed)
+  }
+
+  /**
     * Returns a new DataStream with the same data as this stream, but where the field names have been sanitized
     * by removing any occurances of the given characters.
     */
