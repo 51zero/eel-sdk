@@ -8,9 +8,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-import org.scalatest.{FunSuite, Matchers, Tag}
-
-object HiveIsAvailable extends Tag("eel.Hive")
+import org.scalatest.{FunSuite, Matchers}
 
 class HivePartitionConstraintTest extends FunSuite with Matchers {
 
@@ -30,6 +28,7 @@ class HivePartitionConstraintTest extends FunSuite with Matchers {
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
 
+  HiveTable(dbname, table).drop()
   val schema = StructType(
     Field("state", StringType),
     Field("capital", StringType)

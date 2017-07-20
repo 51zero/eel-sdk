@@ -1,9 +1,10 @@
 package io.eels.datastream
 
-import java.util.concurrent.atomic.{AtomicLong, LongAdder}
+import java.util.concurrent.atomic.{AtomicLong, AtomicReference, LongAdder}
 import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.{Row, Sink}
 
 case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logging {
@@ -13,49 +14,22 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val schema = ds.schema
     val adder = new LongAdder
 
-    var failure: Throwable = null
+    val failure = new AtomicReference[Throwable](null)
 
     val executor = Executors.newFixedThreadPool(parallelism)
     val queue = new LinkedBlockingQueue[Seq[Row]](100)
     val completed = new AtomicLong(0)
+    var dscancellable: Cancellable = null
 
-    val writers = sink.open(schema, parallelism)
-    writers.zipWithIndex.foreach { case (writer, k) =>
-      executor.submit(new Runnable {
-        override def run(): Unit = {
-          logger.info(s"Starting thread writer $k")
-          while (true) {
-            val chunk = queue.take()
-            try {
-              chunk.foreach { row =>
-                writer.write(row)
-                adder.increment()
-              }
-            } catch {
-              case t: Throwable =>
-                logger.error("Error writing to stream", t)
-                // if we have an error writing, we'll exit all writers immediately
-                executor.shutdownNow()
-                failure = t
-            } finally {
-              logger.debug(s"Chunk ${completed.incrementAndGet} has completed")
-            }
-          }
-        }
-      })
-    }
-    executor.shutdown()
-
-    ds.subscribe(new Subscriber[Seq[Row]] {
-
-      var cancellable: Cancellable = null
-
+    val subscriber = new Subscriber[Seq[Row]] {
       override def starting(c: Cancellable): Unit = {
         logger.debug(s"Subscribing to datastream for sink action [cancellable=$c]")
-        this.cancellable = c
+        dscancellable = c
       }
 
-      override def next(chunk: Seq[Row]): Unit = queue.put(chunk)
+      override def next(chunk: Seq[Row]): Unit = {
+        queue.put(chunk)
+      }
 
       override def completed(): Unit = {
         logger.debug("Sink action has received all chunks")
@@ -63,16 +37,43 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
       }
 
       override def error(t: Throwable): Unit = {
-        // if we have an error from downstream, we'll exit immediately and cancel downstream
-        if (cancellable != null)
-          cancellable.cancel()
+        // if we have an error from downstream
         executor.shutdownNow()
-        failure = t
+        failure.set(t)
       }
-    })
+    }
+
+    val writers = sink.open(schema, parallelism)
+    writers.zipWithIndex.foreach { case (writer, k) =>
+      executor.submit(new Runnable {
+        override def run(): Unit = {
+          logger.info(s"Starting thread writer $k")
+          try {
+            BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => failure.get == null).foreach { chunk =>
+              chunk.foreach { row =>
+                writer.write(row)
+                adder.increment()
+              }
+              logger.debug(s"Chunk ${completed.incrementAndGet} has completed")
+            }
+          } catch {
+            case t: Throwable =>
+              logger.error(s"Error writing chunk ${completed.incrementAndGet}", t)
+              failure.set(t)
+              // if we have an error writing, we'll exit immediately by cancelling the downstream
+              dscancellable.cancel()
+          }
+          logger.info(s"Ending thread writer $k")
+        }
+      })
+    }
+    executor.shutdown()
+
+    ds.subscribe(subscriber)
 
     // at this point, the subscriber has returned, and now we need to wait until
     // all outstanding write tasks complete
+    logger.info("Waiting for executor to terminate")
     executor.awaitTermination(999, TimeUnit.DAYS)
     logger.info(s"Sink has written ${adder.sum} rows")
 
@@ -81,8 +82,8 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     writers.foreach(_.close)
     logger.info("All sink writers are closed")
 
-    if (failure != null)
-      throw failure
+    if (failure.get != null)
+      throw failure.get
 
     adder.sum()
   }
