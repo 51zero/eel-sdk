@@ -9,15 +9,18 @@ import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.scalatest.{FunSuite, Matchers}
 
+import scala.util.Try
+
 class HiveEvolutionTest extends FunSuite with Matchers with HiveConfig {
 
   val dbname = "sam"
   val table = "evolution_test_" + System.currentTimeMillis()
-  RecursiveDelete(Paths.get("metastore_db"))
+  Try {
+    RecursiveDelete(Paths.get("metastore_db"))
+  }
 
   test("allow columns to be added to a hive table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
-    HiveTable (dbname, table).drop()
 
     val schema1 = StructType(Field("a", StringType))
     DataStream.fromValues(schema1, Seq(Seq("a"))).to(HiveSink(dbname, table).withCreateTable(true))

@@ -47,7 +47,7 @@ class ListenerTest extends WordSpec with Matchers {
         }
       }
 
-      intercept[RuntimeException] {
+      intercept[java.lang.InterruptedException] {
         ds.listener(new Listener {
           override def onNext(value: Row): Unit = sys.error("boom")
           override def onError(e: Throwable): Unit = ()

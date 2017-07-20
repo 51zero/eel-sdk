@@ -64,6 +64,8 @@ class AvroSinkTest extends WordSpec with Matchers {
           )
         )
       )
+
+      fs.delete(path, true)
     }
   }
 }
