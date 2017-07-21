@@ -5,7 +5,7 @@ import java.util.UUID
 
 import io.eels.Row
 import io.eels.datastream.DataStream
-import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
+import io.eels.schema.{BooleanType, Field, IntType, Partition, PartitionEntry, StringType, StructType}
 import org.scalatest.{FunSuite, Matchers}
 
 import scala.util.Random
@@ -15,7 +15,7 @@ class HiveStatsTest extends FunSuite with Matchers with HiveConfig {
   val dbname = "sam"
   val table = "stats_test_" + System.currentTimeMillis()
 
-  test("hive table should return stats via parquet footers") {
+  test("hive table should return row counts via parquet footers") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
     HiveTable(dbname, table).drop()
 
@@ -29,6 +29,24 @@ class HiveStatsTest extends FunSuite with Matchers with HiveConfig {
 
     DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink)
     HiveTable(dbname, table).stats().count shouldBe size
+  }
+
+  test("hive table should support row count for a partition") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    HiveTable(dbname, table).drop()
+
+    val schema = StructType(
+      Field("a", StringType),
+      Field("b", StringType)
+    )
+    def createRow = Row(schema, Seq(Random.shuffle(Seq("1", "2", "3")).head, UUID.randomUUID.toString))
+
+    val sink = HiveSink(dbname, table).withCreateTable(true, Seq("a"))
+    val size = 100000
+
+    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink)
+    HiveTable(dbname, table).stats().count(Partition(PartitionEntry("a", "2"))) > 0 shouldBe true
+    HiveTable(dbname, table).stats().count(Partition(PartitionEntry("a", "2"))) < size shouldBe true
   }
 
   test("hive table should return partition counts") {

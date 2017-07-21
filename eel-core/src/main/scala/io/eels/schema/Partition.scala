@@ -21,6 +21,7 @@ case class Partition(entries: Seq[PartitionEntry]) {
 
 object Partition {
   val empty = Partition(Nil)
+  def apply(first: PartitionEntry, rest: PartitionEntry*): Partition = Partition(first +: rest)
 }
 
 // a part of a partition, ie in country=usa/state=alabama, an entry would be state=alabama or country=usa
