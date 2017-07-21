@@ -35,7 +35,6 @@ class HiveCompactTest extends FunSuite with HiveConfig with Matchers {
 
     val t = HiveTable(dbname, table)
     t.paths(false, false).size shouldBe 4
-    t.stats().rows shouldBe size
    // t.compact()
     //    t.paths(false, false).size shouldBe 1
     //   t.stats().rows shouldBe size

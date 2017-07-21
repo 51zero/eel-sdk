@@ -40,8 +40,13 @@ case class HiveTable(dbName: String,
     */
   def partitionMetaData(): Seq[PartitionMetaData] = ops.partitionsMetaData(dbName, tableName)
 
-  def partitionMetaData(partition: Partition): PartitionMetaData =
-    partitionMetaData().find(_.partition == partition).getOrError(s"Partition not found $partition")
+  def partitionMetaData(partition: Partition): Option[PartitionMetaData] = partitionMetaData().find(_.partition == partition)
+
+  // returns all partition meta data for partitions that match each constraint
+  def partitionMetaData(constraints: Seq[PartitionConstraint]): Seq[PartitionMetaData] =
+    partitionMetaData().filter { meta => constraints.forall(_.eval(meta.partition)) }
+
+  def hasPartitions: Boolean = partitions().nonEmpty
 
   /**
     * Returns just the values for the given partition key
@@ -52,7 +57,7 @@ case class HiveTable(dbName: String,
 
   def truncatePartition(partition: Partition): Unit = {
     logger.info(s"Truncating partition $partition")
-    val meta = partitionMetaData(partition)
+    val meta = partitionMetaData(partition).getOrError(s"Unknown partition $partition")
     new HivePartitionScanner().scan(Seq(meta), Nil).foreach { case (_, files) =>
       logger.debug(s"Deleting partition files ${files.map(_.getPath).mkString(",")}")
       files.map(_.getPath).foreach(fs.delete(_, false))
@@ -62,8 +67,6 @@ case class HiveTable(dbName: String,
   def schema: StructType = {
     ops.schema(dbName, tableName)
   }
-
-  def queryContext(constraints: Seq[PartitionConstraint]) = new ParquetQueryContext(dbName, tableName, constraints)
 
   def create(schema: StructType,
              partitionFields: Seq[String] = Nil,
@@ -209,23 +212,8 @@ case class HiveTable(dbName: String,
 
   def dialect = io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
 
-  def stats(): HiveStats = {
-    val _spec = spec
-    val _dialect = io.eels.component.hive.HiveDialect(_spec.inputFormat)
-    val partitions = partitionMetaData()
-    if (partitions.isEmpty) {
-      val fileCounts = HiveFileScanner(new Path(_spec.location), false).map { file => _dialect.stats(file.getPath) }
-      val rows = if (fileCounts.isEmpty) 0 else fileCounts.sum
-      HiveStats(dbName, tableName, rows, Map.empty)
-    } else {
-      val pstats = new HivePartitionScanner().scan(partitions).map { case (meta, files) =>
-        val count = files.map { file => _dialect.stats(file.getPath) }.sum
-        meta.partition -> PartitionStats(count)
-      }
-      val total = pstats.values.map(_.rows).sum
-      HiveStats(dbName, tableName, total, pstats)
-    }
-  }
+  // todo use dialect to return correct stats
+  def stats(): HiveStats = new ParquetHiveStats(dbName, tableName, this)
 
   // will compact all the files in each partitions into a single file
   def compact(finalFilename: String = "eel_compacted_" + System.nanoTime): Unit = {
