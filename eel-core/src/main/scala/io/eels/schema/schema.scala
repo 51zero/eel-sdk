@@ -1,5 +1,7 @@
 package io.eels.schema
 
+import org.apache.commons.lang.StringUtils
+
 import scala.language.implicitConversions
 import scala.util.matching.Regex
 
@@ -260,15 +262,27 @@ object StructType {
 
   import scala.reflect.runtime.universe._
 
-  def from[T <: Product : TypeTag]: StructType = {
+  def from[T <: Product : TypeTag](implicit fieldNameStrategy: FieldNameStrategy = JvmFieldNameStrategy): StructType = {
     val fields = typeOf[T].decls.collect {
       case m: MethodSymbol if m.isCaseAccessor =>
         val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
-        val dataType = SchemaFn.toFieldType(javaClass)
-        Field(m.name.toString, dataType, true)
+        val dataType = SchemaFn.toDataType(javaClass)
+        Field(fieldNameStrategy.fieldName(m.name.toString), dataType, true)
     }
     StructType(fields.toList)
   }
+}
+
+trait FieldNameStrategy {
+  def fieldName(jvmName: String): String
+}
+
+object JvmFieldNameStrategy extends FieldNameStrategy {
+  override def fieldName(jvmName: String): String = jvmName
+}
+
+object SnakeCaseFieldNameStrategy extends FieldNameStrategy {
+  override def fieldName(jvmName: String): String = StringUtils.splitByCharacterTypeCamelCase(jvmName).map(_.toLowerCase).mkString("_")
 }
 
 case class MapType(keyType: DataType, valueType: DataType) extends DataType

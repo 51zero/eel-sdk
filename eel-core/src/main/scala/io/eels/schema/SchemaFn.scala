@@ -1,7 +1,9 @@
 package io.eels.schema
 
+import java.sql.Timestamp
+
 object SchemaFn {
-  def toFieldType(clz: Class[_]): DataType = {
+  def toDataType(clz: Class[_]): DataType = {
     val intClass = classOf[Int]
     val floatClass = classOf[Float]
     val stringClass = classOf[String]
@@ -11,17 +13,23 @@ object SchemaFn {
     val doubleClass = classOf[Double]
     val bigdecimalClass = classOf[BigDecimal]
     val longClass = classOf[Long]
+    val byteClass = classOf[Byte]
+    val shortClass = classOf[Short]
+    val timestampClass = classOf[Timestamp]
     clz match {
-      case `bigdecimalClass` => DecimalType(Precision(18), Scale(2))
+      case `bigdecimalClass` => DecimalType(Precision(22), Scale(5))
       case `bigIntClass` => BigIntType
       case `booleanClass` => BooleanType
+      case `byteClass` => ByteType.Signed
+      case `charClass` => CharType(1)
       case `doubleClass` => DoubleType
       case `intClass` => IntType.Signed
       case `floatClass` => FloatType
-      case `charClass` => CharType(1)
       case `longClass` => LongType.Signed
       case `stringClass` => StringType
-      case _ => sys.error(s"Can not map $clz to FieldType")
+      case `shortClass` => ShortType.Signed
+      case `timestampClass` => TimestampMillisType
+      case _ => sys.error(s"Can not map $clz to data type")
     }
   }
 }
