@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.OptionImplicits._
-import io.eels.schema.{Partition, PartitionConstraint}
+import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -12,74 +12,44 @@ import scala.collection.JavaConverters._
 
 trait HiveStats {
 
-  def dbName: String
-
-  def tableName: String
-
   // total number of records
-  def count: Long
+  def count: Long = count(Nil)
 
   // total number of records in the partitions that match the constraints
   def count(constraints: Seq[PartitionConstraint]): Long
 
-  // returns the record count for a particular partition
-  def count(partition: Partition): Long
+  // returns the minimum value of this field
+  def min(field: String): Any = min(field, Nil)
 
-  // returns the minimum value of this field in the partitions that match the constraints
-  def min(field: String): Any
+  // returns the maximum value of this field
+  def max(field: String): Any = max(field, Nil)
 
-  // returns the maximum value of this field in the partitions that match the constraints
-  def max(field: String): Any
+  // returns the minimum value of this field for the partitions that match the constraints
+  def min(field: String, constraints: Seq[PartitionConstraint]): Any
 
-  // returns the minimum value of this field for a particular partition
-  def min(field: String, partition: Partition): Any
-
-  // returns the maximum value of this field for a particular partition
-  def max(field: String, partition: Partition): Any
+  // returns the maximum value of this field for the partitions that match the constraints
+  def max(field: String, constraints: Seq[PartitionConstraint]): Any
 }
 
-class ParquetHiveStats(override val dbName: String,
-                       override val tableName: String,
+class ParquetHiveStats(dbName: String,
+                       tableName: String,
                        table: HiveTable)
                       (implicit fs: FileSystem,
                        conf: Configuration,
                        client: IMetaStoreClient) extends HiveStats {
 
   private val ops = new HiveOps(client)
-  val dialect = table.dialect
 
   private def count(path: Path) = {
     val blocks = ParquetFileReader.readFooter(fs.getConf, path, ParquetMetadataConverter.NO_FILTER).getBlocks.asScala
     blocks.map(_.getRowCount).sum
   }
 
-  def count: Long = {
-    val fileCounts = if (!table.hasPartitions) {
-      HiveFileScanner(table.location, false).map(_.getPath).map(count)
-    } else {
-      new HivePartitionScanner().scan(table.partitionMetaData, Nil).flatMap { case (_, files) =>
-        files.map(_.getPath).map(count)
-      }
-    }
-    if (fileCounts.isEmpty) 0 else fileCounts.sum
-  }
-
   override def count(constraints: Seq[PartitionConstraint]): Long = {
-    val fileCounts = new HivePartitionScanner().scan(table.partitionMetaData, constraints).flatMap { case (_, files) =>
-      files.map(_.getPath).map(count)
-    }
-    if (fileCounts.isEmpty) 0 else fileCounts.sum
-  }
-
-  override def count(partition: Partition): Long = {
-    table.partitionMetaData(partition) match {
-      case Some(meta) =>
-        val files = new HivePartitionScanner().scan(Seq(meta)).getOrElse(meta, Nil)
-        val fileCounts = files.map(_.getPath).map(count)
-        if (fileCounts.isEmpty) 0 else fileCounts.sum
-      case None =>
-        0
-    }
+    val counts = HiveTableFilesFn(dbName, tableName, table.location, constraints)
+      .flatMap(_._2)
+      .map(_.getPath).map(count)
+    if (counts.isEmpty) 0 else counts.sum
   }
 
   private def minmax(field: String, constraints: Seq[PartitionConstraint]): (Any, Any) = {
@@ -103,11 +73,6 @@ class ParquetHiveStats(override val dbName: String,
     stats[Any]
   }
 
-  // returns the minimum value of this field in the partitions
-  override def min(field: String): Any = minmax(field, Nil)._1
-  // returns the maximum value of this field in the partitions
-  override def max(field: String): Any = minmax(field, Nil)._2
-
-  override def min(field: String, partition: Partition): Any = ???
-  override def max(field: String, partition: Partition): Any = ???
+  override def min(field: String, constraints: Seq[PartitionConstraint]): Any = minmax(field, constraints)._1
+  override def max(field: String, constraints: Seq[PartitionConstraint]): Any = minmax(field, constraints)._2
 }
