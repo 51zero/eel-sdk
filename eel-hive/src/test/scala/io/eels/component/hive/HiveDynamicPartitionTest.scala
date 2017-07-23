@@ -5,15 +5,24 @@ import java.io.File
 import io.eels.component.hive.partition.DynamicPartitionStrategy
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, Partition, StructType}
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
-class HiveDynamicPartitionTest extends FunSuite with HiveConfig with Matchers {
+import scala.util.Try
+
+class HiveDynamicPartitionTest extends FunSuite with HiveConfig with Matchers with BeforeAndAfterAll {
 
   val dbname = "sam"
   val table = "dynp_test_" + System.currentTimeMillis()
 
   val schema = StructType(Field("a"), Field("b"))
-  HiveTable(dbname, table).create(schema, Seq("a"))
+
+  Try {
+    HiveTable(dbname, table).create(schema, Seq("a"))
+  }
+
+  override def afterAll(): Unit = Try {
+    HiveTable(dbname, table).drop()
+  }
 
   test("dynamic partition strategy should create new partitions") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)

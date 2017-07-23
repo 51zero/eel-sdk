@@ -7,18 +7,13 @@ import io.eels.datastream.DataStream
 import io.eels.schema.{Field, IntType, PartitionConstraint, StringType, StructType}
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
-import scala.util.Random
+import scala.util.{Random, Try}
 
 class HiveStatsTest extends FunSuite with Matchers with HiveConfig with BeforeAndAfterAll {
 
   val dbname = "sam"
   val table = "stats_test_" + System.currentTimeMillis()
   val partitioned_table = "stats_test2_" + System.currentTimeMillis()
-
-  override def afterAll(): Unit = {
-    HiveTable(dbname, table).drop()
-    HiveTable(dbname, partitioned_table).drop()
-  }
 
   val schema = StructType(
     Field("a", StringType),
@@ -28,11 +23,18 @@ class HiveStatsTest extends FunSuite with Matchers with HiveConfig with BeforeAn
 
   val amount = 10000
 
-  DataStream.fromIterator(schema, Iterator.continually(createRow).take(amount))
-    .to(HiveSink(dbname, table).withCreateTable(true), 4)
+  override def afterAll(): Unit = Try {
+    HiveTable(dbname, table).drop()
+    HiveTable(dbname, partitioned_table).drop()
+  }
 
-  DataStream.fromIterator(schema, Iterator.continually(createRow).take(amount))
-    .to(HiveSink(dbname, partitioned_table).withCreateTable(true, Seq("a")), 4)
+  Try {
+    DataStream.fromIterator(schema, Iterator.continually(createRow).take(amount))
+      .to(HiveSink(dbname, table).withCreateTable(true), 4)
+
+    DataStream.fromIterator(schema, Iterator.continually(createRow).take(amount))
+      .to(HiveSink(dbname, partitioned_table).withCreateTable(true, Seq("a")), 4)
+  }
 
   test("stats should return row counts for a non-partitioned table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)

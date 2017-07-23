@@ -6,12 +6,14 @@ import io.eels.datastream.DataStream
 import io.eels.schema.{Field, PartitionConstraint, StringType, StructType}
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
+import scala.util.Try
+
 class HivePartitionConstraintTest extends FunSuite with Matchers with HiveConfig with BeforeAndAfterAll {
 
   val dbname = "sam"
   val table = "constraints_test_" + System.currentTimeMillis()
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit = Try {
     HiveTable(dbname, table).drop()
   }
 
@@ -20,11 +22,13 @@ class HivePartitionConstraintTest extends FunSuite with Matchers with HiveConfig
     Field("city", StringType)
   )
 
-  DataStream.fromValues(schema, Seq(
-    Seq("iowa", "des moines"),
-    Seq("iowa", "iow city"),
-    Seq("maine", "augusta")
-  )).to(HiveSink(dbname, table).withCreateTable(true, Seq("state")))
+  Try {
+    DataStream.fromValues(schema, Seq(
+      Seq("iowa", "des moines"),
+      Seq("iowa", "iow city"),
+      Seq("maine", "augusta")
+    )).to(HiveSink(dbname, table).withCreateTable(true, Seq("state")))
+  }
 
   test("hive source with partition constraint should return matching data") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
