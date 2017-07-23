@@ -3,6 +3,7 @@ package io.eels.schema
 import org.apache.commons.lang.StringUtils
 
 import scala.language.implicitConversions
+import scala.reflect.runtime.universe
 import scala.util.matching.Regex
 
 sealed trait DataType {
@@ -100,7 +101,7 @@ object ArrayType {
   val Booleans = ArrayType(BooleanType)
   val Strings = ArrayType(StringType)
 
-  def cached(elementType: DataType) : ArrayType = elementType match {
+  def cached(elementType: DataType): ArrayType = elementType match {
     case DoubleType => ArrayType.Doubles
     case IntType.Signed => ArrayType.SignedInts
     case LongType.Signed => ArrayType.SignedLongs
@@ -263,13 +264,20 @@ object StructType {
   import scala.reflect.runtime.universe._
 
   def from[T <: Product : TypeTag](implicit fieldNameStrategy: FieldNameStrategy = JvmFieldNameStrategy): StructType = {
-    val fields = typeOf[T].decls.collect {
-      case m: MethodSymbol if m.isCaseAccessor =>
-        val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
-        val dataType = SchemaFn.toDataType(javaClass)
-        Field(fieldNameStrategy.fieldName(m.name.toString), dataType, true)
+    def process(tpe: universe.Type): StructType = {
+      val fields = tpe.decls.collect {
+        case m: MethodSymbol if m.isCaseAccessor =>
+          if (m.returnType <:< typeOf[Product]) {
+            Field(fieldNameStrategy.fieldName(m.name.toString), process(m.returnType), false)
+          } else {
+            val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
+            val dataType = SchemaFn.toDataType(javaClass)
+            Field(fieldNameStrategy.fieldName(m.name.toString), dataType, true)
+          }
+      }
+      StructType(fields.toList)
     }
-    StructType(fields.toList)
+    process(typeOf[T])
   }
 }
 
