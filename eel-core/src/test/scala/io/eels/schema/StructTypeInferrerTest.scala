@@ -1,9 +1,9 @@
-package io.eels
+package io.eels.schema
 
 import java.nio.file.Paths
 
 import io.eels.component.csv.{CsvSource, Header}
-import io.eels.schema._
+import io.eels.{DataTypeRule, SchemaInferrer}
 import org.scalatest.{Matchers, WordSpec}
 
 class StructTypeInferrerTest extends WordSpec with Matchers {

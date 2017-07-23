@@ -1,6 +1,5 @@
-package io.eels
+package io.eels.schema
 
-import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 
 class StructTypeTest extends WordSpec with Matchers {
@@ -146,19 +145,40 @@ class StructTypeTest extends WordSpec with Matchers {
     }
   }
 
+  case class Foo1(a: String, b: Long, c: Double)
+  case class Foo2(a: BigDecimal)
+  case class Foo3(foo: Foo2)
+  case class Foo4(foo: Seq[Foo2])
+  case class Foo5(foo: Seq[Double])
+
   "Schema.from[T]" should {
     "be inferred from the type" in {
-      StructType.from[Person] shouldBe {
-        StructType(List(
-          Field("name", StringType, true),
-          Field("age", IntType(true), true),
-          Field("salary", DoubleType, true),
-          Field("isPartTime", BooleanType, true),
-          Field("value1", DecimalType(Precision(18), Scale(2)), true),
-          Field("value2", FloatType, true),
-          Field("value3", LongType(true), true)
-        ))
-      }
+      StructType.from[Foo1] shouldBe
+        StructType(Field("a", StringType, false), Field("b", LongType.Signed, false), Field("c", DoubleType, false))
+    }
+
+    "support big decimals" in {
+      StructType.from[Foo2] shouldBe StructType(Field("a", DecimalType(Precision(22), Scale(5)), false))
+    }
+
+    "support nested case classes" in {
+      StructType.from[Foo3] shouldBe StructType(
+        Field("foo", StructType(
+          Field("a", DecimalType(Precision(22), Scale(5)), false)
+        ), false)
+      )
+    }
+
+    "support seqs of doubles" in {
+      StructType.from[Foo5] shouldBe StructType(Field("foo", ArrayType(DoubleType), false))
+    }
+
+    "support seqs of classes" in {
+      StructType.from[Foo4] shouldBe StructType(
+        Field("foo", ArrayType(
+          StructType(Field("a", DecimalType(Precision(22), Scale(5)), false))
+        ), false)
+      )
     }
   }
 

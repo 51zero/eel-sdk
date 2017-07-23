@@ -264,20 +264,31 @@ object StructType {
   import scala.reflect.runtime.universe._
 
   def from[T <: Product : TypeTag](implicit fieldNameStrategy: FieldNameStrategy = JvmFieldNameStrategy): StructType = {
-    def process(tpe: universe.Type): StructType = {
+
+    def struct(tpe: universe.Type): StructType = {
       val fields = tpe.decls.collect {
         case m: MethodSymbol if m.isCaseAccessor =>
-          if (m.returnType <:< typeOf[Product]) {
-            Field(fieldNameStrategy.fieldName(m.name.toString), process(m.returnType), false)
-          } else {
-            val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(m.returnType.typeSymbol.asClass)
-            val dataType = SchemaFn.toDataType(javaClass)
-            Field(fieldNameStrategy.fieldName(m.name.toString), dataType, true)
-          }
+          val dataType = process(m.returnType)
+          val nullable = dataType.isInstanceOf[Option[_]]
+          Field(fieldNameStrategy.fieldName(m.name.toString), dataType, nullable)
       }
       StructType(fields.toList)
     }
-    process(typeOf[T])
+
+    def process(tpe: universe.Type): DataType = {
+
+      if (tpe <:< typeOf[scala.collection.Seq[Any]]) {
+        val dataType = process(tpe.typeArgs.head)
+        ArrayType(dataType)
+      } else if (tpe <:< typeOf[Product]) {
+        struct(tpe)
+      } else {
+        val javaClass = implicitly[TypeTag[T]].mirror.runtimeClass(tpe)
+        SchemaFn.toDataType(javaClass)
+      }
+    }
+
+    struct(typeOf[T])
   }
 }
 
