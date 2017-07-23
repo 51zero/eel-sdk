@@ -253,9 +253,9 @@ case class HiveTable(dbName: String,
     client.dropPartition(dbName, tableName, partition.values.asJava, deleteData)
   }
 
-  def drop(): Unit = {
+  def drop(deleteData: Boolean = true): Unit = {
     logger.debug(s"Dropping table $dbName:$tableName")
-    client.dropTable(dbName, tableName, true, true)
+    client.dropTable(dbName, tableName, deleteData, true)
   }
 
   def truncate(removePartitions: Boolean): Unit = {

@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import io.eels.schema.PartitionConstraint
 import org.apache.hadoop.conf.Configuration
@@ -36,7 +37,7 @@ class ParquetHiveStats(dbName: String,
                        table: HiveTable)
                       (implicit fs: FileSystem,
                        conf: Configuration,
-                       client: IMetaStoreClient) extends HiveStats {
+                       client: IMetaStoreClient) extends HiveStats with Logging {
 
   private val ops = new HiveOps(client)
 
@@ -58,6 +59,7 @@ class ParquetHiveStats(dbName: String,
       def max(ts: Seq[Comparable[T]]): Any = ts.reduceLeft { (a, b) => if (a.compareTo(b.asInstanceOf[T]) >= 0) a else b }
       val location = new Path(ops.location(dbName, tableName))
       val (mins, maxes) = HiveTableFilesFn(dbName, tableName, location, constraints).toSeq.flatMap { case (_, files) =>
+        logger.debug(s"Calculating min,max in file $files")
         files.flatMap { file =>
           val footer = ParquetFileReader.readFooter(conf, file, ParquetMetadataConverter.NO_FILTER)
           footer.getBlocks.asScala.map { block =>

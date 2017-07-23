@@ -12,10 +12,10 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
   * Note: Any new paths must be created on disk by this strategy.
   *
   * The strategy also determines the location of the path where the partition is located,
-  * so custom implemntations can place partitions in non standard locations if required.
+  * so custom implementations can place partitions in non standard locations if required.
   *
-  * Implementations do not need to be thread safe. Each strategy will only be called by a single
-  * thread at a time.
+  * Note: Implementations must be thread safe as multiple writers may invoke
+  * the strategy concurrently for the same partition value.
   */
 trait PartitionStrategy {
   // for the given partition, the strategy must return the full path for the partition or throw an exception

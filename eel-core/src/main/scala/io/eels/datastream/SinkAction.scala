@@ -63,7 +63,6 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
                 writer.write(row)
                 adder.increment()
               }
-              logger.debug(s"Chunk ${completed.incrementAndGet} has completed")
             }
           } catch {
             case t: Throwable =>

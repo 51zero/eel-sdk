@@ -2,30 +2,29 @@ package io.eels.component.hive
 
 import java.io.File
 
+import io.eels.component.hive.partition.DynamicPartitionStrategy
 import io.eels.datastream.DataStream
-import io.eels.schema.{Field, Partition, PartitionEntry, StructType}
+import io.eels.schema.{Field, Partition, StructType}
 import org.scalatest.{FunSuite, Matchers}
 
 class HiveDynamicPartitionTest extends FunSuite with HiveConfig with Matchers {
 
   val dbname = "sam"
-  val table = "dynp_test"
+  val table = "dynp_test_" + System.currentTimeMillis()
+
+  val schema = StructType(Field("a"), Field("b"))
+  HiveTable(dbname, table).create(schema, Seq("a"))
 
   test("dynamic partition strategy should create new partitions") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
-
-    val schema = StructType(Field("a"), Field("b"))
-
-    // create the table with 'a' set as a partition, then try to persist a datastream with
-    // different values for that partition
-    HiveTable(dbname, table).drop()
-    HiveTable(dbname, table).create(schema, Seq("a"))
-
+    HiveTable(dbname, table).partitionValues("a") shouldBe Set.empty
     DataStream.fromValues(schema, Seq(Seq("1", "2"), Seq("3", "4"))).to(HiveSink(dbname, table))
+    HiveTable(dbname, table).partitionValues("a") shouldBe Set("1", "3")
+  }
 
-    new HiveOps(client).partitions(dbname, table) shouldBe List(
-      Partition(List(PartitionEntry("a", "1"))),
-      Partition(List(PartitionEntry("a", "3")))
-    )
+  test("skip partition if partition already exists") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    new DynamicPartitionStrategy().ensurePartition(Partition("a" -> "1"), dbname, table, false, client)
+    new DynamicPartitionStrategy().ensurePartition(Partition("a" -> "1"), dbname, table, false, client)
   }
 }

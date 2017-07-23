@@ -14,11 +14,7 @@ import scala.util.{Random, Try}
 class HiveTableTest extends FunSuite with HiveConfig with Matchers {
 
   val dbname = "sam"
-  val table = "test_table"
-
-  Try {
-    RecursiveDelete(Paths.get("metastore_db"))
-  }
+  val table = "test_table_" + System.currentTimeMillis()
 
   test("partition values should return values for the matching key") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)

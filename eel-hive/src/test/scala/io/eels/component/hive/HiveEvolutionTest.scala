@@ -1,23 +1,16 @@
 package io.eels.component.hive
 
 import java.io.File
-import java.nio.file.Paths
 
-import com.sksamuel.exts.io.RecursiveDelete
 import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.scalatest.{FunSuite, Matchers}
 
-import scala.util.Try
-
 class HiveEvolutionTest extends FunSuite with Matchers with HiveConfig {
 
   val dbname = "sam"
   val table = "evolution_test_" + System.currentTimeMillis()
-  Try {
-    RecursiveDelete(Paths.get("metastore_db"))
-  }
 
   test("allow columns to be added to a hive table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)

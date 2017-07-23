@@ -4,42 +4,39 @@ import java.io.File
 
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, PartitionConstraint, StringType, StructType}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
-import org.scalatest.{FunSuite, Matchers, Tag}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
-class HivePartitionConstraintTest extends FunSuite with Matchers {
+class HivePartitionConstraintTest extends FunSuite with Matchers with HiveConfig with BeforeAndAfterAll {
 
   val dbname = "sam"
-  val table = "constraint_test"
+  val table = "constraints_test_" + System.currentTimeMillis()
 
-  implicit val conf = new Configuration
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.reloadConfiguration()
-
-  implicit val fs = FileSystem.get(conf)
-
-  implicit val hiveConf = new HiveConf()
-  hiveConf.addResource(new Path("/home/sam/development/hive-2.1.0-bin/conf/hive-site.xml"))
-  hiveConf.reloadConfiguration()
-
-  implicit val client = new HiveMetaStoreClient(hiveConf)
+  override def afterAll(): Unit = {
+    HiveTable(dbname, table).drop()
+  }
 
   val schema = StructType(
     Field("state", StringType),
-    Field("capital", StringType)
+    Field("city", StringType)
   )
 
-  test("non existing partitions in constraint should return no data") {
+  DataStream.fromValues(schema, Seq(
+    Seq("iowa", "des moines"),
+    Seq("iowa", "iow city"),
+    Seq("maine", "augusta")
+  )).to(HiveSink(dbname, table).withCreateTable(true, Seq("state")))
+
+  test("hive source with partition constraint should return matching data") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
 
-    DataStream.fromValues(schema, Seq(
-      Seq("iowa", "des moines"),
-      Seq("maine", "augusta")
-    )).to(HiveSink(dbname, table).withCreateTable(true, Seq("state")))
+    HiveSource(dbname, table)
+      .addPartitionConstraint(PartitionConstraint.equals("state", "iowa"))
+      .toDataStream()
+      .collect.size shouldBe 2
+  }
+
+  test("hive source with non-existing partitions in constraint should return no data") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
 
     HiveSource(dbname, table)
       .addPartitionConstraint(PartitionConstraint.equals("state", "pa"))

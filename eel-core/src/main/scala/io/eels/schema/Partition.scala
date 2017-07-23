@@ -22,6 +22,7 @@ case class Partition(entries: Seq[PartitionEntry]) {
 object Partition {
   val empty = Partition(Nil)
   def apply(first: PartitionEntry, rest: PartitionEntry*): Partition = Partition(first +: rest)
+  def apply(first: (String, Any), rest: (String, Any)*): Partition = apply((first +: rest).map { case (key, value) => PartitionEntry(key, value.toString) })
 }
 
 // a part of a partition, ie in country=usa/state=alabama, an entry would be state=alabama or country=usa

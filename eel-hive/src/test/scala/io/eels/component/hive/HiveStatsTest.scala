@@ -1,95 +1,73 @@
 package io.eels.component.hive
 
 import java.io.File
-import java.util.UUID
 
 import io.eels.Row
 import io.eels.datastream.DataStream
-import io.eels.schema.{BooleanType, Field, IntType, Partition, PartitionEntry, StringType, StructType}
-import org.scalatest.{FunSuite, Matchers}
+import io.eels.schema.{Field, IntType, PartitionConstraint, StringType, StructType}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.util.Random
 
-class HiveStatsTest extends FunSuite with Matchers with HiveConfig {
+class HiveStatsTest extends FunSuite with Matchers with HiveConfig with BeforeAndAfterAll {
 
   val dbname = "sam"
   val table = "stats_test_" + System.currentTimeMillis()
+  val partitioned_table = "stats_test2_" + System.currentTimeMillis()
 
-  test("hive table should return row counts via parquet footers") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+  override def afterAll(): Unit = {
     HiveTable(dbname, table).drop()
-
-    val schema = StructType(
-      Field("a", StringType)
-    )
-    def createRow = Row(schema, Seq(UUID.randomUUID.toString))
-
-    val sink = HiveSink(dbname, table).withCreateTable(true)
-    val size = 100000
-
-    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink)
-    HiveTable(dbname, table).stats().count shouldBe size
+    HiveTable(dbname, partitioned_table).drop()
   }
 
-  test("hive table should support row count for a partition") {
+  val schema = StructType(
+    Field("a", StringType),
+    Field("b", IntType.Signed)
+  )
+  def createRow = Row(schema, Seq(Random.shuffle(List("a", "b", "c")).head, Random.shuffle(List(1, 2, 3, 4, 5)).head))
+
+  val amount = 10000
+
+  DataStream.fromIterator(schema, Iterator.continually(createRow).take(amount))
+    .to(HiveSink(dbname, table).withCreateTable(true), 4)
+
+  DataStream.fromIterator(schema, Iterator.continually(createRow).take(amount))
+    .to(HiveSink(dbname, partitioned_table).withCreateTable(true, Seq("a")), 4)
+
+  test("stats should return row counts for a non-partitioned table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
-    HiveTable(dbname, table).drop()
-
-    val schema = StructType(
-      Field("a", StringType),
-      Field("b", StringType)
-    )
-    def createRow = Row(schema, Seq(Random.shuffle(Seq("1", "2", "3")).head, UUID.randomUUID.toString))
-
-    val sink = HiveSink(dbname, table).withCreateTable(true, Seq("a"))
-    val size = 100000
-
-    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink)
-    HiveTable(dbname, table).stats().count(Partition(PartitionEntry("a", "2"))) > 0 shouldBe true
-    HiveTable(dbname, table).stats().count(Partition(PartitionEntry("a", "2"))) < size shouldBe true
+    HiveTable(dbname, table).stats().count shouldBe amount
   }
 
-  test("hive table should return partition counts") {
+  test("stats should return row counts for a partitioned table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
-    HiveTable(dbname, table).drop()
-
-    val schema = StructType(
-      Field("a", StringType),
-      Field("b", StringType),
-      Field("c", IntType.Signed),
-      Field("d", BooleanType)
-    )
-    def createRow = Row(schema, Seq(Random.shuffle(Seq("a", "b", "c", "d")).head, UUID.randomUUID.toString, Random.nextInt(1000000), Random.nextBoolean))
-
-    val sink = HiveSink(dbname, table).withCreateTable(true, Seq("a"))
-    val size = 100000
-
-    //    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink)
-    //    HiveTable(dbname, table).stats().count.toSeq shouldBe
-    //      Seq(
-    //        Partition(Seq(PartitionEntry("a", "a"))),
-    //        Partition(Seq(PartitionEntry("a", "b"))),
-    //        Partition(Seq(PartitionEntry("a", "c"))),
-    //        Partition(Seq(PartitionEntry("a", "d")))
-    //      )
-    //    HiveTable(dbname, table).stats().partitions.values.map(_.rows).sum shouldBe size
+    HiveTable(dbname, partitioned_table).stats().count shouldBe amount
   }
 
-   test("return min and max") {
+  test("stats should throw exception when constraints specified on a non-partitioned table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    intercept[RuntimeException] {
+      val constraints = Seq(PartitionConstraint.equals("a", "b"))
+      HiveTable(dbname, table).stats().count(constraints)
+    }
+  }
 
-    val schema = StructType(
-      Field("a", StringType),
-      Field("b", IntType.Signed)
-    )
-    def createRow = Row(schema, Seq(Random.shuffle(List("a", "b", "c")).head, Random.shuffle(List(1, 2, 3, 4, 5)).head))
+  test("stats should support row count constraints for a partitioned table") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    val constraints = Seq(PartitionConstraint.equals("a", "b"))
+    HiveTable(dbname, partitioned_table).stats().count(constraints) > 0 shouldBe true
+    HiveTable(dbname, partitioned_table).stats().count(constraints) should be < amount.toLong
+  }
 
-    val sink = HiveSink(dbname, table).withCreateTable(true)
-    val size = 10000
-
-    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).to(sink, 10)
-
+  test("stats should support min and max for a non-partitioned tabled") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
     HiveTable(dbname, table).stats.max("b") shouldBe 5
     HiveTable(dbname, table).stats.min("b") shouldBe 1
+  }
+
+  test("stats should support min and max for a partitioned table") {
+    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    HiveTable(dbname, partitioned_table).stats.max("b") shouldBe 5
+    HiveTable(dbname, partitioned_table).stats.min("b") shouldBe 1
   }
 }

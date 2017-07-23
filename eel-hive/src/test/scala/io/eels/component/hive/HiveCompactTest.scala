@@ -6,14 +6,18 @@ import java.util.UUID
 import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.util.Random
 
-class HiveCompactTest extends FunSuite with HiveConfig with Matchers {
+class HiveCompactTest extends FunSuite with HiveConfig with Matchers with BeforeAndAfterAll {
 
   val dbname = "sam"
-  val table = "compact_test"
+  val table = "compact_test_" + System.currentTimeMillis()
+
+  override def afterAll(): Unit = {
+    HiveTable(dbname, table).drop()
+  }
 
   test("compact should result in a single file") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
@@ -35,7 +39,7 @@ class HiveCompactTest extends FunSuite with HiveConfig with Matchers {
 
     val t = HiveTable(dbname, table)
     t.paths(false, false).size shouldBe 4
-   // t.compact()
+    // t.compact()
     //    t.paths(false, false).size shouldBe 1
     //   t.stats().rows shouldBe size
   }

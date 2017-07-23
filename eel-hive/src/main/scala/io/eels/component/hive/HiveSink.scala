@@ -27,7 +27,7 @@ case class HiveSink(dbName: String,
                     principal: Option[String] = None,
                     format: Option[HiveFormat] = None,
                     partitionFields: Seq[String] = Nil,
-                    partitionStrategy: PartitionStrategy = DynamicPartitionStrategy,
+                    partitionStrategy: PartitionStrategy = new DynamicPartitionStrategy,
                     filenameStrategy: FilenameStrategy = DefaultFilenameStrategy,
                     stagingStrategy: StagingStrategy = DefaultStagingStrategy,
                     evolutionStrategy: EvolutionStrategy = AdditionEvolutionStrategy,
@@ -117,11 +117,10 @@ case class HiveSink(dbName: String,
     logger.debug("Invoking evolution strategy to align metastore schema")
     evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
 
+    val dialect = detectDialect
+    val partitionKeyNames = ops.partitionKeys(dbName, tableName)
+
     List.tabulate(n) { k =>
-
-      val partitionKeyNames = ops.partitionKeys(dbName, tableName)
-      val dialect = detectDialect
-
       new HiveSinkWriter(
         schema,
         metastoreSchema,

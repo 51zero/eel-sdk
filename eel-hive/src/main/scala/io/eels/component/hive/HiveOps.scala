@@ -9,7 +9,6 @@ import org.apache.hadoop.hive.metastore.api.{Database, FieldSchema, SerDeInfo, S
 import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
-import com.sksamuel.exts.OptionImplicits._
 
 // client for operating at a low level on the metastore
 // methods in this class will accept/return eel classes, and convert
@@ -107,8 +106,8 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     }
   }
 
-  def partitionMetaData(dbName: String, tableName: String, partition: Partition): PartitionMetaData = {
-    partitionsMetaData(dbName, tableName).find(_.partition == partition).getOrError("Unknown partition $partition")
+  def partitionMetaData(dbName: String, tableName: String, partition: Partition): Option[PartitionMetaData] = {
+    partitionsMetaData(dbName, tableName).find(_.partition == partition)
   }
 
   def createTimeAsInt(): Int = (System.currentTimeMillis() / 1000).toInt

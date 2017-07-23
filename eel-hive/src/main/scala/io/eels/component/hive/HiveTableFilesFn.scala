@@ -45,7 +45,9 @@ object HiveTableFilesFn extends Logging {
 
     // we go to the metastore as we need the locations of the partitions not the values
     val partitions = ops.partitionsMetaData(dbName, tableName)
-    if (partitions.isEmpty) {
+    if (partitions.isEmpty && partitionConstraints.nonEmpty) {
+      sys.error("Constraints were used on a table that was not partitioned")
+    } else if (partitions.isEmpty) {
       logger.debug(s"No partitions for $tableName; performing root table scan")
       rootScan
     } else partitionsScan(partitions)
