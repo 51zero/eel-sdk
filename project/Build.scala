@@ -67,8 +67,8 @@ object Build extends Build {
 
   val rootSettings = Seq(
     organization := org,
-    scalaVersion := "2.12.2",
-    crossScalaVersions := Seq("2.11.11", "2.12.2"),
+    scalaVersion := "2.11.11",
+    crossScalaVersions := Seq("2.11.11"),
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
     publishArtifact in Test := false,
@@ -76,6 +76,7 @@ object Build extends Build {
     scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8"),
     javacOptions := Seq("-source", "1.8", "-target", "1.8"),
     fork in test := false,
+    concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
     javaOptions in test ++= Seq("-Xms256M", "-Xmx2G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC"),
     sbtrelease.ReleasePlugin.autoImport.releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
