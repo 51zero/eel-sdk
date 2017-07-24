@@ -6,8 +6,8 @@ import org.scalatest.{Matchers, WordSpec}
 
 class HiveSchemaFnsTest extends WordSpec with Matchers {
 
-  "HiveSchemaFns" should {
-    "StructDDL should be valid" in {
+  "HiveSchemaFns.toStructDDL" should {
+    "be valid" in {
       val fields = Vector(Field("a", StringType), Field("b", DoubleType))
       val ddl = HiveSchemaFns.toStructDDL(fields)
       ddl shouldBe "struct<a:string,b:double>"
@@ -29,11 +29,46 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
       HiveSchemaFns.toHiveField(Field("a", dataType = StringType)) shouldBe new FieldSchema("a", "string", null)
       HiveSchemaFns.toHiveField(Field("a", dataType = TimestampMillisType)) shouldBe new FieldSchema("a", "timestamp", null)
     }
+    "support structs" in {
+      HiveSchemaFns.toHiveField(Field("a", dataType = StructType(
+        Field("b", LongType.Signed),
+        Field("c", StringType),
+        Field("d", ArrayType(DoubleType))
+      ))).getType shouldBe "struct<b:bigint,c:string,d:array<double>>"
+    }
   }
 
   "HiveSchemaFns.fromHiveField" should {
     "should support decimals" in {
       HiveSchemaFns.fromHiveType("decimal(10,5)") shouldBe DecimalType(Precision(10), Scale(5))
+    }
+
+    "should support boolean" in {
+      HiveSchemaFns.fromHiveType("boolean") shouldBe BooleanType
+    }
+
+    "should support double" in {
+      HiveSchemaFns.fromHiveType("double") shouldBe DoubleType
+    }
+
+    "should support float" in {
+      HiveSchemaFns.fromHiveType("float") shouldBe FloatType
+    }
+
+    "should support tinyint" in {
+      HiveSchemaFns.fromHiveType("tinyint") shouldBe ByteType.Signed
+    }
+
+    "should support smallint" in {
+      HiveSchemaFns.fromHiveType("smallint") shouldBe ShortType.Signed
+    }
+
+    "should support date" in {
+      HiveSchemaFns.fromHiveType("date") shouldBe DateType
+    }
+
+    "should support timestamp" in {
+      HiveSchemaFns.fromHiveType("timestamp") shouldBe TimestampMillisType
     }
 
     "should support varchar" in {
@@ -46,6 +81,10 @@ class HiveSchemaFnsTest extends WordSpec with Matchers {
 
     "should support primitive arrays" in {
       HiveSchemaFns.fromHiveType("array<string>") shouldBe ArrayType(StringType)
+    }
+
+    "should support primitive structs" in {
+      HiveSchemaFns.fromHiveType("struct<a:string>") shouldBe StructType(Field("a", StringType))
     }
 
     "should support complex arrays" in {

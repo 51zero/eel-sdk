@@ -77,7 +77,7 @@ object HiveSchemaFns extends Logging {
     case DateType => "date"
     case DecimalType(precision, scale) => s"decimal(${precision.value},${scale.value})"
     case DoubleType => "double"
-    case EnumType(name, values) =>
+    case _: EnumType =>
       logger.warn("Hive does not support enum types; this field will be written as a varchar(255)")
       "varchar(255)"
     case FloatType => "float"
@@ -85,6 +85,7 @@ object HiveSchemaFns extends Logging {
     case _: LongType => "bigint"
     case _: ShortType => "smallint"
     case StringType => "string"
+    case StructType(fields) => s"struct<${fields.map(toHiveField).map(field => s"${field.getName}:${field.getType}").mkString(",")}>"
     case TimestampMillisType => "timestamp"
     case VarcharType(size) => s"varchar($size)"
     case _ => sys.error(s"No conversion from eel type [$dataType] to hive type")
