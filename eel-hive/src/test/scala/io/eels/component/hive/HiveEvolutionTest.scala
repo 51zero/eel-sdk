@@ -7,7 +7,9 @@ import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.scalatest.{FunSuite, Matchers}
 
-class HiveEvolutionTest extends FunSuite with Matchers with HiveConfig {
+class HiveEvolutionTest extends FunSuite with Matchers {
+
+  import HiveConfig._
 
   val dbname = "sam"
   val table = "evolution_test_" + System.currentTimeMillis()

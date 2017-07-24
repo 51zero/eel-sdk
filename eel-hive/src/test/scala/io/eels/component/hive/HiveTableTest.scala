@@ -1,9 +1,7 @@
 package io.eels.component.hive
 
 import java.io.File
-import java.nio.file.Paths
 
-import com.sksamuel.exts.io.RecursiveDelete
 import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
@@ -11,15 +9,19 @@ import org.scalatest.{FunSuite, Matchers}
 
 import scala.util.{Random, Try}
 
-class HiveTableTest extends FunSuite with HiveConfig with Matchers {
+class HiveTableTest extends FunSuite with Matchers {
+
+  import HiveConfig._
 
   val dbname = "sam"
   val table = "test_table_" + System.currentTimeMillis()
 
+  Try {
+    HiveTable(dbname, table).drop()
+  }
+
   test("partition values should return values for the matching key") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
-
-    HiveTable(dbname, table).drop()
 
     val schema = StructType(
       Field("a", StringType),

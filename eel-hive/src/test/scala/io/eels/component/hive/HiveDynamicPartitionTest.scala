@@ -9,7 +9,9 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.util.Try
 
-class HiveDynamicPartitionTest extends FunSuite with HiveConfig with Matchers with BeforeAndAfterAll {
+class HiveDynamicPartitionTest extends FunSuite with Matchers with BeforeAndAfterAll {
+
+  import HiveConfig._
 
   val dbname = "sam"
   val table = "dynp_test_" + System.currentTimeMillis()

@@ -8,7 +8,9 @@ import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
 
 import scala.util.Random
 
-object HiveDataApp extends App with HiveConfig with Timed {
+object HiveDataApp extends App with Timed {
+
+  import HiveConfig._
 
   private val Database = "sam"
   private val Table = "cities"

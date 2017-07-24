@@ -9,7 +9,9 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.util.{Random, Try}
 
-class HiveStatsTest extends FunSuite with Matchers with HiveConfig with BeforeAndAfterAll {
+class HiveStatsTest extends FunSuite with Matchers with BeforeAndAfterAll {
+
+  import HiveConfig._
 
   val dbname = "sam"
   val table = "stats_test_" + System.currentTimeMillis()

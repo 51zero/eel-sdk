@@ -7,6 +7,10 @@ import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 trait HiveConfig {
 
+}
+
+object HiveConfig {
+
   implicit val conf = new Configuration
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))

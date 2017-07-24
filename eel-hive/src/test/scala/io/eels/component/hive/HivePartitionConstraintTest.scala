@@ -8,7 +8,9 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.util.Try
 
-class HivePartitionConstraintTest extends FunSuite with Matchers with HiveConfig with BeforeAndAfterAll {
+class HivePartitionConstraintTest extends FunSuite with Matchers with BeforeAndAfterAll {
+
+  import HiveConfig._
 
   val dbname = "sam"
   val table = "constraints_test_" + System.currentTimeMillis()
