@@ -8,15 +8,15 @@ import org.apache.hadoop.hive.metastore.api.FieldSchema
 // see https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Types
 object HiveSchemaFns extends Logging {
 
-  val CharRegex = "char\\((.*?)\\)".r
-  val VarcharRegex = "varchar\\((.*?)\\)".r
-  val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".r
-  val StructRegex = "struct<(.*?)>".r
+  private val CharRegex = "char\\((.*?)\\)".r
+  private val VarcharRegex = "varchar\\((.*?)\\)".r
+  private val DecimalRegex = "decimal\\((\\d+),(\\d+)\\)".r
+  private val StructRegex = "struct<(.*?)>".r
 
   // everything up to the type seperator, then letters (which is the datatype), with an optional type params
-  val StructElementRegex = "(.*?)\\:([a-z]+)(\\(.*?\\))?,?".r
+  private val StructElementRegex = "(.*?)\\:([a-z]+)(\\(.*?\\))?,?".r
 
-  val ArrayRegex = "array<(.*?)>".r
+  private val ArrayRegex = "array<(.*?)>".r
 
   def fromHiveField(fieldSchema: FieldSchema): Field =
     fromHive(fieldSchema.getName, fieldSchema.getType, fieldSchema.getComment)
@@ -31,7 +31,7 @@ object HiveSchemaFns extends Logging {
     case ArrayRegex(element) =>
       val elementType = fromHiveType(element)
       ArrayType(elementType)
-    case "bigint" => BigIntType
+    case "bigint" => LongType.Signed
     case "binary" => BinaryType
     case "boolean" => BooleanType
     case CharRegex(size) => CharType(size.toInt)
@@ -69,7 +69,7 @@ object HiveSchemaFns extends Logging {
 
   def toHiveType(dataType: DataType): String = dataType match {
     case ArrayType(elementType) => "array<" + toHiveType(elementType) + ">"
-    case BigIntType => "bigint"
+    case BigIntType => sys.error("Hive does not support java BigIntegers, use long or decimal")
     case BinaryType => "binary"
     case _: ByteType => "tinyint"
     case BooleanType => "boolean"
