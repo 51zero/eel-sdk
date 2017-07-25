@@ -17,12 +17,12 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val failure = new AtomicReference[Throwable](null)
 
     val executor = Executors.newFixedThreadPool(parallelism)
-    val queue = new LinkedBlockingQueue[Seq[Row]](DataStream.bufferSize)
+    val queue = new LinkedBlockingQueue[Seq[Row]](DataStream.DefaultBufferSize)
     val completed = new AtomicLong(0)
-    var dscancellable: Cancellable = null
+    var dscancellable: Subscription = null
 
     val subscriber = new Subscriber[Seq[Row]] {
-      override def starting(c: Cancellable): Unit = {
+      override def subscribed(c: Subscription): Unit = {
         logger.debug(s"Subscribing to datastream for sink action [cancellable=$c]")
         dscancellable = c
       }

@@ -92,8 +92,8 @@ trait DataStream extends Logging {
       val continue = new AtomicBoolean(true)
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
 
-        private var cancellable: Cancellable = _
-        override def starting(c: Cancellable): Unit = cancellable = c
+        private var cancellable: Subscription = _
+        override def subscribed(c: Subscription): Unit = cancellable = c
 
         override def next(t: Seq[Row]): Unit = {
           val ts = t.filter { row =>
@@ -151,8 +151,8 @@ trait DataStream extends Logging {
       val dropping = new AtomicBoolean(true)
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
 
-        private var cancellable: Cancellable = _
-        override def starting(c: Cancellable): Unit = cancellable = c
+        private var cancellable: Subscription = _
+        override def subscribed(c: Subscription): Unit = cancellable = c
 
         override def next(t: Seq[Row]): Unit = {
           val ts = t.filter { row =>
@@ -223,7 +223,7 @@ trait DataStream extends Logging {
       override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
       override def completed(): Unit = queue.put(Row.SentinelSingle)
       override def error(t: Throwable): Unit = queue.put(Row.SentinelSingle)
-      override def starting(c: Cancellable): Unit = ()
+      override def subscribed(c: Subscription): Unit = ()
     })
     executor.shutdown()
     BlockingQueueConcurrentIterator(queue, Row.SentinelSingle)
@@ -244,8 +244,8 @@ trait DataStream extends Logging {
             // todo need to then cancel the subscription
           }
         }
-        override def starting(s: Cancellable): Unit = {
-          subscriber.starting(s)
+        override def subscribed(s: Subscription): Unit = {
+          subscriber.subscribed(s)
           try {
             _listener.started()
           } catch {
@@ -311,7 +311,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema.concat(other.schema)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
-      val queue = new LinkedBlockingQueue[Row](DataStream.bufferSize)
+      val queue = new LinkedBlockingQueue[Row](DataStream.DefaultBufferSize)
       val _schema = schema
       val sentinel = Row(StructType(Field("________sentinal")), Seq(null))
 
@@ -322,7 +322,7 @@ trait DataStream extends Logging {
             override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
             override def completed(): Unit = queue.put(sentinel)
             override def error(t: Throwable): Unit = queue.put(sentinel)
-            override def starting(c: Cancellable): Unit = ()
+            override def subscribed(c: Subscription): Unit = ()
           })
         }
       })
@@ -339,7 +339,7 @@ trait DataStream extends Logging {
         }
         override def completed(): Unit = subscriber.completed()
         override def error(t: Throwable): Unit = subscriber.error(t)
-        override def starting(c: Cancellable): Unit = subscriber.starting(c)
+        override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
       })
     }
   }
@@ -409,7 +409,7 @@ trait DataStream extends Logging {
 
   def minBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
     var minRow: Row = null
-    var cancellable: Cancellable = null
+    var cancellable: Subscription = null
     self.subscribe(new Subscriber[Seq[Row]] {
       override def next(chunk: Seq[Row]): Unit = {
         chunk.foreach { row =>
@@ -421,14 +421,14 @@ trait DataStream extends Logging {
       }
       override def completed(): Unit = ()
       override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel()
-      override def starting(c: Cancellable): Unit = cancellable = c
+      override def subscribed(c: Subscription): Unit = cancellable = c
     })
     minRow
   }
 
   def maxBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
     var maxRow: Row = null
-    var cancellable: Cancellable = null
+    var cancellable: Subscription = null
     self.subscribe(new Subscriber[Seq[Row]] {
       override def next(chunk: Seq[Row]): Unit = {
         chunk.foreach { row =>
@@ -440,7 +440,7 @@ trait DataStream extends Logging {
       }
       override def completed(): Unit = ()
       override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel()
-      override def starting(c: Cancellable): Unit = cancellable = c
+      override def subscribed(c: Subscription): Unit = cancellable = c
     })
     maxRow
   }
@@ -471,8 +471,8 @@ trait DataStream extends Logging {
             subscriber.error(t)
             teed.error(t)
           }
-          override def starting(c: Cancellable): Unit = {
-            subscriber.starting(c)
+          override def subscribed(c: Subscription): Unit = {
+            subscriber.subscribed(c)
           }
         })
       }
@@ -581,14 +581,14 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new Subscriber[Seq[Row]] {
-        override def starting(c: Cancellable): Unit = subscriber.starting(c)
+        override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
         override def next(t: Seq[Row]): Unit = subscriber.next(t)
         override def error(t: Throwable): Unit = subscriber.error(t)
         override def completed(): Unit = {
           other.subscribe(new Subscriber[Seq[Row]] {
             override def next(t: Seq[Row]): Unit = subscriber.next(t)
             override def error(t: Throwable): Unit = subscriber.error(t)
-            override def starting(c: Cancellable): Unit = ()
+            override def subscribed(c: Subscription): Unit = ()
             override def completed(): Unit = subscriber.completed()
           })
         }
@@ -758,7 +758,7 @@ trait DataStream extends Logging {
     val vector = Vector.newBuilder[Row]
     subscribe(new Subscriber[Seq[Row]] {
       override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
-      override def starting(subscription: Cancellable): Unit = ()
+      override def subscribed(subscription: Subscription): Unit = ()
       override def completed(): Unit = ()
       override def error(t: Throwable): Unit = ()
     })
@@ -771,7 +771,7 @@ trait DataStream extends Logging {
     val latch = new CountDownLatch(1)
     subscribe(new Subscriber[Seq[Row]] {
       override def next(t: Seq[Row]): Unit = count = count + t.size
-      override def starting(subscription: Cancellable): Unit = ()
+      override def subscribed(subscription: Subscription): Unit = ()
       override def completed(): Unit = latch.countDown()
       override def error(t: Throwable): Unit = ()
     })
@@ -804,13 +804,13 @@ trait DataStream extends Logging {
 
     def subscribeDownstream(queues: Array[LinkedBlockingQueue[Seq[Row]]],
                             latch: CountDownLatch,
-                            cancellable: AtomicReference[Cancellable]): Unit = {
+                            cancellable: AtomicReference[Subscription]): Unit = {
       logger.debug("Subscribing to multiplexed parent")
       val executor = Executors.newSingleThreadExecutor()
       executor.submit(new Runnable {
         override def run(): Unit = {
           self.subscribe(new Subscriber[Seq[Row]] {
-            override def starting(c: Cancellable): Unit = {
+            override def subscribed(c: Subscription): Unit = {
               logger.debug("Multiplexed parent has started")
               cancellable.set(c)
               latch.countDown()
@@ -831,12 +831,12 @@ trait DataStream extends Logging {
     }
 
     val queues = Array.fill(count) {
-      new LinkedBlockingQueue[Seq[Row]](DataStream.bufferSize)
+      new LinkedBlockingQueue[Seq[Row]](DataStream.DefaultBufferSize)
     }
 
     val subscribed = new AtomicBoolean(false)
     val latch = new CountDownLatch(1)
-    val cancellable = new AtomicReference[Cancellable](null)
+    val cancellable = new AtomicReference[Subscription](null)
 
     Seq.tabulate(count) { k =>
       new DataStream {
@@ -855,7 +855,7 @@ trait DataStream extends Logging {
           latch.await()
 
           try {
-            subscriber.starting(cancellable.get)
+            subscriber.subscribed(cancellable.get)
             BlockingQueueConcurrentIterator(queues(k), Row.Sentinel).foreach(subscriber.next)
             subscriber.completed()
           } catch {
@@ -883,18 +883,18 @@ object DataStream {
 
   import scala.reflect.runtime.universe._
 
-  val bufferSize: Int = ConfigFactory.load().getInt("eel.default-buffer-size")
-  val batchSize: Int = ConfigFactory.load().getInt("eel.default-batch-size")
+  val DefaultBufferSize: Int = ConfigFactory.load().getInt("eel.default-buffer-size")
+  val DefaultBatchSize: Int = ConfigFactory.load().getInt("eel.default-batch-size")
 
   def fromIterator(_schema: StructType, _iterator: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       try {
         var running = true
-        subscriber.starting(new Cancellable {
+        subscriber.subscribed(new Subscription {
           override def cancel(): Unit = running = false
         })
-        _iterator.grouped(batchSize).takeWhile(_ => running).foreach { chunk =>
+        _iterator.grouped(DefaultBatchSize).takeWhile(_ => running).foreach { chunk =>
           subscriber.next(chunk)
         }
         subscriber.completed()
@@ -923,10 +923,10 @@ object DataStream {
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       try {
         var running = true
-        subscriber.starting(new Cancellable {
+        subscriber.subscribed(new Subscription {
           override def cancel(): Unit = running = false
         })
-        rows.grouped(batchSize).takeWhile(_ => running).foreach { chunk =>
+        rows.grouped(DefaultBatchSize).takeWhile(_ => running).foreach { chunk =>
           logger.debug("Seq based publisher is publishing a chunk")
           subscriber.next(chunk)
         }

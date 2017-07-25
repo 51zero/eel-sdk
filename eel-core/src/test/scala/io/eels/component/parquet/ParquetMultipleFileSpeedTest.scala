@@ -19,8 +19,8 @@ import scala.util.Random
   * 5m rows random contents; 20 parts using eels subscriber; reading parquet=1200
   * v1.2.0-M11
   * 5m rows random contents; 20 parts using eels subscriber; reading parquet=1400
-  * v1.3.0-snapsho
-   5m rows random contents; 20 parts using eels subscriber; writing=15000, reading parquet=1400
+  * v1.3.0-snapshot1
+  * 5m rows random contents; 20 parts using eels subscriber; writing=15000, reading parquet=1400
   */
 object ParquetMultipleFileSpeedTest extends App with Timed {
   ParquetLogMute()
@@ -37,9 +37,9 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
   val dir = new Path("parquet-speed-test")
   new File(dir.toString).mkdirs()
 
+  new File(dir.toString).listFiles().foreach(_.delete)
   timed("Insertion") {
     val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
-    new File(dir.toString).listFiles().foreach(_.delete)
     ds.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
   }
 

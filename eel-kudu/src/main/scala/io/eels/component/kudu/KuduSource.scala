@@ -31,7 +31,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
       try {
         val iterator = new ScannerIterator(scanner, schema)
-        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
+        iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)

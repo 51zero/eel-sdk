@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.io.Using
-import io.eels.datastream.{Cancellable, Publisher, Subscriber}
+import io.eels.datastream.{Subscription, Publisher, Subscriber}
 import io.eels.schema.{Partition, StructType}
 import io.eels.{Predicate, _}
 import org.apache.hadoop.conf.Configuration
@@ -54,7 +54,7 @@ class HiveFilePublisher(dialect: HiveDialect,
         }
         subscriber.next(aligned)
       }
-      override def starting(c: Cancellable): Unit = subscriber.starting(c)
+      override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
       override def completed(): Unit = subscriber.completed()
       override def error(t: Throwable): Unit = subscriber.error(t)
     })

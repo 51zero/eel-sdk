@@ -56,7 +56,7 @@ class SinkActionTest extends WordSpec with Matchers {
       val ds = new DataStream {
         override def schema: StructType = _schema
         override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-          subscriber.starting(new Cancellable {
+          subscriber.subscribed(new Subscription {
             override def cancel(): Unit = latch.countDown()
           })
           Iterator.continually(Row(schema, Seq("a"))).takeWhile(_ => latch.getCount > 0).grouped(100).foreach(subscriber.next)
@@ -74,7 +74,7 @@ class SinkActionTest extends WordSpec with Matchers {
       val ds = new DataStream {
         override def schema: StructType = _schema
         override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-          subscriber.starting(Cancellable.empty)
+          subscriber.subscribed(Subscription.empty)
           Iterator.continually(Row(schema, Seq("a"))).take(100000).grouped(10).foreach(subscriber.next)
           subscriber.completed()
         }
@@ -98,7 +98,7 @@ class SinkActionTest extends WordSpec with Matchers {
         override def schema: StructType = _schema
         override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
           Try {
-            subscriber.starting(Cancellable.empty)
+            subscriber.subscribed(Subscription.empty)
             Iterator.continually(Row(schema, Seq("a"))).take(100000).grouped(100).foreach(subscriber.next)
             subscriber.completed()
           }

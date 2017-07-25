@@ -35,7 +35,7 @@ class SequencePublisher(val path: Path)(implicit conf: Configuration) extends Pu
           override def hasNext(): Boolean = reader.next(k, v)
         }
 
-        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
+        iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)

@@ -19,7 +19,7 @@ class AvroParquetPublisher(path: Path,
         val deser = new AvroDeserializer()
         val iterator = ParquetIterator(reader).map(deser.toRow)
 
-        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
+        iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)

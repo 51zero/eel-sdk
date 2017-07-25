@@ -5,7 +5,7 @@ import org.scalatest.{FunSuite, Matchers}
 
 class HiveDDLTest extends FunSuite with Matchers {
 
-  val fields = Seq(Field("str", StringType), Field("i", BigIntType), Field("b", BooleanType))
+  val fields = Seq(Field("str", StringType), Field("i", LongType.Signed), Field("b", BooleanType))
 
   test("generate valid statement") {
     HiveDDL.showDDL("MYTAB", fields) shouldBe

@@ -85,7 +85,7 @@ case class JsonSource(inputFn: () => InputStream,
       using(inputFn()) { input =>
         try {
           val iterator = reader.readValues[JsonNode](input).asScala.map(nodeToRow)
-          iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
+          iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
           subscriber.completed()
         } catch {
           case t: Throwable => subscriber.error(t)

@@ -33,7 +33,7 @@ class CsvPublisher(createParser: () => CsvParser,
           Row(schema, records.toVector)
         }
 
-        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
+        iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
         subscriber.completed()
 
       } catch {

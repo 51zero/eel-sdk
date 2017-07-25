@@ -29,7 +29,7 @@ case class AvroSourcePublisher(path: Path)
     try {
       val deserializer = new AvroDeserializer()
       val reader = AvroReaderFns.createAvroReader(path)
-      AvroRecordIterator(reader).map(deserializer.toRow).grouped(DataStream.batchSize).foreach(subscriber.next)
+      AvroRecordIterator(reader).map(deserializer.toRow).grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

@@ -8,7 +8,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
-import io.eels.datastream.{Cancellable, DataStream, Publisher, Subscriber}
+import io.eels.datastream.{Subscription, DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -35,11 +35,11 @@ class ParquetHiveDialect extends HiveDialect with Logging with Using {
       try {
         val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
         using(RowParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)) { reader =>
-          val cancellable = new Cancellable {
+          val cancellable = new Subscription {
             override def cancel(): Unit = reader.close()
           }
-          subscriber.starting(cancellable)
-          ParquetIterator(reader).grouped(DataStream.batchSize).foreach(subscriber.next)
+          subscriber.subscribed(cancellable)
+          ParquetIterator(reader).grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
           subscriber.completed()
         }
       } catch {

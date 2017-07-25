@@ -6,7 +6,7 @@ import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.datastream.{Cancellable, Publisher, Subscriber}
+import io.eels.datastream.{Subscription, Publisher, Subscriber}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -32,7 +32,7 @@ class JdbcPublisher(connFn: () => Connection,
 
             var cancelled = false
 
-            subscriber.starting(new Cancellable {
+            subscriber.subscribed(new Subscription {
               override def cancel(): Unit = cancelled = true
             })
 

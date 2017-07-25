@@ -23,7 +23,7 @@ class DataStreamPublisher(override val schema: StructType) extends DataStream {
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
-      subscriber.starting(new Cancellable {
+      subscriber.subscribed(new Subscription {
         override def cancel(): Unit = {
           queue.put(Row.Sentinel)
           _isCancelled.set(true)

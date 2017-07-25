@@ -8,7 +8,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
 import io.eels.component.hive.partition.PartitionMetaData
-import io.eels.datastream.{Cancellable, Subscriber}
+import io.eels.datastream.{Subscription, Subscriber}
 import io.eels.schema.{Partition, PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{FilePattern, Row}
@@ -235,7 +235,7 @@ case class HiveTable(dbName: String,
             logger.error(s"Error compacting $partition", t)
             queue.put(Row.Sentinel)
           }
-          override def starting(c: Cancellable): Unit = ()
+          override def subscribed(c: Subscription): Unit = ()
         })
       }
       val output = _dialect.output(_schema, new Path(files.head.getPath.getParent, finalFilename), None, RoundingMode.UNNECESSARY, Map.empty)
