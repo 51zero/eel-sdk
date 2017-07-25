@@ -28,7 +28,7 @@ object JdbcSink extends Logging {
 case class JdbcSink(connFn: () => Connection,
                     table: String,
                     createTable: Boolean = false,
-                    batchSize: Int = 1000,
+                    batchSize: Int = 1000, // the number of rows before a commit is made
                     batchesPerCommit: Int = 0, // 0 means commit at the end, otherwise how many batches before a commit
                     dialect: Option[JdbcDialect] = None,
                     threads: Int = 4) extends Sink with Logging {

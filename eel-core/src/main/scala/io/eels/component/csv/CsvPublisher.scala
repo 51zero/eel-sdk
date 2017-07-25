@@ -6,7 +6,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.univocity.parsers.csv.CsvParser
 import io.eels.Row
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 
 class CsvPublisher(createParser: () => CsvParser,
@@ -33,7 +33,7 @@ class CsvPublisher(createParser: () => CsvParser,
           Row(schema, records.toVector)
         }
 
-        iterator.grouped(1000).foreach(subscriber.next)
+        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
         subscriber.completed()
 
       } catch {

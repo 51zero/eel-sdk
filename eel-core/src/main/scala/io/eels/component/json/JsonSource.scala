@@ -5,7 +5,7 @@ import java.nio.file.Files
 
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber}
 import io.eels.schema.{ArrayType, DataType, Field, StructType}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.codehaus.jackson.JsonNode
@@ -85,7 +85,7 @@ case class JsonSource(inputFn: () => InputStream,
       using(inputFn()) { input =>
         try {
           val iterator = reader.readValues[JsonNode](input).asScala.map(nodeToRow)
-          iterator.grouped(1000).foreach(subscriber.next)
+          iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
           subscriber.completed()
         } catch {
           case t: Throwable => subscriber.error(t)

@@ -1,16 +1,17 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{Executors, LinkedBlockingQueue}
+import java.util.concurrent.{ExecutorService, Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.io.Using
+import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
 import io.eels.{Row, Source}
 
 object ExecutorInstances {
-  val io = Executors.newCachedThreadPool()
+  val io: ExecutorService = Executors.newCachedThreadPool()
 }
 
 // subscribes to a part and publishes to a shared queue
@@ -21,7 +22,7 @@ class PartSubscriber(name: String,
                      outstanding: AtomicInteger) extends Subscriber[Seq[Row]] with Logging {
 
   // to cancel the part publisher
-  var cancellable: Cancellable = null
+  var cancellable: Cancellable = _
 
   override def starting(c: Cancellable): Unit = {
     logger.debug(s"Starting reads for part $name")
@@ -49,7 +50,7 @@ class PartSubscriber(name: String,
 // an implementation of DataStream that provides a subscribe powered by constitent parts
 class DataStreamSource(source: Source) extends DataStream with Using with Logging {
 
-  private val bufferSize = 100
+  private val bufferSize = ConfigFactory.load().getInt("eel.default-buffer-size")
 
   override def schema: StructType = source.schema
 

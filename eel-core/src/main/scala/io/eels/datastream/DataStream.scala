@@ -5,6 +5,7 @@ import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
+import com.typesafe.config.ConfigFactory
 import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{DataTable, Listener, Record, Row, Sink}
 
@@ -310,7 +311,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema.concat(other.schema)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
-      val queue = new LinkedBlockingQueue[Row](100)
+      val queue = new LinkedBlockingQueue[Row](DataStream.bufferSize)
       val _schema = schema
       val sentinel = Row(StructType(Field("________sentinal")), Seq(null))
 
@@ -829,7 +830,7 @@ trait DataStream extends Logging {
     }
 
     val queues = Array.fill(count) {
-      new LinkedBlockingQueue[Seq[Row]](100)
+      new LinkedBlockingQueue[Seq[Row]](DataStream.bufferSize)
     }
 
     val subscribed = new AtomicBoolean(false)
@@ -881,6 +882,9 @@ object DataStream {
 
   import scala.reflect.runtime.universe._
 
+  val bufferSize: Int = ConfigFactory.load().getInt("eel.default-buffer-size")
+  val batchSize: Int = ConfigFactory.load().getInt("eel.default-batch-size")
+
   def fromIterator(_schema: StructType, _iterator: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
@@ -889,7 +893,7 @@ object DataStream {
         subscriber.starting(new Cancellable {
           override def cancel(): Unit = running = false
         })
-        _iterator.grouped(1000).takeWhile(_ => running).foreach { chunk =>
+        _iterator.grouped(batchSize).takeWhile(_ => running).foreach { chunk =>
           subscriber.next(chunk)
         }
         subscriber.completed()
@@ -921,7 +925,7 @@ object DataStream {
         subscriber.starting(new Cancellable {
           override def cancel(): Unit = running = false
         })
-        rows.grouped(1000).takeWhile(_ => running).foreach { chunk =>
+        rows.grouped(batchSize).takeWhile(_ => running).foreach { chunk =>
           logger.debug("Seq based publisher is publishing a chunk")
           subscriber.next(chunk)
         }

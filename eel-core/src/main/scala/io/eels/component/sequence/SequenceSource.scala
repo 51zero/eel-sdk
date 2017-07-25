@@ -3,7 +3,7 @@ package io.eels.component.sequence
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -35,7 +35,7 @@ class SequencePublisher(val path: Path)(implicit conf: Configuration) extends Pu
           override def hasNext(): Boolean = reader.next(k, v)
         }
 
-        iterator.grouped(1000).foreach(subscriber.next)
+        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)

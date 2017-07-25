@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.datastream.{Cancellable, Publisher, Subscriber}
+import io.eels.datastream.{Cancellable, DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -48,7 +48,7 @@ class ParquetPublisher(path: Path,
         subscriber.starting(new Cancellable {
           override def cancel(): Unit = cancelled = true
         })
-        ParquetIterator(reader).takeWhile(_ => !cancelled).grouped(1000).foreach(subscriber.next)
+        ParquetIterator(reader).takeWhile(_ => !cancelled).grouped(DataStream.batchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)

@@ -2,7 +2,7 @@ package io.eels.component.kudu
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber}
 import io.eels.schema._
 import io.eels.{Row, Source}
 import org.apache.kudu.client.{KuduClient, KuduScanner, RowResultIterator}
@@ -31,7 +31,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
       try {
         val iterator = new ScannerIterator(scanner, schema)
-        iterator.grouped(1000).foreach(subscriber.next)
+        iterator.grouped(DataStream.batchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)
@@ -45,7 +45,7 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 object ResultsIterator {
   def apply(schema: StructType, iter: RowResultIterator) = new Iterator[Row] {
 
-    val zipped = schema.fields.zipWithIndex
+    private val zipped = schema.fields.zipWithIndex
 
     override def hasNext: Boolean = iter.hasNext
     override def next(): Row = {

@@ -17,7 +17,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val failure = new AtomicReference[Throwable](null)
 
     val executor = Executors.newFixedThreadPool(parallelism)
-    val queue = new LinkedBlockingQueue[Seq[Row]](100)
+    val queue = new LinkedBlockingQueue[Seq[Row]](DataStream.bufferSize)
     val completed = new AtomicLong(0)
     var dscancellable: Cancellable = null
 

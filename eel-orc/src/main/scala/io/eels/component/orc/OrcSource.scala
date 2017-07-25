@@ -3,7 +3,7 @@ package io.eels.component.orc
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{Cancellable, Publisher, Subscriber}
+import io.eels.datastream.{Cancellable, DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -33,7 +33,7 @@ case class OrcSource(pattern: FilePattern,
 
   override def schema: StructType = {
     val reader = OrcFile.createReader(pattern.toPaths().head, new ReaderOptions(conf).maxLength(1))
-    val schema = reader.getSchema()
+    val schema = reader.getSchema
     OrcSchemaFns.fromOrcType(schema).asInstanceOf[StructType]
   }
 
@@ -61,7 +61,7 @@ class OrcPublisher(path: Path,
       val reader = OrcFile.createReader(path, new ReaderOptions(conf))
       val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
       val iterator: Iterator[Row] = OrcBatchIterator(reader, fileSchema, projection, predicate).flatten
-      iterator.grouped(1000).takeWhile(_ => running).foreach(subscriber.next)
+      iterator.grouped(DataStream.batchSize).takeWhile(_ => running).foreach(subscriber.next)
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

@@ -5,7 +5,7 @@ import java.io.File
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -29,7 +29,7 @@ case class AvroSourcePublisher(path: Path)
     try {
       val deserializer = new AvroDeserializer()
       val reader = AvroReaderFns.createAvroReader(path)
-      AvroRecordIterator(reader).map(deserializer.toRow).grouped(1000).foreach(subscriber.next)
+      AvroRecordIterator(reader).map(deserializer.toRow).grouped(DataStream.batchSize).foreach(subscriber.next)
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

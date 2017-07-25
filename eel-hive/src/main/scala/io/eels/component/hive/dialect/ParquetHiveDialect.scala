@@ -8,7 +8,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
-import io.eels.datastream.{Cancellable, Publisher, Subscriber}
+import io.eels.datastream.{Cancellable, DataStream, Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -17,7 +17,6 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-import scala.collection.mutable.ArrayBuffer
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 class ParquetHiveDialect extends HiveDialect with Logging with Using {
@@ -40,17 +39,7 @@ class ParquetHiveDialect extends HiveDialect with Logging with Using {
             override def cancel(): Unit = reader.close()
           }
           subscriber.starting(cancellable)
-          val iterator = ParquetIterator(reader)
-          val buffer = new ArrayBuffer[Row](1000)
-          while (iterator.hasNext) {
-            buffer.append(iterator.next)
-            if (buffer.size == 1000) {
-              subscriber.next(buffer.toVector)
-              buffer.clear()
-            }
-          }
-          if (buffer.nonEmpty)
-            subscriber.next(buffer.toVector)
+          ParquetIterator(reader).grouped(DataStream.batchSize).foreach(subscriber.next)
           subscriber.completed()
         }
       } catch {
