@@ -450,7 +450,8 @@ trait DataStream extends Logging {
     * The first is the original datastream which will continue as is.
     * The second is a DataStream which is fed by rows generated from the given function.
     * The function is invoked for each row that passes through this stream.
-    * Errors or cancellation requests in the tee'd datastream do not propagate back to the original stream.
+    *
+    * Cancellation requests in the tee'd datastream do not propagate back to the original stream.
     */
   def tee(schema: StructType, fn: Row => Seq[Row]): (DataStream, DataStream) = {
     val teed = new DataStreamPublisher(schema)
@@ -468,7 +469,7 @@ trait DataStream extends Logging {
           }
           override def error(t: Throwable): Unit = {
             subscriber.error(t)
-            teed.close()
+            teed.error(t)
           }
           override def starting(c: Cancellable): Unit = {
             subscriber.starting(c)
