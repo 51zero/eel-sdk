@@ -460,7 +460,7 @@ trait DataStream extends Logging {
         self.subscribe(new Subscriber[Seq[Row]] {
           override def next(chunk: Seq[Row]): Unit = {
             subscriber.next(chunk)
-            teed.publish(chunk)
+            teed.publish(chunk.flatMap(fn))
           }
           override def completed(): Unit = {
             subscriber.completed()
