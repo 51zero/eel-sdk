@@ -31,7 +31,7 @@ object AdditionEvolutionStrategy extends EvolutionStrategy with Logging {
                       tableName: String,
                       metastoreSchema: StructType,
                       targetSchema: StructType,
-                      client: IMetaStoreClient): Unit = {
+                      client: IMetaStoreClient): Unit = client.synchronized {
     val missing = targetSchema.fields.filterNot(field => metastoreSchema.fieldNames().contains(field.name))
     if (missing.nonEmpty) {
       logger.debug("Hive metastore is missing the following fields: " + missing.mkString(", "))

@@ -23,8 +23,8 @@ class HdfsWatcher(path: Path, callback: FileCallback)
   private val running = new AtomicBoolean(true)
   private val interval = 5.seconds
 
-  val admin = new HdfsAdmin(path.toUri, conf)
-  val eventStream = admin.getInotifyEventStream
+  private val admin = new HdfsAdmin(path.toUri, conf)
+  private val eventStream = admin.getInotifyEventStream
 
   executor.submit(new Runnable {
     override def run(): Unit = {

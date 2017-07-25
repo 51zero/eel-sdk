@@ -10,9 +10,6 @@ import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
 
-// used as a lock
-object HiveOps
-
 // client for operating at a low level on the metastore
 // methods in this class will accept/return eel classes, and convert
 // the operations into hive specific ones
@@ -40,7 +37,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   }
 
   // returns the eel field instances which correspond to the partition keys for this table
-  def partitionFields(dbName: String, tableName: String): List[Field] = {
+  def partitionFields(dbName: String, tableName: String): List[Field] = client.synchronized {
     val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
     keys.map { schema =>
       HiveSchemaFns.fromHiveField(schema).withNullable(false).withPartition(true)
@@ -48,7 +45,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   }
 
   // returns the eel partitions for this hive table
-  def partitions(dbName: String, tableName: String): List[Partition] = {
+  def partitions(dbName: String, tableName: String): List[Partition] = client.synchronized {
     val fields = partitionFields(dbName, tableName)
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.map { it =>
       val entries = it.getValues.asScala.zipWithIndex.map { case (str, int) =>
@@ -62,14 +59,14 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     * Creates a new partition in Hive in the given database.table. The location of the partition must be
     * specified. The values for the serialization formats are taken from the values for the table.
     */
-  def createPartition(dbName: String, tableName: String, location: Path, partition: Partition): Unit = {
+  def createPartition(dbName: String, tableName: String, location: Path, partition: Partition): Unit = client.synchronized {
     logger.info(s"Creating partition ${partition.values.mkString(",")} on $dbName.$tableName at location=$location")
 
     // we fetch the table so we can copy the serde/format values from the table. It makes no sense
     // to store a partition with different serialization formats to other partitions.
     val table = client.getTable(dbName, tableName)
     val sd = new StorageDescriptor(table.getSd)
-    sd.setLocation(location.toString())
+    sd.setLocation(location.toString)
 
     // the hive partition requires the values of the entries
     val hivePartition = new HivePartition(
@@ -90,10 +87,12 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     *
     * In Hive, a partition is a set
     */
-  def hivePartitions(dbName: String, tableName: String): List[HivePartition] = client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
+  def hivePartitions(dbName: String, tableName: String): List[HivePartition] = client.synchronized {
+    client.listPartitions(dbName, tableName, Short.MaxValue).asScala.toList
+  }
 
   // returns the partition meta datas for this table
-  def partitionsMetaData(dbName: String, tableName: String): Seq[PartitionMetaData] = {
+  def partitionsMetaData(dbName: String, tableName: String): Seq[PartitionMetaData] = client.synchronized {
     val keys = client.getTable(dbName, tableName).getPartitionKeys.asScala
     client.listPartitions(dbName, tableName, Short.MaxValue).asScala.map { it =>
       val partition = Partition(keys.zip(it.getValues.asScala).map { case (key, value) => PartitionEntry(key.getName, value) })
@@ -119,20 +118,28 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     * Returns the hive FieldSchema's for partition columns.
     * Hive calls these "partition partitionKeys"
     */
-  def partitionFieldSchemas(dbName: String, tableName: String): List[FieldSchema] = client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
+  def partitionFieldSchemas(dbName: String, tableName: String): List[FieldSchema] = client.synchronized {
+    client.getTable(dbName, tableName).getPartitionKeys.asScala.toList
+  }
 
   def partitionKeys(dbName: String, tableName: String): List[String] = partitionFieldSchemas(dbName, tableName).map(_.getName)
 
-  def tableExists(databaseName: String, tableName: String): Boolean = client.tableExists(databaseName, tableName)
+  def tableExists(databaseName: String, tableName: String): Boolean = client.synchronized {
+    client.tableExists(databaseName, tableName)
+  }
 
-  def tableFormat(dbName: String, tableName: String): String = client.getTable(dbName, tableName).getSd.getInputFormat
+  def tableFormat(dbName: String, tableName: String): String = client.synchronized {
+    client.getTable(dbName, tableName).getSd.getInputFormat
+  }
 
-  def location(dbName: String, tableName: String): String = client.getTable(dbName, tableName).getSd.getLocation
+  def location(dbName: String, tableName: String): String = client.synchronized {
+    client.getTable(dbName, tableName).getSd.getLocation
+  }
 
   def tablePath(dbName: String, tableName: String): Path = new Path(location(dbName, tableName))
 
   // Returns the eel schema for the hive dbName:tableName
-  def schema(dbName: String, tableName: String): StructType = {
+  def schema(dbName: String, tableName: String): StructType = client.synchronized {
     val table = client.getTable(dbName, tableName)
 
     // hive columns are always nullable, and hive partitions are never nullable so we can set
@@ -150,7 +157,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     * Adds this column to the hive schema. This is schema evolution.
     * The column must be marked as nullable and cannot have the same name as an existing column.
     */
-  def addColumn(dbName: String, tableName: String, field: Field): Unit = {
+  def addColumn(dbName: String, tableName: String, field: Field): Unit = client.synchronized {
     val table = client.getTable(dbName, tableName)
     val sd = table.getSd
     sd.addToCols(HiveSchemaFns.toHiveField(field))
@@ -160,7 +167,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   // returns true if the given partition exists for the given database.table
   def partitionExists(dbName: String,
                       tableName: String,
-                      partition: Partition): Boolean = {
+                      partition: Partition): Boolean = client.synchronized {
     logger.debug(s"Checking if partition exists '${partition.entries.mkString(",")}'")
     import scala.collection.JavaConverters._
 
@@ -177,7 +184,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   def createPartitionIfNotExists(dbName: String,
                                  tableName: String,
                                  partition: Partition,
-                                 path: Path): Boolean = {
+                                 path: Path): Boolean = client.synchronized {
     logger.debug(s"Ensuring partition exists '$partition'")
 
     try {
@@ -199,7 +206,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
                   props: Map[String, String] = Map.empty,
                   tableType: TableType = TableType.MANAGED_TABLE,
                   location: String = null,
-                  overwrite: Boolean = false): Boolean = {
+                  overwrite: Boolean = false): Boolean = client.synchronized {
     for (partitionKey <- partitionKeys) {
       if (!schema.contains(partitionKey)) {
         throw new IllegalArgumentException(s"Schema must define all partition partitionKeys but it does not define $partitionKey")
@@ -258,7 +265,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     }
   }
 
-  def createDatabase(name: String, description: String = null, overwrite: Boolean = false) {
+  def createDatabase(name: String, description: String = null, overwrite: Boolean = false): Unit = client.synchronized {
     val exists = client.getDatabase(name) != null
     if (exists && overwrite) {
       logger.info(s"Database exists, overwrite=true; dropping database $name")

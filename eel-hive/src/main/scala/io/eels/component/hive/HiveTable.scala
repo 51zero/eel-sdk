@@ -187,7 +187,7 @@ case class HiveTable(dbName: String,
     * Returns a TableSpec which contains details of the underlying table.
     * Similar to the Table class in the Hive API but using scala friendly types.
     */
-  def spec(): TableSpec = {
+  def spec(): TableSpec = client.synchronized {
     val table = client.getTable(dbName, tableName)
     val tableType = TableType.values().find(_.name.toLowerCase == table.getTableType.toLowerCase)
       .getOrError("Hive table type is not supported by this version of hive")
@@ -210,7 +210,9 @@ case class HiveTable(dbName: String,
     )
   }
 
-  def dialect = io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
+  def dialect = client.synchronized {
+    io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
+  }
 
   // todo use dialect to return correct stats
   def stats(): HiveStats = new ParquetHiveStats(dbName, tableName, this)
@@ -248,17 +250,17 @@ case class HiveTable(dbName: String,
   // returns the location of this table as a hadoop Path
   def location(): Path = new Path(spec().location)
 
-  def deletePartition(partition: Partition, deleteData: Boolean): Unit = {
+  def deletePartition(partition: Partition, deleteData: Boolean): Unit = client.synchronized {
     logger.debug(s"Deleting partition ${partition.unquoted}")
     client.dropPartition(dbName, tableName, partition.values.asJava, deleteData)
   }
 
-  def drop(deleteData: Boolean = true): Unit = {
+  def drop(deleteData: Boolean = true): Unit = client.synchronized {
     logger.debug(s"Dropping table $dbName:$tableName")
     client.dropTable(dbName, tableName, deleteData, true)
   }
 
-  def truncate(removePartitions: Boolean): Unit = {
+  def truncate(removePartitions: Boolean): Unit = client.synchronized {
     logger.debug(s"Truncating table $dbName:$tableName")
     if (removePartitions)
       new HiveOps(client).partitions(dbName, tableName).foreach(deletePartition(_, true))

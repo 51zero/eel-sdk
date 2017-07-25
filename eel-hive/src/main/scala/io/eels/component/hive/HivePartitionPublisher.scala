@@ -50,7 +50,7 @@ class HivePartitionPublisher(dbName: String,
     }
   }
 
-  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = client.synchronized {
     try {
 
       import scala.collection.JavaConverters._
