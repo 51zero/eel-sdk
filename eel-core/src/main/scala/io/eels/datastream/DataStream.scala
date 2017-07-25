@@ -60,7 +60,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        val index = schema.indexOf(fieldName)
+        private val index = schema.indexOf(fieldName)
         if (index < 0)
           sys.error(s"Unknown field $fieldName")
         override def next(t: Seq[Row]): Unit = {
@@ -74,7 +74,7 @@ trait DataStream extends Logging {
     override def schema: StructType = self.schema.toLowerCase()
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        val lower = schema
+        private val lower = schema
         override def next(t: Seq[Row]): Unit = {
           val ts = t.map { row => Row(lower, row.values) }
           subscriber.next(ts)
@@ -91,7 +91,7 @@ trait DataStream extends Logging {
       val continue = new AtomicBoolean(true)
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
 
-        var cancellable: Cancellable = null
+        private var cancellable: Cancellable = _
         override def starting(c: Cancellable): Unit = cancellable = c
 
         override def next(t: Seq[Row]): Unit = {
@@ -150,7 +150,7 @@ trait DataStream extends Logging {
       val dropping = new AtomicBoolean(true)
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
 
-        var cancellable: Cancellable = null
+        private var cancellable: Cancellable = _
         override def starting(c: Cancellable): Unit = cancellable = c
 
         override def next(t: Seq[Row]): Unit = {
@@ -361,10 +361,10 @@ trait DataStream extends Logging {
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
 
-        val _schema = schema
-        val keyIndex = _schema.indexOf(key)
+        private val _schema = schema
+        private val keyIndex = _schema.indexOf(key)
         // this is a map of the key value to the original row with the key removed
-        val map = other.collect.map { row => row(keyIndex) -> row.values.patch(keyIndex, Nil, 1) }.toMap
+        private val map = other.collect.map { row => row(keyIndex) -> row.values.patch(keyIndex, Nil, 1) }.toMap
 
         override def next(t: Seq[Row]): Unit = {
           val ts = t.map { row =>
@@ -419,7 +419,7 @@ trait DataStream extends Logging {
         }
       }
       override def completed(): Unit = ()
-      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel
+      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel()
       override def starting(c: Cancellable): Unit = cancellable = c
     })
     minRow
@@ -438,7 +438,7 @@ trait DataStream extends Logging {
         }
       }
       override def completed(): Unit = ()
-      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel
+      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel()
       override def starting(c: Cancellable): Unit = cancellable = c
     })
     maxRow
@@ -628,7 +628,7 @@ trait DataStream extends Logging {
     def schema: StructType = self.schema
     def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        val rhs = stream.collect
+        private val rhs = stream.collect
         override def next(t: Seq[Row]): Unit = subscriber next t.filterNot(rhs.contains)
       })
     }
@@ -638,7 +638,7 @@ trait DataStream extends Logging {
     def schema: StructType = self.schema
     def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        val rhs = stream.collect
+        private val rhs = stream.collect
         override def next(t: Seq[Row]): Unit = subscriber next t.filter(rhs.contains)
       })
     }
@@ -672,20 +672,26 @@ trait DataStream extends Logging {
   }
 
   /**
-    * Returns a new DataStream which a new field added.
+    * Returns a new DataStream with a new field added.
     * The value for the field is taken from the function which is invoked for each row.
     */
   def addField(field: Field, fn: Row => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema.addField(field)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        val _schema = schema
+        private val _schema = schema
         override def next(t: Seq[Row]): Unit = {
           subscriber next t.map { row => Row(_schema, row.values :+ fn(row)) }
         }
       })
     }
   }
+
+  /**
+    * Returns a new DataStream with a new field added.
+    * The value for the field is taken from the function which is invoked for each row.
+    */
+  def addField(name: String, fn: Row => Any): DataStream = addField(Field(name, StringType), fn)
 
   /**
     * Returns a new DataStream with the new field of type String added at the end. The value of
