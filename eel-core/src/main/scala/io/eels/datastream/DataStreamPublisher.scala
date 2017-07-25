@@ -13,14 +13,12 @@ import io.eels.schema.StructType
   * Subscribers to this publisher will block as normal, and so they should normally be placed
   * into a separate thread.
   */
-class DataStreamPublisher(schemaFn: () => StructType) extends DataStream {
+class DataStreamPublisher(override val schema: StructType) extends DataStream {
 
   private val queue = new LinkedBlockingQueue[Seq[Row]]
   private val _isCancelled = new AtomicBoolean(false)
 
   def isCancelled: Boolean = _isCancelled.get
-
-  override def schema: StructType = schemaFn()
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
