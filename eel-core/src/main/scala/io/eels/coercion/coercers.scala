@@ -23,6 +23,7 @@ object BooleanCoercer extends Coercer[Boolean] {
     case s: Short => s == 1
     case b: Byte => b == 1
     case s: String => s == "true"
+    case bigint: BigInt => bigint.longValue == 1
   }
 }
 
@@ -38,6 +39,9 @@ object TimestampCoercer extends Coercer[java.sql.Timestamp] {
   override def coerce(input: Any): Timestamp = input match {
     case t: Timestamp => t // passthrough
     case l: Long => new Timestamp(l)
+    case bigint: BigInt if bigint.isValidLong => new Timestamp(bigint.longValue)
+    case bigint: java.math.BigInteger => new Timestamp(bigint.longValueExact)
+    case bigdec: java.math.BigDecimal => new Timestamp(bigdec.longValueExact)
   }
 }
 
@@ -48,6 +52,10 @@ object IntCoercer extends Coercer[Int] {
     case b: Byte => b
     case s: Short => s
     case s: String => s.toInt
+    case bigint: BigInt if bigint.isValidInt => bigint.intValue
+    case bigdec: BigDecimal if bigdec.isValidInt => bigdec.intValue
+    case bigint: java.math.BigInteger => bigint.intValueExact
+    case bigdec: java.math.BigDecimal => bigdec.intValueExact
   }
 }
 
@@ -58,6 +66,10 @@ object ShortCoercer extends Coercer[Short] {
     case i: Int if Short.MinValue <= i && i <= Short.MaxValue => i.toShort
     case l: Long if Short.MinValue <= l && l <= Short.MaxValue => l.toShort
     case s: String => s.toShort
+    case bigint: BigInt if bigint.isValidShort => bigint.shortValue
+    case bigdec: BigDecimal if bigdec.isValidShort => bigdec.shortValue
+    case bigint: java.math.BigInteger => bigint.shortValueExact
+    case bigdec: java.math.BigDecimal => bigdec.shortValueExact
   }
 }
 
@@ -68,6 +80,10 @@ object ByteCoercer extends Coercer[Byte] {
     case s: Short if Byte.MinValue <= s && s <= Byte.MaxValue => s.toByte
     case i: Int if Byte.MinValue <= i && i <= Byte.MaxValue => i.toByte
     case l: Long if Byte.MinValue <= l && l <= Byte.MaxValue => l.toByte
+    case bigint: BigInt if bigint.isValidByte => bigint.byteValue
+    case bigdec: BigDecimal if bigdec.isValidByte => bigdec.byteValue
+    case bigint: java.math.BigInteger => bigint.byteValueExact()
+    case bigdec: java.math.BigDecimal => bigdec.byteValueExact()
   }
 }
 
@@ -79,6 +95,10 @@ object LongCoercer extends Coercer[Long] {
     case s: Short => s
     case s: String => s.toLong
     case t: Timestamp => t.getTime
+    case bigint: BigInt if bigint.isValidLong => bigint.longValue
+    case bigdec: BigDecimal if bigdec.isValidLong => bigdec.longValue
+    case bigint: java.math.BigInteger => bigint.longValueExact()
+    case bigdec: java.math.BigDecimal => bigdec.longValueExact()
   }
 }
 
@@ -130,6 +150,9 @@ object StringCoercer extends Coercer[String] {
 object BigIntegerCoercer extends Coercer[BigInt] {
   override def coerce(input: Any): BigInt = input match {
     case b: BigInt => b // pass through
+    case bigdec: BigDecimal if bigdec.isWhole => bigdec.toBigInt()
+    case bigint: java.math.BigInteger => bigint
+    case bigdec: java.math.BigDecimal => bigdec.toBigInteger
     case i: Int => BigInt(i)
     case l: Long => BigInt(l)
     case s: Short => BigInt(s)
