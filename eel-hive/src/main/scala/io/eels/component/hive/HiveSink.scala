@@ -15,9 +15,8 @@ import scala.math.BigDecimal.RoundingMode
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 object HiveSink {
-  val config: Config = ConfigFactory.load()
-  val schemaEvolutionDefault = config.getBoolean("eel.hive.sink.schemaEvolution")
-  val upperCaseAction = config.getString("eel.hive.sink.upper-case-action")
+  private val config: Config = ConfigFactory.load()
+  private val upperCaseAction = config.getString("eel.hive.sink.upper-case-action")
 }
 
 case class HiveSink(dbName: String,
@@ -97,51 +96,54 @@ case class HiveSink(dbName: String,
     login()
     upperCaseCheck(schema)
 
-    if (createTable) {
-      if (!ops.tableExists(dbName, tableName)) {
-        ops.createTable(dbName,
-          tableName,
+    // hive metastore is not good with concurrency in versions < 2.0
+    HiveOps.synchronized {
+      if (createTable) {
+        if (!ops.tableExists(dbName, tableName)) {
+          ops.createTable(dbName,
+            tableName,
+            schema,
+            partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
+            format = format.getOrElse(DefaultHiveFormat),
+            props = Map.empty,
+            tableType = TableType.MANAGED_TABLE
+          )
+        }
+      }
+
+      val metastoreSchema = ops.schema(dbName, tableName)
+      logger.trace(s"Retrieved metastore schema: $metastoreSchema")
+
+      // call the evolve method on the evolution strategy to ensure the metastore is good to go
+      logger.debug("Invoking evolution strategy to align metastore schema")
+      evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
+
+      val dialect = detectDialect
+      val partitionKeyNames = ops.partitionKeys(dbName, tableName)
+
+      List.tabulate(n) { k =>
+        new HiveSinkWriter(
           schema,
-          partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
-          format = format.getOrElse(DefaultHiveFormat),
-          props = Map.empty,
-          tableType = TableType.MANAGED_TABLE
+          metastoreSchema,
+          dbName,
+          tableName,
+          partitionKeyNames,
+          Some(k.toString),
+          dialect,
+          partitionStrategy,
+          filenameStrategy,
+          stagingStrategy,
+          evolutionStrategy,
+          alignStrategy,
+          outputSchemaStrategy,
+          inheritPermissions,
+          permission,
+          fileListener,
+          callbacks,
+          roundingMode,
+          metadata
         )
       }
-    }
-
-    val metastoreSchema = ops.schema(dbName, tableName)
-    logger.trace(s"Retrieved metastore schema: $metastoreSchema")
-
-    // call the evolve method on the evolution strategy to ensure the metastore is good to go
-    logger.debug("Invoking evolution strategy to align metastore schema")
-    evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
-
-    val dialect = detectDialect
-    val partitionKeyNames = ops.partitionKeys(dbName, tableName)
-
-    List.tabulate(n) { k =>
-      new HiveSinkWriter(
-        schema,
-        metastoreSchema,
-        dbName,
-        tableName,
-        partitionKeyNames,
-        Some(k.toString),
-        dialect,
-        partitionStrategy,
-        filenameStrategy,
-        stagingStrategy,
-        evolutionStrategy,
-        alignStrategy,
-        outputSchemaStrategy,
-        inheritPermissions,
-        permission,
-        fileListener,
-        callbacks,
-        roundingMode,
-        metadata
-      )
     }
   }
 

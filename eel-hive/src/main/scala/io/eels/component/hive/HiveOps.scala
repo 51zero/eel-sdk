@@ -10,6 +10,9 @@ import org.apache.hadoop.hive.metastore.{IMetaStoreClient, TableType}
 
 import scala.collection.JavaConverters._
 
+// used as a lock
+object HiveOps
+
 // client for operating at a low level on the metastore
 // methods in this class will accept/return eel classes, and convert
 // the operations into hive specific ones
