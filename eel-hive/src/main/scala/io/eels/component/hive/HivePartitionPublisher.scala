@@ -3,7 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.Row
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -67,6 +67,7 @@ class HivePartitionPublisher(dbName: String,
       }
 
       logger.debug(s"After scanning partitions and files we have ${rows.size} rows")
+      subscriber.subscribed(Subscription.empty)
       rows.iterator.grouped(10).foreach(subscriber.next)
       subscriber.completed()
     } catch {

@@ -9,10 +9,10 @@ class ExistsSubscriber(fn: Row => Boolean) extends Subscriber[Seq[Row]] with Log
 
   val result = new AtomicReference[Either[Throwable, Boolean]](null)
 
-  private var cancellable: Subscription = null
+  private var subscription: Subscription = null
   private var exists = false
 
-  override def subscribed(c: Subscription): Unit = this.cancellable = c
+  override def subscribed(subscription: Subscription): Unit = this.subscription = subscription
 
   override def error(t: Throwable): Unit = {
     logger.error("Subscriber received error", t)
@@ -24,9 +24,7 @@ class ExistsSubscriber(fn: Row => Boolean) extends Subscriber[Seq[Row]] with Log
       exists = t.exists(fn)
       if (exists) {
         logger.debug("Value found, cancelling rest of stream")
-        if (cancellable != null) {
-          cancellable.cancel()
-        }
+        subscription.cancel()
       }
     }
   }

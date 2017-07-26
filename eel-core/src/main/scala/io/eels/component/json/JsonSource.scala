@@ -2,10 +2,11 @@ package io.eels.component.json
 
 import java.io.InputStream
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.{ArrayType, DataType, Field, StructType}
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.codehaus.jackson.JsonNode
@@ -82,14 +83,19 @@ case class JsonSource(inputFn: () => InputStream,
     }
 
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      using(inputFn()) { input =>
-        try {
-          val iterator = reader.readValues[JsonNode](input).asScala.map(nodeToRow)
-          iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
+      try {
+        using(inputFn()) { input =>
+          val running = new AtomicBoolean(true)
+          subscriber.subscribed(Subscription.fromRunning(running))
+          reader.readValues[JsonNode](input).asScala
+            .takeWhile(_ => running.get)
+            .map(nodeToRow)
+            .grouped(DataStream.DefaultBatchSize)
+            .foreach(subscriber.next)
           subscriber.completed()
-        } catch {
-          case t: Throwable => subscriber.error(t)
         }
+      } catch {
+        case t: Throwable => subscriber.error(t)
       }
     }
   }

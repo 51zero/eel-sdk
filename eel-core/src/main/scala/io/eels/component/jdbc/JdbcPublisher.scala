@@ -1,12 +1,13 @@
 package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
 import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.datastream.{Subscription, Publisher, Subscriber}
+import io.eels.datastream.{Publisher, Subscriber, Subscription}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -30,16 +31,13 @@ class JdbcPublisher(connFn: () => Connection,
           logger.debug(s"Executing query $query")
           using(stmt.executeQuery()) { rs =>
 
-            var cancelled = false
-
-            subscriber.subscribed(new Subscription {
-              override def cancel(): Unit = cancelled = true
-            })
-
             val schema = schemaFor(dialect, rs)
 
+            val running = new AtomicBoolean(true)
+            subscriber.subscribed(Subscription.fromRunning(running))
+
             val buffer = new ArrayBuffer[Row](fetchSize)
-            while (rs.next && !cancelled) {
+            while (rs.next && running.get) {
               val values = schema.fieldNames().map { name =>
                 val raw = rs.getObject(name)
                 dialect.sanitize(raw)

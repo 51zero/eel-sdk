@@ -1,9 +1,11 @@
 package io.eels.component.orc
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{Subscription, DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -54,14 +56,13 @@ class OrcPublisher(path: Path,
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
-      var running = true
-      subscriber.subscribed(new Subscription {
-        override def cancel(): Unit = running = false
-      })
       val reader = OrcFile.createReader(path, new ReaderOptions(conf))
       val fileSchema = OrcSchemaFns.fromOrcType(reader.getSchema).asInstanceOf[StructType]
       val iterator: Iterator[Row] = OrcBatchIterator(reader, fileSchema, projection, predicate).flatten
-      iterator.grouped(DataStream.DefaultBatchSize).takeWhile(_ => running).foreach(subscriber.next)
+
+      val running = new AtomicBoolean(true)
+      subscriber.subscribed(Subscription.fromRunning(running))
+      iterator.grouped(DataStream.DefaultBatchSize).takeWhile(_ => running.get).foreach(subscriber.next)
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

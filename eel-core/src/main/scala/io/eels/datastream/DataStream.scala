@@ -409,8 +409,9 @@ trait DataStream extends Logging {
 
   def minBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
     var minRow: Row = null
-    var cancellable: Subscription = null
+    var subscription: Subscription = null
     self.subscribe(new Subscriber[Seq[Row]] {
+      override def subscribed(s: Subscription): Unit = subscription = s
       override def next(chunk: Seq[Row]): Unit = {
         chunk.foreach { row =>
           val t = fn(row)
@@ -420,16 +421,16 @@ trait DataStream extends Logging {
         }
       }
       override def completed(): Unit = ()
-      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel()
-      override def subscribed(c: Subscription): Unit = cancellable = c
+      override def error(t: Throwable): Unit = subscription.cancel()
     })
     minRow
   }
 
   def maxBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
     var maxRow: Row = null
-    var cancellable: Subscription = null
+    var subscription: Subscription = null
     self.subscribe(new Subscriber[Seq[Row]] {
+      override def subscribed(s: Subscription): Unit = subscription = s
       override def next(chunk: Seq[Row]): Unit = {
         chunk.foreach { row =>
           val t = fn(row)
@@ -439,8 +440,7 @@ trait DataStream extends Logging {
         }
       }
       override def completed(): Unit = ()
-      override def error(t: Throwable): Unit = if (cancellable != null) cancellable.cancel()
-      override def subscribed(c: Subscription): Unit = cancellable = c
+      override def error(t: Throwable): Unit = subscription.cancel()
     })
     maxRow
   }
@@ -459,6 +459,7 @@ trait DataStream extends Logging {
       override def schema: StructType = self.schema
       override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
         self.subscribe(new Subscriber[Seq[Row]] {
+          override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
           override def next(chunk: Seq[Row]): Unit = {
             subscriber.next(chunk)
             teed.publish(chunk.flatMap(fn))
@@ -470,9 +471,6 @@ trait DataStream extends Logging {
           override def error(t: Throwable): Unit = {
             subscriber.error(t)
             teed.error(t)
-          }
-          override def subscribed(c: Subscription): Unit = {
-            subscriber.subscribed(c)
           }
         })
       }
@@ -804,7 +802,7 @@ trait DataStream extends Logging {
 
     def subscribeDownstream(queues: Array[LinkedBlockingQueue[Seq[Row]]],
                             latch: CountDownLatch,
-                            cancellable: AtomicReference[Subscription]): Unit = {
+                            subscription: AtomicReference[Subscription]): Unit = {
       logger.debug("Subscribing to multiplexed parent")
       val executor = Executors.newSingleThreadExecutor()
       executor.submit(new Runnable {
@@ -812,7 +810,7 @@ trait DataStream extends Logging {
           self.subscribe(new Subscriber[Seq[Row]] {
             override def subscribed(c: Subscription): Unit = {
               logger.debug("Multiplexed parent has started")
-              cancellable.set(c)
+              subscription.set(c)
               latch.countDown()
             }
             override def next(t: Seq[Row]): Unit = queues.foreach(_.put(t))
@@ -836,7 +834,7 @@ trait DataStream extends Logging {
 
     val subscribed = new AtomicBoolean(false)
     val latch = new CountDownLatch(1)
-    val cancellable = new AtomicReference[Subscription](null)
+    val subscription = new AtomicReference[Subscription](null)
 
     Seq.tabulate(count) { k =>
       new DataStream {
@@ -848,14 +846,14 @@ trait DataStream extends Logging {
         override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
 
           if (subscribed.compareAndSet(false, true)) {
-            subscribeDownstream(queues, latch, cancellable)
+            subscribeDownstream(queues, latch, subscription)
           }
 
           // all subscribers will block until it has started downstream
           latch.await()
 
           try {
-            subscriber.subscribed(cancellable.get)
+            subscriber.subscribed(subscription.get)
             BlockingQueueConcurrentIterator(queues(k), Row.Sentinel).foreach(subscriber.next)
             subscriber.completed()
           } catch {

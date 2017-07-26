@@ -1,12 +1,13 @@
 package io.eels.component.csv
 
 import java.io.InputStream
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.univocity.parsers.csv.CsvParser
 import io.eels.Row
-import io.eels.datastream.{DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 
 class CsvPublisher(createParser: () => CsvParser,
@@ -20,28 +21,33 @@ class CsvPublisher(createParser: () => CsvParser,
     case _ => 0
   }
 
+
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-    using(inputFn()) { input =>
+    val input = inputFn()
+    val parser = createParser()
 
-      val parser = createParser()
+    try {
+      parser.beginParsing(input)
 
-      try {
+      val running = new AtomicBoolean(true)
+      subscriber.subscribed(Subscription.fromRunning(running))
 
-        parser.beginParsing(input)
+      Iterator.continually(parser.parseNext)
+        .takeWhile(_ != null)
+        .takeWhile(_ => running.get)
+        .drop(rowsToSkip)
+        .map { records => Row(schema, records.toVector) }
+        .grouped(DataStream.DefaultBatchSize)
+        .foreach(subscriber.next)
 
-        val iterator = Iterator.continually(parser.parseNext).takeWhile(_ != null).drop(rowsToSkip).map { records =>
-          Row(schema, records.toVector)
-        }
+      subscriber.completed()
 
-        iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
-        subscriber.completed()
+    } catch {
+      case t: Throwable => subscriber.error(t)
 
-      } catch {
-        case t: Throwable => subscriber.error(t)
-      } finally {
-        parser.stopParsing()
-        input.close()
-      }
+    } finally {
+      parser.stopParsing()
+      input.close()
     }
   }
 }

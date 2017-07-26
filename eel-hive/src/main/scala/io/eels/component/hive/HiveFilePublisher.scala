@@ -43,6 +43,7 @@ class HiveFilePublisher(dialect: HiveDialect,
     // we also need to throw away the dummy field if we had an empty schema
     val publisher = dialect.input(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
     publisher.subscribe(new Subscriber[Seq[Row]] {
+      override def subscribed(s: Subscription): Unit = subscriber.subscribed(s)
       override def next(chunk: Seq[Row]): Unit = {
         val aligned = chunk.map { row =>
           if (projectionFields.isEmpty) {
@@ -54,7 +55,6 @@ class HiveFilePublisher(dialect: HiveDialect,
         }
         subscriber.next(aligned)
       }
-      override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
       override def completed(): Unit = subscriber.completed()
       override def error(t: Throwable): Unit = subscriber.error(t)
     })

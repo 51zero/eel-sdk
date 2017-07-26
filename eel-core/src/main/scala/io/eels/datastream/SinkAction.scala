@@ -19,12 +19,12 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val executor = Executors.newFixedThreadPool(parallelism)
     val queue = new LinkedBlockingQueue[Seq[Row]](DataStream.DefaultBufferSize)
     val completed = new AtomicLong(0)
-    var dscancellable: Subscription = null
+    var subscription: Subscription = null
 
     val subscriber = new Subscriber[Seq[Row]] {
-      override def subscribed(c: Subscription): Unit = {
-        logger.debug(s"Subscribing to datastream for sink action [cancellable=$c]")
-        dscancellable = c
+      override def subscribed(sub: Subscription): Unit = {
+        logger.debug(s"Subscribing to datastream for sink action [subscription=$sub]")
+        subscription = sub
       }
 
       override def next(chunk: Seq[Row]): Unit = {
@@ -45,8 +45,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
         queue.clear()
         queue.put(Row.Sentinel)
         executor.shutdownNow()
-        if (dscancellable != null)
-          dscancellable.cancel()
+        subscription.cancel()
       }
     }
 
@@ -70,7 +69,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
               queue.clear()
               queue.put(Row.Sentinel)
               failure.set(t)
-              dscancellable.cancel()
+              subscription.cancel()
           }
           logger.info(s"Ending thread writer $k")
         }

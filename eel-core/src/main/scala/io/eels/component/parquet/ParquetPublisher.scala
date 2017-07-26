@@ -1,10 +1,12 @@
 package io.eels.component.parquet
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetIterator
-import io.eels.datastream.{Subscription, DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -42,17 +44,18 @@ class ParquetPublisher(path: Path,
   }
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-    using(RowParquetReaderFn(path, predicate, readSchema, dictionaryFiltering)) { reader =>
-      try {
-        var cancelled = false
-        subscriber.subscribed(new Subscription {
-          override def cancel(): Unit = cancelled = true
-        })
-        ParquetIterator(reader).takeWhile(_ => !cancelled).grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
+    try {
+      using(RowParquetReaderFn(path, predicate, readSchema, dictionaryFiltering)) { reader =>
+        val running = new AtomicBoolean(true)
+        subscriber.subscribed(Subscription.fromRunning(running))
+        ParquetIterator(reader)
+          .takeWhile(_ => running.get)
+          .grouped(DataStream.DefaultBatchSize)
+          .foreach(subscriber.next)
         subscriber.completed()
-      } catch {
-        case t: Throwable => subscriber.error(t)
       }
+    } catch {
+      case t: Throwable => subscriber.error(t)
     }
   }
 }

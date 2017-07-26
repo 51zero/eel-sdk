@@ -1,11 +1,12 @@
 package io.eels.component.avro
 
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
-import io.eels.datastream.{DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -24,13 +25,21 @@ case class AvroSource(path: Path)
 }
 
 case class AvroSourcePublisher(path: Path)
-                              (implicit conf: Configuration, fs: FileSystem) extends Publisher[Seq[Row]] with Logging {
+                              (implicit conf: Configuration, fs: FileSystem)
+  extends Publisher[Seq[Row]] with Logging with Using {
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    val deserializer = new AvroDeserializer()
     try {
-      val deserializer = new AvroDeserializer()
-      val reader = AvroReaderFns.createAvroReader(path)
-      AvroRecordIterator(reader).map(deserializer.toRow).grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
-      subscriber.completed()
+      using(AvroReaderFns.createAvroReader(path)) { reader =>
+        val running = new AtomicBoolean(true)
+        subscriber.subscribed(Subscription.fromRunning(running))
+        AvroRecordIterator(reader)
+          .takeWhile(_ => running.get)
+          .map(deserializer.toRow)
+          .grouped(DataStream.DefaultBatchSize)
+          .foreach(subscriber.next)
+        subscriber.completed()
+      }
     } catch {
       case t: Throwable => subscriber.error(t)
     }

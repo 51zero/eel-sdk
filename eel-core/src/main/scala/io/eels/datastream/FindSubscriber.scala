@@ -9,10 +9,10 @@ class FindSubscriber(p: Row => Boolean) extends Subscriber[Seq[Row]] with Loggin
 
   val result = new AtomicReference[Either[Throwable, Option[Row]]](null)
 
-  private var cancellable: Subscription = null
+  private var subscription: Subscription = null
   private var value: Option[Row] = None
 
-  override def subscribed(c: Subscription): Unit = this.cancellable = c
+  override def subscribed(c: Subscription): Unit = this.subscription = c
 
   override def error(t: Throwable): Unit = {
     logger.error("Subscriber received error", t)
@@ -24,9 +24,7 @@ class FindSubscriber(p: Row => Boolean) extends Subscriber[Seq[Row]] with Loggin
       value = t.find(p)
       if (value.isDefined) {
         logger.debug("Value found, cancelling rest of stream")
-        if (cancellable != null) {
-          cancellable.cancel()
-        }
+        subscription.cancel()
       }
     }
   }

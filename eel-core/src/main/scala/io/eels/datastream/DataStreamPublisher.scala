@@ -3,6 +3,7 @@ package io.eels.datastream
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicMarkableReference, AtomicReference}
 
+import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.Row
 import io.eels.schema.StructType
 
@@ -16,20 +17,21 @@ import io.eels.schema.StructType
 class DataStreamPublisher(override val schema: StructType) extends DataStream {
 
   private val queue = new LinkedBlockingQueue[Seq[Row]]
-  private val _isCancelled = new AtomicBoolean(false)
+  private val running = new AtomicBoolean(true)
   private val failure = new AtomicReference[Throwable](null)
 
-  def isCancelled: Boolean = _isCancelled.get
+  def isCancelled: Boolean = !running.get
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
       subscriber.subscribed(new Subscription {
         override def cancel(): Unit = {
+          queue.clear()
           queue.put(Row.Sentinel)
-          _isCancelled.set(true)
+          running.set(false)
         }
       })
-      Iterator.continually(queue.take).takeWhile(_ != Row.Sentinel).foreach(subscriber.next)
+      BlockingQueueConcurrentIterator(queue, Row.Sentinel).takeWhile(_ => running.get).foreach(subscriber.next)
       failure.get match {
         case t: Throwable => subscriber.error(t)
         case _ => subscriber.completed()

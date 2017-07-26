@@ -1,8 +1,10 @@
 package io.eels.component.elasticsearch
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.sksamuel.elastic4s.http.HttpClient
 import com.sksamuel.elastic4s.http.search.SearchIterator
-import io.eels.datastream.{Publisher, Subscriber}
+import io.eels.datastream.{Publisher, Subscriber, Subscription}
 import io.eels.schema.{Field, StructType}
 import io.eels.{Row, Source}
 
@@ -33,13 +35,18 @@ class ElasticsearchPublisher(index: String)(implicit client: HttpClient) extends
 
   override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
-      SearchIterator.hits(client, search(index).matchAllQuery.keepAlive("1m").size(50)).grouped(50).foreach { batch =>
-        val chunk = batch.map { hit =>
-          val schema = StructType(hit.fields.keys.map { key => Field(key) }.toSeq)
-          Row(schema, hit.fields.values.toVector)
+      val running = new AtomicBoolean(true)
+      subscriber.subscribed(Subscription.fromRunning(running))
+      SearchIterator.hits(client, search(index).matchAllQuery.keepAlive("1m").size(50))
+        .takeWhile(_ => running.get)
+        .grouped(50)
+        .foreach { batch =>
+          val chunk = batch.map { hit =>
+            val schema = StructType(hit.fields.keys.map { key => Field(key) }.toSeq)
+            Row(schema, hit.fields.values.toVector)
+          }
+          subscriber.next(chunk)
         }
-        subscriber.next(chunk)
-      }
       subscriber.completed()
     } catch {
       case t: Throwable => subscriber.error(t)

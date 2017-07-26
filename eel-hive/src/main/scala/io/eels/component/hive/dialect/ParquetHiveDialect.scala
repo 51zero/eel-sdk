@@ -35,10 +35,10 @@ class ParquetHiveDialect extends HiveDialect with Logging with Using {
       try {
         val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
         using(RowParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)) { reader =>
-          val cancellable = new Subscription {
+          val subscription = new Subscription {
             override def cancel(): Unit = reader.close()
           }
-          subscriber.subscribed(cancellable)
+          subscriber.subscribed(subscription)
           ParquetIterator(reader).grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
           subscriber.completed()
         }

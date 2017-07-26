@@ -1,8 +1,10 @@
 package io.eels.component.kudu
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
-import io.eels.datastream.{DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema._
 import io.eels.{Row, Source}
 import org.apache.kudu.client.{KuduClient, KuduScanner, RowResultIterator}
@@ -31,7 +33,9 @@ case class KuduSource(tableName: String)(implicit client: KuduClient) extends So
 
       try {
         val iterator = new ScannerIterator(scanner, schema)
-        iterator.grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
+        val running = new AtomicBoolean(true)
+        subscriber.subscribed(Subscription.fromRunning(running))
+        iterator.takeWhile(_ => running.get).grouped(DataStream.DefaultBatchSize).foreach(subscriber.next)
         subscriber.completed()
       } catch {
         case t: Throwable => subscriber.error(t)
