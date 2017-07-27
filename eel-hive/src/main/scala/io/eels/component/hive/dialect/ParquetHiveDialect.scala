@@ -8,7 +8,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.hive.{HiveDialect, HiveOps, HiveOutputStream}
 import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
-import io.eels.datastream.{Subscription, DataStream, Publisher, Subscriber}
+import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
@@ -16,10 +16,16 @@ import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
+import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+import org.apache.hadoop.hive.ql.io.parquet.{MapredParquetInputFormat, MapredParquetOutputFormat}
 
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
-class ParquetHiveDialect extends HiveDialect with Logging with Using {
+case class ParquetHiveDialect(options: ParquetWriteOptions = ParquetWriteOptions()) extends HiveDialect with Logging with Using {
+
+  override val serde: String = classOf[ParquetHiveSerDe].getCanonicalName
+  override val inputFormat: String = classOf[MapredParquetInputFormat].getCanonicalName
+  override val outputFormat: String = classOf[MapredParquetOutputFormat].getCanonicalName
 
   override def input(path: Path,
                      ignore: StructType,
@@ -81,5 +87,3 @@ class ParquetHiveDialect extends HiveDialect with Logging with Using {
     }
   }
 }
-
-case class FileStats(count: Long, min: Any, max: Any)

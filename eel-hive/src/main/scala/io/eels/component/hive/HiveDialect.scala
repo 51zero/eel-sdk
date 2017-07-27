@@ -1,7 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
-import io.eels.component.hive.dialect.{AvroHiveDialect, OrcHiveDialect, ParquetHiveDialect}
+import io.eels.component.hive.dialect.{OrcHiveDialect, ParquetHiveDialect}
 import io.eels.datastream.Publisher
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
@@ -13,6 +13,10 @@ import org.apache.hadoop.hive.metastore.api.Table
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 trait HiveDialect extends Logging {
+
+  def serde: String
+  def inputFormat: String
+  def outputFormat: String
 
   /**
     * @param path where to load the data from
@@ -60,9 +64,9 @@ trait HiveDialect extends Logging {
 object HiveDialect extends Logging {
 
   def apply(format: String): HiveDialect = format match {
-    case input if input.contains("ParquetInputFormat") => new ParquetHiveDialect
-    case input if input.contains("OrcInputFormat") => new OrcHiveDialect
-    case input if input.contains("AvroHiveDialect") || input.contains("AvroContainerInputFormat") => AvroHiveDialect
+    case input if input.contains("ParquetInputFormat") => ParquetHiveDialect()
+    case input if input.contains("OrcInputFormat") => OrcHiveDialect()
+    //case input if input.contains("AvroHiveDialect") || input.contains("AvroContainerInputFormat") => AvroHiveDialect
     //      "org.apache.hadoop.mapred.TextInputFormat" -> TextHiveDialect
     case _ => throw new UnsupportedOperationException(s"Unknown hive input format $format")
   }

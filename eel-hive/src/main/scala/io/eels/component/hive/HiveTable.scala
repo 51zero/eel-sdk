@@ -7,8 +7,9 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import io.eels.component.hdfs.{AclSpec, HdfsSource}
+import io.eels.component.hive.dialect.ParquetHiveDialect
 import io.eels.component.hive.partition.PartitionMetaData
-import io.eels.datastream.{Subscription, Subscriber}
+import io.eels.datastream.{Subscriber, Subscription}
 import io.eels.schema.{Partition, PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{FilePattern, Row}
@@ -71,14 +72,14 @@ case class HiveTable(dbName: String,
   def create(schema: StructType,
              partitionFields: Seq[String] = Nil,
              tableType: TableType = TableType.MANAGED_TABLE,
-             format: HiveFormat = HiveFormat.Parquet,
+             dialect: HiveDialect = ParquetHiveDialect(),
              props: Map[String, String] = Map.empty): Unit = {
     if (!ops.tableExists(dbName, tableName)) {
       ops.createTable(dbName,
         tableName,
         schema,
         partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
-        format = format,
+        dialect = dialect,
         props = props,
         tableType = tableType
       )

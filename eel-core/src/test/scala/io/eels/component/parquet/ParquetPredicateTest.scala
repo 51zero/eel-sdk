@@ -53,7 +53,7 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     if (fs.exists(path))
       fs.delete(path, false)
 
-    ds.to(ParquetSink(path).withDictionary(false))
+    ds.to(ParquetSink(path))
 
     val source = ParquetSource(path)
       .withDictionaryFiltering(false)

@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import io.eels.Constants
+import io.eels.component.hive.dialect.ParquetHiveDialect
 import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.schema._
 import org.apache.hadoop.fs.Path
@@ -202,7 +203,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
                   tableName: String,
                   schema: StructType,
                   partitionKeys: Seq[String],
-                  format: HiveFormat = HiveFormat.Text,
+                  dialect: HiveDialect = ParquetHiveDialect(),
                   props: Map[String, String] = Map.empty,
                   tableType: TableType = TableType.MANAGED_TABLE,
                   location: String = null,
@@ -236,11 +237,11 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
       sd.setCols(lowerColumns.filterNot { it => lowerPartitionKeys.contains(it.name) }.map(HiveSchemaFns.toHiveField).asJava)
       sd.setSerdeInfo(new SerDeInfo(
         null,
-        format.serde,
+        dialect.serde,
         Map("serialization.format" -> "1").asJava
       ))
-      sd.setInputFormat(format.inputFormat)
-      sd.setOutputFormat(format.outputFormat)
+      sd.setInputFormat(dialect.inputFormat)
+      sd.setOutputFormat(dialect.outputFormat)
       sd.setLocation(location)
 
       val table = new Table()

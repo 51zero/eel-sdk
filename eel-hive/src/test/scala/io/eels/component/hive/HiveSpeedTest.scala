@@ -4,9 +4,6 @@ import com.sksamuel.exts.metrics.Timed
 import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.permission.FsPermission
-import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
 import scala.util.Random
 
@@ -28,15 +25,7 @@ import scala.util.Random
   */
 object HiveSpeedTest extends App with Timed {
 
-  val conf = new HiveConf()
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
-  conf.reloadConfiguration()
-
-  implicit val client = new HiveMetaStoreClient(conf)
-  implicit val ops = new HiveOps(client)
-  implicit val fs = FileSystem.get(conf)
+  import HiveConfig._
 
   val Database = "sam"
   val Table = "speedtest"
@@ -65,7 +54,6 @@ object HiveSpeedTest extends App with Timed {
       Table,
       ds.schema,
       List("artist"),
-      format = HiveFormat.Parquet,
       overwrite = true
     )
 

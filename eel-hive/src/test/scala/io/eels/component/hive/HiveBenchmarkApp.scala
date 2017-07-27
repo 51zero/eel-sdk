@@ -66,18 +66,7 @@ object HiveBenchmarkApp extends App with Timed {
     "Wisconsin",
     "Wyoming").map(_.replace(' ', '_').toLowerCase)
 
-  val conf = new Configuration
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.reloadConfiguration()
-
-  implicit val fs = FileSystem.get(conf)
-
-  implicit val hiveConf = new HiveConf()
-  hiveConf.addResource(new Path("/home/sam/development/hive-1.2.1-bin/conf/hive-site.xml"))
-  hiveConf.reloadConfiguration()
-
-  implicit val client = new HiveMetaStoreClient(hiveConf)
+  import HiveConfig._
 
   val schema = StructType("id", "state")
   val rows = List.fill(1000000)(List(UUID.randomUUID.toString, states(Random.nextInt(50))))
@@ -89,7 +78,6 @@ object HiveBenchmarkApp extends App with Timed {
     "people",
     schema,
     List("state"),
-    format = HiveFormat.Parquet,
     overwrite = true
   )
 

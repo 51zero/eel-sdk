@@ -5,10 +5,6 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 
-trait HiveConfig {
-
-}
-
 object HiveConfig {
 
   implicit val conf = new Configuration

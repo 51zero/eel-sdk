@@ -4,7 +4,7 @@ import java.io.File
 
 import io.eels.Row
 import io.eels.datastream.DataStream
-import io.eels.schema.{Field, IntType, PartitionConstraint, StringType, StructType}
+import io.eels.schema._
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.util.{Random, Try}
@@ -13,9 +13,9 @@ class HiveStatsTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   import HiveConfig._
 
-  val dbname = "sam"
-  val table = "stats_test_" + System.currentTimeMillis()
-  val partitioned_table = "stats_test2_" + System.currentTimeMillis()
+  private val dbname = "sam"
+  private val table = "stats_test_" + System.currentTimeMillis()
+  private val partitioned_table = "stats_test2_" + System.currentTimeMillis()
 
   val schema = StructType(
     Field("a", StringType),

@@ -11,8 +11,8 @@ class HiveEvolutionTest extends FunSuite with Matchers {
 
   import HiveConfig._
 
-  val dbname = "sam"
-  val table = "evolution_test_" + System.currentTimeMillis()
+  private val dbname = "sam"
+  private val table = "evolution_test_" + System.currentTimeMillis()
 
   test("allow columns to be added to a hive table") {
     assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)

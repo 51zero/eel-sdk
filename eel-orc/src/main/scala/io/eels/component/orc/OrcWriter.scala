@@ -18,9 +18,7 @@ import scala.collection.mutable.ArrayBuffer
 // performs the actual write out of orc data, to be used by an orc sink
 class OrcWriter(path: Path,
                 structType: StructType,
-                bloomFilterColumns: Seq[String],
-                rowIndexStride: Option[Int],
-                config: OrcSinkConfig)(implicit conf: Configuration) extends Logging {
+                options: OrcWriteOptions)(implicit conf: Configuration) extends Logging {
 
   private val schema: TypeDescription = OrcSchemaFns.toOrcSchema(structType)
   logger.trace(s"Creating orc writer for schema $schema")
@@ -29,29 +27,29 @@ class OrcWriter(path: Path,
     val size = ConfigFactory.load().getInt("eel.orc.sink.batchSize")
     Math.max(Math.min(1024, size), 1)
   }
-  logger.info(s"Orc writer will use batchsize=$batchSize")
+  logger.debug(s"Orc writer will use batchsize=$batchSize")
 
   private val buffer = new ArrayBuffer[Row](batchSize)
   private val serializers = schema.getChildren.asScala.map(OrcSerializer.forType).toArray
   private val batch = schema.createRowBatch(batchSize)
 
-  OrcConf.COMPRESSION_STRATEGY.setString(conf, config.compressionStrategy.name)
-  OrcConf.COMPRESS.setString(conf, config.compressionKind.name)
-  config.encodingStrategy.map(_.name).foreach(OrcConf.ENCODING_STRATEGY.setString(conf, _))
-  config.compressionBufferSize.foreach(OrcConf.BUFFER_SIZE.setLong(conf, _))
-  private val options = OrcFile.writerOptions(conf).setSchema(schema)
+  OrcConf.COMPRESSION_STRATEGY.setString(conf, options.compressionStrategy.name)
+  OrcConf.COMPRESS.setString(conf, options.compressionKind.name)
+  options.encodingStrategy.map(_.name).foreach(OrcConf.ENCODING_STRATEGY.setString(conf, _))
+  options.compressionBufferSize.foreach(OrcConf.BUFFER_SIZE.setLong(conf, _))
+  private val woptions = OrcFile.writerOptions(conf).setSchema(schema)
 
-  rowIndexStride.foreach { size =>
-    options.rowIndexStride(size)
-    logger.info(s"Using stride size = $size")
+  options.rowIndexStride.foreach { size =>
+    woptions.rowIndexStride(size)
+    logger.debug(s"Using stride size = $size")
   }
 
-  if (bloomFilterColumns.nonEmpty) {
-    options.bloomFilterColumns(bloomFilterColumns.mkString(","))
-    logger.info(s"Using bloomFilterColumns = $bloomFilterColumns")
+  if (options.bloomFilterColumns.nonEmpty) {
+    woptions.bloomFilterColumns(options.bloomFilterColumns.mkString(","))
+    logger.debug(s"Using bloomFilterColumns = $options.bloomFilterColumns")
   }
 
-  private lazy val writer = OrcFile.createWriter(path, options)
+  private lazy val writer = OrcFile.createWriter(path, woptions)
 
   private val _records = new AtomicInteger(0)
 

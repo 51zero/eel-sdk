@@ -2,17 +2,22 @@ package io.eels.component.hive.dialect
 
 import com.sksamuel.exts.Logging
 import io.eels.component.hive.{HiveDialect, HiveOutputStream}
-import io.eels.component.orc.{OrcPublisher, OrcSinkConfig, OrcWriter}
+import io.eels.component.orc.{OrcPublisher, OrcWriteOptions, OrcWriter}
 import io.eels.datastream.{Publisher, Subscriber}
 import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.hive.ql.io.orc.{OrcInputFormat, OrcOutputFormat, OrcSerde}
 
 import scala.math.BigDecimal.RoundingMode.RoundingMode
 
-class OrcHiveDialect extends HiveDialect with Logging {
+case class OrcHiveDialect(options: OrcWriteOptions = OrcWriteOptions()) extends HiveDialect with Logging {
+
+  override val serde: String = classOf[OrcSerde].getCanonicalName
+  override val inputFormat: String = classOf[OrcInputFormat].getCanonicalName
+  override val outputFormat: String = classOf[OrcOutputFormat].getCanonicalName
 
   override def input(path: Path,
                      metastoreSchema: StructType,
@@ -31,7 +36,7 @@ class OrcHiveDialect extends HiveDialect with Logging {
                       metadata: Map[String, String])(implicit fs: FileSystem, conf: Configuration): HiveOutputStream = {
 
     val path_x = path
-    val writer = new OrcWriter(path, schema, Nil, None, OrcSinkConfig())
+    val writer = new OrcWriter(path, schema, Nil, None, OrcWriteOptions())
 
     new HiveOutputStream {
 

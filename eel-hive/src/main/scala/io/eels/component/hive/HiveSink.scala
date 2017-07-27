@@ -3,6 +3,7 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.{Config, ConfigFactory}
+import io.eels.component.hive.dialect.ParquetHiveDialect
 import io.eels.component.hive.partition.{DynamicPartitionStrategy, PartitionStrategy}
 import io.eels.schema.StructType
 import io.eels.{Sink, SinkWriter}
@@ -24,7 +25,6 @@ case class HiveSink(dbName: String,
                     permission: Option[FsPermission] = None,
                     inheritPermissions: Option[Boolean] = None,
                     principal: Option[String] = None,
-                    format: Option[HiveFormat] = None,
                     partitionFields: Seq[String] = Nil,
                     partitionStrategy: PartitionStrategy = new DynamicPartitionStrategy,
                     filenameStrategy: FilenameStrategy = DefaultFilenameStrategy,
@@ -35,6 +35,8 @@ case class HiveSink(dbName: String,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
+                   // dialect used to create a new table, for existing tables the dialect will always be detected
+                    dialect: Option[HiveDialect] = None,
                     callbacks: Seq[CommitCallback] = Nil,
                     roundingMode: RoundingMode = RoundingMode.UNNECESSARY,
                     metadata: Map[String, String] = Map.empty)
@@ -44,12 +46,11 @@ case class HiveSink(dbName: String,
 
   implicit private val conf = fs.getConf
   private val ops = new HiveOps(client)
-  private val DefaultHiveFormat = HiveFormat.Parquet
 
   def withCreateTable(createTable: Boolean,
                       partitionFields: Seq[String] = Nil,
-                      format: HiveFormat = DefaultHiveFormat): HiveSink =
-    copy(createTable = createTable, partitionFields = partitionFields, format = format.some)
+                      dialect: HiveDialect = ParquetHiveDialect()): HiveSink =
+    copy(createTable = createTable, partitionFields = partitionFields, dialect = dialect.some)
 
   def withPermission(permission: FsPermission): HiveSink = copy(permission = Option(permission))
   def withInheritPermission(inheritPermissions: Boolean): HiveSink = copy(inheritPermissions = Option(inheritPermissions))
@@ -92,18 +93,18 @@ case class HiveSink(dbName: String,
 
   override def open(schema: StructType): SinkWriter = open(schema, 1).head
 
+  // hive metastore is not good with concurrency in versions < 2.0
   override def open(schema: StructType, n: Int): Seq[SinkWriter] = client.synchronized {
     login()
     upperCaseCheck(schema)
 
-    // hive metastore is not good with concurrency in versions < 2.0
     if (createTable) {
       if (!ops.tableExists(dbName, tableName)) {
         ops.createTable(dbName,
           tableName,
           schema,
           partitionKeys = schema.partitions.map(_.name.toLowerCase) ++ partitionFields,
-          format = format.getOrElse(DefaultHiveFormat),
+          dialect = dialect.getOrElse(ParquetHiveDialect()),
           props = Map.empty,
           tableType = TableType.MANAGED_TABLE
         )
@@ -117,7 +118,7 @@ case class HiveSink(dbName: String,
     logger.debug("Invoking evolution strategy to align metastore schema")
     evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
 
-    val dialect = detectDialect
+    val readDialect = detectDialect
     val partitionKeyNames = ops.partitionKeys(dbName, tableName)
 
     List.tabulate(n) { k =>
@@ -128,7 +129,7 @@ case class HiveSink(dbName: String,
         tableName,
         partitionKeyNames,
         Some(k.toString),
-        dialect,
+        readDialect,
         partitionStrategy,
         filenameStrategy,
         stagingStrategy,

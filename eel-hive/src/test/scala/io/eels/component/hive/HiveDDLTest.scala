@@ -1,5 +1,6 @@
 package io.eels.component.hive
 
+import io.eels.component.hive.dialect.ParquetHiveDialect
 import io.eels.schema._
 import org.scalatest.{FunSuite, Matchers}
 
@@ -100,7 +101,7 @@ class HiveDDLTest extends FunSuite with Matchers {
   test("should allow implict from schema") {
     val schema = StructType(fields)
     import HiveDDL._
-    schema.showDDL("mytab", format = HiveFormat.Parquet) shouldBe
+    schema.showDDL("mytab", dialect = ParquetHiveDialect()) shouldBe
       "CREATE TABLE IF NOT EXISTS `mytab` (\n   `str` string,\n   `i` bigint,\n   `b` boolean)\nROW FORMAT SERDE\n   'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'\nSTORED AS INPUTFORMAT\n   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'\nOUTPUTFORMAT\n   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'"
   }
 }

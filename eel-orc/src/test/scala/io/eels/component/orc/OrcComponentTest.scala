@@ -145,7 +145,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
 
       val path = new Path("overwrite_test.orc")
       frame.to(OrcSink(path))
-      frame.to(OrcSink(path, true))
+      frame.to(OrcSink(path).withOverwrite(true))
       fs.delete(path, false)
     }
     "support permissions" in {

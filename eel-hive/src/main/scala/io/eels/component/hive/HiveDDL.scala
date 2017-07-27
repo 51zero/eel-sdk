@@ -47,18 +47,18 @@ object HiveDDL {
                 tableType: TableType = TableType.MANAGED_TABLE,
                 partitions: Seq[PartitionColumn] = Nil,
                 location: Option[String] = None,
-                format: HiveFormat,
+                dialect: HiveDialect,
                 props: Map[String, String] = Map.empty,
                 tableComment: Option[String] = None,
-                ifNotExists: Boolean = true) = {
+                ifNotExists: Boolean = true): String = {
       HiveDDL.showDDL(tableName,
         schema.fields,
         tableType,
         partitions,
         location,
-        format.serde,
-        format.inputFormat,
-        format.outputFormat,
+        dialect.serde,
+        dialect.inputFormat,
+        dialect.outputFormat,
         props,
         tableComment,
         ifNotExists)
