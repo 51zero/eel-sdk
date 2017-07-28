@@ -3,10 +3,11 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
-import io.eels.Row
+import io.eels.{Listener, Row}
+import io.eels.datastream.DataStream
 import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
 
-import scala.util.Random
+import scala.util.{Random, Try}
 
 object HiveDataApp extends App with Timed {
 
@@ -77,7 +78,7 @@ object HiveDataApp extends App with Timed {
   )
   def createRow = Row(schema, Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean))
 
-  val size = 1000 * 1000 * 100
+  val size = 1000 * 1000 * 1000
 
   //  for (_ <- 1 to 5) {
   //    timed("Orc write complete") {
@@ -96,23 +97,23 @@ object HiveDataApp extends App with Timed {
   //      Thread.sleep(1000)
   //    }
 
-//  timed("Parquet write complete") {
-//    HiveTable(Database, Table).drop()
-//
-//
-//    val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Parquet)
-//
-//    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(new Listener {
-//      var count = 0
-//      override def onNext(row: Row): Unit = {
-//        count = count + 1
-//        if (count % 10000 == 0) logger.info("Count=" + count)
-//      }
-//    }).to(sink, 4)
-//
-//    Thread.sleep(1000)
-//  }
-  //  }
+  def listener = new Listener {
+    var count = 0
+    override def onNext(row: Row): Unit = {
+      count = count + 1
+      if (count % 100000 == 0) logger.info("Count=" + count)
+    }
+  }
+
+  timed("Parquet write complete") {
+    Try {
+      HiveTable(Database, Table).drop()
+    }
+
+    val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Parquet)
+
+    DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(listener).to(sink, 4)
+  }
 
   val table = new HiveOps(client).tablePath(Database, Table)
   logger.info("table:" + table)
@@ -120,8 +121,11 @@ object HiveDataApp extends App with Timed {
   val partitions = new HiveOps(client).hivePartitions(Database, Table)
   logger.info("Partitions:" + partitions)
 
-  HiveTable(Database, Table2).drop()
-  HiveSource(Database, Table).toDataStream.to(HiveSink(Database, Table2).withCreateTable(true))
+  Try {
+    HiveTable(Database, Table2).drop()
+  }
+
+  HiveSource(Database, Table).toDataStream.listener(listener).to(HiveSink(Database, Table2).withCreateTable(true), 8)
 
   logger.info("Row count from stats: " + HiveTable(Database, Table).stats)
   logger.info("Row count from stats: " + HiveTable(Database, Table2).stats)

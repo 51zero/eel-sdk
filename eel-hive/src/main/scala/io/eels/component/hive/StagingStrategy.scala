@@ -2,6 +2,10 @@ package io.eels.component.hive
 
 import org.apache.hadoop.fs.{FileSystem, Path}
 
+trait StagingStrategy2 {
+
+}
+
 trait StagingStrategy {
 
   /**

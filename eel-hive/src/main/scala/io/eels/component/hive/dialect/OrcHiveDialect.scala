@@ -36,7 +36,7 @@ case class OrcHiveDialect(options: OrcWriteOptions = OrcWriteOptions()) extends 
                       metadata: Map[String, String])(implicit fs: FileSystem, conf: Configuration): HiveOutputStream = {
 
     val path_x = path
-    val writer = new OrcWriter(path, schema, Nil, None, OrcWriteOptions())
+    val writer = new OrcWriter(path, schema, options)
 
     new HiveOutputStream {
 
