@@ -409,6 +409,7 @@ trait DataStream extends Logging {
   // returns a new DataStream with any rows that contain one or more nulls excluded
   def dropNullRows(): DataStream = filterNot(_.values.contains(null))
 
+  def dropField(fieldName: String, caseSensitive: Boolean = true): DataStream = dropField(fieldName, caseSensitive)
   def removeField(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
@@ -419,6 +420,27 @@ trait DataStream extends Logging {
           subscriber next t.map { row =>
             val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
             Row(newSchema, newValues)
+          }
+        }
+      })
+    }
+  }
+
+  def dropFieldIfExists(fieldName: String, caseSensitive: Boolean = true): DataStream = removeFieldIfExists(fieldName, caseSensitive)
+  def removeFieldIfExists(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
+    override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      val index = self.schema.indexOf(fieldName, caseSensitive)
+      val newSchema = schema
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          subscriber next t.map { row =>
+            if (index >= 0) {
+              val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
+              Row(newSchema, newValues)
+            } else {
+              row
+            }
           }
         }
       })
