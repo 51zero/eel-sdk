@@ -27,6 +27,7 @@ object RowPartitionFn extends Logging {
       try {
         val value = row.values(index)
         require(value != null, s"Partition value cannot be null for $fieldName")
+        require(value.toString.trim.nonEmpty, s"Partition value cannot be empty for $fieldName")
         require(!value.toString.contains(" "), s"Values for partitions cannot contain spaces $fieldName=$value (index $index)")
         PartitionEntry(fieldName, value.toString)
       } catch {
