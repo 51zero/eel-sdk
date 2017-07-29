@@ -515,6 +515,7 @@ trait DataStream extends Logging {
     * For each row, the value corresponding to the given fieldName is applied to the function.
     * The result of the function is the new value for that cell.
     */
+  def update(fieldName: String, fn: Any => Any): DataStream = replace(fieldName, fn)
   def replace(fieldName: String, fn: (Any) => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
