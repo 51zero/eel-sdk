@@ -1,5 +1,6 @@
 package io.eels
 
+import com.sksamuel.exts.OptionImplicits._
 import io.eels.schema.{Field, StringType, StructType}
 
 object Row {
@@ -36,21 +37,41 @@ case class Row(schema: StructType, values: Seq[Any]) {
   def apply(name: String): Any = get(name)
 
   def get(k: Int): Any = values(k)
-  def getAs[T](name: String, caseInsensitive: Boolean = false): T = get(name, caseInsensitive).asInstanceOf[T]
-  def get(name: String, caseInsensitive: Boolean = false): Any = {
-    val index = schema.indexOf(name, caseInsensitive)
-    if (index < 0)
-      sys.error(s"$name did not exist in row")
-    values(index)
+  def getOpt(name: String, caseSensitive: Boolean = true): Option[Any] = {
+    val index = schema.indexOf(name, caseSensitive)
+    if (index < 0) None else values(index).some
+  }
+
+  def getAs[T](name: String, caseSensitive: Boolean = true): T = get(name, caseSensitive).asInstanceOf[T]
+  def get(name: String, caseSensitive: Boolean = true): Any = {
+    getOpt(name, caseSensitive).getOrError(s"$name did not exist in row")
   }
 
   def size(): Int = values.size
 
-  def replace(name: String, value: Any, caseSensitive: Boolean): Row = {
+  def replace(name: String, value: Any, caseSensitive: Boolean = true): Row = {
     val k = schema.indexOf(name, caseSensitive)
     // todo this could be optimized to avoid the copy
     val newValues = values.updated(k, value)
     copy(values = newValues)
+  }
+
+  def map(name: String, fn: Any => Any, caseSensitive: Boolean = true): Row = {
+    val k = schema.indexOf(name, caseSensitive)
+    val value = get(k)
+    val newValues = values.updated(k, value)
+    copy(values = newValues)
+  }
+
+  def mapIfExists(name: String, fn: Any => Any, caseSensitive: Boolean = true): Row = {
+    val k = schema.indexOf(name, caseSensitive)
+    if (k > 0) {
+      val value = get(k)
+      val newValues = values.updated(k, value)
+      copy(values = newValues)
+    } else {
+      this
+    }
   }
 
   def containsValue(value: Any): Boolean = values.contains(value)

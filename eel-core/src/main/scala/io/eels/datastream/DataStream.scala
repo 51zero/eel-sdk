@@ -6,8 +6,8 @@ import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
+import io.eels._
 import io.eels.schema.{DataType, Field, StringType, StructType}
-import io.eels.{DataTable, Listener, Record, Row, Sink}
 
 import scala.language.implicitConversions
 import scala.util.matching.Regex
@@ -41,6 +41,24 @@ trait DataStream extends Logging {
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
         override def next(t: Seq[Row]): Unit = subscriber.next(t.map(f))
+      })
+    }
+  }
+
+  def mapField(fieldName: String, fn: Any => Any): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = subscriber next t.map(_.map(fieldName, fn))
+      })
+    }
+  }
+
+  def mapFieldIfExists(fieldName: String, fn: Any => Any): DataStream = new DataStream {
+    override def schema: StructType = self.schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = subscriber next t.map(_.mapIfExists(fieldName, fn))
       })
     }
   }
