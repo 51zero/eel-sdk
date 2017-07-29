@@ -22,15 +22,16 @@ object RowPartitionFn extends Logging {
       s"The schema must include data for all partitions; otherwise the writer wouldn't be able to create the correct partition path; schema fields=${row.schema.fieldNames()}; expected partitions=$partitionKeys"
     )
 
-    val entries = partitionKeys.map { it =>
-      val index = row.schema.indexOf(it)
+    val entries = partitionKeys.map { fieldName =>
+      val index = row.schema.indexOf(fieldName)
       try {
         val value = row.values(index)
-        require(!value.toString().contains(" "), s"Values for partitions cannot contain spaces $it=$value (index $index)")
-        PartitionEntry(it, value.toString)
+        require(value != null, s"Partition value cannot be null for $fieldName")
+        require(!value.toString.contains(" "), s"Values for partitions cannot contain spaces $fieldName=$value (index $index)")
+        PartitionEntry(fieldName, value.toString)
       } catch {
         case NonFatal(t) =>
-          logger.error(s"Could not get value for partition $it. Row=$row")
+          logger.error(s"Could not get value for partition $fieldName. Row=$row")
           throw t
       }
     }
