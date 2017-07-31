@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import io.eels.Row
 import io.eels.component.csv.CsvSource
-import io.eels.schema.{BooleanType, Field, IntType, LongType, StringType, StructType}
+import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
 
 class DataStreamTest extends WordSpec with Matchers {
@@ -493,6 +493,21 @@ class DataStreamTest extends WordSpec with Matchers {
       val ds2 = ds1.removeField("locATION", false)
       ds2.schema shouldBe StructType("name", "postcode")
       ds2.toSet shouldBe Set(Row(ds2.schema, "sam", "hp22"), Row(ds2.schema, "ham", "mk10"))
+    }
+  }
+
+  "DataStream.removeFields" should {
+    "remove all matching fields" in {
+      val ds1 = DataStream.fromValues(
+        StructType("a", "aa", "ab"),
+        Seq(
+          List("1", "2", "3"),
+          List("4", "5", "6")
+        )
+      )
+      val ds2 = ds1.removeFields("a.".r)
+      ds2.schema shouldBe StructType("a")
+      ds2.toSet shouldBe Set(Row(ds2.schema, "1"), Row(ds2.schema, "4"))
     }
   }
 

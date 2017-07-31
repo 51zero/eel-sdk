@@ -123,6 +123,7 @@ object Scale {
 
 case class StructType(fields: Vector[Field]) extends DataType {
 
+
   require(fields.nonEmpty, "StructType cannot be empty")
   private val dups = fields.map(_.name).groupBy(identity).collect { case (x, list) if list.size > 1 => x }
   if (dups.nonEmpty) {
@@ -144,6 +145,9 @@ case class StructType(fields: Vector[Field]) extends DataType {
       fields.indexWhere(_.name.equalsIgnoreCase(fieldName))
     }
   }
+
+  // returns the field names that match the given regex
+  def fieldNames(regex: Regex): Seq[String] = fieldNames.filter { name => regex.pattern.matcher(name).matches() }
 
   def partitions: Seq[Field] = fields.filter(_.partition)
 
@@ -207,6 +211,7 @@ case class StructType(fields: Vector[Field]) extends DataType {
     else field
   })
 
+  def removeFields(regex: Regex): StructType = StructType(fields.filterNot { field => regex.pattern.matcher(field.name).matches })
   def removeFields(first: String, rest: String*): StructType = removeFields(first +: rest)
   def removeFields(names: Seq[String]): StructType = copy(fields = fields.filterNot { field =>
     names.contains(field.name)

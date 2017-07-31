@@ -409,7 +409,7 @@ trait DataStream extends Logging {
   // returns a new DataStream with any rows that contain one or more nulls excluded
   def dropNullRows(): DataStream = filterNot(_.values.contains(null))
 
-  def dropField(fieldName: String, caseSensitive: Boolean = true): DataStream = dropField(fieldName, caseSensitive)
+  def dropField(fieldName: String, caseSensitive: Boolean = true): DataStream = removeField(fieldName, caseSensitive)
   def removeField(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
@@ -421,6 +421,19 @@ trait DataStream extends Logging {
             val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
             Row(newSchema, newValues)
           }
+        }
+      })
+    }
+  }
+
+  def dropFields(regex: Regex): DataStream = removeFields(regex)
+  def removeFields(regex: Regex): DataStream = new DataStream {
+    override def schema: StructType = self.schema.removeFields(regex)
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      val newSchema = schema
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(t: Seq[Row]): Unit = {
+          subscriber next t.map(RowUtils.rowAlign(_, newSchema))
         }
       })
     }
