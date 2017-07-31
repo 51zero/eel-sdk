@@ -14,7 +14,7 @@ class HivePartitionScanner(implicit fs: FileSystem) extends Logging {
 
   def scan(partitions: Seq[PartitionMetaData],
            constraints: Seq[PartitionConstraint] = Nil): Map[PartitionMetaData, Seq[LocatedFileStatus]] = {
-    logger.debug(s"Scanning partitions for applicable files: ${partitions.map(_.location).mkString(", ")}")
+    logger.debug(s"Scanning ${partitions.size} partitions for applicable files ${partitions.map(_.location).mkString(", ").take(100)}")
 
     // first we filter out any partitions not matching the constraints
     val filteredPartitions = partitions.filter { meta =>
