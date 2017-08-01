@@ -13,40 +13,39 @@ import scala.math.BigDecimal.RoundingMode.RoundingMode
 
 // accepts a scala/java value and writes it out to a record consumer as
 // the appropriate parquet type
-trait RecordConsumerWriter {
+trait RecordWriter {
   def write(record: RecordConsumer, value: Any): Unit
 }
 
-object RecordConsumerWriter {
-  def apply(dataType: DataType, roundingMode: RoundingMode): RecordConsumerWriter = {
+object RecordWriter {
+  def apply(dataType: DataType, roundingMode: RoundingMode): RecordWriter = {
     dataType match {
-      case ArrayType(elementType) =>
-        new ArrayParquetWriter(RecordConsumerWriter(elementType, roundingMode))
+      case ArrayType(elementType) => new ArrayRecordWriter(RecordWriter(elementType, roundingMode))
       case BinaryType => BinaryParquetWriter
-      case BigIntType => BigIntRecordConsumerWriter
-      case BooleanType => BooleanRecordConsumerWriter
-      case CharType(_) => StringRecordConsumerWriter
-      case DateType => DateRecordConsumerWriter
+      case BigIntType => BigIntRecordWriter
+      case BooleanType => BooleanRecordWriter
+      case CharType(_) => StringRecordWriter
+      case DateType => DateRecordWriter
       case DecimalType(precision, scale) => new DecimalWriter(precision, scale, roundingMode)
-      case DoubleType => DoubleRecordConsumerWriter
-      case FloatType => FloatRecordConsumerWriter
-      case _: IntType => IntRecordConsumerWriter
-      case _: LongType => LongRecordConsumerWriter
+      case DoubleType => DoubleRecordWriter
+      case FloatType => FloatRecordWriter
+      case _: IntType => IntRecordWriter
+      case _: LongType => LongRecordWriter
       case _: ShortType => ShortParquetWriter
       case mapType@MapType(keyType, valueType) =>
-        new MapParquetWriter(mapType, apply(keyType, roundingMode), apply(valueType, roundingMode))
-      case StringType => StringRecordConsumerWriter
-      case struct: StructType => new StructWriter(struct, roundingMode, true)
-      case TimeMillisType => TimeRecordConsumerWriter
-      case TimestampMillisType => TimestampRecordConsumerWriter
-      case VarcharType(_) => StringRecordConsumerWriter
+        new MapRecordWriter(mapType, apply(keyType, roundingMode), apply(valueType, roundingMode))
+      case StringType => StringRecordWriter
+      case struct: StructType => new StructRecordWriter(struct, roundingMode, true)
+      case TimeMillisType => TimeRecordWriter
+      case TimestampMillisType => TimestampRecordWriter
+      case VarcharType(_) => StringRecordWriter
     }
   }
 }
 
-class MapParquetWriter(mapType: MapType,
-                       keyWriter: RecordConsumerWriter,
-                       valueWriter: RecordConsumerWriter) extends RecordConsumerWriter {
+class MapRecordWriter(mapType: MapType,
+                      keyWriter: RecordWriter,
+                      valueWriter: RecordWriter) extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     val map = MapCoercer.coerce(value)
 
@@ -70,11 +69,13 @@ class MapParquetWriter(mapType: MapType,
   }
 }
 
-class ArrayParquetWriter(nested: RecordConsumerWriter) extends RecordConsumerWriter with Logging {
+class ArrayRecordWriter(nested: RecordWriter) extends RecordWriter with Logging {
   override def write(record: RecordConsumer, value: Any): Unit = {
 
     val seq = SequenceCoercer.coerce(value)
 
+    // this layout follows the spark style, an array is a group of a single element called list, which itself
+    // contains repeated groups which contain another record called element
     record.startGroup()
     record.startField("list", 0)
 
@@ -91,12 +92,12 @@ class ArrayParquetWriter(nested: RecordConsumerWriter) extends RecordConsumerWri
   }
 }
 
-class StructWriter(structType: StructType,
-                   roundingMode: RoundingMode,
-                   nested: Boolean // nested groups, ie not the outer record, must be handled differently
-                  ) extends RecordConsumerWriter with Logging {
+class StructRecordWriter(structType: StructType,
+                         roundingMode: RoundingMode,
+                         nested: Boolean // nested groups, ie not the outer record, must be handled differently
+                        ) extends RecordWriter with Logging {
 
-  val writers = structType.fields.map(_.dataType).map(RecordConsumerWriter.apply(_, roundingMode))
+  val writers = structType.fields.map(_.dataType).map(RecordWriter.apply(_, roundingMode))
 
   override def write(record: RecordConsumer, value: Any): Unit = {
     require(record != null)
@@ -119,7 +120,7 @@ class StructWriter(structType: StructType,
   }
 }
 
-object BinaryParquetWriter extends RecordConsumerWriter {
+object BinaryParquetWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     value match {
       case array: Array[Byte] => record.addBinary(Binary.fromReusedByteArray(array))
@@ -130,7 +131,7 @@ object BinaryParquetWriter extends RecordConsumerWriter {
 
 // The scale stores the number of digits of that value that are to the right of the decimal point,
 // and the precision stores the maximum number of sig digits supported in the unscaled value.
-class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMode) extends RecordConsumerWriter {
+class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMode) extends RecordWriter {
 
   private val bits = ParquetSchemaFns.byteSizeForPrecision(precision.value)
 
@@ -144,13 +145,13 @@ class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMo
   }
 }
 
-object BigIntRecordConsumerWriter extends RecordConsumerWriter {
+object BigIntRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addLong(BigIntegerCoercer.coerce(value).longValue)
   }
 }
 
-object DateRecordConsumerWriter extends RecordConsumerWriter {
+object DateRecordWriter extends RecordWriter {
 
   private val UnixEpoch = LocalDate.of(1970, 1, 1)
 
@@ -166,7 +167,7 @@ object DateRecordConsumerWriter extends RecordConsumerWriter {
 }
 
 
-object TimeRecordConsumerWriter extends RecordConsumerWriter {
+object TimeRecordWriter extends RecordWriter {
 
   private val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
@@ -183,7 +184,7 @@ object TimeRecordConsumerWriter extends RecordConsumerWriter {
   }
 }
 
-object TimestampRecordConsumerWriter extends RecordConsumerWriter {
+object TimestampRecordWriter extends RecordWriter {
 
   private val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
@@ -198,43 +199,43 @@ object TimestampRecordConsumerWriter extends RecordConsumerWriter {
   }
 }
 
-object StringRecordConsumerWriter extends RecordConsumerWriter {
+object StringRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addBinary(Binary.fromString(StringCoercer.coerce(value)))
   }
 }
 
-object ShortParquetWriter extends RecordConsumerWriter {
+object ShortParquetWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addInteger(ShortCoercer.coerce(value))
   }
 }
 
-object DoubleRecordConsumerWriter extends RecordConsumerWriter {
+object DoubleRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addDouble(DoubleCoercer.coerce(value))
   }
 }
 
-object FloatRecordConsumerWriter extends RecordConsumerWriter {
+object FloatRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addFloat(FloatCoercer.coerce(value))
   }
 }
 
-object BooleanRecordConsumerWriter extends RecordConsumerWriter {
+object BooleanRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addBoolean(BooleanCoercer.coerce(value))
   }
 }
 
-object LongRecordConsumerWriter extends RecordConsumerWriter {
+object LongRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addLong(LongCoercer.coerce(value))
   }
 }
 
-object IntRecordConsumerWriter extends RecordConsumerWriter {
+object IntRecordWriter extends RecordWriter {
   override def write(record: RecordConsumer, value: Any): Unit = {
     record.addInteger(IntCoercer.coerce(value))
   }

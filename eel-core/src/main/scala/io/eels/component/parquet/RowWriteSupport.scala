@@ -38,7 +38,7 @@ class RowWriter(record: RecordConsumer, roundingMode: RoundingMode) {
 
   def write(row: Row): Unit = {
     record.startMessage()
-    val writer = new StructWriter(row.schema, roundingMode, false)
+    val writer = new StructRecordWriter(row.schema, roundingMode, false)
     writer.write(record, row.values)
     record.endMessage()
   }

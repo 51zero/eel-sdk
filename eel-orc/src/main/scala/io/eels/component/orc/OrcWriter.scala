@@ -48,10 +48,9 @@ class OrcWriter(path: Path,
     woptions.bloomFilterColumns(options.bloomFilterColumns.mkString(","))
     logger.debug(s"Using bloomFilterColumns = $options.bloomFilterColumns")
   }
-
   private lazy val writer = OrcFile.createWriter(path, woptions)
 
-  private val _records = new AtomicInteger(0)
+  private val counter = new AtomicInteger(0)
 
   def write(row: Row): Unit = {
     buffer.append(row)
@@ -59,7 +58,7 @@ class OrcWriter(path: Path,
       flush()
   }
 
-  def records: Int = _records.get()
+  def records: Int = counter.get()
 
   def flush(): Unit = {
 
@@ -80,7 +79,7 @@ class OrcWriter(path: Path,
 
     batch.size = buffer.size
     writer.addRowBatch(batch)
-    _records.updateAndGet(new IntUnaryOperator {
+    counter.updateAndGet(new IntUnaryOperator {
       override def applyAsInt(operand: Int): Int = operand + batch.size
     })
     buffer.clear()

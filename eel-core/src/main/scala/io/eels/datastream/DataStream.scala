@@ -968,6 +968,9 @@ object DataStream {
     fromValues(schema, values)
   }
 
+  def fromRows(first: Row, rest: Row*): DataStream = fromRows(first +: rest)
+  def fromRows(rows: Seq[Row]): DataStream = fromRows(rows.head.schema, rows)
+
   def fromRows(_schema: StructType, first: Row, rest: Row*): DataStream = fromRows(_schema, first +: rest)
 
   def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {

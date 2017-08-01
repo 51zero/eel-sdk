@@ -27,7 +27,7 @@ object Build extends Build {
   val RxJavaVersion = "2.1.1"
   val ScalatestVersion = "3.0.3"
   val Slf4jVersion = "1.7.12"
-  val SparkVersion = "2.1.1"
+  val SparkVersion = "2.2.0"
   val UnivocityVersion = "2.4.1"
 
   val hiveSettings = Seq(
@@ -100,7 +100,7 @@ object Build extends Build {
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
-//      "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
+      "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-core"              % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % Log4jVersion             % "test",
