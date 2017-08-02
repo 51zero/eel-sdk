@@ -15,9 +15,12 @@ object CustomParquetDataFrameReader extends App {
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.get(conf)
 
-  val row = io.eels.Row(io.eels.schema.StructType("a", "b"), Vector("1", "2"))
-  val ds = DataStream.fromRows(row)
-  ds.to(ParquetSink("uparquet.pq").withOverwrite(true))
+  val schema = io.eels.schema.StructType("id")
+  val rows = Vector(io.eels.Row(schema, Vector("1")), io.eels.Row(schema, Vector("2")), io.eels.Row(schema, Vector("3")))
+  DataStream.fromRows(rows).to(ParquetSink("uparquet.pq").withOverwrite(true))
+
+  val excludes = io.eels.Row(schema, Vector("2"))
+  DataStream.fromRows(excludes).to(ParquetSink("excludes_uparquet.pq").withOverwrite(true))
 
   val spark = new SparkContext(new SparkConf().setMaster("local").setAppName("test").set("spark.driver.allowMultipleContexts", "true"))
   val session = SparkSession.builder().appName("test").master("local").getOrCreate()
@@ -49,9 +52,15 @@ class UParquetDataSource extends DataSourceRegister with RelationProvider with L
   override def shortName(): String = "uparquet"
   override def createRelation(sqlContext: SQLContext, parameters: Map[String, String]): BaseRelation = {
     logger.info(s"Opening u parquet file $parameters")
-    val path = new Path(parameters("path"))
-    val ds = ParquetSource(path).toDataStream()
-    val sparkschema = StructType(ds.schema.fieldNames().map { name => StructField(name, StringType) })
-    new UParquet(sqlContext, sparkschema, ds.collect)
+
+    val dataPath = new Path(parameters("path"))
+    val main = ParquetSource(dataPath).toDataStream().collect
+    val sparkschema = StructType(main.head.schema.fieldNames().map { name => StructField(name, StringType) })
+
+    val excludePath = new Path("excludes_" + parameters("path"))
+    val excludeIds = ParquetSource(excludePath).toDataStream().collect.map(_.values).map(_.head)
+
+    val rows = main.filterNot { row => excludeIds.contains(row("id")) }
+    new UParquet(sqlContext, sparkschema, rows)
   }
 }
