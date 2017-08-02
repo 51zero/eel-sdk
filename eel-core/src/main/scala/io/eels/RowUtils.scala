@@ -1,6 +1,7 @@
 package io.eels
 
-import io.eels.schema.StructType
+import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, ByteCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, StringCoercer, TimestampCoercer}
+import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType}
 
 object RowUtils {
 
@@ -13,5 +14,30 @@ object RowUtils {
       if (lookup.contains(name)) lookup(name) else row.get(name)
     }
     Row(targetSchema, values.toVector)
+  }
+
+  /**
+    * Accepts a Row, and returns a new Row where each value in the row has been coerced into
+    * the correct type for it's field. For example, if a row has a schema with a String field called foo,
+    * and a value for foo that is a Boolean, after calling this method, the boolean would have been
+    * coerced into a String.
+    */
+  def coerce(row: Row): Row = {
+    val values = row.schema.fields.zip(row.values).map { case (field, value) =>
+      field.dataType match {
+        case StringType => StringCoercer.coerce(value)
+        case LongType(_) => LongCoercer.coerce(value)
+        case IntType(_) => IntCoercer.coerce(value)
+        case ByteType(_) => ByteCoercer.coerce(value)
+        case BigIntType => BigIntegerCoercer.coerce(value)
+        case DoubleType => DoubleCoercer.coerce(value)
+        case FloatType => FloatCoercer.coerce(value)
+        case BooleanType => BooleanCoercer.coerce(value)
+        case BinaryType => value
+        case _: DecimalType => BigDecimalCoercer.coerce(value)
+        case TimestampMillisType => TimestampCoercer.coerce(value)
+      }
+    }
+    Row(row.schema, values)
   }
 }

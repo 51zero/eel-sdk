@@ -1,7 +1,6 @@
 package io.eels
 
-import io.eels.schema.Field
-import io.eels.schema.StructType
+import io.eels.schema.{BooleanType, DoubleType, Field, StringType, StructType}
 import org.scalatest.{Matchers, WordSpec}
 
 class RowUtilsTest extends WordSpec with Matchers {
@@ -22,6 +21,14 @@ class RowUtilsTest extends WordSpec with Matchers {
       intercept[RuntimeException] {
         RowUtils.rowAlign(row, targetSchema)
       }
+    }
+  }
+
+  "RowUtils.coerce" should {
+    "coerce values to match types" in {
+      val schema = StructType(Field("a", StringType), Field("b", DoubleType), Field("c", BooleanType))
+      val row = Row(schema, Vector(1, "1.4", "true"))
+      RowUtils.coerce(row) shouldBe Row(schema, "1", 1.4D, true)
     }
   }
 }
