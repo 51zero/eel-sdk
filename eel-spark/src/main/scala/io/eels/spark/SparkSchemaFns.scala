@@ -1,6 +1,6 @@
 package io.eels.spark
 
-import io.eels.schema.{BinaryType, BooleanType, ByteType, CharType, DecimalType, DoubleType, Field, FloatType, IntType, LongType, Precision, Scale, ShortType, StringType, StructType, TimestampMillisType, VarcharType}
+import io.eels.schema.{BinaryType, BooleanType, ByteType, CharType, DateType, DecimalType, DoubleType, Field, FloatType, IntType, LongType, Precision, Scale, ShortType, StringType, StructType, TimestampMillisType, VarcharType}
 
 object SparkSchemaFns {
 
@@ -20,6 +20,7 @@ object SparkSchemaFns {
         case ShortType(_) => org.apache.spark.sql.types.ShortType
         case VarcharType(size) => org.apache.spark.sql.types.VarcharType(size)
         case CharType(size) => org.apache.spark.sql.types.CharType(size)
+        case DateType => org.apache.spark.sql.types.DateType
       }
       org.apache.spark.sql.types.StructField(field.name, datatype, field.nullable)
     }
@@ -42,6 +43,7 @@ object SparkSchemaFns {
         case org.apache.spark.sql.types.TimestampType => TimestampMillisType
         case org.apache.spark.sql.types.VarcharType(size) => VarcharType(size)
         case org.apache.spark.sql.types.CharType(size) => CharType(size)
+        case org.apache.spark.sql.types.DateType => DateType
       }
       Field(field.name, datatype, field.nullable)
     }

@@ -1,7 +1,7 @@
 package io.eels
 
-import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, ByteCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, StringCoercer, TimestampCoercer}
-import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType}
+import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, ByteCoercer, DateCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, StringCoercer, TimestampCoercer}
+import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, DateType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType}
 
 object RowUtils {
 
@@ -36,6 +36,7 @@ object RowUtils {
         case BinaryType => value
         case _: DecimalType => BigDecimalCoercer.coerce(value)
         case TimestampMillisType => TimestampCoercer.coerce(value)
+        case DateType => DateCoercer.coerce(value)
       }
     }
     Row(row.schema, values)

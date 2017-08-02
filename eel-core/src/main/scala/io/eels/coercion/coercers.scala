@@ -1,6 +1,7 @@
 package io.eels.coercion
 
 import java.sql.Timestamp
+import java.util.Date
 
 import scala.collection.JavaConverters._
 
@@ -42,6 +43,15 @@ object TimestampCoercer extends Coercer[java.sql.Timestamp] {
     case bigint: BigInt if bigint.isValidLong => new Timestamp(bigint.longValue)
     case bigint: java.math.BigInteger => new Timestamp(bigint.longValueExact)
     case bigdec: java.math.BigDecimal => new Timestamp(bigdec.longValueExact)
+  }
+}
+
+object DateCoercer extends Coercer[java.util.Date] {
+  override def coerce(input: Any): Date = input match {
+    case date: Date => date
+    case timestamp: Long => new Date(timestamp)
+    case str: String => new Date(str.toLong)
+    case timestamp:Timestamp => new Date(timestamp.getTime)
   }
 }
 
