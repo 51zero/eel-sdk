@@ -2,7 +2,7 @@ package io.eels
 
 import java.util.Date
 
-import io.eels.schema.{BooleanType, DateType, DoubleType, Field, StringType, StructType}
+import io.eels.schema.{BooleanType, DateType, DoubleType, Field, IntType, StringType, StructType}
 import org.scalatest.{Matchers, WordSpec}
 
 class RowUtilsTest extends WordSpec with Matchers {
@@ -28,9 +28,9 @@ class RowUtilsTest extends WordSpec with Matchers {
 
   "RowUtils.coerce" should {
     "coerce values to match types" in {
-      val schema = StructType(Field("a", StringType), Field("b", DoubleType), Field("c", BooleanType), Field("d", DateType))
-      val row = Row(schema, Vector(1, "1.4", "true", "1123123244493"))
-      RowUtils.coerce(row) shouldBe Row(schema, "1", 1.4D, true, new Date(1123123244493L))
+      val schema = StructType(Field("a", StringType), Field("b", DoubleType), Field("c", BooleanType), Field("d", DateType), Field("e", IntType.Signed))
+      val row = Row(schema, Vector(1, "1.4", "true", "1123123244493", "1"))
+      RowUtils.coerce(row) shouldBe Row(schema, "1", 1.4D, true, new Date(1123123244493L), 1)
     }
   }
 }
