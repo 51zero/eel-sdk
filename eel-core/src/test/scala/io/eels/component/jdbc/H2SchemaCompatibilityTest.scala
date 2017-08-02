@@ -8,6 +8,8 @@ import org.scalatest.{FlatSpec, Matchers}
 // tests that the schema mappings for jdbc are correct using h2
 class H2SchemaCompatibilityTest extends FlatSpec with Matchers {
 
+  Class.forName("org.h2.Driver")
+
   val conn = DriverManager.getConnection("jdbc:h2:mem:schematest")
   conn.createStatement().executeUpdate("create table t (" +
     "a integer, " +

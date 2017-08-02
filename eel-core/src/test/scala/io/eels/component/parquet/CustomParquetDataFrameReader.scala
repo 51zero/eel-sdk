@@ -1,5 +1,7 @@
 package io.eels.component.parquet
 
+import java.sql.Timestamp
+
 import com.sksamuel.exts.Logging
 import io.eels.datastream.DataStream
 import org.apache.hadoop.conf.Configuration
@@ -25,7 +27,7 @@ object CustomParquetDataFrameReader extends App {
   val spark = new SparkContext(new SparkConf().setMaster("local").setAppName("test").set("spark.driver.allowMultipleContexts", "true"))
   val session = SparkSession.builder().appName("test").master("local").getOrCreate()
 
-  val df = session.sqlContext.read.format("io.eels.component.parquet.UParquetDataSource").load("uparquet.pq")
+  val df = session.sqlContext.read.format("io.eels.component.parquet.UParquetDataSource").option("modify_ts", new Timestamp(System.currentTimeMillis).toString).load("uparquet.pq")
   println(df.collect.toList)
 }
 

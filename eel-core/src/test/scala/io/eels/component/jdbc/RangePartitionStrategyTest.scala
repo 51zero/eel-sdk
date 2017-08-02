@@ -8,6 +8,8 @@ import scala.util.Random
 
 class RangePartitionStrategyTest extends WordSpec with Matchers {
 
+  Class.forName("org.h2.Driver")
+
   private val conn = DriverManager.getConnection("jdbc:h2:mem:rangetest")
   conn.createStatement().executeUpdate("create table bucket_test (a integer)")
   for (k <- 0 until 20) {
