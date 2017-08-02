@@ -65,6 +65,13 @@ object Build extends Build {
     )
   )
 
+  val sparkSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.spark" %% "spark-core" % SparkVersion,
+      "org.apache.spark" %% "spark-sql" % SparkVersion
+    )
+  )
+
   val rootSettings = Seq(
     organization := org,
     scalaVersion := "2.11.11",
@@ -146,6 +153,7 @@ object Build extends Build {
     .aggregate(core,
       orc,
       hive,
+      spark,
       kafka,
       kudu,
       elasticsearch)
@@ -165,6 +173,12 @@ object Build extends Build {
     .settings(hiveSettings: _*)
     .settings(name := "eel-hive")
     .dependsOn(core, orc)
+
+  lazy val spark = Project("eel-spark", file("eel-spark"))
+    .settings(rootSettings: _*)
+    .settings(sparkSettings: _*)
+    .settings(name := "eel-spark")
+    .dependsOn(core)
 
   lazy val kafka = Project("eel-kafka", file("eel-kafka"))
     .settings(rootSettings: _*)
