@@ -110,7 +110,7 @@ object HiveDataApp extends App with Timed {
       HiveTable(Database, Table).drop()
     }
 
-    val sink = HiveSink(Database, Table).withCreateTable(true, format = HiveFormat.Parquet)
+    val sink = HiveSink(Database, Table).withCreateTable(true)
 
     DataStream.fromIterator(schema, Iterator.continually(createRow).take(size)).listener(listener).to(sink, 4)
   }

@@ -67,3 +67,7 @@ case class ParquetSink(path: Path, options: ParquetWriteOptions = ParquetWriteOp
 
   override def open(schema: StructType): SinkWriter = create(schema, path)
 }
+
+object ParquetSink {
+  def apply(path: String)(implicit fs: FileSystem): ParquetSink = ParquetSink(new Path(path))
+}

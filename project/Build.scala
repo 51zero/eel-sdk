@@ -100,6 +100,7 @@ object Build extends Build {
       "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
+      "org.apache.spark"            %% "spark-core"             % SparkVersion             % "test",
       "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-core"              % Log4jVersion             % "test",
