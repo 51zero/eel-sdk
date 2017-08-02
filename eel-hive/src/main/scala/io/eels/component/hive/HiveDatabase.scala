@@ -22,4 +22,6 @@ case class HiveDatabase(dbName: String)(implicit fs: FileSystem, client: IMetaSt
       throw new IllegalArgumentException(s"$dbName.$tableName does not exist")
     HiveSource(dbName, tableName)
   }
+
+  def location: String = client.getDatabase(dbName).getLocationUri
 }
