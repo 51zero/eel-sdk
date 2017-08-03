@@ -80,7 +80,7 @@ case class CsvSource(inputFn: () => InputStream,
     inferrer.struct(headers)
   }
 
-  override def parts(): Seq[Publisher[Seq[Row]]] = {
+  override def parts(): Seq[Publisher[Chunk]] = {
     val part = new CsvPublisher(createParser _, inputFn, header, skipBadRows.getOrElse(defaultSkipBadRows), schema)
     List(part)
   }

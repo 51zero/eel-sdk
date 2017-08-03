@@ -5,7 +5,7 @@ import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
-import io.eels.{Row, Sink}
+import io.eels.{Chunk, Row, Sink}
 
 case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logging {
 
@@ -17,17 +17,17 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
     val failure = new AtomicReference[Throwable](null)
 
     val executor = Executors.newFixedThreadPool(parallelism)
-    val queue = new LinkedBlockingQueue[Seq[Row]](DataStream.DefaultBufferSize)
+    val queue = new LinkedBlockingQueue[Chunk](DataStream.DefaultBufferSize)
     val completed = new AtomicLong(0)
     var subscription: Subscription = null
 
-    val subscriber = new Subscriber[Seq[Row]] {
+    val subscriber = new Subscriber[Chunk] {
       override def subscribed(sub: Subscription): Unit = {
         logger.debug(s"Subscribing to datastream for sink action [subscription=$sub]")
         subscription = sub
       }
 
-      override def next(chunk: Seq[Row]): Unit = {
+      override def next(chunk: Chunk): Unit = {
         if (failure.get == null)
           queue.put(chunk)
       }

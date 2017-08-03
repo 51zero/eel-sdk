@@ -8,4 +8,4 @@ case class DataTable(schema: StructType, records: Seq[Record]) {
   def filter(p: Record => Boolean): DataTable = DataTable(schema, records.filter(p))
 }
 
-case class Record(values: Seq[Any])
+case class Record(values: Rec)

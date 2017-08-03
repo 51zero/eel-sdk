@@ -101,9 +101,8 @@ class ParquetComponentTest extends WordSpec with Matchers {
       ds.to(ParquetSink(path))
 
       val rows = ParquetSource(path).toDataStream().collect
-      rows.head.schema shouldBe structType
-      rows.map(_.values).head(1).asInstanceOf[Seq[String]] shouldBe Vector("earth", "mars", "saturn")
-      rows.map(_.values).last(1).asInstanceOf[Seq[String]] shouldBe Vector("algeron-i", "algeron-ii", "algeron-iii")
+      rows.head(1).asInstanceOf[Seq[String]] shouldBe Vector("earth", "mars", "saturn")
+      rows.last(1).asInstanceOf[Seq[String]] shouldBe Vector("algeron-i", "algeron-ii", "algeron-iii")
 
       fs.delete(path, false)
     }
@@ -125,9 +124,8 @@ class ParquetComponentTest extends WordSpec with Matchers {
       ds.to(ParquetSink(path))
 
       val rows = ParquetSource(path).toDataStream().collect
-      rows.head.schema shouldBe structType
-      rows.map(_.values).head(1).asInstanceOf[Seq[Double]].toVector shouldBe Vector(0.1, 0.2, 0.3)
-      rows.map(_.values).last(1).asInstanceOf[Seq[Double]].toVector shouldBe Vector(0.3, 0.4, 0.5)
+      rows.head(1).asInstanceOf[Seq[Double]].toVector shouldBe Vector(0.1, 0.2, 0.3)
+      rows.last(1).asInstanceOf[Seq[Double]].toVector shouldBe Vector(0.3, 0.4, 0.5)
 
       fs.delete(path, false)
     }
@@ -181,7 +179,6 @@ class ParquetComponentTest extends WordSpec with Matchers {
       ds.to(ParquetSink(path))
 
       val rows = ParquetSource(path).toDataStream().collect
-      structType shouldBe rows.head.schema
       rows shouldBe Seq(Row(structType, Vector("abc", Map("a" -> true, "b" -> false))))
 
       fs.delete(path, false)

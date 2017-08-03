@@ -73,8 +73,8 @@ class ParquetSinkTest extends FlatSpec with Matchers {
 
     val schema = StructType(Field("a", StringType))
     val ds = DataStream.fromRows(schema,
-      Row(schema, Vector("x")),
-      Row(schema, Vector("y"))
+      Vector("x"),
+      Vector("y")
     )
 
     ds.to(ParquetSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))

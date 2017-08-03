@@ -26,31 +26,33 @@ class HiveFilePublisher(dialect: HiveDialect,
                         projectionSchema: StructType,
                         predicate: Option[Predicate],
                         partition: Partition)
-                       (implicit fs: FileSystem, conf: Configuration) extends Publisher[Seq[Row]] with Using {
+                       (implicit fs: FileSystem, conf: Configuration) extends Publisher[Chunk] with Using {
   require(projectionSchema.fieldNames.forall { it => it == it.toLowerCase() }, s"Use only lower case field names with hive")
 
-  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
 
     val partitionMap: Map[String, Any] = partition.entries.map { it => (it.key, it.value) }.toMap
 
     // the schema we send to the dialect must have any partition fields removed, because those
-    // fields won't exist in the data files. This is because partitions are not always written
-    // and instead inferred from the partition itself.
+    // fields won't exist in the data files. This is because partitions are not written
+    // but instead inferred from the partition string itself.
+    // we will call this the read schema
     val projectionFields = projectionSchema.fields.filterNot(field => partition.containsKey(field.name))
-    val projectionWithoutPartitions = StructType(projectionFields)
+    val readSchema = StructType(projectionFields)
 
     // since we removed the partition fields from the target schema, we must repopulate them after the read
     // we also need to throw away the dummy field if we had an empty schema
-    val publisher = dialect.input(file.getPath, metastoreSchema, projectionWithoutPartitions, predicate)
-    publisher.subscribe(new Subscriber[Seq[Row]] {
+    val publisher = dialect.input(file.getPath, metastoreSchema, readSchema, predicate)
+    publisher.subscribe(new Subscriber[Chunk] {
       override def subscribed(s: Subscription): Unit = subscriber.subscribed(s)
-      override def next(chunk: Seq[Row]): Unit = {
-        val aligned = chunk.map { row =>
+      override def next(chunk: Chunk): Unit = {
+        val aligned: Chunk = chunk.map { row =>
+          // if we had no projection fields, then that means we just had a partition only projection,
+          // and so the array of values can come directly from the partition map
           if (projectionFields.isEmpty) {
-            val values = projectionSchema.fieldNames().map(partitionMap.apply)
-            Row(projectionSchema, values.toVector)
+            projectionSchema.fieldNames().map(partitionMap.apply).toArray
           } else {
-            RowUtils.rowAlign(row, projectionSchema, partitionMap)
+            RowUtils.rowAlign(row, projectionSchema, readSchema, partitionMap)
           }
         }
         subscriber.next(aligned)

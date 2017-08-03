@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicInteger
 
-import io.eels.Row
+import io.eels.Rec
 import io.eels.schema.StructType
 import org.apache.avro.file.DataFileWriter
 import org.apache.avro.generic
@@ -19,7 +19,7 @@ class AvroWriter(structType: StructType, out: OutputStream) {
 
   dataFileWriter.create(schema, out)
 
-  def write(row: Row): Unit = {
+  def write(row: Rec): Unit = {
     val record = serializer.serialize(row)
     dataFileWriter.append(record)
     _records.incrementAndGet()

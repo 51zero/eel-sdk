@@ -3,7 +3,6 @@ package io.eels.component.hive
 import java.io.File
 import java.util.UUID
 
-import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
@@ -32,7 +31,7 @@ class HiveCompactTest extends FunSuite with Matchers with BeforeAndAfterAll {
       Field("c", IntType.Signed),
       Field("d", BooleanType)
     )
-    def createRow = Row(schema, Seq(UUID.randomUUID.toString, UUID.randomUUID.toString, Random.nextInt(1000000), Random.nextBoolean))
+    def createRow = Seq(Seq(UUID.randomUUID.toString, UUID.randomUUID.toString, Random.nextInt(1000000), Random.nextBoolean))
 
     val sink = HiveSink(dbname, table).withCreateTable(true)
     val size = 10000

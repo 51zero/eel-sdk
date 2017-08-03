@@ -3,8 +3,8 @@ package io.eels.component.sequence
 import java.io.StringWriter
 
 import com.univocity.parsers.csv.{CsvWriter, CsvWriterSettings}
-import io.eels.{Row, Sink, SinkWriter}
 import io.eels.schema.StructType
+import io.eels.{Rec, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.{BytesWritable, IntWritable, SequenceFile}
@@ -28,9 +28,9 @@ case class SequenceSink(path: Path)(implicit conf: Configuration) extends Sink {
 
     override def close(): Unit = writer.close()
 
-    override def write(row: Row): Unit = {
+    override def write(row: Rec): Unit = {
       this.synchronized {
-        val csv = valuesToCsv(row.values)
+        val csv = valuesToCsv(row)
         writer.append(key, new BytesWritable(csv.getBytes()))
         key.set(key.get() + 1)
       }

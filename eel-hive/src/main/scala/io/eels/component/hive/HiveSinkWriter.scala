@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigFactory
 import io.eels.component.hive.partition.{PartitionStrategy, RowPartitionFn}
 import io.eels.schema.StructType
 import io.eels.util.HdfsIterator
-import io.eels.{Row, SinkWriter}
+import io.eels.{Rec, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -59,10 +59,10 @@ class HiveSinkWriter(sourceSchema: StructType,
     streams.values.map { writer => WriteStatus(writer.path, fs.getFileStatus(writer.path).getLen, writer.records) }
   }.toVector
 
-  override def write(row: Row): Unit = {
+  override def write(row: Rec): Unit = {
     val stream = getOrCreateHiveWriter(row)
     // need to ensure the row is compatible with the write schema
-    stream.write(alignStrategy.align(row, writeSchema))
+    stream.write(alignStrategy.align(row, sourceSchema, writeSchema))
   }
 
   override def close(): Unit = {
@@ -131,13 +131,13 @@ class HiveSinkWriter(sourceSchema: StructType,
   // and returns an output stream for that partition
   // if partitioning is not used then will return the same table stream for all rows
   // we cache the writer so that we don't keep opening and closing loads of writers
-  private def getOrCreateHiveWriter(row: Row): HiveOutputStream = {
+  private def getOrCreateHiveWriter(row: Rec): HiveOutputStream = {
     // we need a a writer per partition (as each partition is written to a different directory)
     // if we don't have partitions then we only need a writer for the table
     if (partitionKeys.isEmpty) {
       streams.getOrElseUpdate(tablePath, createWriter(tablePath))
     } else {
-      val partition = RowPartitionFn(row, partitionKeys)
+      val partition = RowPartitionFn(row, sourceSchema, partitionKeys)
       val partitionPath = partitionStrategy.ensurePartition(partition, dbName, tableName, inheritPermissions.getOrElse(inheritPermissionsDefault), client)
       streams.getOrElseUpdate(partitionPath, createWriter(partitionPath))
     }

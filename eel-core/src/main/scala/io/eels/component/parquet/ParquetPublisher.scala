@@ -5,10 +5,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.io.Using
+import io.eels.{Chunk, Predicate}
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
-import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.format.converter.ParquetMetadataConverter
@@ -20,7 +20,7 @@ class ParquetPublisher(path: Path,
                        projection: Seq[String],
                        caseSensitive: Boolean,
                        dictionaryFiltering: Boolean)
-                      (implicit conf: Configuration) extends Publisher[Seq[Row]] with Logging with Using {
+                      (implicit conf: Configuration) extends Publisher[Chunk] with Logging with Using {
 
   def readSchema: Option[MessageType] = {
     if (projection.isEmpty) None
@@ -44,9 +44,9 @@ class ParquetPublisher(path: Path,
     }
   }
 
-  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
     try {
-      using(RowParquetReaderFn(path, predicate, readSchema, dictionaryFiltering)) { reader =>
+      using(RecordParquetReaderFn(path, predicate, readSchema, dictionaryFiltering)) { reader =>
         val running = new AtomicBoolean(true)
         subscriber.subscribed(Subscription.fromRunning(running))
         ParquetIterator(reader)

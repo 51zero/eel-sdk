@@ -4,7 +4,7 @@ import java.sql.Connection
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.jdbc.ResultSetIterator
-import io.eels.Row
+import io.eels.Chunk
 import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.schema.StructType
 
@@ -22,11 +22,11 @@ class JdbcInserter(val connFn: () => Connection,
 
   private var batches = 0
 
-  def insertBatch(batch: Seq[Row]): Unit = {
+  def insertBatch(batch: Chunk): Unit = {
     val stmt = conn.prepareStatement(dialect.insertQuery(schema, table))
     try {
       batch.foreach { row =>
-        row.values.zipWithIndex.foreach { case (value, k) =>
+        row.zipWithIndex.foreach { case (value, k) =>
           stmt.setObject(k + 1, value)
         }
         stmt.addBatch()

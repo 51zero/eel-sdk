@@ -12,7 +12,7 @@ import io.eels.component.hive.partition.PartitionMetaData
 import io.eels.datastream.{Subscriber, Subscription}
 import io.eels.schema.{Partition, PartitionConstraint, StringType, StructType}
 import io.eels.util.HdfsIterator
-import io.eels.{FilePattern, Row}
+import io.eels.{Chunk, FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -211,7 +211,7 @@ case class HiveTable(dbName: String,
     )
   }
 
-  def dialect = client.synchronized {
+  def dialect: HiveDialect = client.synchronized {
     io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
   }
 
@@ -224,11 +224,11 @@ case class HiveTable(dbName: String,
     val _dialect = dialect
     HiveTableFilesFn(dbName, tableName, location, Nil).filter(_._2.nonEmpty).foreach { case (partition, files) =>
       logger.info(s"Starting compact for $partition")
-      val queue = new LinkedBlockingQueue[Seq[Row]]
+      val queue = new LinkedBlockingQueue[Chunk]
       val done = new AtomicInteger(0)
       files.foreach { file =>
-        _dialect.input(file.getPath, _schema, _schema, None).subscribe(new Subscriber[Seq[Row]] {
-          override def next(t: Seq[Row]): Unit = queue.put(t)
+        _dialect.input(file.getPath, _schema, _schema, None).subscribe(new Subscriber[Chunk] {
+          override def next(t: Chunk): Unit = queue.put(t)
           override def completed(): Unit = if (done.incrementAndGet == files.size) {
             queue.put(Row.Sentinel)
           }

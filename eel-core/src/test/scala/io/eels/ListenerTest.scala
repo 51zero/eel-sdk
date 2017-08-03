@@ -17,7 +17,7 @@ class ListenerTest extends WordSpec with Matchers {
   implicit val fs = FileSystem.get(conf)
 
   val schema = StructType("a", "b", "c", "d", "e")
-  val rows = List.fill(1000)(Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
+  val rows = List.fill(1000)(Array(Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
   val ds = DataStream.fromRows(schema, rows)
 
   val path = new Path("listener_test.csv")
@@ -29,7 +29,7 @@ class ListenerTest extends WordSpec with Matchers {
       fs.delete(path, false)
 
       ds.listener(new Listener {
-        override def onNext(value: Row): Unit = latch.countDown()
+        override def onNext(value: Rec): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
       }).to(CsvSink(path))
@@ -43,13 +43,13 @@ class ListenerTest extends WordSpec with Matchers {
       class TestSink extends Sink {
         override def open(schema: StructType): SinkWriter = new SinkWriter {
           override def close(): Unit = ()
-          override def write(row: Row): Unit = ()
+          override def write(row: Rec): Unit = ()
         }
       }
 
       try {
         ds.listener(new Listener {
-          override def onNext(value: Row): Unit = sys.error("boom")
+          override def onNext(value: Rec): Unit = sys.error("boom")
           override def onError(e: Throwable): Unit = ()
           override def onComplete(): Unit = ()
         }).to(new TestSink)
@@ -69,7 +69,7 @@ class ListenerTest extends WordSpec with Matchers {
       ds.to(CsvSink(path))
 
       CsvSource(path).toDataStream(new Listener {
-        override def onNext(value: Row): Unit = latch.countDown()
+        override def onNext(value: Rec): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = ()
       }).collect
@@ -85,7 +85,7 @@ class ListenerTest extends WordSpec with Matchers {
       ds.to(CsvSink(path))
 
       CsvSource(path).toDataStream(new Listener {
-        override def onNext(value: Row): Unit = latch.countDown()
+        override def onNext(value: Rec): Unit = latch.countDown()
         override def onError(e: Throwable): Unit = ()
         override def onComplete(): Unit = latch.countDown()
       }).collect

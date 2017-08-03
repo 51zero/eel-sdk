@@ -26,7 +26,7 @@ trait Sink extends Using {
   */
 trait SinkWriter {
 
-  def write(row: Row): Unit
+  def write(row: Rec): Unit
 
   // closes this writer and performs any other "completion" actions
   // if multiple writers have been opened, then close should be called on them all at the same time

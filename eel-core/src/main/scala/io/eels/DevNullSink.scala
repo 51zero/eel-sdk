@@ -9,6 +9,6 @@ import io.eels.schema.StructType
 object DevNullSink extends Sink {
   override def open(schema: StructType): SinkWriter = new SinkWriter {
     override def close(): Unit = ()
-    override def write(row: Row): Unit = ()
+    override def write(row: Rec): Unit = ()
   }
 }

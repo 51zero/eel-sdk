@@ -6,7 +6,7 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.datastream.Publisher
 import io.eels.schema.{PartitionConstraint, StructType}
-import io.eels.{Predicate, Row, Source}
+import io.eels.{Chunk, Predicate, Source}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.hive.metastore.IMetaStoreClient
@@ -101,7 +101,7 @@ case class HiveSource(dbName: String,
     projection.nonEmpty && projection.map { it => it.toLowerCase() }.forall { it => partitionKeyNames.contains(it) }
   }
 
-  override def parts(): Seq[Publisher[Seq[Row]]] = {
+  override def parts(): Seq[Publisher[Chunk]] = {
     login()
 
     val dialect = table.dialect

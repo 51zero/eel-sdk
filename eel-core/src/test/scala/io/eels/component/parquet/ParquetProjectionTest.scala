@@ -36,11 +36,11 @@ class ParquetProjectionTest extends FlatSpec with Matchers {
 
   "ParquetSource" should "support projections" in {
     val rows = ParquetSource(path).withProjection("name").toDataStream().collect
-    rows.map(_.values) shouldBe Vector(Vector("clint eastwood"), Vector("elton john"))
+    rows shouldBe Vector(Vector("clint eastwood"), Vector("elton john"))
   }
 
   it should "return all data when no projection is set" in {
     val rows = ParquetSource(path).toDataStream().collect
-    rows.map(_.values) shouldBe Vector(Vector("clint eastwood", "actor", "carmel"), Vector("elton john", "musician", "pinner"))
+    rows shouldBe Vector(Vector("clint eastwood", "actor", "carmel"), Vector("elton john", "musician", "pinner"))
   }
 }
