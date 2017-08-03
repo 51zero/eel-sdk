@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
 
-import io.eels.Row
+import io.eels.Chunk
 import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.datastream.Publisher
 
@@ -16,7 +16,7 @@ case class HashPartitionStrategy(hashExpression: String,
                      query: String,
                      bindFn: (PreparedStatement) => Unit,
                      fetchSize: Int,
-                     dialect: JdbcDialect): Seq[Publisher[Seq[Row]]] = {
+                     dialect: JdbcDialect): Seq[Publisher[Chunk]] = {
 
     for (k <- 0 until numberOfPartitions) yield {
       new JdbcPublisher(connFn, partitionedQuery(k, query), bindFn, fetchSize, dialect)

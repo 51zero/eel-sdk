@@ -10,7 +10,7 @@ import io.eels.component.parquet._
 import io.eels.component.parquet.util.{ParquetIterator, ParquetLogMute}
 import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
-import io.eels.{Predicate, Row}
+import io.eels.{Chunk, Predicate, Rec}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -31,16 +31,16 @@ case class ParquetHiveDialect(options: ParquetWriteOptions = ParquetWriteOptions
                      ignore: StructType,
                      projectionSchema: StructType,
                      predicate: Option[Predicate])
-                    (implicit fs: FileSystem, conf: Configuration): Publisher[Seq[Row]] = new Publisher[Seq[Row]] {
+                    (implicit fs: FileSystem, conf: Configuration): Publisher[Chunk] = new Publisher[Chunk] {
 
     val client = new HiveMetaStoreClient(new HiveConf)
     val ops = new HiveOps(client)
 
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       // convert the eel projection schema into a parquet schema which will be used by the native parquet reader
       try {
         val parquetProjectionSchema = ParquetSchemaFns.toParquetMessageType(projectionSchema)
-        using(RowParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)) { reader =>
+        using(RecordParquetReaderFn(path, predicate, parquetProjectionSchema.some, true)) { reader =>
           val subscription = new Subscription {
             override def cancel(): Unit = reader.close()
           }
@@ -68,8 +68,8 @@ case class ParquetHiveDialect(options: ParquetWriteOptions = ParquetWriteOptions
       logger.debug(s"Creating parquet writer at $path")
       private val writer = RowParquetWriterFn(path, schema, metadata, true, roundingMode)
 
-      override def write(row: Row) {
-        require(row.values.nonEmpty, "Attempting to write an empty row")
+      override def write(row: Rec) {
+        require(row.nonEmpty, "Attempting to write an empty row")
         writer.write(row)
         _records.incrementAndGet()
       }

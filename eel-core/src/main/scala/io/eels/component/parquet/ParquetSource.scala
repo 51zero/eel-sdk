@@ -53,12 +53,14 @@ case class ParquetSource(pattern: FilePattern,
 
   // todo should take the merged schema from all files
   lazy val schema: StructType = {
-    using(RowParquetReaderFn(paths.head, None, None, false)) { reader =>
-      val row = Option(reader.read).getOrElse {
-        sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
-      }
-      row.schema
-    }
+    // this is the full file schema
+    RecordParquetReaderFn.schema(paths.head)
+    //    using(RecordParquetReaderFn(paths.head, None, None, false)) { reader =>
+    //      val row = Option(reader.read).getOrElse {
+    //        sys.error(s"Cannot read ${paths.head} for schema; file contains no records")
+    //      }
+    //      row.schema
+    //    }
   }
 
   // returns the count of all records in this source, predicate is ignored
@@ -81,7 +83,7 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts(): Seq[Publisher[Seq[Row]]] = {
+  override def parts(): Seq[Publisher[Chunk]] = {
     logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
     paths.map { it => new ParquetPublisher(it, predicate, projection, caseSensitive, dictionaryFiltering) }
   }

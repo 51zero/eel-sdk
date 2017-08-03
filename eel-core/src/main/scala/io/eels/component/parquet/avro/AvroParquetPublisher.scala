@@ -7,15 +7,15 @@ import com.sksamuel.exts.io.Using
 import io.eels.component.avro.AvroDeserializer
 import io.eels.component.parquet.util.ParquetIterator
 import io.eels.datastream.{DataStream, Publisher, Subscriber, Subscription}
-import io.eels.{Predicate, Row}
+import io.eels.{Chunk, Predicate}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
 class AvroParquetPublisher(path: Path,
                            predicate: Option[Predicate])(implicit conf: Configuration)
-  extends Publisher[Seq[Row]] with Logging with Using {
+  extends Publisher[Chunk] with Logging with Using {
 
-  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
     try {
       val deser = new AvroDeserializer()
       val running = new AtomicBoolean(true)
@@ -23,7 +23,7 @@ class AvroParquetPublisher(path: Path,
       using(AvroParquetReaderFn(path, predicate, None)) { reader =>
         ParquetIterator(reader)
           .takeWhile(_ => running.get)
-          .map(deser.toRow)
+          .map(deser.toValues)
           .grouped(DataStream.DefaultBatchSize)
           .foreach(subscriber.next)
       }

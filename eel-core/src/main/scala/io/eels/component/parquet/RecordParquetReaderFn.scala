@@ -1,22 +1,31 @@
 package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
-import io.eels.{Predicate, Row}
+import io.eels.schema.StructType
+import io.eels.{Predicate, Rec}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
+import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.api.ReadSupport
-import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
+import org.apache.parquet.hadoop.{ParquetFileReader, ParquetInputFormat, ParquetReader}
 import org.apache.parquet.schema.Type
 
 /**
-  * Helper function to create a native parquet reader for Row objects, using the apache parquet library.
+  * Helper function to create a native parquet reader objects which are arrays of values,
+  * using the apache parquet library.
+  *
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */
-object RowParquetReaderFn extends Logging {
+object RecordParquetReaderFn extends Logging {
 
   private val config = ParquetReaderConfig()
+
+  def schema(path: Path)(implicit conf: Configuration): StructType = {
+    val messageType = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER).getFileMetaData.getSchema
+    ParquetSchemaFns.fromParquetMessageType(messageType)
+  }
 
   /**
     * Creates a new reader for the given path.
@@ -27,7 +36,7 @@ object RowParquetReaderFn extends Logging {
   def apply(path: Path,
             predicate: Option[Predicate],
             readSchema: Option[Type],
-            dictionaryFiltering: Boolean)(implicit conf: Configuration): ParquetReader[Row] = {
+            dictionaryFiltering: Boolean)(implicit conf: Configuration): ParquetReader[Rec] = {
     logger.debug(s"Opening parquet reader for $path")
 
     // The parquet reader can use a projection by setting a projected schema onto the supplied conf object
@@ -46,7 +55,7 @@ object RowParquetReaderFn extends Logging {
       .map(FilterCompat.get)
       .getOrElse(FilterCompat.NOOP)
 
-    ParquetReader.builder(new RowReadSupport, path)
+    ParquetReader.builder(new ArrayReadSupport, path)
       .withConf(configuration())
       .withFilter(filter())
       .build()

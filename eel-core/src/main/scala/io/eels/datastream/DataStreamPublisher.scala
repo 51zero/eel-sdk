@@ -1,11 +1,11 @@
 package io.eels.datastream
 
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicMarkableReference, AtomicReference}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
 
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
-import io.eels.Row
 import io.eels.schema.StructType
+import io.eels.{Chunk, Row}
 
 /**
   * An implementation of DataStream for which items are emitted by calling publish.
@@ -16,13 +16,13 @@ import io.eels.schema.StructType
   */
 class DataStreamPublisher(override val schema: StructType) extends DataStream {
 
-  private val queue = new LinkedBlockingQueue[Seq[Row]]
+  private val queue = new LinkedBlockingQueue[Chunk]
   private val running = new AtomicBoolean(true)
   private val failure = new AtomicReference[Throwable](null)
 
   def isCancelled: Boolean = !running.get
 
-  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
     try {
       subscriber.subscribed(new Subscription {
         override def cancel(): Unit = {
@@ -41,7 +41,7 @@ class DataStreamPublisher(override val schema: StructType) extends DataStream {
     }
   }
 
-  def publish(row: Seq[Row]): Unit = queue.put(row)
+  def publish(row: Chunk): Unit = queue.put(row)
   def error(t: Throwable): Unit = {
     failure.set(t)
     queue.clear()

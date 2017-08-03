@@ -2,7 +2,7 @@ package io.eels.component.hive
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.Row
+import io.eels.Chunk
 import io.eels.datastream.{Publisher, Subscriber, Subscription}
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -21,7 +21,7 @@ class HivePartitionPublisher(dbName: String,
                              dialect: HiveDialect // used to open up the files to check they exist if checkDataForPartitionOnlySources is true
                             )
                             (implicit fs: FileSystem,
-                             client: IMetaStoreClient) extends Publisher[Seq[Row]] with Logging {
+                             client: IMetaStoreClient) extends Publisher[Chunk] with Logging {
 
   private val config = ConfigFactory.load()
 
@@ -50,7 +50,7 @@ class HivePartitionPublisher(dbName: String,
     }
   }
 
-  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = client.synchronized {
+  override def subscribe(subscriber: Subscriber[Chunk]): Unit = client.synchronized {
     try {
 
       import scala.collection.JavaConverters._
@@ -63,7 +63,7 @@ class HivePartitionPublisher(dbName: String,
         // first we build a map of the keys to values, then use that map to return a Row with
         // values in the order set by the fieldNames parameter
         val map = partitionKeys.zip(part.getValues.asScala).toMap
-        Row(projectionSchema, projectionSchema.fieldNames.map(map(_)).toVector)
+        projectionSchema.fieldNames.map(map(_)).toArray[Any]
       }
 
       logger.debug(s"After scanning partitions and files we have ${rows.size} rows")

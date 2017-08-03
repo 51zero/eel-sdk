@@ -34,40 +34,50 @@ trait DataStream extends Logging {
 
   def schema: StructType
 
-  def subscribe(subscriber: Subscriber[Seq[Row]]): Unit
+  def subscribe(subscriber: Subscriber[Chunk]): Unit
 
-  def map(f: Row => Row): DataStream = new DataStream {
+  def map(f: Rec => Rec): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = subscriber.next(t.map(f))
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = subscriber.next(t.map(f))
       })
     }
   }
 
   def mapField(fieldName: String, fn: Any => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = subscriber next t.map(_.map(fieldName, fn))
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      val index = schema.indexOf(fieldName)
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map(RowUtils.map(_, index, fn))
+          subscriber.next(ts)
+        }
       })
     }
   }
 
   def mapFieldIfExists(fieldName: String, fn: Any => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = subscriber next t.map(_.mapIfExists(fieldName, fn))
-      })
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      val index = schema.indexOf(fieldName)
+      if (index < 0) self.subscribe(subscriber)
+      else
+        self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+          override def next(t: Chunk): Unit = {
+            val ts = t.map(RowUtils.map(_, index, fn))
+            subscriber.next(ts)
+          }
+        })
     }
   }
 
-  def filter(f: Row => Boolean): DataStream = new DataStream {
+  def filter(f: Rec => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = subscriber.next(t.filter(f))
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = subscriber.next(t.filter(f))
       })
     }
   }
@@ -77,13 +87,13 @@ trait DataStream extends Logging {
     */
   def filter(fieldName: String, p: (Any) => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
         private val index = schema.indexOf(fieldName)
         if (index < 0)
           sys.error(s"Unknown field $fieldName")
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.filter { row => p(row.values(index)) }
+        override def next(t: Chunk): Unit = {
+          subscriber next t.filter(RowUtils.filter(_, index, p))
         }
       })
     }
@@ -91,29 +101,21 @@ trait DataStream extends Logging {
 
   def withLowerCaseSchema(): DataStream = new DataStream {
     override def schema: StructType = self.schema.toLowerCase()
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        private val lower = schema
-        override def next(t: Seq[Row]): Unit = {
-          val ts = t.map { row => Row(lower, row.values) }
-          subscriber.next(ts)
-        }
-      })
-    }
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = self.subscribe(subscriber)
   }
 
-  def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
+  def filterNot(p: Rec => Boolean): DataStream = filter { row => !p(row) }
 
-  def takeWhile(p: Row => Boolean): DataStream = new DataStream {
+  def takeWhile(p: Rec => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val continue = new AtomicBoolean(true)
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
 
         private var cancellable: Subscription = _
         override def subscribed(c: Subscription): Unit = cancellable = c
 
-        override def next(t: Seq[Row]): Unit = {
+        override def next(t: Chunk): Unit = {
           val ts = t.filter { row =>
             val satisified = continue.get && p(row)
             if (satisified) true
@@ -130,14 +132,14 @@ trait DataStream extends Logging {
     }
   }
 
-  def takeWhile(fieldName: String, p: Any => Boolean): DataStream = takeWhile(row => p(row.get(fieldName)))
+  def takeWhile(fieldName: String, p: Any => Boolean): DataStream = ??? // takeWhile(row => p(row.get(fieldName)))
 
   def take(n: Int): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val count = new AtomicInteger(0)
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
           val remaining = n - count.get
           if (remaining > 0) {
             val ts = t.take(remaining)
@@ -151,10 +153,10 @@ trait DataStream extends Logging {
 
   def drop(n: Int): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       var left = n
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
           val todrop = Math.min(left, t.size)
           left = left - todrop
           subscriber next t.drop(todrop)
@@ -163,16 +165,16 @@ trait DataStream extends Logging {
     }
   }
 
-  def dropWhile(p: Row => Boolean): DataStream = new DataStream {
+  def dropWhile(p: Rec => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val dropping = new AtomicBoolean(true)
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
 
         private var cancellable: Subscription = _
         override def subscribed(c: Subscription): Unit = cancellable = c
 
-        override def next(t: Seq[Row]): Unit = {
+        override def next(t: Chunk): Unit = {
           val ts = t.filter { row =>
             val skip = dropping.get && p(row)
             if (skip) false
@@ -187,7 +189,7 @@ trait DataStream extends Logging {
     }
   }
 
-  def dropWhile(fieldName: String, p: Any => Boolean): DataStream = dropWhile(row => p(row.get(fieldName)))
+  def dropWhile(fieldName: String, p: Any => Boolean): DataStream = ??? // dropWhile(row => p(row.get(fieldName)))
 
   // allows aggregations on the entire dataset
   def aggregated(): GroupedDataStream = new GroupedDataStream {
@@ -218,27 +220,22 @@ trait DataStream extends Logging {
     */
   def cartesian(other: DataStream): DataStream = new DataStream {
     override def schema: StructType = self.schema.concat(other.schema)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val materialized = other.collect
-      val schema = self.schema.concat(other.schema)
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          val rows = t.flatMap { left =>
-            materialized.map { right =>
-              Row(schema, left.values ++ right.values)
-            }
-          }
-          subscriber.next(rows)
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(chunk: Chunk): Unit = {
+          val recs = for (t <- chunk; m <- materialized) yield t ++ m
+          subscriber.next(recs)
         }
       })
     }
   }
 
-  def iterator: Iterator[Row] = {
-    val queue = new LinkedBlockingQueue[Row]()
+  def iterator: Iterator[Rec] = {
+    val queue = new LinkedBlockingQueue[Rec]()
     val executor = Executors.newSingleThreadExecutor()
-    self.subscribe(new Subscriber[Seq[Row]] {
-      override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
+    self.subscribe(new Subscriber[Chunk] {
+      override def next(t: Chunk): Unit = t.foreach(queue.put)
       override def completed(): Unit = queue.put(Row.SentinelSingle)
       override def error(t: Throwable): Unit = queue.put(Row.SentinelSingle)
       override def subscribed(c: Subscription): Unit = ()
@@ -249,9 +246,9 @@ trait DataStream extends Logging {
 
   def listener(_listener: Listener): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new Subscriber[Seq[Row]] {
-        override def next(t: Seq[Row]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new Subscriber[Chunk] {
+        override def next(t: Chunk): Unit = {
           subscriber.next(t)
           try {
             t.foreach(_listener.onNext)
@@ -291,32 +288,18 @@ trait DataStream extends Logging {
     */
   def replaceFieldType(fieldName: String, datatype: DataType): DataStream = new DataStream {
     override def schema: StructType = self.schema.updateFieldType(fieldName, datatype)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val updatedSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map(row => Row(updatedSchema, row.values))
-        }
-      })
-    }
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = self.subscribe(subscriber)
   }
 
   def replaceField(name: String, field: Field): DataStream = new DataStream {
     override def schema: StructType = self.schema.replaceField(name, field)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val updatedSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map(row => Row(updatedSchema, row.values))
-        }
-      })
-    }
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = self.subscribe(subscriber)
   }
 
   /**
     * Execute a side effecting function for every row in the stream, returning the same row.
     */
-  def foreach[U](fn: (Row) => U): DataStream = map { row => fn(row); row }
+  def foreach[U](fn: Rec => U): DataStream = map { row => fn(row); row }
 
   /**
     * Combines two datastreams together such that the fields from this datastream are joined with the fields
@@ -327,31 +310,30 @@ trait DataStream extends Logging {
     */
   def concat(other: DataStream): DataStream = new DataStream {
     override def schema: StructType = self.schema.concat(other.schema)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
 
-      val queue = new LinkedBlockingQueue[Row](DataStream.DefaultBufferSize)
+      val queue = new LinkedBlockingQueue[Rec](DataStream.DefaultBufferSize)
       val _schema = schema
-      val sentinel = Row(StructType(Field("________sentinal")), Seq(null))
 
       val executor = Executors.newSingleThreadExecutor()
       executor.submit(new Runnable {
         override def run(): Unit = {
-          other.subscribe(new Subscriber[Seq[Row]] {
-            override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
-            override def completed(): Unit = queue.put(sentinel)
-            override def error(t: Throwable): Unit = queue.put(sentinel)
+          other.subscribe(new Subscriber[Chunk] {
+            override def next(t: Chunk): Unit = t.foreach(queue.put)
+            override def completed(): Unit = queue.put(Row.SentinelSingle)
+            override def error(t: Throwable): Unit = queue.put(Row.SentinelSingle)
             override def subscribed(c: Subscription): Unit = ()
           })
         }
       })
       executor.shutdown()
 
-      self.subscribe(new Subscriber[Seq[Row]] {
+      self.subscribe(new Subscriber[Chunk] {
         // foreach item we receive, we need to marry it up with one from the other subscriber
-        override def next(t: Seq[Row]): Unit = {
+        override def next(t: Chunk): Unit = {
           val ts = t.map { a =>
             val b = queue.take()
-            Row(_schema, a.values ++ b.values)
+            a ++ b
           }
           subscriber.next(ts)
         }
@@ -377,50 +359,36 @@ trait DataStream extends Logging {
       val b = other.schema.removeField(key)
       a.concat(b)
     }
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
 
         private val _schema = schema
         private val keyIndex = _schema.indexOf(key)
         // this is a map of the key value to the original row with the key removed
-        private val map = other.collect.map { row => row(keyIndex) -> row.values.patch(keyIndex, Nil, 1) }.toMap
+        private val map = other.collect.map { row => row(keyIndex) -> row.patch(keyIndex, Nil, 1) }.toMap
 
-        override def next(t: Seq[Row]): Unit = {
-          val ts = t.map { row =>
-            Row(_schema, row.values ++ map(row(key)))
-          }
+        override def next(t: Chunk): Unit = {
+          val ts = t.map { row => row ++ map(row(keyIndex)) }
           subscriber.next(ts)
         }
       })
     }
   }
 
-  def renameField(nameFrom: String, nameTo: String): DataStream = new DataStream {
-    override def schema: StructType = self.schema.renameField(nameFrom, nameTo)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val updatedSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit =
-          subscriber next t.map { row => Row(updatedSchema, row.values) }
-      })
-    }
-  }
+  def renameField(nameFrom: String, nameTo: String): DataStream = withSchema(_.renameField(nameFrom, nameTo))
 
   // returns a new DataStream with any rows that contain one or more nulls excluded
-  def dropNullRows(): DataStream = filterNot(_.values.contains(null))
+  def dropNullRows(): DataStream = filter(_.indexOf(null) < 0)
 
   def dropField(fieldName: String, caseSensitive: Boolean = true): DataStream = removeField(fieldName, caseSensitive)
   def removeField(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val index = self.schema.indexOf(fieldName, caseSensitive)
-      val newSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row =>
-            val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
-            Row(newSchema, newValues)
-          }
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map(RowUtils.dropIndexes(_, Array(index)))
+          subscriber.next(ts)
         }
       })
     }
@@ -429,11 +397,13 @@ trait DataStream extends Logging {
   def dropFields(regex: Regex): DataStream = removeFields(regex)
   def removeFields(regex: Regex): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeFields(regex)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val newSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map(RowUtils.rowAlign(_, newSchema))
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      val _schema = schema
+      val indexesToDrop = _schema.fieldNames(regex).map(_schema.indexOf).toArray
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map(RowUtils.dropIndexes(_, indexesToDrop))
+          subscriber.next(ts)
         }
       })
     }
@@ -442,30 +412,24 @@ trait DataStream extends Logging {
   def dropFieldIfExists(fieldName: String, caseSensitive: Boolean = true): DataStream = removeFieldIfExists(fieldName, caseSensitive)
   def removeFieldIfExists(fieldName: String, caseSensitive: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeField(fieldName, caseSensitive)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val index = self.schema.indexOf(fieldName, caseSensitive)
-      val newSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row =>
-            if (index >= 0) {
-              val newValues = row.values.slice(0, index) ++ row.values.slice(index + 1, row.values.size)
-              Row(newSchema, newValues)
-            } else {
-              row
-            }
+      if (index < 0) self.subscribe(subscriber)
+      else
+        self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+          override def next(t: Chunk): Unit = {
+            val ts = t.map(RowUtils.removeIndex(_, index))
           }
-        }
-      })
+        })
     }
   }
 
-  def minBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
-    var minRow: Row = null
+  def minBy[T](fn: Rec => T)(implicit ordering: Ordering[T]): Rec = {
+    var minRow: Rec = null
     var subscription: Subscription = null
-    self.subscribe(new Subscriber[Seq[Row]] {
+    self.subscribe(new Subscriber[Chunk] {
       override def subscribed(s: Subscription): Unit = subscription = s
-      override def next(chunk: Seq[Row]): Unit = {
+      override def next(chunk: Chunk): Unit = {
         chunk.foreach { row =>
           val t = fn(row)
           if (minRow == null || ordering.lt(t, fn(minRow))) {
@@ -479,12 +443,12 @@ trait DataStream extends Logging {
     minRow
   }
 
-  def maxBy[T](fn: Row => T)(implicit ordering: Ordering[T]): Row = {
-    var maxRow: Row = null
+  def maxBy[T](fn: Rec => T)(implicit ordering: Ordering[T]): Rec = {
+    var maxRow: Rec = null
     var subscription: Subscription = null
-    self.subscribe(new Subscriber[Seq[Row]] {
+    self.subscribe(new Subscriber[Chunk] {
       override def subscribed(s: Subscription): Unit = subscription = s
-      override def next(chunk: Seq[Row]): Unit = {
+      override def next(chunk: Chunk): Unit = {
         chunk.foreach { row =>
           val t = fn(row)
           if (maxRow == null || ordering.gt(t, fn(maxRow))) {
@@ -506,14 +470,14 @@ trait DataStream extends Logging {
     *
     * Cancellation requests in the tee'd datastream do not propagate back to the original stream.
     */
-  def tee(schema: StructType, fn: Row => Seq[Row]): (DataStream, DataStream) = {
+  def tee(schema: StructType, fn: Rec => Chunk): (DataStream, DataStream) = {
     val teed = new DataStreamPublisher(schema)
     val original = new DataStream {
       override def schema: StructType = self.schema
-      override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-        self.subscribe(new Subscriber[Seq[Row]] {
+      override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+        self.subscribe(new Subscriber[Chunk] {
           override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
-          override def next(chunk: Seq[Row]): Unit = {
+          override def next(chunk: Chunk): Unit = {
             subscriber.next(chunk)
             teed.publish(chunk.flatMap(fn))
           }
@@ -535,16 +499,7 @@ trait DataStream extends Logging {
     * Returns a new DataStream with the same data as this stream, but where the field names have been sanitized
     * by removing any occurances of the given characters.
     */
-  def stripCharsFromFieldNames(chars: Seq[Char]): DataStream = new DataStream {
-    override def schema: StructType = self.schema.stripFromFieldNames(chars)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val updatedSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit =
-          subscriber next t.map { row => Row(updatedSchema, row.values) }
-      })
-    }
-  }
+  def stripCharsFromFieldNames(chars: Seq[Char]): DataStream = withSchema(_.stripFromFieldNames(chars))
 
   /**
     * For each row, the value corresponding to the given fieldName is applied to the function.
@@ -553,15 +508,13 @@ trait DataStream extends Logging {
   def update(fieldName: String, fn: Any => Any): DataStream = replace(fieldName, fn)
   def replace(fieldName: String, fn: (Any) => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val index = schema.indexOf(fieldName)
       if (index < 0) throw new IllegalArgumentException(s"Unknown field $fieldName")
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row =>
-            val newValues = row.values.updated(index, fn(row.values(index)))
-            Row(row.schema, newValues)
-          }
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map(RowUtils.replace(_, index, fn))
+          subscriber.next(ts)
         }
       })
     }
@@ -573,19 +526,13 @@ trait DataStream extends Logging {
     */
   def replace(fieldName: String, from: String, target: Any): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val index = schema.indexOf(fieldName)
       if (index < 0) throw new IllegalArgumentException(s"Unknown field $fieldName")
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row =>
-            val existing = row.values(index)
-            if (existing == from) {
-              Row(row.schema, row.values.updated(index, target))
-            } else {
-              row
-            }
-          }
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map(RowUtils.replace(_, index, from, target))
+          subscriber.next(ts)
         }
       })
     }
@@ -596,10 +543,9 @@ trait DataStream extends Logging {
     * This operation applies to all values for all rows.
     */
   def replace(from: String, target: Any): DataStream = map { row =>
-    val values = row.values.map { value =>
+    row.map { value =>
       if (value == from) target else value
     }
-    Row(row.schema, values)
   }
 
   /**
@@ -610,10 +556,10 @@ trait DataStream extends Logging {
     */
   def sample(k: Int): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val counter = new AtomicLong(0)
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
           subscriber next t.filter { _ =>
             if (counter.getAndIncrement % k == 0) false
             else true
@@ -631,14 +577,14 @@ trait DataStream extends Logging {
   def union(other: DataStream): DataStream = new DataStream {
     // todo check schemas are compatible
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new Subscriber[Seq[Row]] {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new Subscriber[Chunk] {
         override def subscribed(c: Subscription): Unit = subscriber.subscribed(c)
-        override def next(t: Seq[Row]): Unit = subscriber.next(t)
+        override def next(t: Chunk): Unit = subscriber.next(t)
         override def error(t: Throwable): Unit = subscriber.error(t)
         override def completed(): Unit = {
-          other.subscribe(new Subscriber[Seq[Row]] {
-            override def next(t: Seq[Row]): Unit = subscriber.next(t)
+          other.subscribe(new Subscriber[Chunk] {
+            override def next(t: Chunk): Unit = subscriber.next(t)
             override def error(t: Throwable): Unit = subscriber.error(t)
             override def subscribed(c: Subscription): Unit = ()
             override def completed(): Unit = subscriber.completed()
@@ -658,19 +604,16 @@ trait DataStream extends Logging {
 
     override def schema: StructType = self.schema.projection(fields)
 
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
 
       val oldSchema = self.schema
       val newSchema = schema
+      val indexes = newSchema.fields.map(oldSchema.indexOf).toArray
 
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
           val ts = t.map { row =>
-            val values = newSchema.fieldNames().map { name =>
-              val k = oldSchema.indexOf(name)
-              row.values(k)
-            }
-            Row(newSchema, values)
+            indexes.map(row.apply)
           }
           subscriber.next(ts)
         }
@@ -680,36 +623,34 @@ trait DataStream extends Logging {
 
   def substract(stream: DataStream): DataStream = new DataStream {
     def schema: StructType = self.schema
-    def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+    def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
         private val rhs = stream.collect
-        override def next(t: Seq[Row]): Unit = subscriber next t.filterNot(rhs.contains)
+        override def next(t: Chunk): Unit = subscriber next t.filterNot(rhs.contains)
       })
     }
   }
 
   def intersection(stream: DataStream): DataStream = new DataStream {
     def schema: StructType = self.schema
-    def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+    def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
         private val rhs = stream.collect
-        override def next(t: Seq[Row]): Unit = subscriber next t.filter(rhs.contains)
+        override def next(t: Chunk): Unit = subscriber next t.filter(rhs.contains)
       })
     }
   }
 
   def replaceNullValues(defaultValue: String): DataStream = new DataStream {
     override def schema: StructType = self.schema
-
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          val ts = t.map { row =>
-            val newValues = row.values.map {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map { rec =>
+            rec.map {
               case null => defaultValue
               case otherwise => otherwise
             }
-            Row(row.schema, newValues)
           }
           subscriber.next(ts)
         }
@@ -729,13 +670,13 @@ trait DataStream extends Logging {
     * Returns a new DataStream with a new field added.
     * The value for the field is taken from the function which is invoked for each row.
     */
-  def addField(field: Field, fn: Row => Any): DataStream = new DataStream {
+  def addField(field: Field, fn: Rec => Any): DataStream = new DataStream {
     override def schema: StructType = self.schema.addField(field)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        private val _schema = schema
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row => Row(_schema, row.values :+ fn(row)) }
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map { row => row :+ fn(row) }
+          subscriber.next(ts)
         }
       })
     }
@@ -757,27 +698,31 @@ trait DataStream extends Logging {
     * Returns a new DataStream with the given field added at the end. The value of this field
     * for each Row is specified by the default value. The value must be compatible with the
     * field definition. Eg, an error will occur if the field has type Int and the default
-    * value was 1.3
+    * value was a Double.
+    *
+    * @throws RuntimeException if the field already exists
     */
   def addField(field: Field, defaultValue: Any): DataStream = new DataStream {
     override def schema: StructType = self.schema.addField(field)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       val exists = self.schema.fieldNames().contains(field.name)
       if (exists) sys.error(s"Cannot add field ${field.name} as it already exists")
-      val newSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = subscriber.next(t.map(row => Row(newSchema, row.values :+ defaultValue)))
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.map { row => row :+ defaultValue }
+        }
       })
     }
   }
 
 
-  def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
+  def explode(fn: Rec => Chunk): DataStream = new DataStream {
     override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber.next(t.flatMap(fn))
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+      self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
+        override def next(t: Chunk): Unit = {
+          val ts = t.flatMap(fn)
+          subscriber.next(ts)
         }
       })
     }
@@ -793,23 +738,16 @@ trait DataStream extends Logging {
 
   private def withSchema(fn: StructType => StructType): DataStream = new DataStream {
     override def schema: StructType = fn(self.schema)
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val updatedSchema = schema
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row => Row(updatedSchema, row.values) }
-        }
-      })
-    }
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = self.subscribe(subscriber)
   }
 
   /**
     * Action which results in all the rows being returned in memory as a Vector.
     */
-  def collect: Vector[Row] = {
-    val vector = Vector.newBuilder[Row]
-    subscribe(new Subscriber[Seq[Row]] {
-      override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
+  def collect: Vector[Rec] = {
+    val vector = Vector.newBuilder[Rec]
+    subscribe(new Subscriber[Chunk] {
+      override def next(t: Chunk): Unit = t.foreach(vector.+=)
       override def subscribed(subscription: Subscription): Unit = ()
       override def completed(): Unit = ()
       override def error(t: Throwable): Unit = ()
@@ -821,8 +759,8 @@ trait DataStream extends Logging {
   def size: Long = {
     var count = 0L
     val latch = new CountDownLatch(1)
-    subscribe(new Subscriber[Seq[Row]] {
-      override def next(t: Seq[Row]): Unit = count = count + t.size
+    subscribe(new Subscriber[Chunk] {
+      override def next(t: Chunk): Unit = count = count + t.size
       override def subscribed(subscription: Subscription): Unit = ()
       override def completed(): Unit = latch.countDown()
       override def error(t: Throwable): Unit = ()
@@ -831,10 +769,10 @@ trait DataStream extends Logging {
     count
   }
 
-  def head: Row = collect.head
+  def head: Rec = collect.head
 
   // -- actions --
-  def exists(p: (Row) => Boolean): Boolean = {
+  def exists(p: Rec => Boolean): Boolean = {
     val sub = new ExistsSubscriber(p)
     subscribe(sub)
     sub.result.get match {
@@ -843,7 +781,7 @@ trait DataStream extends Logging {
     }
   }
 
-  def find(p: (Row) => Boolean): Option[Row] = {
+  def find(p: Rec => Boolean): Option[Rec] = {
     val sub = new FindSubscriber(p)
     subscribe(sub)
     sub.result.get match {
@@ -854,20 +792,20 @@ trait DataStream extends Logging {
 
   def multiplex(count: Int): Seq[DataStream] = {
 
-    def subscribeDownstream(queues: Array[LinkedBlockingQueue[Seq[Row]]],
+    def subscribeDownstream(queues: Array[LinkedBlockingQueue[Chunk]],
                             latch: CountDownLatch,
                             subscription: AtomicReference[Subscription]): Unit = {
       logger.debug("Subscribing to multiplexed parent")
       val executor = Executors.newSingleThreadExecutor()
       executor.submit(new Runnable {
         override def run(): Unit = {
-          self.subscribe(new Subscriber[Seq[Row]] {
+          self.subscribe(new Subscriber[Chunk] {
             override def subscribed(c: Subscription): Unit = {
               logger.debug("Multiplexed parent has started")
               subscription.set(c)
               latch.countDown()
             }
-            override def next(t: Seq[Row]): Unit = queues.foreach(_.put(t))
+            override def next(t: Chunk): Unit = queues.foreach(_.put(t))
             override def completed(): Unit = {
               logger.debug("Multiplexed parent has completed")
               queues.foreach(_.put(Row.Sentinel))
@@ -883,7 +821,7 @@ trait DataStream extends Logging {
     }
 
     val queues = Array.fill(count) {
-      new LinkedBlockingQueue[Seq[Row]](DataStream.DefaultBufferSize)
+      new LinkedBlockingQueue[Chunk](DataStream.DefaultBufferSize)
     }
 
     val subscribed = new AtomicBoolean(false)
@@ -897,7 +835,7 @@ trait DataStream extends Logging {
         // when someone calls subscribe on one of the multiplex streams,
         // we'll have to subscribe to this stream and then block if the other multiplexed
         // streams are not keeping up
-        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
 
           if (subscribed.compareAndSet(false, true)) {
             subscribeDownstream(queues, latch, subscription)
@@ -925,10 +863,10 @@ trait DataStream extends Logging {
     * Action which results in all the rows being returned in memory as a Vector.
     * Alias for 'collect()'
     */
-  def toVector: Vector[Row] = collect
-  def toSet: Set[Row] = collect.toSet
+  def toVector: Vector[Rec] = collect
+  def toSet: Set[Rec] = collect.toSet
 
-  def toDataTable: DataTable = DataTable(schema, collect.map(_.values).map(Record.apply))
+  def toDataTable: DataTable = DataTable(schema, collect.map(Record.apply))
 }
 
 object DataStream {
@@ -938,16 +876,16 @@ object DataStream {
   val DefaultBufferSize: Int = ConfigFactory.load().getInt("eel.default-buffer-size")
   val DefaultBatchSize: Int = ConfigFactory.load().getInt("eel.default-batch-size")
 
-  def fromIterator(_schema: StructType, _iterator: Iterator[Row]): DataStream = new DataStream {
+  def fromIterator(_schema: StructType, _iterator: Iterator[Seq[Any]]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       try {
         var running = true
         subscriber.subscribed(new Subscription {
           override def cancel(): Unit = running = false
         })
         _iterator.grouped(DefaultBatchSize).takeWhile(_ => running).foreach { chunk =>
-          subscriber.next(chunk)
+          subscriber.next(chunk.map(_.toArray))
         }
         subscriber.completed()
         logger.debug("Iterator based publisher has completed")
@@ -964,18 +902,15 @@ object DataStream {
     */
   def apply[T <: Product : TypeTag](ts: Seq[T]): DataStream = {
     val schema = StructType.from[T]
-    val values = ts.map(_.productIterator.toVector)
-    fromValues(schema, values)
+    val values = ts.map(_.productIterator.toArray)
+    fromRows(schema, values)
   }
 
-  def fromRows(first: Row, rest: Row*): DataStream = fromRows(first +: rest)
-  def fromRows(rows: Seq[Row]): DataStream = fromRows(rows.head.schema, rows)
+  def fromRows(_schema: StructType, first: Seq[Any], rest: Seq[Any]*): DataStream = fromRows(_schema, first +: rest)
 
-  def fromRows(_schema: StructType, first: Row, rest: Row*): DataStream = fromRows(_schema, first +: rest)
-
-  def fromRows(_schema: StructType, rows: Seq[Row]): DataStream = new DataStream {
+  def fromRows(_schema: StructType, rows: Seq[Seq[Any]]): DataStream = new DataStream {
     override def schema: StructType = _schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
       try {
         var running = true
         subscriber.subscribed(new Subscription {
@@ -983,7 +918,7 @@ object DataStream {
         })
         rows.grouped(DefaultBatchSize).takeWhile(_ => running).foreach { chunk =>
           logger.debug("Seq based publisher is publishing a chunk")
-          subscriber.next(chunk)
+          subscriber.next(chunk.map(_.toArray))
         }
         subscriber.completed()
         logger.debug("Seq based publisher has completed")
@@ -998,6 +933,6 @@ object DataStream {
     * This will result in a single partitioned DataStream.
     */
   def fromValues(schema: StructType, values: Seq[Seq[Any]]): DataStream = {
-    fromRows(schema, values.map(Row(schema, _)))
+    fromRows(schema, values.map(_.toArray))
   }
 }

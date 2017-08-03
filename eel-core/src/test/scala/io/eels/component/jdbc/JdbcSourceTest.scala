@@ -29,8 +29,8 @@ class JdbcSourceTest extends WordSpec with Matchers {
       conn.createStatement().executeUpdate("insert into mytable (a,b,c) values ('4','5','6')")
       JdbcSource(() => DriverManager.getConnection("jdbc:h2:mem:test3"), "select * from mytable where a=4").toDataStream().size shouldBe 1
       val a = JdbcSource("jdbc:h2:mem:test3", "select a,c from mytable where a=4").toDataStream().toVector
-      a.head.values.head shouldBe 4
-      a.head.values(1) shouldBe 6L
+      a.head.head shouldBe 4
+      a.head(1) shouldBe 6L
     }
     "read decimal precision and scale" in {
       val conn = DriverManager.getConnection("jdbc:h2:mem:decimal")

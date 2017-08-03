@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
 
-import io.eels.Row
+import io.eels.Chunk
 import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.datastream.Publisher
 
@@ -11,7 +11,7 @@ case object SinglePartitionStrategy extends JdbcPartitionStrategy {
                      query: String,
                      bindFn: (PreparedStatement) => Unit,
                      fetchSize: Int,
-                     dialect: JdbcDialect): Seq[Publisher[Seq[Row]]] = {
+                     dialect: JdbcDialect): Seq[Publisher[Chunk]] = {
     List(new JdbcPublisher(connFn, query, bindFn, fetchSize, dialect))
   }
 }

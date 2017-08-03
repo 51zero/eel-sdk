@@ -1,6 +1,6 @@
 package io.eels.component.parquet
 
-import io.eels.Row
+import io.eels.Rec
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -26,8 +26,8 @@ object RowParquetWriterFn {
                                 schema: MessageType,
                                 roundingMode: RoundingMode,
                                 metadata: Map[String, String])
-    extends ParquetWriter.Builder[Row, RowParquetWriterBuilder](path) {
-    override def getWriteSupport(conf: Configuration): WriteSupport[Row] = new RowWriteSupport(schema, roundingMode, metadata)
+    extends ParquetWriter.Builder[Rec, RowParquetWriterBuilder](path) {
+    override def getWriteSupport(conf: Configuration): WriteSupport[Rec] = new RowWriteSupport(schema, roundingMode, metadata)
     override def self(): RowParquetWriterBuilder = this
   }
 
@@ -35,7 +35,7 @@ object RowParquetWriterFn {
             schema: StructType,
             metadata: Map[String, String],
             dictionary: Boolean,
-            roundingMode: RoundingMode): ParquetWriter[Row] = {
+            roundingMode: RoundingMode): ParquetWriter[Rec] = {
     val config = ParquetWriterConfig()
     val messageType = ParquetSchemaFns.toParquetMessageType(schema)
     new RowParquetWriterBuilder(path, messageType, roundingMode, metadata)

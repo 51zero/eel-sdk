@@ -45,7 +45,7 @@ object ReadParquetEEL extends App {
     Vector(Vector("Steven", 27))
   )
 
-  val rows = Vector(
+  val rows = Array(
     Vector(Vector("Fred", 50, BigDecimal("50000.99000"), new Timestamp(System.currentTimeMillis())), friends)
   )
 

@@ -2,7 +2,7 @@ package io.eels.component.csv
 
 import com.univocity.parsers.csv.CsvWriter
 import io.eels.schema.StructType
-import io.eels.{Row, Sink, SinkWriter}
+import io.eels.{Rec, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -49,10 +49,10 @@ case class CsvSink(path: Path,
 
     override def close(): Unit = writer.close()
 
-    override def write(row: Row): Unit = {
+    override def write(row: Rec): Unit = {
       lock.synchronized {
         // nulls should be written as empty strings
-        val array = row.values.map {
+        val array = row.map {
           case null => ""
           case other => other.toString
         }

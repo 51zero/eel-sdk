@@ -3,7 +3,6 @@ package io.eels
 import com.sksamuel.exts.Logging
 import io.eels.datastream.{DataStream, DataStreamSource, Publisher}
 import io.eels.schema.StructType
-import io.eels.util.{JacksonSupport, JsonRow}
 
 /**
   * A Source is a provider of data.
@@ -23,14 +22,14 @@ trait Source extends Logging {
 
   def schema: StructType
 
-  def parts(): Seq[Publisher[Seq[Row]]]
+  def parts(): Seq[Publisher[Chunk]]
 
-  def load[T: Manifest]: Seq[T] = {
-    toDataStream.collect.map { row =>
-      val node = JsonRow(row)
-      JacksonSupport.mapper.readerFor[T].readValue(node)
-    }
-  }
+  //  def load[T: Manifest]: Seq[T] = {
+  //    toDataStream.collect.map { row =>
+  //      val node = JsonRow(row)
+  //      JacksonSupport.mapper.readerFor[T].readValue(node)
+  //    }
+  //  }
 
   def toDataStream(): DataStream = new DataStreamSource(this)
   def toDataStream(listener: Listener): DataStream = new DataStreamSource(this).listener(listener)

@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import com.sksamuel.exts.metrics.Timed
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.schema._
-import io.eels.{Listener, Row}
+import io.eels.{Listener, Rec}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 
@@ -45,7 +45,7 @@ object GroupedByParquetSpeedTest extends App with Timed {
       val f = ParquetSource("./parquettest/*")
         .toDataStream(new Listener {
           var count = 0
-          override def onNext(row: Row): Unit = {
+          override def onNext(row: Rec): Unit = {
             count = count + 1
             if (count % 250000 == 0)
               println(count)

@@ -5,7 +5,7 @@ import java.util.function.IntUnaryOperator
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
-import io.eels.Row
+import io.eels.{Rec, Row}
 import io.eels.schema.StructType
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
@@ -52,7 +52,7 @@ class OrcWriter(path: Path,
 
   private val counter = new AtomicInteger(0)
 
-  def write(row: Row): Unit = {
+  def write(row: Rec): Unit = {
     buffer.append(row)
     if (buffer.size == batchSize)
       flush()

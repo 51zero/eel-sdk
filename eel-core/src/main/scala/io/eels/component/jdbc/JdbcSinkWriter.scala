@@ -5,8 +5,8 @@ import java.util.concurrent.{Executors, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import io.eels.component.jdbc.dialect.JdbcDialect
-import io.eels.schema.{Field, StructType}
-import io.eels.{Row, SinkWriter}
+import io.eels.schema.StructType
+import io.eels.{Rec, Row, SinkWriter}
 
 class JdbcSinkWriter(schema: StructType,
                      connFn: () => Connection,
@@ -21,14 +21,12 @@ class JdbcSinkWriter(schema: StructType,
   logger.info(s"Creating Jdbc writer with $threads threads, batch size $batchSize, autoCommit=$autoCommit")
   require(bufferSize >= batchSize)
 
-  private val Sentinel = Row(StructType(Field("____jdbcsentinel")), Seq(null))
-
   import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
   // the buffer is a concurrent receiver for the write method. It needs to hold enough elements so that
   // the invokers of this class can keep pumping in rows while we wait for a buffer to fill up.
   // the buffer size must be >= batch size or we'll never fill up enough to trigger a batch
-  private val buffer = new LinkedBlockingQueue[Row](bufferSize)
+  private val buffer = new LinkedBlockingQueue[Rec](bufferSize)
 
   // the coordinator pool is just a single thread that runs the coordinator
   private val coordinatorPool = Executors.newSingleThreadExecutor()
@@ -47,7 +45,7 @@ class JdbcSinkWriter(schema: StructType,
       logger.debug("Starting JdbcWriter Coordinator")
       // once we receive the pill its all over for the writer
       Iterator.continually(buffer.take)
-        .takeWhile(_ != Sentinel)
+        .takeWhile(_ != Row.SentinelSingle)
         .grouped(batchSize).withPartial(true)
         .foreach { batch =>
           inserter.insertBatch(batch)
@@ -63,14 +61,14 @@ class JdbcSinkWriter(schema: StructType,
   coordinatorPool.shutdown()
 
   override def close(): Unit = {
-    buffer.put(Sentinel)
+    buffer.put(Row.SentinelSingle)
     logger.info("Closing JDBC Writer... waiting on writes to finish")
     coordinatorPool.awaitTermination(1, TimeUnit.DAYS)
   }
 
   // when we get a row to write, we won't commit it immediately to the database,
   // but we'll buffer it so we can do batched inserts
-  override def write(row: Row): Unit = {
+  override def write(row: Rec): Unit = {
     buffer.put(row)
   }
 }

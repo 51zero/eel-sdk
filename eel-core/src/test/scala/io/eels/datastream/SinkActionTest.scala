@@ -3,7 +3,7 @@ package io.eels.datastream
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels.schema.{Field, StructType}
-import io.eels.{Row, Sink, SinkWriter}
+import io.eels.{Chunk, Rec, Sink, SinkWriter}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.util.Try
@@ -30,7 +30,7 @@ class SinkActionTest extends WordSpec with Matchers {
         class ErrorSink extends Sink {
           override def open(schema: StructType): SinkWriter = new SinkWriter {
             override def close(): Unit = closed = true
-            override def write(row: Row): Unit = sys.error("boom")
+            override def write(row: Rec): Unit = sys.error("boom")
           }
         }
 
@@ -43,7 +43,7 @@ class SinkActionTest extends WordSpec with Matchers {
     "return successfully when an error stops the writer writing" in {
 
       val schema = StructType(Field("a"))
-      val ds = DataStream.fromIterator(schema, Iterator.continually(Row(schema, Seq("a"))))
+      val ds = DataStream.fromIterator(schema, Iterator.continually(Seq("a")))
 
       intercept[RuntimeException] {
         ds.to(new ErrorSink)
@@ -55,11 +55,11 @@ class SinkActionTest extends WordSpec with Matchers {
       val _schema = StructType(Field("a"))
       val ds = new DataStream {
         override def schema: StructType = _schema
-        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
           subscriber.subscribed(new Subscription {
             override def cancel(): Unit = latch.countDown()
           })
-          Iterator.continually(Row(schema, Seq("a"))).takeWhile(_ => latch.getCount > 0).grouped(100).foreach(subscriber.next)
+          Iterator.continually(Array[Any]("a")).takeWhile(_ => latch.getCount > 0).grouped(100).foreach(subscriber.next)
           subscriber.completed()
         }
       }
@@ -73,9 +73,9 @@ class SinkActionTest extends WordSpec with Matchers {
       val _schema = StructType(Field("a"))
       val ds = new DataStream {
         override def schema: StructType = _schema
-        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
           subscriber.subscribed(Subscription.empty)
-          Iterator.continually(Row(schema, Seq("a"))).take(100000).grouped(10).foreach(subscriber.next)
+          Iterator.continually(Array[Any]("a")).take(100000).grouped(10).foreach(subscriber.next)
           subscriber.completed()
         }
       }
@@ -86,7 +86,7 @@ class SinkActionTest extends WordSpec with Matchers {
         ds.to(new Sink {
           override def open(schema: StructType): SinkWriter = new SinkWriter {
             override def close(): Unit = latch.countDown()
-            override def write(row: Row): Unit = sys.error("boom")
+            override def write(row: Rec): Unit = sys.error("boom")
           }
         }, 8)
       }
@@ -96,10 +96,10 @@ class SinkActionTest extends WordSpec with Matchers {
       val _schema = StructType(Field("a"))
       val ds = new DataStream {
         override def schema: StructType = _schema
-        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+        override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
           Try {
             subscriber.subscribed(Subscription.empty)
-            Iterator.continually(Row(schema, Seq("a"))).take(100000).grouped(100).foreach(subscriber.next)
+            Iterator.continually(Array[Any]("a")).take(100000).grouped(100).foreach(subscriber.next)
             subscriber.completed()
           }
         }
@@ -111,7 +111,7 @@ class SinkActionTest extends WordSpec with Matchers {
         ds.to(new Sink {
           override def open(schema: StructType): SinkWriter = new SinkWriter {
             override def close(): Unit = latch.countDown()
-            override def write(row: Row): Unit = sys.error("boom")
+            override def write(row: Rec): Unit = sys.error("boom")
           }
         }, 8)
       }
@@ -124,6 +124,6 @@ class SinkActionTest extends WordSpec with Matchers {
 class ErrorSink extends Sink {
   override def open(schema: StructType): SinkWriter = new SinkWriter {
     override def close(): Unit = ()
-    override def write(row: Row): Unit = sys.error("boom")
+    override def write(row: Rec): Unit = sys.error("boom")
   }
 }
