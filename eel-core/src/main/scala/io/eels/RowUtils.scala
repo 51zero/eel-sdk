@@ -24,7 +24,8 @@ object RowUtils {
     */
   def coerce(row: Row): Row = {
     val values = row.schema.fields.zip(row.values).map { case (field, value) =>
-      field.dataType match {
+      if (value == null) null
+      else field.dataType match {
         case StringType | VarcharType(_) | CharType(_)=> StringCoercer.coerce(value)
         case LongType(_) => LongCoercer.coerce(value)
         case IntType(_) => IntCoercer.coerce(value)
