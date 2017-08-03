@@ -1,7 +1,7 @@
 package io.eels
 
 import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, ByteCoercer, DateCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, StringCoercer, TimestampCoercer}
-import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, DateType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType}
+import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, CharType, DateType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType, VarcharType}
 
 object RowUtils {
 
@@ -25,7 +25,7 @@ object RowUtils {
   def coerce(row: Row): Row = {
     val values = row.schema.fields.zip(row.values).map { case (field, value) =>
       field.dataType match {
-        case StringType => StringCoercer.coerce(value)
+        case StringType | VarcharType(_) | CharType(_)=> StringCoercer.coerce(value)
         case LongType(_) => LongCoercer.coerce(value)
         case IntType(_) => IntCoercer.coerce(value)
         case ByteType(_) => ByteCoercer.coerce(value)
