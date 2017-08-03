@@ -7,7 +7,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.sksamuel.exts.concurrent.ExecutorImplicits._
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.concurrent.TrieMap
 
 trait Publisher[T] {
   def subscribe(subscriber: Subscriber[T])
@@ -33,11 +33,11 @@ object Publisher extends Logging {
 
         // we make a collection of all the subscriptions, so if there's an error at any point in the
         // merge, we can cancel all upstream producers
-        val subscriptions = ArrayBuffer.empty[Subscription]
+        val subscriptions = TrieMap.empty[Subscription, Int]
 
         // this cancellable can be used to cancel all the subscriptions
         val subscription = new Subscription {
-          override def cancel(): Unit = subscriptions.foreach(_.cancel)
+          override def cancel(): Unit = subscriptions.keys.foreach(_.cancel)
         }
 
         // status flag that an error occured and the subscriptions should watch for it
@@ -55,7 +55,7 @@ object Publisher extends Logging {
           executor.submit {
             try {
               publisher.subscribe(new Subscriber[T] {
-                override def subscribed(sub: Subscription): Unit = if (sub != null) subscriptions.append(sub)
+                override def subscribed(sub: Subscription): Unit = if (sub != null) subscriptions.put(sub, 1)
                 override def next(t: T): Unit = queue.put(Right(t))
                 override def error(t: Throwable): Unit = terminate(t)
                 override def completed(): Unit = {
