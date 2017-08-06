@@ -22,9 +22,9 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "reqEnum", OriginalType.ENUM),
       Types.required(PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY).precision(14).scale(6).id(1).length(6).as(OriginalType.DECIMAL).named("requiredDecimal"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "timeMillis", OriginalType.TIME_MILLIS),
-      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "timeMicros", OriginalType.TIME_MICROS),
-      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT96, "timestampMillis"),
-      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "timestampMicros", OriginalType.TIMESTAMP_MICROS)
+      //new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "timeMicros", OriginalType.TIME_MICROS),
+      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT96, "timestampMillis")
+  //    new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "timestampMicros", OriginalType.TIMESTAMP_MICROS)
     )
 
     val struct = StructType(Vector(
@@ -38,9 +38,9 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("reqEnum", EnumType("reqEnum", Nil), false, false),
       Field("requiredDecimal", DecimalType(14, 6), false, false),
       Field("timeMillis", TimeMillisType, false, false),
-      Field("timeMicros", TimeMicrosType, false, false),
-      Field("timestampMillis", TimestampMillisType, false, false),
-      Field("timestampMicros", TimestampMicrosType, false, false)
+   //   Field("timeMicros", TimeMicrosType, false, false),
+      Field("timestampMillis", TimestampMillisType, false, false)
+  //    Field("timestampMicros", TimestampMicrosType, false, false)
     ))
 
     ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe struct
