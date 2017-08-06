@@ -1,10 +1,11 @@
 package io.eels.component.parquet
 
 import java.io.File
+import java.sql.Timestamp
 
-import io.eels.Predicate
 import io.eels.datastream.DataStream
-import io.eels.schema.{DecimalType, Field, StringType, StructType}
+import io.eels.schema._
+import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{FlatSpec, Matchers}
@@ -39,6 +40,32 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
   "ParquetSource" should "support predicates" in {
     val rows = ParquetSource(path).withPredicate(Predicate.equals("job", "actor")).toDataStream().collect
     rows.size shouldBe 1
+  }
+
+  it should "support timestamp predicates" in {
+
+    val schema = StructType(
+      Field("id", StringType),
+      Field("timestamp", TimestampMillisType)
+    )
+
+    val ds = DataStream.fromValues(schema, Seq(
+      Array("a", Timestamp.valueOf("2017-05-01 12:12:12")),
+      Array("b", Timestamp.valueOf("2017-06-02 11:11:11")),
+      Array("c", Timestamp.valueOf("2017-07-03 10:10:10"))
+    ))
+
+    val path = new Path("timestamp_predicate.pq")
+    ds.to(ParquetSink(path))
+
+    ParquetSource(path).withPredicate(Predicate.gte("timestamp", Timestamp.valueOf("2017-06-02 11:11:11"))).toDataStream().collect shouldBe
+      Seq(
+        Row(schema, Array("a", Timestamp.valueOf("2017-05-01 12:12:12"))),
+        Row(schema, Array("b", Timestamp.valueOf("2017-06-02 11:11:11"))),
+        Row(schema, Array("c", Timestamp.valueOf("2017-07-03 10:10:10")))
+      )
+
+    fs.delete(path, false)
   }
 
   it should "support decimal type predicate via user defined predicate" in {
