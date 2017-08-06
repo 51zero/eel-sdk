@@ -145,13 +145,19 @@ object ParquetSchemaFns {
       case StructType(fields) => new GroupType(repetition, name, fields.map(toParquetType): _*)
       // nullable arrays should be written as 3-level nested groups
       case ArrayType(elementType) =>
-        new GroupType(repetition, name, OriginalType.LIST,
-          new GroupType(Repetition.REPEATED, "list", toParquetType(elementType, "element", false))
-        )
+        val listType = toParquetType(elementType, "element", false)
+        Types.buildGroup(repetition)
+          .as(OriginalType.LIST)
+          .addField(Types.repeatedGroup().addField(listType).named("list"))
+          .named(name)
       case BigIntType =>
-        val id = new Type.ID(1)
-        val metadata = new DecimalMetadata(38, 0)
-        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 20, name, OriginalType.DECIMAL, metadata, id)
+        Types.primitive(PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, repetition)
+          .precision(38)
+          .scale(0)
+          .as(OriginalType.DECIMAL)
+          .length(20)
+          .id(1)
+          .named(name)
       case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name)
       case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, name)
       case ByteType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_8)
@@ -162,10 +168,14 @@ object ParquetSchemaFns {
       // The scale stores the number of digits of that value that are to the right of the decimal point,
       // and the precision stores the maximum number of digits supported in the unscaled value.
       case DecimalType(precision, scale) =>
-        val metadata = new DecimalMetadata(precision.value, scale.value)
         val byteSize = byteSizeForPrecision(precision)
-        val id = new Type.ID(1)
-        new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, byteSize, name, OriginalType.DECIMAL, metadata, id)
+        Types.primitive(PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, repetition)
+          .precision(precision.value)
+          .scale(scale.value)
+          .as(OriginalType.DECIMAL)
+          .length(byteSize)
+          .id(1)
+          .named(name)
       case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, name)
       case EnumType(enumName, _) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, enumName, OriginalType.ENUM)
       case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, name)
@@ -176,9 +186,10 @@ object ParquetSchemaFns {
       case MapType(keyType, valueType) =>
         val key = toParquetType(keyType, "key", false)
         val value = toParquetType(valueType, "value", true)
-        new GroupType(repetition, name, OriginalType.MAP,
-          new GroupType(Repetition.REPEATED, "key_value", key, value)
-        )
+        Types.buildGroup(repetition)
+          .as(OriginalType.MAP)
+          .addField(Types.repeatedGroup().addFields(key, value).named("key_value"))
+          .named(name)
       case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_16)
       case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_16)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
