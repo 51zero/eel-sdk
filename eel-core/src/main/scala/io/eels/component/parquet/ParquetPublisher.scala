@@ -11,6 +11,7 @@ import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
+import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.ParquetFileReader
 import org.apache.parquet.schema.MessageType
 
@@ -25,7 +26,7 @@ class ParquetPublisher(path: Path,
     if (projection.isEmpty) None
     else {
 
-      val fileSchema = ParquetFileReader.open(conf, path).getFileMetaData.getSchema
+      val fileSchema = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER).getFileMetaData.getSchema
       val structType = ParquetSchemaFns.fromParquetMessageType(fileSchema)
 
       if (caseSensitive) {
