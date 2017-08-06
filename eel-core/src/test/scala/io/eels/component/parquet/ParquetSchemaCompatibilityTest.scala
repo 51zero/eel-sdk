@@ -20,7 +20,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "requiredLong"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "requiredString", OriginalType.UTF8),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "reqEnum", OriginalType.ENUM),
-      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 6, "requiredDecimal", OriginalType.DECIMAL, new DecimalMetadata(14, 6), new Type.ID(1)),
+      Types.required(PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY).precision(14).scale(6).id(1).length(6).as(OriginalType.DECIMAL).named("requiredDecimal"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "timeMillis", OriginalType.TIME_MILLIS),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "timeMicros", OriginalType.TIME_MICROS),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT96, "timestampMillis"),

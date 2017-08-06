@@ -23,13 +23,19 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
   it should "store decimals as FIXED_LEN_BYTE_ARRAY with OriginalType.DECIMAL and precision and scale set" in {
     val schema = StructType(Field("a", DecimalType(20, 10)))
     ParquetSchemaFns.toParquetMessageType(schema) shouldBe
-      new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 9, "a", OriginalType.DECIMAL, new DecimalMetadata(20, 10), new org.apache.parquet.schema.Type.ID(1)))
+      new MessageType(
+        "eel_schema",
+        Types.primitive(PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, Repetition.OPTIONAL).precision(20).scale(10).id(1).length(9).as(OriginalType.DECIMAL).named("a")
+    )
   }
 
   it should "store big int as FIXED_LEN_BYTE_ARRAY with OriginalType.DECIMAL and precision set and scale 0" in {
     val schema = StructType(Field("a", BigIntType))
     ParquetSchemaFns.toParquetMessageType(schema) shouldBe
-      new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 20, "a", OriginalType.DECIMAL, new DecimalMetadata(38, 0), new org.apache.parquet.schema.Type.ID(1)))
+      new MessageType(
+        "eel_schema",
+        Types.primitive(PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, Repetition.OPTIONAL).precision(38).scale(0).id(1).length(20).as(OriginalType.DECIMAL).named("a")
+      )
   }
 
   it should "store char as BINARY with UTF8" in {
