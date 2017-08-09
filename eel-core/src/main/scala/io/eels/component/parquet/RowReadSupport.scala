@@ -97,12 +97,15 @@ class ArrayConverter(elementType: DataType,
 
   private val builder = new VectorBuilder()
 
-  // the outer converter is just a pass through to the list converter
-  override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
-    override def getConverter(fieldIndex: Int): Converter = Converter(elementType, false, -1, builder)
+  val converter = new GroupConverter {
+    val converter = Converter(elementType, false, -1, builder)
+    override def getConverter(fieldIndex: Int): Converter = converter
     override def start(): Unit = ()
     override def end(): Unit = () // a no-op as each nested group only contains a single element and we want to handle the finished list
   }
+
+  // the outer converter is just a pass through to the list converter
+  override def getConverter(fieldIndex: Int): Converter = converter
   override def start(): Unit = builder.reset()
   override def end(): Unit = parent.put(index, builder.result)
 }
