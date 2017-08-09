@@ -142,7 +142,7 @@ object ParquetSchemaFns {
   def toParquetType(dataType: DataType, name: String, nullable: Boolean): Type = {
     val repetition = if (nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     dataType match {
-      case StructType(fields) => new GroupType(repetition, name, fields.map(toParquetType): _*)
+      case StructType(fields) => Types.buildGroup(repetition).addFields(fields.map(toParquetType): _*).named(name)
       // arrays are written out in the style of spark, which is an outer, optional group,
       // marked with original type List, and the name of the real field. This group then contains
       // a single field, which is a repeated group, name of 'list', and no original type.
@@ -150,9 +150,8 @@ object ParquetSchemaFns {
       // no original type, and fields taken from our array's element type.
       case ArrayType(elementType) =>
         val listType = toParquetType(elementType, "element", false)
-        Types.buildGroup(repetition)
-          .as(OriginalType.LIST)
-          .addField(Types.repeatedGroup().addField(listType).named("list"))
+        Types.list(repetition)
+          .element(listType)
           .named(name)
       case BigIntType =>
         Types.primitive(PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, repetition)
@@ -162,12 +161,12 @@ object ParquetSchemaFns {
           .length(20)
           .id(1)
           .named(name)
-      case BinaryType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name)
-      case BooleanType => new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, name)
-      case ByteType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_8)
-      case ByteType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_8)
-      case CharType(_) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
-      case DateType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.DATE)
+      case BinaryType => Types.primitive(PrimitiveTypeName.BINARY, repetition).named(name)
+      case BooleanType => Types.primitive(PrimitiveTypeName.BOOLEAN, repetition).named(name)
+      case ByteType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.INT_8).named(name)
+      case ByteType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_8).named(name)
+      case CharType(_) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
+      case DateType => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.DATE).named(name)
       // https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md#decimal
       // The scale stores the number of digits of that value that are to the right of the decimal point,
       // and the precision stores the maximum number of digits supported in the unscaled value.
@@ -180,29 +179,26 @@ object ParquetSchemaFns {
           .length(byteSize)
           .id(1)
           .named(name)
-      case DoubleType => new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, name)
+      case DoubleType => Types.primitive(PrimitiveTypeName.DOUBLE, repetition).named(name)
       case EnumType(enumName, _) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, enumName, OriginalType.ENUM)
       case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, name)
-      case IntType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name)
-      case IntType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_32)
-      case LongType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name)
-      case LongType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.UINT_64)
+      case IntType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).named(name)
+      case IntType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_32).named(name)
+      case LongType(true) => Types.primitive(PrimitiveTypeName.INT64, repetition).named(name)
+      case LongType(false) => Types.primitive(PrimitiveTypeName.INT64, repetition).as(OriginalType.UINT_64).named(name)
       case MapType(keyType, valueType) =>
         val key = toParquetType(keyType, "key", false)
         val value = toParquetType(valueType, "value", true)
-        Types.buildGroup(repetition)
-          .as(OriginalType.MAP)
-          .addField(Types.repeatedGroup().addFields(key, value).named("key_value"))
-          .named(name)
-      case ShortType(true) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.INT_16)
-      case ShortType(false) => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.UINT_16)
+        Types.map(repetition).key(key).value(value).named(name)
+      case ShortType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.INT_16).named(name)
+      case ShortType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_16).named(name)
       case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
       case TimeMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.TIME_MILLIS)
    //   case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIME_MICROS)
       // spark doesn't annotate timestamps, just uses int96, so same here
-      case TimestampMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT96, name)
+      case TimestampMillisType => Types.primitive(PrimitiveTypeName.INT96, repetition).named(name)
    //   case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
-      case VarcharType(_) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
+      case VarcharType(_) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
     }
   }
 }

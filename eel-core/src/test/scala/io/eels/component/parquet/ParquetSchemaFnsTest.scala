@@ -226,7 +226,7 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
     ParquetSchemaFns.toParquetMessageType(structType, "eel_schema") shouldBe new MessageType(
       "eel_schema",
       new GroupType(Repetition.OPTIONAL, "abc", OriginalType.MAP,
-        new GroupType(Repetition.REPEATED, "key_value",
+        new GroupType(Repetition.REPEATED, "map",
           new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "key"),
           new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "value")
         )
@@ -243,7 +243,7 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
     ParquetSchemaFns.toParquetMessageType(structType, "eel_schema") shouldBe new MessageType(
       "eel_schema",
       new GroupType(Repetition.REQUIRED, "abc", OriginalType.MAP,
-        new GroupType(Repetition.REPEATED, "key_value",
+        new GroupType(Repetition.REPEATED, "map",
           new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "key"),
           new PrimitiveType(Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.BOOLEAN, "value")
         )
