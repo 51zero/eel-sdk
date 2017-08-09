@@ -4,11 +4,8 @@ import java.sql.Date
 import java.util.Properties
 
 import com.sksamuel.exts.metrics.Timed
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hive.common.`type`.HiveDecimal
-import org.apache.hadoop.hive.conf.HiveConf
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient
 import org.apache.hadoop.hive.ql.io.IOConstants
 import org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
 import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
@@ -20,18 +17,7 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName
 
 object HiveTestApp extends App with Timed {
 
-  implicit val conf = new Configuration
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
-  conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
-  conf.reloadConfiguration()
-
-  implicit val fs = FileSystem.get(conf)
-
-  implicit val hiveConf = new HiveConf()
-  hiveConf.addResource(new Path("/home/sam/development/hive-2.1.0-bin/conf/hive-site.xml"))
-  hiveConf.reloadConfiguration()
-
-  implicit val client = new HiveMetaStoreClient(hiveConf)
+  import HiveConfig._
 
   val path = new Path("hive.test")
 

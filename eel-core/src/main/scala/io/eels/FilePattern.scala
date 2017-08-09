@@ -20,7 +20,7 @@ case class FilePattern(pattern: String,
   def isDirectory(): Boolean = pattern.endsWith("/")
 
   def toPaths()(implicit fs: FileSystem): List[Path] = {
-    if (isRegex) {
+    val paths = if (isRegex) {
 
       val regex = new Path(pattern).getName.replace("*", ".*?")
       val dir = new Path(pattern).getParent
@@ -31,13 +31,18 @@ case class FilePattern(pattern: String,
         .filter { path => path.getName.matches(regex) }
         .filter(filter)
 
-    } else if (isDirectory) {
+    } else if (fs.isDirectory(new Path(pattern))) {
+
       val path = new Path(pattern.stripSuffix("/"))
-      logger.debug(s"File expansion will check path $path")
-      HdfsIterator.remote(fs.listFiles(path, true)).map(_.getPath).toList.filter(fs.isFile).filter(filter)
+      logger.debug(s"File expansion will search directory $path")
+      HdfsIterator.remote(fs.listFiles(path, false)).map(_.getPath).toList.filter(fs.isFile).filter(filter)
+
     } else {
       List(new Path(pattern))
     }
+
+    logger.debug(s"toPaths has returned ${paths.size} paths, first 5: ${paths.take(5).mkString(",")}")
+    paths
   }
 
   def withFilter(p: Path => Boolean): FilePattern = copy(filter = p)

@@ -1,12 +1,14 @@
 package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
+import io.eels.schema.StructType
 import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
+import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.api.ReadSupport
-import org.apache.parquet.hadoop.{ParquetInputFormat, ParquetReader}
+import org.apache.parquet.hadoop.{ParquetFileReader, ParquetInputFormat, ParquetReader}
 import org.apache.parquet.schema.Type
 
 /**
@@ -17,6 +19,11 @@ import org.apache.parquet.schema.Type
 object RowParquetReaderFn extends Logging {
 
   private val config = ParquetReaderConfig()
+
+  def schema(path: Path)(implicit conf: Configuration): StructType = {
+    val mt = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER).getFileMetaData.getSchema
+    ParquetSchemaFns.fromParquetMessageType(mt)
+  }
 
   /**
     * Creates a new reader for the given path.

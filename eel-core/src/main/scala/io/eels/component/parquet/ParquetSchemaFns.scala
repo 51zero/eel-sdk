@@ -143,7 +143,11 @@ object ParquetSchemaFns {
     val repetition = if (nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     dataType match {
       case StructType(fields) => new GroupType(repetition, name, fields.map(toParquetType): _*)
-      // nullable arrays should be written as 3-level nested groups
+      // arrays are written out in the style of spark, which is an outer, optional group,
+      // marked with original type List, and the name of the real field. This group then contains
+      // a single field, which is a repeated group, name of 'list', and no original type.
+      // This then contains a single field called element, which is an optional group,
+      // no original type, and fields taken from our array's element type.
       case ArrayType(elementType) =>
         val listType = toParquetType(elementType, "element", false)
         Types.buildGroup(repetition)

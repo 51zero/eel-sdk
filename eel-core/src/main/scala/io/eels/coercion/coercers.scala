@@ -178,6 +178,7 @@ object SequenceCoercer extends Coercer[Seq[Any]] {
     case array: Array[_] => array
     case seq: Seq[_] => seq
     case seq: Seq[Any] => seq
+    case product: Product => product.productIterator.toVector
     case col: java.util.Collection[Any] => col.asScala.toSeq
   }
 }

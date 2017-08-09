@@ -28,6 +28,7 @@ object ReadParquetEEL extends App {
       Field("AGE", IntType.Signed)
     )
   )
+
   val personDetailsStruct = Field.createStructField("PERSON_DETAILS",
     Seq(
       Field("NAME", StringType),
@@ -36,6 +37,7 @@ object ReadParquetEEL extends App {
       Field("CREATION_TIME", TimestampMillisType)
     )
   )
+
   val friendType = StructType(friendStruct)
   val schema = StructType(personDetailsStruct, Field("FRIENDS", ArrayType(friendType), nullable = false))
 

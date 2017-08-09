@@ -2,11 +2,12 @@ package io.eels.component.parquet
 
 import java.sql.{Date, Timestamp}
 
-import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema._
+import io.eels.{FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.sql.catalyst.expressions.{GenericRow, GenericRowWithSchema}
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
@@ -85,7 +86,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
 
       df.write.mode(SaveMode.Overwrite).parquet(path.toString)
 
-      val ds = ParquetSource(path).toDataStream()
+      val ds = ParquetSource(FilePattern(path).withFilter(path => !path.getName.contains("SUCCESS"))).toDataStream()
       ds.schema shouldBe schema
 
       val values = ds.collect.head.values.toArray
@@ -108,6 +109,27 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       )
 
       fs.delete(path, true)
+    }
+
+    "read arrays of structs written by eel" in {
+      val eelSchema = StructType(Field("a", ArrayType(StructType("p", "q"))))
+      val sparkSchema = org.apache.spark.sql.types.StructType(Seq(
+        StructField("a", org.apache.spark.sql.types.ArrayType(
+          org.apache.spark.sql.types.StructType(Seq(
+            StructField("p", org.apache.spark.sql.types.StringType),
+            StructField("q", org.apache.spark.sql.types.StringType)
+          ))
+        ))
+      ))
+
+      val path = new Path("spark.parquet.structs")
+      DataStream.fromRows(eelSchema, Row(eelSchema, Seq(Seq(Tuple2("prince", "queen"))))).to(ParquetSink(path).withOverwrite(true))
+
+      val df = session.sqlContext.read.parquet(path.toString)
+      df.schema shouldBe sparkSchema
+      df.collect.head.toSeq.head.asInstanceOf[Seq[_]].head.asInstanceOf[GenericRow].toSeq shouldBe Array("prince", "queen")
+
+      fs.delete(path, false)
     }
   }
 
@@ -197,6 +219,24 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
 
       ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+    }
+
+    "read arrays of structs written by spark" in {
+      val eelSchema = StructType(Field("a", ArrayType(StructType("p", "q"))))
+      val sparkSchema = org.apache.spark.sql.types.StructType(Seq(
+        StructField("a", org.apache.spark.sql.types.ArrayType(
+          org.apache.spark.sql.types.StructType(Seq(
+            StructField("p", org.apache.spark.sql.types.StringType),
+            StructField("q", org.apache.spark.sql.types.StringType)
+          ))
+        ))
+      ))
+      val df1 = Seq(Array(Tuple2("prince", "queen"))).toDF
+      val df2 = session.sqlContext.createDataFrame(df1.rdd, sparkSchema)
+      df2.write.mode(SaveMode.Overwrite).parquet("/tmp/structs")
+      val ds = ParquetSource(FilePattern("/tmp/structs").withFilter(path => path.getName.contains(".parquet"))).toDataStream()
+      ds.schema shouldBe eelSchema
+      ds.head shouldBe Row(eelSchema, Seq(Seq(Seq("prince", "queen"))))
     }
   }
 }

@@ -65,7 +65,7 @@ object Converter {
       case _: IntType => new DefaultPrimitiveConverter(fieldIndex, builder)
       case _: LongType => new DefaultPrimitiveConverter(fieldIndex, builder)
       case _: ShortType => new DefaultPrimitiveConverter(fieldIndex, builder)
-      case mapType@MapType(keyType, valueType) => new MapConverter(fieldIndex, builder, mapType)
+      case mapType: MapType => new MapConverter(fieldIndex, builder, mapType)
       case StringType => new StringConverter(fieldIndex, builder)
       case struct: StructType => new StructConverter(struct, fieldIndex, Option(builder))
       case TimestampMillisType => new TimestampConverter(fieldIndex, builder)
@@ -91,18 +91,38 @@ class StructConverter(schema: StructType, index: Int, parent: Option[ValuesBuild
   override def start(): Unit = builder.reset()
 }
 
+// this is the converter for the group type that has the field name and original type List
 class ArrayConverter(elementType: DataType,
                      index: Int,
                      parent: ValuesBuilder) extends GroupConverter with Logging {
 
   private val builder = new VectorBuilder()
 
-  // the outer converter is just a pass through to the list converter
-  override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
-    override def getConverter(fieldIndex: Int): Converter = Converter(elementType, false, -1, builder)
+  // this converter is for the group called 'list'
+  private val converter = new GroupConverter { // getting a convertor for 'list'
+
+    // this converter is for the actual element type
+    val converter = Converter(elementType, false, -1, builder)
+
+    // this group contains a single field called 'element'
+    // so we only ever expect fieldIndex to be 0
+    override def getConverter(fieldIndex: Int): Converter = {
+      require(fieldIndex == 0)
+      logger.info(s"Getting array converter for field $fieldIndex $elementType")
+      converter
+    }
+
     override def start(): Unit = ()
     override def end(): Unit = () // a no-op as each nested group only contains a single element and we want to handle the finished list
   }
+
+  // the array group will contain a single field, a group called list, so we only
+  // ever expect fieldIndex to be 0
+  override def getConverter(fieldIndex: Int): Converter = {
+    require(fieldIndex == 0)
+    converter
+  }
+
   override def start(): Unit = builder.reset()
   override def end(): Unit = parent.put(index, builder.result)
 }
@@ -152,7 +172,10 @@ class StringConverter(index: Int,
 
   private var dict: Array[String] = _
 
-  override def addBinary(value: Binary): Unit = builder.put(index, value.toStringUsingUTF8)
+  override def addBinary(value: Binary): Unit = {
+    logger.info(s"Adding ${value.toStringUsingUTF8} to builder $builder")
+    builder.put(index, value.toStringUsingUTF8)
+  }
 
   override def hasDictionarySupport: Boolean = true
 
@@ -218,6 +241,7 @@ class VectorBuilder extends ValuesBuilder with Logging {
 
   override def reset(): Unit = vector = Vector.newBuilder[Any]
   override def put(pos: Int, value: Any): Unit = {
+    logger.info(s"PUTTING $pos $value")
     vector.+=(value)
   }
   override def result: Seq[Any] = vector.result()

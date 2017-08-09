@@ -103,7 +103,7 @@ class StructRecordWriter(structType: StructType,
     require(record != null)
     if (nested)
       record.startGroup()
-    val values = value.asInstanceOf[Seq[Any]]
+    val values = SequenceCoercer.coerce(value)
     for (k <- structType.fields.indices) {
       val value = values(k)
       // if a value is null then parquet requires us to completely skip the field
