@@ -89,7 +89,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       val ds = ParquetSource(FilePattern(path).withFilter(path => !path.getName.contains("SUCCESS"))).toDataStream()
       ds.schema shouldBe schema
 
-      val values = ds.collect.head
+      val values = ds.collect.head.toArray
       // must convert byte array to list for deep equals
       values.update(8, values(8).asInstanceOf[Array[Byte]].toList)
       values shouldBe Vector(
@@ -123,7 +123,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       ))
 
       val path = new Path("spark.parquet.structs")
-      DataStream.fromRows(eelSchema, Row(eelSchema, Seq(Seq(Tuple2("prince", "queen"))))).to(ParquetSink(path).withOverwrite(true))
+      DataStream.fromRows(eelSchema, Seq(Seq(Tuple2("prince", "queen")))).to(ParquetSink(path).withOverwrite(true))
 
       val df = session.sqlContext.read.parquet(path.toString)
       df.schema shouldBe sparkSchema

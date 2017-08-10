@@ -55,7 +55,7 @@ object RecordParquetReaderFn extends Logging {
       .map(FilterCompat.get)
       .getOrElse(FilterCompat.NOOP)
 
-    ParquetReader.builder(new ArrayReadSupport, path)
+    ParquetReader.builder(new VectorReadSupport, path)
       .withConf(configuration())
       .withFilter(filter())
       .build()

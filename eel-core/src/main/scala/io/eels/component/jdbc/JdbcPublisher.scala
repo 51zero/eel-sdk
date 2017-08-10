@@ -42,7 +42,7 @@ class JdbcPublisher(connFn: () => Connection,
                 val raw = rs.getObject(name)
                 dialect.sanitize(raw)
               }
-              buffer.append(values.toArray)
+              buffer.append(values)
               if (buffer.size == fetchSize) {
                 subscriber.next(buffer.toVector)
                 buffer.clear()

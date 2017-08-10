@@ -3,6 +3,8 @@ package io.eels.coercion
 import java.sql.Timestamp
 import java.util.Date
 
+import io.eels.Rec
+
 import scala.collection.JavaConverters._
 
 /**
@@ -178,7 +180,8 @@ object SequenceCoercer extends Coercer[Seq[Any]] {
     case array: Array[_] => array
     case seq: Seq[_] => seq
     case seq: Seq[Any] => seq
-    case product: Product => product.productIterator.toVector
+    case rec: Rec => rec
+    case product: Product => product.productIterator.toSeq
     case col: java.util.Iterator[Any] => col.asScala.toSeq
     case col: java.util.Collection[Any] => col.asScala.toSeq
   }

@@ -4,6 +4,7 @@ import java.util
 import java.util.function.Consumer
 
 import com.sksamuel.exts.Logging
+import io.eels.coercion.SequenceCoercer
 import io.eels.{Rec, Row}
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericData, GenericRecord}
@@ -70,7 +71,7 @@ class RowSerializer(schema: Schema) extends AvroSerializer {
     case iter: Iterable[_] => iter.toList
   }
 
-  private def writeValues(values: Array[Any]): GenericRecord = {
+  private def writeValues(values: Seq[Any]): GenericRecord = {
     val record = new GenericData.Record(schema)
     explode(values).zip(serializers).zip(fields).foreach { case ((x, serializer), field) =>
       val converted = if (x == null) null else serializer.serialize(x)
@@ -88,12 +89,7 @@ class RowSerializer(schema: Schema) extends AvroSerializer {
   }
 
   override def serialize(value: Any): GenericRecord = {
-    value match {
-      case row: Rec => writeRow(row)
-      case product: Product => writeValues(product.productIterator.toArray)
-      case iter: Iterator[_] => writeValues(iter.toArray)
-      case seq: Seq[Any] => writeValues(seq.toArray)
-    }
+    writeValues(SequenceCoercer.coerce(value))
   }
 }
 

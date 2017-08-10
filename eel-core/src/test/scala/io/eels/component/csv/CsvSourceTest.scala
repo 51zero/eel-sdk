@@ -78,7 +78,7 @@ class CsvSourceTest extends WordSpec with Matchers {
         Field("b", StringType, true),
         Field("c", StringType, true)
       )
-      CsvSource(path).withHeader(Header.FirstComment).toDataStream().toSet shouldBe
+      CsvSource(path).withHeader(Header.FirstComment).toDataStream().collect.toSet shouldBe
         Set(Vector("1", "2", "3"), Vector("e", "f", "g"), Vector("4", "5", "6"))
     }
     "terminate if asking for first comment but no comments" in {

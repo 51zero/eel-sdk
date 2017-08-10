@@ -16,14 +16,14 @@ object SequenceSupport extends Logging with Using {
   def createReader(path: Path)(implicit conf: Configuration): SequenceFile.Reader =
     new SequenceFile.Reader(conf, SequenceFile.Reader.file(path))
 
-  def toValues(v: BytesWritable): Array[String] = toValues(new String(v.copyBytes(), Charset.forName("UTF8")))
+  def toValues(v: BytesWritable): Vector[String] = toValues(new String(v.copyBytes(), Charset.forName("UTF8")))
 
-  def toValues(str: String): Array[String] = {
+  def toValues(str: String): Vector[String] = {
     val parser = CsvSupport.createParser(CsvFormat(), false, false, false, null, null)
     parser.beginParsing(new StringReader(str))
     val record = parser.parseNext()
     parser.stopParsing()
-    record
+    record.toVector
   }
 
   def schema(path: Path)(implicit conf: Configuration): StructType = {
@@ -31,7 +31,7 @@ object SequenceSupport extends Logging with Using {
     using(createReader(path)) { it =>
       val k = new IntWritable()
       val v = new BytesWritable()
-      val fields: Array[Field] = {
+      val fields: Vector[Field] = {
         it.next(k, v)
         toValues(v).map { it => new Field(it) }
       }

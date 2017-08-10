@@ -32,12 +32,13 @@ class CsvPublisher(createParser: () => CsvParser,
       val running = new AtomicBoolean(true)
       subscriber.subscribed(Subscription.fromRunning(running))
 
-      val iter: Iterator[Chunk] = Iterator.continually(parser.parseNext)
+      Iterator.continually(parser.parseNext)
         .takeWhile(_ != null)
         .takeWhile(_ => running.get)
         .drop(rowsToSkip)
-        .map(_.toArray[Any])
+        .map(_.toVector)
         .grouped(DataStream.DefaultBatchSize)
+        .foreach(subscriber.next)
 
       subscriber.completed()
 

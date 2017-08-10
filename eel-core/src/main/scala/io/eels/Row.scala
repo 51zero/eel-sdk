@@ -4,8 +4,8 @@ import com.sksamuel.exts.OptionImplicits._
 import io.eels.schema.StructType
 
 object Row {
-  val SentinelSingle: Rec = Array("___sentinel___")
-  val Sentinel: Chunk = List(Array("___sentinel___"))
+  val SentinelSingle: Rec = Vector("___sentinel___")
+  val Sentinel: Chunk = Vector(Vector("___sentinel___"))
   def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
   // this is needed so that apply(first,rest) doesn't override the apply from the case class
   def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
