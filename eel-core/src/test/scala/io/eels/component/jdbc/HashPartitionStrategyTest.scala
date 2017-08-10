@@ -26,7 +26,7 @@ class HashPartitionStrategyTest extends WordSpec with Matchers {
       JdbcSource(() => DriverManager.getConnection(uri), "select * from hash_test")
         .withPartitionStrategy(HashPartitionStrategy("mod(a, 10)", 10))
         .toDataStream().collect.toSet shouldBe
-        Vector.tabulate(20) { k => k }.toSet
+        Vector.tabulate(20) { k => Vector(k) }.toSet
     }
   }
 }

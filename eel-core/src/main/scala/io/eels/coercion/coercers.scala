@@ -177,7 +177,7 @@ object SequenceCoercer extends Coercer[Seq[Any]] {
 
   override def coerce(input: Any): Seq[Any] = input match {
     case iter: Iterable[Any] => iter.toSeq
-    case array: Array[_] => array
+    case array: Array[_] => array.toSeq
     case seq: Seq[_] => seq
     case seq: Seq[Any] => seq
     case rec: Rec => rec

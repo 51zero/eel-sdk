@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, WordSpec}
 
 class AvroDeserializerTest extends WordSpec with Matchers {
 
-  private  val config = ConfigFactory.parseString(""" eel.avro.fillMissingValues = true """)
+  private val config = ConfigFactory.parseString(""" eel.avro.fillMissingValues = true """)
 
   "toRow" should {
     "create eel row from supplied avro record" in {
@@ -18,7 +18,7 @@ class AvroDeserializerTest extends WordSpec with Matchers {
       record.put("b", "bbbb")
       record.put("c", "cccc")
       val row = new AvroDeserializer(true).toValues(record)
-      row shouldBe Row(schema, "aaaa", "bbbb", "cccc")
+      row shouldBe Vector("aaaa", "bbbb", "cccc")
     }
     "support arrays" in {
       val schema = StructType(Field("a"), Field("b", ArrayType(BooleanType)))

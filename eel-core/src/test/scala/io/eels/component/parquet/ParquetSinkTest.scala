@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import java.sql.DriverManager
 
-import io.eels.{FilePattern, Row}
+import io.eels.FilePattern
 import io.eels.component.jdbc.{JdbcSource, RangePartitionStrategy}
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
@@ -42,8 +42,8 @@ class ParquetSinkTest extends FlatSpec with Matchers {
 
     val rows = ParquetSource(path).toDataStream().collect
     rows shouldBe Seq(
-      Row(schema, Vector("clint eastwood", "actor", null)),
-      Row(schema, Vector("elton john", null, "pinner"))
+      Vector("clint eastwood", "actor", null),
+      Vector("elton john", null, "pinner")
     )
     fs.delete(path, false)
   }
@@ -57,8 +57,8 @@ class ParquetSinkTest extends FlatSpec with Matchers {
     val ds = DataStream.fromRows(
       schema,
       Seq(
-        Row(schema, Vector("x")),
-        Row(schema, Vector("y"))
+        Vector("x"),
+        Vector("y")
       )
     )
 

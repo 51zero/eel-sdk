@@ -1,6 +1,5 @@
 package io.eels.component.avro
 
-import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{ArrayType, Field, MapType, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
@@ -54,14 +53,14 @@ class AvroSinkTest extends WordSpec with Matchers {
       val path = new Path("array_map_avro", ".avro")
       fs.delete(path, false)
       ds.to(AvroSink(path))
-      AvroSource(path).toDataStream().collect shouldBe Seq(
-        Row(
-          ds.schema,
-          Seq(
-            "clint eastwood",
-            List("fistful of dollars", "high plains drifters"),
-            Map("preacher" -> "high plains", "no name" -> "good bad ugly")
-          )
+
+      val ds2 = AvroSource(path).toDataStream()
+      ds2.schema shouldBe ds.schema
+      ds2.collect shouldBe Seq(
+        Seq(
+          "clint eastwood",
+          List("fistful of dollars", "high plains drifters"),
+          Map("preacher" -> "high plains", "no name" -> "good bad ugly")
         )
       )
 

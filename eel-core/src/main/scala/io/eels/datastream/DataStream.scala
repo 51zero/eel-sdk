@@ -398,8 +398,8 @@ trait DataStream extends Logging {
   def removeFields(regex: Regex): DataStream = new DataStream {
     override def schema: StructType = self.schema.removeFields(regex)
     override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
-      val _schema = schema
-      val indexesToDrop = _schema.fieldNames(regex).map(_schema.indexOf).toArray
+      val original = self.schema
+      val indexesToDrop = original.fieldNames(regex).map(original.indexOf).toArray
       self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
         override def next(t: Chunk): Unit = {
           val ts = t.map(RowUtils.dropIndexes(_, indexesToDrop))
@@ -710,6 +710,7 @@ trait DataStream extends Logging {
       self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
         override def next(t: Chunk): Unit = {
           val ts = t.map { row => row :+ defaultValue }
+          subscriber.next(ts)
         }
       })
     }
@@ -902,7 +903,7 @@ object DataStream {
     */
   def apply[T <: Product : TypeTag](ts: Seq[T]): DataStream = {
     val schema = StructType.from[T]
-    val values = ts.map(_.productIterator.toArray)
+    val values = ts.map(_.productIterator.toVector).toVector
     fromRows(schema, values)
   }
 
@@ -933,6 +934,6 @@ object DataStream {
     * This will result in a single partitioned DataStream.
     */
   def fromValues(schema: StructType, values: Seq[Seq[Any]]): DataStream = {
-    fromRows(schema, values.map(_.toArray))
+    fromRows(schema, values)
   }
 }

@@ -3,7 +3,6 @@ package io.eels.component.parquet
 import java.io.File
 import java.nio.file.Paths
 
-import io.eels.Row
 import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
 import io.eels.datastream.DataStream
 import io.eels.schema._
@@ -32,8 +31,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
       val ds = DataStream.fromValues(
         structType,
         Seq(
-          Array("clint eastwood", "actor", "carmel"),
-          Array("elton john", "musician", "pinner")
+          Vector("clint eastwood", "actor", "carmel"),
+          Vector("elton john", "musician", "pinner")
         )
       )
 
@@ -41,8 +40,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
 
       val actual = AvroParquetSource(path).toDataStream().collect
       actual shouldBe Vector(
-        Array("clint eastwood", "actor", "carmel"),
-        Array("elton john", "musician", "pinner")
+        Vector("clint eastwood", "actor", "carmel"),
+        Vector("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
@@ -64,8 +63,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
       val frame = DataStream.fromValues(
         structType,
         Seq(
-          Array("clint eastwood", "carmel"),
-          Array("elton john", "pinner")
+          Vector("clint eastwood", "carmel"),
+          Vector("elton john", "pinner")
         )
       )
 
@@ -75,10 +74,10 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
       val parent = Paths.get(path1.toString).toAbsolutePath.resolve("*")
       val actual = AvroParquetSource(parent.toString).toDataStream().toSet
       actual shouldBe Set(
-        Array("clint eastwood", "carmel"),
-        Array("elton john", "pinner"),
-        Array("clint eastwood", "carmel"),
-        Array("elton john", "pinner")
+        Vector("clint eastwood", "carmel"),
+        Vector("elton john", "pinner"),
+        Vector("clint eastwood", "carmel"),
+        Vector("elton john", "pinner")
       )
     }
     "support collections of strings" in {
@@ -88,8 +87,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
         Field("planets", ArrayType(StringType))
       )
 
-      val sol = Array[Any]("sol", Vector("earth", "mars", "saturn"))
-      val algeron = Array[Any]("algeron", Vector("algeron-i", "algeron-ii", "algeron-iii"))
+      val sol = Vector("sol", Vector("earth", "mars", "saturn"))
+      val algeron = Vector("algeron", Vector("algeron-i", "algeron-ii", "algeron-iii"))
       val frame = DataStream.fromValues(structType, Seq(sol, algeron))
 
       val path = new Path("array.pq")
@@ -99,8 +98,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
       frame.to(AvroParquetSink(path))
 
       val rows = AvroParquetSource(path).toDataStream().collect
-      rows.head.asInstanceOf[Array[String]].toVector shouldBe sol.last
-      rows.last.asInstanceOf[Array[String]].toVector shouldBe algeron.last
+      rows.head shouldBe sol
+      rows.last shouldBe algeron
 
       fs.delete(path, false)
     }
@@ -111,8 +110,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
         Field("doubles", ArrayType(DoubleType))
       )
 
-      val values1 = Array[Any]("a", Vector(0.1, 0.2, 0.3))
-      val values2 = Array[Any]("b", Vector(0.3, 0.4, 0.5))
+      val values1 = Vector("a", Vector(0.1, 0.2, 0.3))
+      val values2 = Vector("b", Vector(0.3, 0.4, 0.5))
       val frame = DataStream.fromValues(structType, Seq(values1, values2))
 
       val path = new Path("array.pq")
@@ -140,8 +139,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
       val ds = DataStream.fromValues(
         structType,
         Seq(
-          Array("federation", Vector("sol", 0, 0, 0)),
-          Array("empire", Vector("andromeda", 914, 735, 132))
+          Vector("federation", Vector("sol", 0, 0, 0)),
+          Vector("empire", Vector("andromeda", 914, 735, 132))
         )
       )
 
@@ -153,8 +152,8 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
 
       val rows = AvroParquetSource(path).toDataStream().collect
       rows shouldBe Vector(
-        Row(structType, Vector("federation", Vector("sol", 0, 0, 0))),
-        Row(structType, Vector("empire", Vector("andromeda", 914, 735, 132)))
+        Vector("federation", Vector("sol", 0, 0, 0)),
+        Vector("empire", Vector("andromeda", 914, 735, 132))
       )
 
       fs.delete(path, false)
@@ -175,7 +174,7 @@ class AvroParquetComponentTest extends WordSpec with Matchers {
       ds.to(AvroParquetSink(path))
 
       val rows = AvroParquetSource(path).toDataStream().collect
-      rows shouldBe Seq(Row(structType, Vector("abc", Map("a" -> true, "b" -> false))))
+      rows shouldBe Seq(Vector("abc", Map("a" -> true, "b" -> false)))
 
       fs.delete(path, false)
     }

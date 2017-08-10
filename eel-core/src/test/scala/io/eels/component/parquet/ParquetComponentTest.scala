@@ -40,8 +40,8 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       val actual = ParquetSource(path).toDataStream().collect
       actual shouldBe Vector(
-        Row(structType, "clint eastwood", "actor", "carmel"),
-        Row(structType, "elton john", "musician", "pinner")
+        Vector("clint eastwood", "actor", "carmel"),
+        Vector("elton john", "musician", "pinner")
       )
     }
     "read multiple parquet files using file expansion" in {
@@ -74,10 +74,10 @@ class ParquetComponentTest extends WordSpec with Matchers {
       val parent = Paths.get(path1.toString).toAbsolutePath.resolve("*")
       val actual = ParquetSource(parent.toString).toDataStream().toSet
       actual shouldBe Set(
-        Row(structType, "clint eastwood", "carmel"),
-        Row(structType, "elton john", "pinner"),
-        Row(structType, "clint eastwood", "carmel"),
-        Row(structType, "elton john", "pinner")
+        Vector("clint eastwood", "carmel"),
+        Vector("elton john", "pinner"),
+        Vector("clint eastwood", "carmel"),
+        Vector("elton john", "pinner")
       )
 
       fs.delete(path1, false)
@@ -155,10 +155,9 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       frame.to(ParquetSink(path))
 
-      val rows = ParquetSource(path).toDataStream().collect
-      rows shouldBe Seq(
-        Row(structType, Vector("federation", Vector("sol", 0, 0, 0))),
-        Row(structType, Vector("empire", Vector("andromeda", 914, 735, 132)))
+      ParquetSource(path).toDataStream().collect shouldBe Seq(
+        Vector("federation", Vector("sol", 0, 0, 0)),
+        Vector("empire", Vector("andromeda", 914, 735, 132))
       )
 
       fs.delete(path, false)
@@ -178,8 +177,8 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       ds.to(ParquetSink(path))
 
-      val rows = ParquetSource(path).toDataStream().collect
-      rows shouldBe Seq(Row(structType, Vector("abc", Map("a" -> true, "b" -> false))))
+      ParquetSource(path).toDataStream().collect shouldBe
+        Seq(Vector("abc", Map("a" -> true, "b" -> false)))
 
       fs.delete(path, false)
     }

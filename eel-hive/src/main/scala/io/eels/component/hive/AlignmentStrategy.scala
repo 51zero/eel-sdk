@@ -18,6 +18,6 @@ object RowPaddingAlignmentStrategy extends AlignmentStrategy {
     // if the input map does not have it, then pad it with a default or null
     targetSchema.fields.map { field =>
       map.getOrElse(field.name, field.default)
-    }.toArray
+    }
   }
 }

@@ -33,8 +33,8 @@ class SequenceSourceTest extends WordSpec with Matchers {
       val path = new Path(getClass.getResource("/test.seq").getFile)
       val rows = SequenceSource(path).toDataStream().toSet
       rows shouldBe Set(
-        Row(schema, "1", "2", "3", "4"),
-        Row(schema, "5", "6", "7", "8")
+        Vector("1", "2", "3", "4"),
+        Vector("5", "6", "7", "8")
       )
     }
     "read header as schema" in {
