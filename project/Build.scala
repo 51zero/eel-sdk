@@ -14,7 +14,7 @@ object Build extends Build {
   val Elastic4sVersion = "5.4.6"
   val ExtsVersion = "1.49.0"
   val H2Version = "1.4.196"
-  val HadoopVersion = "2.6.5"
+  val HadoopVersion = "2.7.2"
   val HiveVersion = "1.2.2"
   val JacksonVersion = "2.8.9"
   val KafkaVersion = "0.11.0.0"

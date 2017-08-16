@@ -50,8 +50,8 @@ class ParquetPublisher(path: Path,
         val running = new AtomicBoolean(true)
         subscriber.subscribed(Subscription.fromRunning(running))
         ParquetIterator(reader)
-          .takeWhile(_ => running.get)
           .grouped(DataStream.DefaultBatchSize)
+          .takeWhile(_ => running.get)
           .foreach(subscriber.next)
         subscriber.completed()
       }

@@ -22,9 +22,9 @@ class AvroParquetPublisher(path: Path,
       subscriber.subscribed(Subscription.fromRunning(running))
       using(AvroParquetReaderFn(path, predicate, None)) { reader =>
         ParquetIterator(reader)
-          .takeWhile(_ => running.get)
           .map(deser.toValues)
           .grouped(DataStream.DefaultBatchSize)
+          .takeWhile(_ => running.get)
           .foreach(subscriber.next)
       }
       subscriber.completed()
