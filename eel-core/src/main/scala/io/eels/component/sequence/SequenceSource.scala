@@ -24,7 +24,7 @@ object SequenceReaderIterator {
     private val v = new BytesWritable()
     // throw away the header
     reader.next(k, v)
-    override def next(): Rec = SequenceSupport.toValues(v)
+    override def next(): Rec = SequenceSupport.toValues(v).toArray
     override def hasNext(): Boolean = reader.next(k, v)
   }
 }

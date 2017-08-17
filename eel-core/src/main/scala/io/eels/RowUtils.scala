@@ -3,6 +3,8 @@ package io.eels
 import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, ByteCoercer, DateCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, StringCoercer, TimestampCoercer}
 import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, CharType, DateType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType, VarcharType}
 
+import scala.collection.mutable.ArrayBuffer
+
 object RowUtils {
 
   // returns the data in this row as a Map
@@ -18,13 +20,13 @@ object RowUtils {
     val map = RowUtils.toMap(row, inputSchema)
     outputSchema.fieldNames.map { name =>
       map.getOrElse(name, lookup(name))
-    }.toVector
+    }.toArray
   }
 
   def dropIndexes(rec: Rec, indexesToDrop: Array[Int]): Rec = {
-    val vector = Vector.newBuilder[Any]
-    for (k <- rec.indices) if (!indexesToDrop.contains(k)) vector += rec(k)
-    vector.result()
+    val array = ArrayBuffer.empty[Any]
+    for (k <- rec.indices) if (!indexesToDrop.contains(k)) array.append(rec(k))
+    array.toArray
   }
 
   def replace(rec: Rec, index: Int, fn: (Any) => Any): Rec = rec.updated(index, fn(rec(index)))

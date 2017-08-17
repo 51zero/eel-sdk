@@ -608,7 +608,7 @@ trait DataStream extends Logging {
 
       val oldSchema = self.schema
       val newSchema = schema
-      val indexes = newSchema.fields.map(oldSchema.indexOf)
+      val indexes = newSchema.fields.map(oldSchema.indexOf).toArray
 
       self.subscribe(new DelegateSubscriber[Chunk](subscriber) {
         override def next(t: Chunk): Unit = {
@@ -885,7 +885,7 @@ object DataStream {
           override def cancel(): Unit = running = false
         })
         _iterator.grouped(DefaultBatchSize).takeWhile(_ => running).foreach { chunk =>
-          subscriber.next(chunk.map(_.toVector))
+          subscriber.next(chunk.map(_.toArray))
         }
         subscriber.completed()
         logger.debug("Iterator based publisher has completed")
@@ -918,7 +918,7 @@ object DataStream {
         })
         rows.grouped(DefaultBatchSize).takeWhile(_ => running).foreach { chunk =>
           logger.debug("Seq based publisher is publishing a chunk")
-          subscriber.next(chunk.map(_.toVector))
+          subscriber.next(chunk.map(_.toArray))
         }
         subscriber.completed()
         logger.debug("Seq based publisher has completed")

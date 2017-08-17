@@ -178,7 +178,7 @@ case class StructType(fields: Vector[Field]) extends DataType {
 
   def toLowerCase(): StructType = copy(fields = fields.map(_.toLowerCase()))
 
-  def fieldNames(): Vector[String] = fields.map(_.name)
+  def fieldNames(): Seq[String] = fields.map(_.name)
 
   def addField(name: String): StructType = addField(Field(name, StringType))
 

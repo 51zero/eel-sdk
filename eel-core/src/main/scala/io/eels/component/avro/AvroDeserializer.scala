@@ -24,7 +24,7 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
   def toScala(value: Any): Any = {
     value match {
       case record: GenericRecord => toValues(record)
-      case utf8: Utf8 if useJavaString => utf8.toString
+      case utf8: Utf8 if useJavaString => value.asInstanceOf[Utf8].toString
       case col: java.util.Collection[Any] => col.asScala.toVector.map(toScala)
       case map: java.util.Map[_, _] => map.asScala.toMap.map { case (k, v) => toScala(k) -> toScala(v) }
       case other => other
@@ -32,12 +32,12 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
   }
 
   def toValues(record: GenericRecord): Rec = {
-    val vector = Vector.newBuilder[Any]
-    for (k <- 0 until record.getSchema.getFields.size) {
+    val array = Array.ofDim[Any](record.getSchema.getFields.size)
+    for (k <- array.indices) {
       val value = record.get(k)
-      vector += toScala(value)
+      array.updated(k, toScala(value))
     }
-    vector.result()
+    array
   }
 
   //  def toRow(record: GenericRecord): Row = {

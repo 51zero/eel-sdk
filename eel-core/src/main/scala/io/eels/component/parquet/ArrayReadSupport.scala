@@ -18,7 +18,7 @@ import org.apache.parquet.schema.MessageType
 import scala.collection.mutable.ArrayBuffer
 
 // required by the parquet reader builder, and returns a record materializer for eel records
-class VectorReadSupport extends ReadSupport[Vector[Any]] with Logging {
+class ArrayReadSupport extends ReadSupport[Array[Any]] with Logging {
 
   override def prepareForRead(configuration: Configuration,
                               keyValueMetaData: java.util.Map[String, String],
@@ -50,7 +50,7 @@ class ArrayRecordMaterializer(fileSchema: MessageType,
 
   override val getRootConverter: StructConverter = new StructConverter(schema, -1, None)
   override def skipCurrentRecord(): Unit = getRootConverter.start()
-  override def getCurrentRecord: Vector[Any] = getRootConverter.builder.result
+  override def getCurrentRecord: Array[Any] = getRootConverter.builder.result
 }
 
 object Converter {
@@ -98,7 +98,7 @@ class ArrayConverter(elementType: DataType,
                      index: Int,
                      parent: ValuesBuilder) extends GroupConverter with Logging {
 
-  private val builder = new VectorBuilder()
+  private val builder = new ArrayBufferBuilder()
 
   // this converter is for the group called 'list'
   private val converter = new GroupConverter { // getting a convertor for 'list'
@@ -133,8 +133,8 @@ class MapConverter(index: Int,
                    parent: ValuesBuilder,
                    mapType: MapType) extends GroupConverter {
 
-  private val keys = new VectorBuilder()
-  private val values = new VectorBuilder()
+  private val keys = new ArrayBufferBuilder()
+  private val values = new ArrayBufferBuilder()
 
   override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
     override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
@@ -231,26 +231,26 @@ class DateConverter(index: Int,
 trait ValuesBuilder {
   def reset(): Unit
   def put(pos: Int, value: Any): Unit
-  def result: Vector[Any]
+  def result: Array[Any]
 }
 
-class VectorBuilder extends ValuesBuilder with Logging {
-
-  private var vector = Vector.newBuilder[Any]
-
-  override def reset(): Unit = vector = Vector.newBuilder[Any]
-  override def put(pos: Int, value: Any): Unit = {
-    vector.+=(value)
-  }
-  override def result: Vector[Any] = vector.result()
-}
+//class VectorBuilder extends ValuesBuilder with Logging {
+//
+//  private var vector = Vector.newBuilder[Any]
+//
+//  override def reset(): Unit = vector = Vector.newBuilder[Any]
+//  override def put(pos: Int, value: Any): Unit = {
+//    vector.+=(value)
+//  }
+//  override def result: Seq[Any] = vector.result()
+//}
 
 class ArrayBufferBuilder extends ValuesBuilder {
 
   private val buffer = ArrayBuffer.empty[Any]
   reset()
 
-  def result: Vector[Any] = buffer.toVector
+  def result: Array[Any] = buffer.toArray
 
   def reset(): Unit = buffer.clear()
   def put(pos: Int, value: Any): Unit = buffer.append(value)
@@ -261,7 +261,7 @@ class ArrayBuilder(size: Int) extends ValuesBuilder {
   private var array: Array[Any] = _
   reset()
 
-  def result: Vector[Any] = array.toVector
+  def result: Array[Any] = array
 
   def reset(): Unit = array = Array.ofDim(size)
   def put(pos: Int, value: Any): Unit = array(pos) = value

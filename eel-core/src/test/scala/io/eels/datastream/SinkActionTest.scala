@@ -59,7 +59,7 @@ class SinkActionTest extends WordSpec with Matchers {
           subscriber.subscribed(new Subscription {
             override def cancel(): Unit = latch.countDown()
           })
-          Iterator.continually(Vector("a")).takeWhile(_ => latch.getCount > 0).grouped(100).foreach(subscriber.next)
+          Iterator.continually(Array[Any]("a")).takeWhile(_ => latch.getCount > 0).grouped(100).foreach(subscriber.next)
           subscriber.completed()
         }
       }
@@ -75,7 +75,7 @@ class SinkActionTest extends WordSpec with Matchers {
         override def schema: StructType = _schema
         override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
           subscriber.subscribed(Subscription.empty)
-          Iterator.continually(Vector("a")).take(100000).grouped(10).foreach(subscriber.next)
+          Iterator.continually(Array[Any]("a")).take(100000).grouped(10).foreach(subscriber.next)
           subscriber.completed()
         }
       }
@@ -99,7 +99,7 @@ class SinkActionTest extends WordSpec with Matchers {
         override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
           Try {
             subscriber.subscribed(Subscription.empty)
-            Iterator.continually(Vector("a")).take(100000).grouped(100).foreach(subscriber.next)
+            Iterator.continually(Array[Any]("a")).take(100000).grouped(100).foreach(subscriber.next)
             subscriber.completed()
           }
         }

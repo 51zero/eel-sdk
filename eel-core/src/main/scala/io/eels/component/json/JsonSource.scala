@@ -78,7 +78,7 @@ case class JsonSource(inputFn: () => InputStream,
     }
 
     private def nodeToRow(node: JsonNode): Rec = {
-      node.getElements.asScala.map(nodeToValue).toVector
+      node.getElements.asScala.map(nodeToValue).toArray
     }
 
     override def subscribe(subscriber: Subscriber[Chunk]): Unit = {

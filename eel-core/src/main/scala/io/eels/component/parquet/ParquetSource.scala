@@ -52,7 +52,7 @@ case class ParquetSource(pattern: FilePattern,
   }
 
   // todo should take the merged schema from all files
-  lazy val schema: StructType = RecordParquetReaderFn.schema(paths.headOption.getOrError("No paths found for source"))
+  lazy val schema: StructType = RowParquetReaderFn.schema(paths.headOption.getOrError("No paths found for source"))
 
   // returns the count of all records in this source, predicate is ignored
   def countNoPredicate(): Long = statistics().count
