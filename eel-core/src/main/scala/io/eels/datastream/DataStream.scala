@@ -6,6 +6,7 @@ import java.util.concurrent.{CountDownLatch, Executors, LinkedBlockingQueue}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
 import com.typesafe.config.ConfigFactory
+import io.Expression
 import io.eels._
 import io.eels.schema.{DataType, Field, StringType, StructType}
 
@@ -88,6 +89,8 @@ trait DataStream extends Logging {
       })
     }
   }
+
+  def filter(expression: io.Equals): DataStream = filter(row => expression.evalulate(row) == true)
 
   def withLowerCaseSchema(): DataStream = new DataStream {
     override def schema: StructType = self.schema.toLowerCase()
@@ -550,10 +553,12 @@ trait DataStream extends Logging {
     * For each row, the value corresponding to the given fieldName is applied to the function.
     * The result of the function is the new value for that cell.
     */
-  def update(fieldName: String, fn: Any => Any, errorIfUnknownField: Boolean = true): DataStream =
+  def update(fieldName: String, fn: Any => Any): DataStream = update(fieldName, fn, true)
+  def update(fieldName: String, fn: Any => Any, errorIfUnknownField: Boolean): DataStream =
     replace(fieldName, fn, errorIfUnknownField)
 
-  def replace(fieldName: String, fn: (Any) => Any, errorIfUnknownField: Boolean = true): DataStream = new DataStream {
+  def replace(fieldName: String, fn: (Any) => Any): DataStream = update(fieldName, fn, true)
+  def replace(fieldName: String, fn: (Any) => Any, errorIfUnknownField: Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val index = schema.indexOf(fieldName)
@@ -581,9 +586,11 @@ trait DataStream extends Logging {
     *                            If set to false, then this operation will be a no-op if the field
     *                            does not exist.
     */
+  def update(fieldName: String, from: String, target: Any): DataStream = update(fieldName, from, target, true)
   def update(fieldName: String, from: String, target: Any, errorIfUnknownField: Boolean = true): DataStream =
     replace(fieldName, from, target, errorIfUnknownField)
 
+  def replace(fieldName: String, from: String, target: Any): DataStream = replace(fieldName, from, target, true)
   def replace(fieldName: String, from: String, target: Any, errorIfUnknownField: Boolean = true): DataStream =
     replace(fieldName, (value: Any) => if (value == from) target else value)
 
@@ -728,7 +735,8 @@ trait DataStream extends Logging {
     * Returns a new DataStream with a new field added at the end.
     * The value for the field is taken from the function which is invoked for each row.
     */
-  def addField(field: Field, fn: Row => Any, errorIfFieldExists: Boolean = true): DataStream = new DataStream {
+  def addField(field: Field, fn: Row => Any): DataStream = addField(field, fn, true)
+  def addField(field: Field, fn: Row => Any, errorIfFieldExists: Boolean): DataStream = new DataStream {
     override def schema: StructType = {
       val original = self.schema
       val exists = original.contains(field.name)
@@ -754,15 +762,21 @@ trait DataStream extends Logging {
     * The datatype for the field is assumed to be String.
     * The value for the field is taken from the function which is invoked for each row.
     */
-  def addField(name: String, fn: Row => Any, errorIfFieldExists: Boolean = true): DataStream =
+  def addField(name: String, fn: Row => Any): DataStream = addField(name, fn, true)
+  def addField(name: String, fn: Row => Any, errorIfFieldExists: Boolean): DataStream =
     addField(Field(name, StringType), fn, errorIfFieldExists)
 
   /**
     * Returns a new DataStream with the new field of type String added at the end. The value of
     * this field for each Row is specified by the default value.
     */
-  def addField(name: String, defaultValue: String, errorIfFieldExists: Boolean = true): DataStream =
+  def addField(name: String, defaultValue: String): DataStream = addField(name, defaultValue, true)
+  def addField(name: String, defaultValue: String, errorIfFieldExists: Boolean): DataStream =
     addField(Field(name, StringType), defaultValue, errorIfFieldExists)
+
+  def addField(field: Field, expression: Expression): DataStream = addField(field, expression, true)
+  def addField(field: Field, expression: Expression, errorIfFieldExists: Boolean): DataStream =
+    addField(field, (row: Row) => expression.evalulate(row), errorIfFieldExists)
 
   /**
     * Returns a new DataStream with the given field added at the end. The value of this field
@@ -770,7 +784,8 @@ trait DataStream extends Logging {
     * field definition. Eg, an error will occur if the field has type Int and the default
     * value was 1.3
     */
-  def addField(field: Field, defaultValue: Any, errorIfFieldExists: Boolean = true): DataStream =
+  def addField(name: Field, defaultValue: Any): DataStream = addField(name, defaultValue, true)
+  def addField(field: Field, defaultValue: Any, errorIfFieldExists: Boolean): DataStream =
     addField(field, (_: Row) => defaultValue, errorIfFieldExists)
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
@@ -817,6 +832,8 @@ trait DataStream extends Logging {
     })
     vector.result()
   }
+
+  def collectValues: Vector[Seq[Any]] = collect.map(_.values)
 
   def count: Long = size
   def size: Long = {
