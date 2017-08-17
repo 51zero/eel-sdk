@@ -550,38 +550,20 @@ trait DataStream extends Logging {
     * For each row, the value corresponding to the given fieldName is applied to the function.
     * The result of the function is the new value for that cell.
     */
-  def update(fieldName: String, fn: Any => Any): DataStream = replace(fieldName, fn)
-  def replace(fieldName: String, fn: (Any) => Any): DataStream = new DataStream {
-    override def schema: StructType = self.schema
-    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val index = schema.indexOf(fieldName)
-      if (index < 0) throw new IllegalArgumentException(s"Unknown field $fieldName")
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
-        override def next(t: Seq[Row]): Unit = {
-          subscriber next t.map { row =>
-            val newValues = row.values.updated(index, fn(row.values(index)))
-            Row(row.schema, newValues)
-          }
-        }
-      })
-    }
-  }
+  def update(fieldName: String, fn: Any => Any, errorIfUnknownField: Boolean = true): DataStream =
+    replace(fieldName, fn, errorIfUnknownField)
 
-  /**
-    * Replaces any values that match "form" with the value "target".
-    * This operation only applies to the field name specified.
-    */
-  def replace(fieldName: String, from: String, target: Any): DataStream = new DataStream {
+  def replace(fieldName: String, fn: (Any) => Any, errorIfUnknownField: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       val index = schema.indexOf(fieldName)
-      if (index < 0) throw new IllegalArgumentException(s"Unknown field $fieldName")
+      if (index < 0 && errorIfUnknownField) throw new IllegalArgumentException(s"Unknown field $fieldName")
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
         override def next(t: Seq[Row]): Unit = {
           subscriber next t.map { row =>
-            val existing = row.values(index)
-            if (existing == from) {
-              Row(row.schema, row.values.updated(index, target))
+            if (index >= 0) {
+              val newValues = row.values.updated(index, fn(row.values(index)))
+              Row(row.schema, newValues)
             } else {
               row
             }
@@ -592,9 +574,24 @@ trait DataStream extends Logging {
   }
 
   /**
-    * For each row, any values that match "from" will be replaced with "target".
-    * This operation applies to all values for all rows.
+    * Replaces any values that match "form" with the value "target".
+    * This operation only applies to the field name specified.
+    *
+    * @param errorIfUnknownField throw an exception if the field specified does not exist in the dataset
+    *                            If set to false, then this operation will be a no-op if the field
+    *                            does not exist.
     */
+  def update(fieldName: String, from: String, target: Any, errorIfUnknownField: Boolean = true): DataStream =
+    replace(fieldName, from, target, errorIfUnknownField)
+
+  def replace(fieldName: String, from: String, target: Any, errorIfUnknownField: Boolean = true): DataStream =
+    replace(fieldName, (value: Any) => if (value == from) target else value)
+
+  /**
+    * For each row, any values that match "from" will be replaced with "target".
+    * This operation applies to all fields for all rows.
+    */
+  def update(from: String, target: Any): DataStream = replace(from, target)
   def replace(from: String, target: Any): DataStream = map { row =>
     val values = row.values.map { value =>
       if (value == from) target else value
@@ -717,29 +714,25 @@ trait DataStream extends Logging {
     }
   }
 
-  @deprecated("use addField with an AddMode of Offer", "1.3.0")
+  @deprecated("use addField with errorIfFieldExists = false", "1.3.0")
   def addFieldIfNotExists(name: String, defaultValue: Any): DataStream =
     addFieldIfNotExists(Field(name, StringType), defaultValue)
 
-  @deprecated("use addField with an AddMode of Offer", "1.3.0")
+  @deprecated("use addField with errorIfFieldExists = false", "1.3.0")
   def addFieldIfNotExists(field: Field, defaultValue: Any): DataStream = {
     val exists = self.schema.fieldNames().contains(field.name)
-    if (exists) this else addField(field, defaultValue, AddMode.Offer)
+    if (exists) this else addField(field, defaultValue, false)
   }
 
   /**
     * Returns a new DataStream with a new field added at the end.
     * The value for the field is taken from the function which is invoked for each row.
     */
-  def addField(field: Field, fn: Row => Any, mode: AddMode): DataStream = new DataStream {
+  def addField(field: Field, fn: Row => Any, errorIfFieldExists: Boolean = true): DataStream = new DataStream {
     override def schema: StructType = {
       val original = self.schema
       val exists = original.contains(field.name)
-      mode match {
-        case AddMode.Add => if (exists) sys.error(s"Field ${field.name} already exists") else self.schema.addField(field)
-        case AddMode.Offer => self.schema.addField(field)
-        case AddMode.Replace => self.schema.addField(field)
-      }
+      if (exists && errorIfFieldExists) sys.error(s"Field ${field.name} already exists") else self.schema.addField(field)
     }
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
@@ -761,15 +754,15 @@ trait DataStream extends Logging {
     * The datatype for the field is assumed to be String.
     * The value for the field is taken from the function which is invoked for each row.
     */
-  def addField(name: String, fn: Row => Any, mode: AddMode): DataStream =
-    addField(Field(name, StringType), fn, mode)
+  def addField(name: String, fn: Row => Any, errorIfFieldExists: Boolean = true): DataStream =
+    addField(Field(name, StringType), fn, errorIfFieldExists)
 
   /**
     * Returns a new DataStream with the new field of type String added at the end. The value of
     * this field for each Row is specified by the default value.
     */
-  def addField(name: String, defaultValue: String, mode: AddMode): DataStream =
-    addField(Field(name, StringType), defaultValue, mode)
+  def addField(name: String, defaultValue: String, errorIfFieldExists: Boolean = true): DataStream =
+    addField(Field(name, StringType), defaultValue, errorIfFieldExists)
 
   /**
     * Returns a new DataStream with the given field added at the end. The value of this field
@@ -777,8 +770,8 @@ trait DataStream extends Logging {
     * field definition. Eg, an error will occur if the field has type Int and the default
     * value was 1.3
     */
-  def addField(field: Field, defaultValue: Any, mode: AddMode): DataStream =
-    addField(field, (row: Row) => defaultValue, mode)
+  def addField(field: Field, defaultValue: Any, errorIfFieldExists: Boolean = true): DataStream =
+    addField(field, (_: Row) => defaultValue, errorIfFieldExists)
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = self.schema

@@ -6,12 +6,12 @@ import io.eels.schema.{Field, StringType, StructType}
 object Row {
   val SentinelSingle = Row(StructType(Field("__sentinel__", StringType)), Array(null))
   val Sentinel = List(SentinelSingle)
-  def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
+  def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, (first +: rest).toIndexedSeq)
   // this is needed so that apply(first,rest) doesn't override the apply from the case class
   def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
 }
 
-case class Row(schema: StructType, values: Seq[Any]) {
+case class Row(schema: StructType, values: IndexedSeq[Any]) {
 
   require(
     schema.size == values.size,
