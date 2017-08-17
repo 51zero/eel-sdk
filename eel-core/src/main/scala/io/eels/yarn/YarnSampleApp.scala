@@ -1,8 +1,12 @@
 package io.eels.yarn
 
 import java.util
+import javax.servlet.Servlet
 
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.commons.cli.CommandLine
+import org.apache.commons.codec.binary.BinaryCodec
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.{FileSystem, Hdfs, Path}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records._
 import org.apache.hadoop.yarn.client.api.YarnClient
@@ -38,7 +42,46 @@ object YarnSampleApp extends App {
 
   val localResources = new java.util.HashMap[String, LocalResource]()
   val env = new java.util.HashMap[String, String]()
-  val commands = util.Arrays.asList("java -cp /home/sam/.ivy2/cache/commons-codec/commons-codec/jars/commons-codec-1.10.jar:/home/sam/.ivy2/cache/commons-cli/commons-cli/jars/commons-cli-1.3.1.jar:/home/sam/.ivy2/cache/javax.servlet/javax.servlet-api/jars/javax.servlet-api-3.1.0.jar:/home/sam/.ivy2/cache/org.apache.hadoop/hadoop-hdfs/jars/hadoop-hdfs-2.7.2.jar:/home/sam/.gradle/caches/modules-2/files-2.1/org.scala-lang/scala-library/2.11.8/ddd5a8bced249bedd86fb4578a39b9fb71480573/scala-library-2.11.8.jar:/home/sam/.ivy2/cache/org.apache.hadoop/hadoop-yarn-client/jars/hadoop-yarn-client-2.7.2.jar:/home/sam/.ivy2/cache/org.apache.hadoop/hadoop-yarn-api/jars/hadoop-yarn-api-2.7.2.jar:/home/sam/.ivy2/cache/org.apache.hadoop/hadoop-common/jars/hadoop-common-2.7.2.jar:/home/sam/.ivy2/cache/commons-logging/commons-logging/jars/commons-logging-1.2.jar:/home/sam/.ivy2/cache/com.google.guava/guava/jars/guava-19.0.jar:/home/sam/.ivy2/cache/commons-collections/commons-collections/jars/commons-collections-3.2.2.jar:/home/sam/.ivy2/cache/commons-lang/commons-lang/jars/commons-lang-2.6.jar:/home/sam/.ivy2/cache/org.apache.hadoop/hadoop-yarn-common/jars/hadoop-yarn-common-2.7.2.jar:/home/sam/.ivy2/cache/commons-configuration/commons-configuration/jars/commons-configuration-1.6.jar:/home/sam/.ivy2/cache/org.apache.hadoop/hadoop-auth/jars/hadoop-auth-2.7.2.jar:/home/sam/.ivy2/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.7.25.jar:/home/sam/.ivy2/cache/commons-io/commons-io/jars/commons-io-2.5.jar:/home/sam/.ivy2/cache/com.google.protobuf/protobuf-java/jars/protobuf-java-2.5.0.jar:/home/sam/.ivy2/cache/org.apache.htrace/htrace-core/jars/htrace-core-3.1.0-incubating.jar:/home/sam/development/workspace/eel/eel-core/target/scala-2.11/classes io.eels.yarn.EelApplicationMaster 1> " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout 2> " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr")
+
+  val coreClasses = Seq(
+    classOf[BinaryCodec], // commons-codec
+    classOf[CommandLine], // commons-cli
+    classOf[Servlet], // javax-servlet-api
+    classOf[Hdfs], // hadoop-hdfs
+    classOf[Configuration], // hadoop-common
+    classOf[Product], // scala-sdk
+    classOf[YarnClient], // hadoop-yarn-client
+    classOf[YarnConfiguration], // hadoop-yarn-api
+    classOf[com.google.common.base.Preconditions], // guava
+    classOf[org.apache.commons.logging.Log], // commons-logging
+    classOf[org.apache.commons.collections.ArrayStack], // commons-collections
+    classOf[org.apache.commons.lang.ArrayUtils], // commons-lang
+    classOf[org.apache.hadoop.yarn.ContainerLogAppender], // hadoop-yarn-common
+    classOf[org.apache.commons.configuration.AbstractConfiguration], //commons-configuration
+    classOf[org.apache.hadoop.security.authentication.client.Authenticator], //hadoop-auth
+    classOf[org.slf4j.Logger], // slf4j-api
+    classOf[org.apache.commons.io.Charsets], // commons-io
+    classOf[com.google.protobuf.AbstractMessage], // protobuf-java
+    classOf[org.apache.htrace.Trace] // htrace-core
+  )
+
+  val ApplicationMasterClass = "io.eels.yarn.EelApplicationMaster"
+
+  val classpath = (coreClasses.map(YarnUtils.jarForClass) ++ Seq("/home/sam/development/workspace/eel/eel-core/target/scala-2.11/classes")).mkString(":")
+
+  val commands = Seq(
+    "java",
+    "-cp",
+    classpath,
+    ApplicationMasterClass,
+    "1>",
+    ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout",
+    "2>",
+    ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr"
+  )
+
+  val command = commands.mkString(" ")
+  println(s"Application master will execute $command")
 
   val pri = Priority.newInstance(2)
   appContext.setPriority(pri)
@@ -47,7 +90,7 @@ object YarnSampleApp extends App {
   appContext.setResource(resources)
 
   // Set up the container launch context for the application master
-  val amContainer = ContainerLaunchContext.newInstance(localResources, env, commands, null, null, null)
+  val amContainer = ContainerLaunchContext.newInstance(localResources, env, util.Arrays.asList(command), null, null, null)
   appContext.setAMContainerSpec(amContainer)
 
   yarnClient.submitApplication(appContext)
