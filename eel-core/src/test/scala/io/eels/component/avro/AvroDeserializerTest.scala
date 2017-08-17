@@ -17,7 +17,8 @@ class AvroDeserializerTest extends WordSpec with Matchers {
       record.put("a", "aaaa")
       record.put("b", "bbbb")
       record.put("c", "cccc")
-      val row = new AvroDeserializer(true).toValues(record)
+      val row = new AvroDeserializer(true).toRow(record)
+      row.schema shouldBe schema
       row shouldBe Row(schema, "aaaa", "bbbb", "cccc")
     }
     "support arrays" in {
@@ -25,8 +26,8 @@ class AvroDeserializerTest extends WordSpec with Matchers {
       val record = new GenericData.Record(AvroSchemaFns.toAvroSchema(schema))
       record.put("a", "aaaa")
       record.put("b", Array(true, false))
-      new AvroDeserializer().toValues(record).head shouldBe "aaaa"
-      new AvroDeserializer().toValues(record).last.asInstanceOf[Array[Boolean]].toList shouldBe List(true, false)
+      new AvroDeserializer().toRow(record).values.head shouldBe "aaaa"
+      new AvroDeserializer().toRow(record).values.last.asInstanceOf[Array[Boolean]].toList shouldBe List(true, false)
     }
   }
 }

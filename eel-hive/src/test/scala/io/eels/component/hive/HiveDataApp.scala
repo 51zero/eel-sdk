@@ -3,9 +3,9 @@ package io.eels.component.hive
 import java.util.UUID
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.{Listener, Row}
 import io.eels.datastream.DataStream
 import io.eels.schema.{BooleanType, Field, IntType, StringType, StructType}
-import io.eels.{Listener, Rec, Row}
 
 import scala.util.{Random, Try}
 
@@ -76,7 +76,7 @@ object HiveDataApp extends App with Timed {
     Field("population", IntType.Signed),
     Field("incorporated", BooleanType)
   )
-  def createRow = Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean)
+  def createRow = Row(schema, Seq(UUID.randomUUID.toString, List.fill(8)(Random.nextPrintableChar).mkString, states(Random.nextInt(50)), Random.nextInt(1000000), Random.nextBoolean))
 
   val size = 1000 * 1000 * 1000
 
@@ -99,7 +99,7 @@ object HiveDataApp extends App with Timed {
 
   def listener = new Listener {
     var count = 0
-    override def onNext(row: Rec): Unit = {
+    override def onNext(row: Row): Unit = {
       count = count + 1
       if (count % 100000 == 0) logger.info("Count=" + count)
     }

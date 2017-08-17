@@ -6,7 +6,7 @@ import java.sql.{Date, Timestamp}
 import java.time.{LocalDateTime, ZoneId}
 
 import com.sksamuel.exts.Logging
-import io.eels.Rec
+import io.eels.Row
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
 import org.apache.parquet.column.Dictionary
@@ -15,16 +15,14 @@ import org.apache.parquet.hadoop.api.ReadSupport.ReadContext
 import org.apache.parquet.io.api._
 import org.apache.parquet.schema.MessageType
 
-import scala.collection.mutable.ArrayBuffer
-
-// required by the parquet reader builder, and returns a record materializer for eel records
-class ArrayReadSupport extends ReadSupport[Array[Any]] with Logging {
+// required by the parquet reader builder, and returns a record materializer for rows
+class RowReadSupport extends ReadSupport[Row] with Logging {
 
   override def prepareForRead(configuration: Configuration,
                               keyValueMetaData: java.util.Map[String, String],
                               fileSchema: MessageType,
-                              readContext: ReadContext): RecordMaterializer[Rec] = {
-    new ArrayRecordMaterializer(fileSchema, readContext)
+                              readContext: ReadContext): RecordMaterializer[Row] = {
+    new RowRecordMaterializer(fileSchema, readContext)
   }
 
   override def init(configuration: Configuration,
@@ -37,20 +35,20 @@ class ArrayReadSupport extends ReadSupport[Array[Any]] with Logging {
   }
 }
 
-// an array record materializer returns a group converter which is invoked for each
+// a row materializer returns a group converter which is invoked for each
 // field in a group to get a converter for that field, and then each of those
 // converts is in turn called with the basic value.
 // The converter must know what to do with the basic value so where basic values
 // overlap, eg byte arrays, you must have different converters
-class ArrayRecordMaterializer(fileSchema: MessageType,
-                              readContext: ReadContext) extends RecordMaterializer[Rec] with Logging {
+class RowRecordMaterializer(fileSchema: MessageType,
+                            readContext: ReadContext) extends RecordMaterializer[Row] with Logging {
 
   private val schema = ParquetSchemaFns.fromParquetMessageType(readContext.getRequestedSchema)
-  logger.trace(s"Record materializer will create arrays with schema $schema")
+  logger.trace(s"Record materializer will create row with schema $schema")
 
   override val getRootConverter: StructConverter = new StructConverter(schema, -1, None)
   override def skipCurrentRecord(): Unit = getRootConverter.start()
-  override def getCurrentRecord: Array[Any] = getRootConverter.builder.result
+  override def getCurrentRecord: Row = Row(schema, getRootConverter.builder.result)
 }
 
 object Converter {
@@ -98,7 +96,7 @@ class ArrayConverter(elementType: DataType,
                      index: Int,
                      parent: ValuesBuilder) extends GroupConverter with Logging {
 
-  private val builder = new ArrayBufferBuilder()
+  private val builder = new VectorBuilder()
 
   // this converter is for the group called 'list'
   private val converter = new GroupConverter { // getting a convertor for 'list'
@@ -133,8 +131,8 @@ class MapConverter(index: Int,
                    parent: ValuesBuilder,
                    mapType: MapType) extends GroupConverter {
 
-  private val keys = new ArrayBufferBuilder()
-  private val values = new ArrayBufferBuilder()
+  private val keys = new VectorBuilder()
+  private val values = new VectorBuilder()
 
   override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
     override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
@@ -174,7 +172,10 @@ class StringConverter(index: Int,
 
   private var dict: Array[String] = _
 
-  override def addBinary(value: Binary): Unit = builder.put(index, value.toStringUsingUTF8)
+  override def addBinary(value: Binary): Unit = {
+    logger.info(s"Adding ${value.toStringUsingUTF8} to builder $builder")
+    builder.put(index, value.toStringUsingUTF8)
+  }
 
   override def hasDictionarySupport: Boolean = true
 
@@ -231,29 +232,19 @@ class DateConverter(index: Int,
 trait ValuesBuilder {
   def reset(): Unit
   def put(pos: Int, value: Any): Unit
-  def result: Array[Any]
+  def result: Seq[Any]
 }
 
-//class VectorBuilder extends ValuesBuilder with Logging {
-//
-//  private var vector = Vector.newBuilder[Any]
-//
-//  override def reset(): Unit = vector = Vector.newBuilder[Any]
-//  override def put(pos: Int, value: Any): Unit = {
-//    vector.+=(value)
-//  }
-//  override def result: Seq[Any] = vector.result()
-//}
+class VectorBuilder extends ValuesBuilder with Logging {
 
-class ArrayBufferBuilder extends ValuesBuilder {
+  private var vector = Vector.newBuilder[Any]
 
-  private val buffer = ArrayBuffer.empty[Any]
-  reset()
-
-  def result: Array[Any] = buffer.toArray
-
-  def reset(): Unit = buffer.clear()
-  def put(pos: Int, value: Any): Unit = buffer.append(value)
+  override def reset(): Unit = vector = Vector.newBuilder[Any]
+  override def put(pos: Int, value: Any): Unit = {
+    logger.info(s"PUTTING $pos $value")
+    vector.+=(value)
+  }
+  override def result: Seq[Any] = vector.result()
 }
 
 class ArrayBuilder(size: Int) extends ValuesBuilder {
@@ -261,7 +252,7 @@ class ArrayBuilder(size: Int) extends ValuesBuilder {
   private var array: Array[Any] = _
   reset()
 
-  def result: Array[Any] = array
+  def result: Seq[Any] = array
 
   def reset(): Unit = array = Array.ofDim(size)
   def put(pos: Int, value: Any): Unit = array(pos) = value

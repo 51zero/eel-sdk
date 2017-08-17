@@ -30,8 +30,8 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = DataStream.fromRows(
         schema,
-        Array("clint eastwood", "actor", "carmel"),
-        Array("elton john", "musician", "pinner")
+        Row(schema, Vector("clint eastwood", "actor", "carmel")),
+        Row(schema, Vector("elton john", "musician", "pinner"))
       )
 
       frame.to(CsvSink(temp))
@@ -43,8 +43,8 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = DataStream.fromRows(
         schema,
-        Array("clint eastwood", "actor", "carmel"),
-        Array("elton john", "musician", "pinner")
+        Row(schema, Vector("clint eastwood", "actor", "carmel")),
+        Row(schema, Vector("elton john", "musician", "pinner"))
       )
 
       frame.to(CsvSink(temp, format = CsvFormat().copy(delimiter = '>')))
@@ -55,8 +55,8 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = DataStream.fromRows(
         schema,
-        Array("clint eastwood", "actor", "carmel"),
-        Array("elton john", "musician", "pinner")
+        Row(schema, Vector("clint eastwood", "actor", "carmel")),
+        Row(schema, Vector("elton john", "musician", "pinner"))
       )
       frame.to(CsvSink(temp).withHeaders(Header.FirstRow))
       val result = Source.fromInputStream(fs.open(temp)).mkString
@@ -66,8 +66,8 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       val schema = StructType(Field("name"), Field("job"), Field("location"))
       val frame = DataStream.fromRows(
         schema,
-        Array("clint eastwood", null, "carmel"),
-        Array("elton john", null, "pinner")
+        Row(schema, Vector("clint eastwood", null, "carmel")),
+        Row(schema, Vector("elton john", null, "pinner"))
       )
       frame.to(CsvSink(temp))
       val result = Source.fromInputStream(fs.open(temp)).mkString
@@ -81,8 +81,8 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       val schema = StructType(Field("a", StringType))
       val frame = DataStream.fromRows(
         schema,
-        Array("x"),
-        Array("y")
+        Row(schema, Vector("x")),
+        Row(schema, Vector("y"))
       )
 
       frame.to(CsvSink(path))

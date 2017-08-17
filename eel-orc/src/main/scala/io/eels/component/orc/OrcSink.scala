@@ -5,7 +5,7 @@ import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.exts.config.ConfigSupport
 import com.typesafe.config.ConfigFactory
 import io.eels.schema.StructType
-import io.eels.{Rec, Sink, SinkWriter}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -75,7 +75,7 @@ case class OrcSink(path: Path, options: OrcWriteOptions = OrcWriteOptions())
 
     val writer = new OrcWriter(path, schema, options)
 
-    override def write(row: Rec): Unit = writer.write(row)
+    override def write(row: Row): Unit = writer.write(row)
     
     override def close(): Unit = {
       writer.close()

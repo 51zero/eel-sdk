@@ -21,14 +21,13 @@ case class AvroSource(path: Path)
     }
   }
 
-  override def parts(): Seq[Publisher[Chunk]] = Seq(AvroSourcePublisher(path))
+  override def parts(): Seq[Publisher[Seq[Row]]] = Seq(AvroSourcePublisher(path))
 }
 
 case class AvroSourcePublisher(path: Path)
                               (implicit conf: Configuration, fs: FileSystem)
-  extends Publisher[Chunk] with Logging with Using {
-
-  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+  extends Publisher[Seq[Row]] with Logging with Using {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     val deserializer = new AvroDeserializer()
     try {
       using(AvroReaderFns.createAvroReader(path)) { reader =>
@@ -36,7 +35,7 @@ case class AvroSourcePublisher(path: Path)
         subscriber.subscribed(Subscription.fromRunning(running))
         AvroRecordIterator(reader)
           .takeWhile(_ => running.get)
-          .map(deserializer.toValues)
+          .map(deserializer.toRow)
           .grouped(DataStream.DefaultBatchSize)
           .foreach(subscriber.next)
         subscriber.completed()

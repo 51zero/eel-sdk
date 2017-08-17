@@ -86,34 +86,34 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
       .withDictionaryFiltering(false)
 
     source.withPredicate(Predicate.gt("price", BigInt(5500)))
-      .toDataStream().collect shouldBe Vector("goog")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("goog")
 
     source.withPredicate(Predicate.lte("price", BigInt(10051)))
-      .toDataStream().collect shouldBe Vector("tsla")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("tsla")
 
     source.withPredicate(Predicate.lte("price", BigInt(10052)))
-      .toDataStream().collect shouldBe Vector("goog", "tsla")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("goog", "tsla")
 
     source.withPredicate(Predicate.lt("price", BigInt(10052)))
-      .toDataStream().collect shouldBe Vector("tsla")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("tsla")
 
     source.withPredicate(Predicate.gte("price", BigInt(1913)))
-      .toDataStream().collect shouldBe Vector("goog", "tsla")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("goog", "tsla")
 
     source.withPredicate(Predicate.gte("price", BigInt(1914)))
-      .toDataStream().collect shouldBe Vector("goog")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("goog")
 
     source.withPredicate(Predicate.gt("price", BigInt(1913)))
-      .toDataStream().collect shouldBe Vector("goog")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("goog")
 
     source.withPredicate(Predicate.equals("price", BigInt(1913)))
-      .toDataStream().collect shouldBe Vector("tsla")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("tsla")
 
     source.withPredicate(Predicate.equals("price", BigInt(10052)))
-      .toDataStream().collect shouldBe Vector("goog")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("goog")
 
     source.withPredicate(Predicate.notEquals("price", BigInt(10052)))
-      .toDataStream().collect shouldBe Vector("tsla")
+      .toDataStream().collect.map(_.values.head) shouldBe Vector("tsla")
 
     fs.delete(path, false)
   }

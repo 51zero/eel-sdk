@@ -1,10 +1,10 @@
 package io.eels.component.hive
 
+import io.eels.Row
 import io.eels.schema.StructType
-import io.eels.{Rec, RowUtils}
 
 trait AlignmentStrategy {
-  def align(row: Rec, sourceSchema: StructType, targetSchema: StructType): Rec
+  def align(row: Row, targetSchema: StructType): Row
 }
 
 /**
@@ -12,12 +12,13 @@ trait AlignmentStrategy {
   * to match the target schema.
   */
 object RowPaddingAlignmentStrategy extends AlignmentStrategy {
-  override def align(row: Rec, sourceSchema: StructType, targetSchema: StructType): Rec = {
-    val map = RowUtils.toMap(row, sourceSchema)
+  override def align(row: Row, targetSchema: StructType): Row = {
+    val map = row.schema.fieldNames().zip(row.values).toMap
     // for each field in the metastore, get the field from the input row, and use that
     // if the input map does not have it, then pad it with a default or null
-    targetSchema.fields.map { field =>
+    val values = targetSchema.fields.map { field =>
       map.getOrElse(field.name, field.default)
-    }.toArray
+    }
+    Row(targetSchema, values)
   }
 }

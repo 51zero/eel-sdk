@@ -1,7 +1,7 @@
 package io.eels.datastream
 
-import io.eels.Rec
+import io.eels.Row
 
 case class IteratorAction(ds: DataStream) {
-  def execute: Iterator[Rec] = ds.toVector.iterator
+  def execute: Iterator[Row] = ds.toVector.iterator
 }

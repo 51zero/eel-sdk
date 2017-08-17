@@ -49,9 +49,9 @@ case class JsonSource(inputFn: () => InputStream,
     struct(roots.next)
   }
 
-  override def parts(): Seq[Publisher[Chunk]] = List(new JsonPublisher(inputFn))
+  override def parts(): Seq[Publisher[Seq[Row]]] = List(new JsonPublisher(inputFn))
 
-  class JsonPublisher(inputFn: () => InputStream) extends Publisher[Chunk] {
+  class JsonPublisher(inputFn: () => InputStream) extends Publisher[Seq[Row]] {
 
     private def nodeToValue(node: JsonNode): Any = {
       if (node.isArray) {
@@ -77,11 +77,12 @@ case class JsonSource(inputFn: () => InputStream,
       }
     }
 
-    private def nodeToRow(node: JsonNode): Rec = {
-      node.getElements.asScala.map(nodeToValue).toArray
+    private def nodeToRow(node: JsonNode): Row = {
+      val values = node.getElements.asScala.map(nodeToValue).toArray
+      Row(schema, values)
     }
 
-    override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       try {
         using(inputFn()) { input =>
           val running = new AtomicBoolean(true)

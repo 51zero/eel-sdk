@@ -1,5 +1,5 @@
 package io.eels
 
 object NoopListener extends Listener {
-  override def onNext(row: Rec): Unit = ()
+  override def onNext(row: Row): Unit = ()
 }

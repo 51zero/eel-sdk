@@ -2,7 +2,7 @@ package io.eels.component.jdbc
 
 import java.sql.{Connection, PreparedStatement}
 
-import io.eels.Chunk
+import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.datastream.Publisher
 
@@ -29,7 +29,7 @@ case class RangePartitionStrategy(columnName: String,
                      query: String,
                      bindFn: (PreparedStatement) => Unit,
                      fetchSize: Int,
-                     dialect: JdbcDialect): Seq[Publisher[Chunk]] = {
+                     dialect: JdbcDialect): Seq[Publisher[Seq[Row]]] = {
 
     ranges.map { case (start, end) =>
 

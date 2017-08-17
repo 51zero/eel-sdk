@@ -1,11 +1,11 @@
 package io.eels
 
 import com.sksamuel.exts.OptionImplicits._
-import io.eels.schema.StructType
+import io.eels.schema.{Field, StringType, StructType}
 
 object Row {
-  val SentinelSingle: Rec = Array("___sentinel___")
-  val Sentinel: Chunk = List(Array("___sentinel___"))
+  val SentinelSingle = Row(StructType(Field("__sentinel__", StringType)), Array(null))
+  val Sentinel = List(SentinelSingle)
   def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, first +: rest)
   // this is needed so that apply(first,rest) doesn't override the apply from the case class
   def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
@@ -56,6 +56,12 @@ case class Row(schema: StructType, values: Seq[Any]) {
     copy(values = newValues)
   }
 
+  def map(name: String, fn: Any => Any, caseSensitive: Boolean = true): Row = {
+    val k = schema.indexOf(name, caseSensitive)
+    val value = get(k)
+    val newValues = values.updated(k, value)
+    copy(values = newValues)
+  }
 
   def mapIfExists(name: String, fn: Any => Any, caseSensitive: Boolean = true): Row = {
     val k = schema.indexOf(name, caseSensitive)

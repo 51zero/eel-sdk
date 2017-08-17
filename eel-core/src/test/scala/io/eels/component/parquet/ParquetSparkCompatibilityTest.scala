@@ -89,7 +89,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       val ds = ParquetSource(FilePattern(path).withFilter(path => !path.getName.contains("SUCCESS"))).toDataStream()
       ds.schema shouldBe schema
 
-      val values = ds.collect.head
+      val values = ds.collect.head.values.toArray
       // must convert byte array to list for deep equals
       values.update(8, values(8).asInstanceOf[Array[Byte]].toList)
       values shouldBe Vector(
@@ -137,7 +137,8 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
     "generate a file compatible with spark" in {
       fs.delete(path, true)
 
-      val row = Array(
+      val row = Row(
+        schema,
         "flibble",
         52.972D,
         51616L,
@@ -153,7 +154,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
         Map("a" -> true, "b" -> false)
       )
 
-      DataStream.fromRows(schema, row).to(ParquetSink(path))
+      DataStream.fromRows(row).to(ParquetSink(path))
 
       val df = session.sqlContext.read.parquet(path.toString)
       df.schema shouldBe org.apache.spark.sql.types.StructType(
@@ -180,14 +181,14 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       // and spark will use java big decimal
       dfvalues.update(7, dfvalues(7).asInstanceOf[java.math.BigDecimal]: BigDecimal)
       dfvalues.update(11, dfvalues(11).asInstanceOf[Seq[String]].toList)
-      dfvalues.toVector shouldBe row.toVector
+      dfvalues.toVector shouldBe row.values.toVector
 
       fs.delete(path, true)
     }
 
     "support nullable maps created in spark" in {
       Seq(Maps(Map("a" -> true, "b" -> false))).toDF.write.mode(SaveMode.Overwrite).save("/tmp/a")
-      ParquetSource(new Path("/tmp/a")).toDataStream().collect shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
+      ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
     }
 
     "support non-null maps created in spark" in {
@@ -195,7 +196,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       val schema = org.apache.spark.sql.types.StructType(df1.schema.map(_.copy(nullable = false)))
       val df2 = df1.sqlContext.createDataFrame(df1.rdd, schema)
       df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
-      ParquetSource(new Path("/tmp/a")).toDataStream().collect shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
+      ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Vector(Map("a" -> true, "b" -> false)))
     }
 
     "support nullable arrays created in spark" in {
@@ -205,10 +206,10 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(Array())).toDF.write.mode(SaveMode.Overwrite).save("/tmp/c")
       Seq(ArrayTest(Array(1.0, 2.0, 3.0)), ArrayTest(null)).toDF.write.mode(SaveMode.Overwrite).save("/tmp/d")
 
-      ParquetSource(new Path("/tmp/a")).toDataStream().collect shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
-      ParquetSource(new Path("/tmp/b")).toDataStream().collect shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0)))
-      ParquetSource(new Path("/tmp/c")).toDataStream().collect shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector()))
-      ParquetSource(new Path("/tmp/d")).toDataStream().collect shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(null))
+      ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+      ParquetSource(new Path("/tmp/b")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0)))
+      ParquetSource(new Path("/tmp/c")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector()))
+      ParquetSource(new Path("/tmp/d")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(null))
     }
 
     "support non-null arrays created in spark" in {
@@ -217,7 +218,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       val df2 = df1.sqlContext.createDataFrame(df1.rdd, schema)
       df2.write.mode(SaveMode.Overwrite).save("/tmp/a")
 
-      ParquetSource(new Path("/tmp/a")).toDataStream().collect shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
+      ParquetSource(new Path("/tmp/a")).toDataStream().collect.map(_.values) shouldBe Seq(Seq(Vector(1.0, 2.0, 3.0)), Seq(Vector(1.0, 2.0)))
     }
 
     "read arrays of structs written by spark" in {

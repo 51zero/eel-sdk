@@ -151,29 +151,28 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(name := "eel")
     .aggregate(core,
-      // orc,
+      orc,
       hive,
-      spark
-    )
-  //   kafka,
-  //   kudu,
-  //   elasticsearch
+      spark,
+      kafka,
+      kudu,
+      elasticsearch)
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
     .settings(name := "eel-core")
 
-  //  lazy val orc = Project("eel-orc", file("eel-orc"))
-  //    .settings(rootSettings: _*)
-  //    .settings(orcSettings: _*)
-  //    .settings(name := "eel-orc")
-  //    .dependsOn(core)
+  lazy val orc = Project("eel-orc", file("eel-orc"))
+    .settings(rootSettings: _*)
+    .settings(orcSettings: _*)
+    .settings(name := "eel-orc")
+    .dependsOn(core)
 
   lazy val hive = Project("eel-hive", file("eel-hive"))
     .settings(rootSettings: _*)
     .settings(hiveSettings: _*)
     .settings(name := "eel-hive")
-    .dependsOn(core)
+    .dependsOn(core, orc)
 
   lazy val spark = Project("eel-spark", file("eel-spark"))
     .settings(rootSettings: _*)
@@ -181,21 +180,21 @@ object Build extends Build {
     .settings(name := "eel-spark")
     .dependsOn(core)
 
-  //  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
-  //    .settings(rootSettings: _*)
-  //    .settings(kafkaSettings: _*)
-  //    .settings(name := "eel-kafka")
-  //    .dependsOn(core)
-  //
-  //  lazy val kudu = Project("eel-kudu", file("eel-kudu"))
-  //    .settings(rootSettings: _*)
-  //    .settings(kuduSettings: _*)
-  //    .settings(name := "eel-kudu")
-  //    .dependsOn(core)
-  //
-  //  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
-  //    .settings(rootSettings: _*)
-  //    .settings(esSettings: _*)
-  //    .settings(name := "eel-elasticsearch")
-  //    .dependsOn(core)
+  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
+    .settings(rootSettings: _*)
+    .settings(kafkaSettings: _*)
+    .settings(name := "eel-kafka")
+    .dependsOn(core)
+
+  lazy val kudu = Project("eel-kudu", file("eel-kudu"))
+    .settings(rootSettings: _*)
+    .settings(kuduSettings: _*)
+    .settings(name := "eel-kudu")
+    .dependsOn(core)
+
+  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
+    .settings(rootSettings: _*)
+    .settings(esSettings: _*)
+    .settings(name := "eel-elasticsearch")
+    .dependsOn(core)
 }

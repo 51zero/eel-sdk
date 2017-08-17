@@ -4,7 +4,7 @@ import java.util
 import java.util.function.Consumer
 
 import com.sksamuel.exts.Logging
-import io.eels.{Rec, Row}
+import io.eels.Row
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericData, GenericRecord}
 
@@ -70,7 +70,7 @@ class RowSerializer(schema: Schema) extends AvroSerializer {
     case iter: Iterable[_] => iter.toList
   }
 
-  private def writeValues(values: Array[Any]): GenericRecord = {
+  private def writeValues(values: Seq[Any]): GenericRecord = {
     val record = new GenericData.Record(schema)
     explode(values).zip(serializers).zip(fields).foreach { case ((x, serializer), field) =>
       val converted = if (x == null) null else serializer.serialize(x)
@@ -80,19 +80,19 @@ class RowSerializer(schema: Schema) extends AvroSerializer {
   }
 
   // only rows can support out of order writing
-  private def writeRow(row: Rec): GenericRecord = {
-    require(row.length == schema.getFields.size, s"row size $row must match the target schema $schema")
+  private def writeRow(row: Row): GenericRecord = {
+    require(row.size() == schema.getFields.size, s"row size $row must match the target schema $schema")
     // order the values by the write schema
-    // val values = fields.map(_.name).map(row.get(_, false))
-    writeValues(row)
+    val values = fields.map(_.name).map(row.get(_, false))
+    writeValues(values)
   }
 
   override def serialize(value: Any): GenericRecord = {
     value match {
-      case row: Rec => writeRow(row)
-      case product: Product => writeValues(product.productIterator.toArray)
-      case iter: Iterator[_] => writeValues(iter.toArray)
-      case seq: Seq[Any] => writeValues(seq.toArray)
+      case row: Row => writeRow(row)
+      case product: Product => writeValues(product.productIterator.toList)
+      case iter: Iterator[_] => writeValues(iter.toList)
+      case seq: Seq[Any] => writeValues(seq)
     }
   }
 }

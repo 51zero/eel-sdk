@@ -3,9 +3,9 @@ package io.eels.datastream
 import java.util.concurrent.atomic.AtomicReference
 
 import com.sksamuel.exts.Logging
-import io.eels.{Chunk, Rec, Row}
+import io.eels.Row
 
-class ExistsSubscriber(fn: Rec => Boolean) extends Subscriber[Chunk] with Logging {
+class ExistsSubscriber(fn: Row => Boolean) extends Subscriber[Seq[Row]] with Logging {
 
   val result = new AtomicReference[Either[Throwable, Boolean]](null)
 
@@ -19,7 +19,7 @@ class ExistsSubscriber(fn: Rec => Boolean) extends Subscriber[Chunk] with Loggin
     result.set(Left(t))
   }
 
-  override def next(t: Chunk): Unit = {
+  override def next(t: Seq[Row]): Unit = {
     if (!exists) {
       exists = t.exists(fn)
       if (exists) {

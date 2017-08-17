@@ -74,7 +74,7 @@ case class ParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts(): Seq[Publisher[Chunk]] = {
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
     logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
     paths.map { it => new ParquetPublisher(it, predicate, projection, caseSensitive, dictionaryFiltering) }
   }

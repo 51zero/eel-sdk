@@ -5,9 +5,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
+import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
 import io.eels.datastream.{Publisher, Subscriber, Subscription}
-import io.eels.{Chunk, Rec}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -16,9 +16,9 @@ class JdbcPublisher(connFn: () => Connection,
                     bindFn: (PreparedStatement) => Unit,
                     fetchSize: Int,
                     dialect: JdbcDialect
-              ) extends Publisher[Chunk] with Timed with JdbcPrimitives with Using {
+              ) extends Publisher[Seq[Row]] with Timed with JdbcPrimitives with Using {
 
-  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
       using(connFn()) { conn =>
 
@@ -36,13 +36,13 @@ class JdbcPublisher(connFn: () => Connection,
             val running = new AtomicBoolean(true)
             subscriber.subscribed(Subscription.fromRunning(running))
 
-            val buffer = new ArrayBuffer[Rec](fetchSize)
+            val buffer = new ArrayBuffer[Row](fetchSize)
             while (rs.next && running.get) {
               val values = schema.fieldNames().map { name =>
                 val raw = rs.getObject(name)
                 dialect.sanitize(raw)
               }
-              buffer.append(values.toArray)
+              buffer append Row(schema, values)
               if (buffer.size == fetchSize) {
                 subscriber.next(buffer.toVector)
                 buffer.clear()

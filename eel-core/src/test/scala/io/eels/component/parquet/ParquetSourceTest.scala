@@ -30,7 +30,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read parquet files" in {
-      val people = ParquetSource(personFile.toAbsolutePath).toDataStream().collect.toSet
+      val people = ParquetSource(personFile.toAbsolutePath).toDataStream().collect.map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner")
@@ -38,7 +38,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
     }
     "be case sensitive by default" in {
       intercept[RuntimeException] {
-        val people = ParquetSource(personFile).withProjection("NAME", "JoB").toDataStream.collect.toSet
+        val people = ParquetSource(personFile).withProjection("NAME", "JoB").toDataStream.collect.map(_.values).toSet
         people shouldBe Set(
           Vector("clint eastwood", "actor", "carmel"),
           Vector("elton john", "musician", "pinner")
@@ -46,14 +46,14 @@ class ParquetSourceTest extends WordSpec with Matchers {
       }
     }
     "support case insensitive reads" in {
-      val people = ParquetSource(personFile).withProjection("NAME", "JoB").withCaseSensitivity(false).toDataStream.collect.toSet
+      val people = ParquetSource(personFile).withProjection("NAME", "JoB").withCaseSensitivity(false).toDataStream.collect.map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor"),
         Vector("elton john", "musician")
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().collect.toSet
+      val people = ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().collect.map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),

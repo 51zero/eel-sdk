@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import java.io.File
 
+import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema._
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
@@ -20,7 +21,7 @@ class HiveStatsTest extends FunSuite with Matchers with BeforeAndAfterAll {
     Field("a", StringType),
     Field("b", IntType.Signed)
   )
-  def createRow = Seq(Random.shuffle(List("a", "b", "c")).head, Random.shuffle(List(1, 2, 3, 4, 5)).head)
+  def createRow = Row(schema, Seq(Random.shuffle(List("a", "b", "c")).head, Random.shuffle(List(1, 2, 3, 4, 5)).head))
 
   val amount = 10000
 

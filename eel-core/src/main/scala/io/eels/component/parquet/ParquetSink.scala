@@ -3,7 +3,7 @@ package io.eels.component.parquet
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import io.eels.schema.StructType
-import io.eels.{Rec, Sink, SinkWriter}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
 
@@ -43,7 +43,7 @@ case class ParquetSink(path: Path, options: ParquetWriteOptions = ParquetWriteOp
 
     val writer = RowParquetWriterFn(path, schema, options.metadata, options.dictionary, options.roundingMode)
 
-    override def write(row: Rec): Unit = {
+    override def write(row: Row): Unit = {
       writer.write(row)
     }
 

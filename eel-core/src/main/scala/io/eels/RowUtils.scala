@@ -3,51 +3,7 @@ package io.eels
 import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, ByteCoercer, DateCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, StringCoercer, TimestampCoercer}
 import io.eels.schema.{BigIntType, BinaryType, BooleanType, ByteType, CharType, DateType, DecimalType, DoubleType, FloatType, IntType, LongType, StringType, StructType, TimestampMillisType, VarcharType}
 
-import scala.collection.mutable.ArrayBuffer
-
 object RowUtils {
-
-  // returns the data in this row as a Map
-  def toMap(row: Rec, inputSchema: StructType): Map[String, Any] = {
-    row.zip(inputSchema.fieldNames).map { case (value, name) =>
-      name -> value
-    }.toMap
-  }
-
-  // accepts a row with the source schema, and returns a new rec matching the target schema
-  // any missing values in the input row are looked up in the map, or an exception is thrown
-  def rowAlign(row: Rec, inputSchema: StructType, outputSchema: StructType, lookup: Map[String, Any]): Rec = {
-    val map = RowUtils.toMap(row, inputSchema)
-    outputSchema.fieldNames.map { name =>
-      map.getOrElse(name, lookup(name))
-    }.toArray
-  }
-
-  def dropIndexes(rec: Rec, indexesToDrop: Array[Int]): Rec = {
-    val array = ArrayBuffer.empty[Any]
-    for (k <- rec.indices) if (!indexesToDrop.contains(k)) array.append(rec(k))
-    array.toArray
-  }
-
-  def replace(rec: Rec, index: Int, fn: (Any) => Any): Rec = rec.updated(index, fn(rec(index)))
-
-  def removeIndex(rec: Rec, index: Int): Rec = rec.slice(0, index) ++ rec.slice(index + 1, rec.length)
-
-  def replace(rec: Rec, index: Int, from: String, target: Any): Rec = {
-    val existing = rec(index)
-    if (existing == from) {
-      rec.updated(index, target)
-    } else {
-      rec
-    }
-  }
-
-  def filter(rec: Rec, index: Int, p: (Any) => Boolean): Boolean = p(rec(index))
-
-  def map(rec: Rec, index: Int, fn: Any => Any, caseSensitive: Boolean = true): Rec = {
-    val value = rec(index)
-    rec.updated(index, value)
-  }
 
   /**
     * Accepts a Row and reformats it according to the target schema, using the lookup map

@@ -1,5 +1,6 @@
 package io.eels.component.parquet
 
+import io.eels.Row
 import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.datastream.DataStream
@@ -45,7 +46,7 @@ class AvroParquetSinkTest extends WordSpec with Matchers {
       if (fs.exists(path))
         fs.delete(path, false)
       ds.to(AvroParquetSink(path))
-      AvroParquetSource(path).toDataStream().toSet shouldBe
+      AvroParquetSource(path).toDataStream().toSet.map(_.values) shouldBe
         Set(
           Vector("clint eastwood", "actor", "carmel"),
           Vector("elton john", "musician", "pinner")
@@ -59,8 +60,8 @@ class AvroParquetSinkTest extends WordSpec with Matchers {
 
       val schema = StructType(Field("a", StringType))
       val ds = DataStream.fromRows(schema,
-        Vector("x"),
-        Vector("y")
+        Row(schema, Vector("x")),
+        Row(schema, Vector("y"))
       )
 
       ds.to(AvroParquetSink(path))

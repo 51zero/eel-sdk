@@ -20,16 +20,16 @@ class DataStreamTest extends WordSpec with Matchers {
     Field("sales", LongType())
   )
   val ds1 = DataStream.fromRows(schema1,
-    Vector("Elton John", 1969, "Empty Sky", 1433),
-    Vector("Elton John", 1971, "Madman Across the Water", 7636),
-    Vector("Elton John", 1972, "Honky Château", 2525),
-    Vector("Elton John", 1973, "Goodbye Yellow Brick Road", 4352),
-    Vector("Elton John", 1975, "Rock of the Westies", 5645),
-    Vector("Kate Bush", 1978, "The Kick Inside", 2577),
-    Vector("Kate Bush", 1978, "Lionheart", 745),
-    Vector("Kate Bush", 1980, "Never for Ever", 7444),
-    Vector("Kate Bush", 1982, "The Dreaming", 8253),
-    Vector("Kate Bush", 1985, "Hounds of Love", 2495)
+    Row(schema1, Vector("Elton John", 1969, "Empty Sky", 1433)),
+    Row(schema1, Vector("Elton John", 1971, "Madman Across the Water", 7636)),
+    Row(schema1, Vector("Elton John", 1972, "Honky Château", 2525)),
+    Row(schema1, Vector("Elton John", 1973, "Goodbye Yellow Brick Road", 4352)),
+    Row(schema1, Vector("Elton John", 1975, "Rock of the Westies", 5645)),
+    Row(schema1, Vector("Kate Bush", 1978, "The Kick Inside", 2577)),
+    Row(schema1, Vector("Kate Bush", 1978, "Lionheart", 745)),
+    Row(schema1, Vector("Kate Bush", 1980, "Never for Ever", 7444)),
+    Row(schema1, Vector("Kate Bush", 1982, "The Dreaming", 8253)),
+    Row(schema1, Vector("Kate Bush", 1985, "Hounds of Love", 2495))
   )
 
   val schema2 = StructType(
@@ -37,8 +37,8 @@ class DataStreamTest extends WordSpec with Matchers {
     Field("country")
   )
   val ds2 = DataStream.fromRows(schema2,
-    Vector("Pizza", "Italy"),
-    Vector("Foie Gras", "France")
+    Row(schema2, Vector("Pizza", "Italy")),
+    Row(schema2, Vector("Foie Gras", "France"))
   )
 
   val schema3 = StructType(
@@ -46,13 +46,13 @@ class DataStreamTest extends WordSpec with Matchers {
     Field("gender")
   )
   val ds3 = DataStream.fromRows(schema3,
-    Vector("Elton John", "m"),
-    Vector("Kate Bush", "f")
+    Row(schema3, Vector("Elton John", "m")),
+    Row(schema3, Vector("Kate Bush", "f"))
   )
 
   "DataStream.filter" should {
     "return only matching rows" in {
-      source.toDataStream().filter(row => row.contains("Kent")).collect.size shouldBe 22
+      source.toDataStream().filter(row => row.values.contains("Kent")).collect.size shouldBe 22
     }
     "support row filtering by column name and fn" in {
       ds3.filter("gender", _ == "f").size shouldBe 1
@@ -75,7 +75,7 @@ class DataStreamTest extends WordSpec with Matchers {
         )
       )
       val f = ds.projection("location")
-      f.head shouldBe Seq("aylesbury")
+      f.head.values shouldBe Seq("aylesbury")
       f.schema shouldBe StructType("location")
     }
     "support column projection expressions" in {
@@ -88,7 +88,7 @@ class DataStreamTest extends WordSpec with Matchers {
         )
       )
       val f = ds.projectionExpression("location,name")
-      f.head shouldBe Vector("aylesbury", "sam")
+      f.head.values shouldBe Vector("aylesbury", "sam")
       f.schema shouldBe StructType("location", "name")
     }
     "support column projection re-ordering" in {
@@ -102,13 +102,13 @@ class DataStreamTest extends WordSpec with Matchers {
       )
       val f = ds.projection("location", "name")
       f.schema shouldBe StructType("location", "name")
-      f.head shouldBe Vector("aylesbury", "sam")
+      f.head.values shouldBe Vector("aylesbury", "sam")
     }
   }
 
   "DataStream.concat" should {
     "merge together two datastreams" in {
-      ds1.take(2).concat(ds2).collect shouldBe
+      ds1.take(2).concat(ds2).collect.map(_.values) shouldBe
         Vector(Vector("Elton John", 1969, "Empty Sky", 1433, "Pizza", "Italy"), Vector("Elton John", 1971, "Madman Across the Water", 7636, "Foie Gras", "France"))
     }
   }
@@ -124,14 +124,14 @@ class DataStreamTest extends WordSpec with Matchers {
       )
     }
     "join together two datastreams on a key" in {
-      ds1.take(2).join("artist", ds3).collect shouldBe
+      ds1.take(2).join("artist", ds3).collect.map(_.values) shouldBe
         Vector(Vector("Elton John", 1969, "Empty Sky", 1433, "m"), Vector("Elton John", 1971, "Madman Across the Water", 7636, "m"))
     }
   }
 
   "DataStream.map" should {
     "transform each row" in {
-      source.toDataStream().map(row => row ++ Array("foo", "moo")).take(1).collect should contain("moo")
+      source.toDataStream().map(row => row.add("foo", "moo")).take(1).collect.flatMap(_.values) should contain("moo")
     }
   }
 
@@ -143,17 +143,17 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.dropWhile" should {
     "work!" in {
-      //      ds1.dropWhile(_.get("artist") == "Elton John").collect shouldBe
-      //        Vector(
-      //          Vector("Kate Bush", 1978, "The Kick Inside", 2577),
-      //          Vector("Kate Bush", 1978, "Lionheart", 745),
-      //          Vector("Kate Bush", 1980, "Never for Ever", 7444),
-      //          Vector("Kate Bush", 1982, "The Dreaming", 8253),
-      //          Vector("Kate Bush", 1985, "Hounds of Love", 2495)
-      //        )
+      ds1.dropWhile(_.get("artist") == "Elton John").collect.map(_.values) shouldBe
+        Vector(
+          Vector("Kate Bush", 1978, "The Kick Inside", 2577),
+          Vector("Kate Bush", 1978, "Lionheart", 745),
+          Vector("Kate Bush", 1980, "Never for Ever", 7444),
+          Vector("Kate Bush", 1982, "The Dreaming", 8253),
+          Vector("Kate Bush", 1985, "Hounds of Love", 2495)
+        )
     }
     "support with column predicate" in {
-      ds1.dropWhile("year", value => value.toString.toInt < 1980).collect shouldBe
+      ds1.dropWhile("year", value => value.toString.toInt < 1980).collect.map(_.values) shouldBe
         Vector(
           Vector("Kate Bush", 1980, "Never for Ever", 7444),
           Vector("Kate Bush", 1982, "The Dreaming", 8253),
@@ -164,7 +164,7 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.explode" should {
     "expand rows" in {
-      ds3.explode(row => Seq(row, row)).collect shouldBe
+      ds3.explode(row => Seq(row, row)).collect.map(_.values) shouldBe
         Vector(
           Vector("Elton John", "m"),
           Vector("Elton John", "m"),
@@ -233,17 +233,17 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.exists" should {
     "return true when a row matches the predicate" in {
-      ds3.exists(row => row.contains("Elton John")) shouldBe true
-      ds3.exists(row => row.contains("Jack Bruce")) shouldBe false
+      ds3.exists(row => row.containsValue("Elton John")) shouldBe true
+      ds3.exists(row => row.containsValue("Jack Bruce")) shouldBe false
     }
   }
 
   "DataStream.find" should {
     "return Option[Row] when a row matches the predicate" in {
-      ds3.find(row => row.contains("Elton John")) shouldBe Option(Row(ds3.schema, Seq("Elton John", "m")))
+      ds3.find(row => row.containsValue("Elton John")) shouldBe Option(Row(ds3.schema, Seq("Elton John", "m")))
     }
     "return None when no row matches the predicate" in {
-      ds3.find(row => row.contains("Jack Bruce")) shouldBe None
+      ds3.find(row => row.containsValue("Jack Bruce")) shouldBe None
     }
   }
 
@@ -271,7 +271,7 @@ class DataStreamTest extends WordSpec with Matchers {
           List("d", 1)
         )
       )
-      // ds.minBy(_.getAs[Int]("b"))(Ordering.Int) shouldBe Row(ds.schema, Seq("a", 1))
+      ds.minBy(_.getAs[Int]("b"))(Ordering.Int) shouldBe Row(ds.schema, Seq("a", 1))
     }
   }
 
@@ -286,7 +286,7 @@ class DataStreamTest extends WordSpec with Matchers {
           List("d", 1)
         )
       )
-      //ds.maxBy(_.getAs[Int]("b"))(Ordering.Int) shouldBe Row(ds.schema, Seq("b", 4))
+      ds.maxBy(_.getAs[Int]("b"))(Ordering.Int) shouldBe Row(ds.schema, Seq("b", 4))
     }
   }
 
@@ -300,7 +300,7 @@ class DataStreamTest extends WordSpec with Matchers {
           List(null, "buckingham")
         )
       )
-      ds.replaceNullValues("wibble").collect shouldBe
+      ds.replaceNullValues("wibble").collect.map(_.values) shouldBe
         Vector(
           List("sam", "wibble"),
           List("jam", "aylesbury"),
@@ -317,14 +317,14 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.union" should {
     "join together two datastreams" in {
-      ds1.take(2).union(ds1.take(1)).collect shouldBe
+      ds1.take(2).union(ds1.take(1)).collect.map(_.values) shouldBe
         Vector(Vector("Elton John", 1969, "Empty Sky", 1433), Vector("Elton John", 1971, "Madman Across the Water", 7636), Vector("Elton John", 1969, "Empty Sky", 1433))
     }
   }
 
   "DataStream.take" should {
     "return only n number of rows" in {
-      source.toDataStream().take(3).collect shouldBe
+      source.toDataStream().take(3).collect.map(_.values) shouldBe
         Vector(
           Vector("Aleshia", "Tomkiewicz", "Alan D Rosenburg Cpa Pc", "14 Taylor St", "St. Stephens Ward", "Kent", "CT2 7PP", "01835-703597", "01944-369967", "atomkiewicz@hotmail.com", "http://www.alandrosenburgcpapc.co.uk"),
           Vector("Evan", "Zigomalas", "Cap Gemini America", "5 Binney St", "Abbey Ward", "Buckinghamshire", "HP11 2AX", "01937-864715", "01714-737668", "evan.zigomalas@gmail.com", "http://www.capgeminiamerica.co.uk"),
@@ -335,7 +335,7 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.takeWhile" should {
     "support take while with row predicate" in {
-      source.toDataStream().takeWhile(row => row.mkString.contains("co.uk")).collect.size shouldBe 6
+      source.toDataStream().takeWhile(row => row.values.mkString.contains("co.uk")).collect.size shouldBe 6
     }
     "support take while with column predicate" in {
       source.toDataStream().takeWhile("web", _.toString.contains("co.uk")).collect.size shouldBe 6
@@ -345,6 +345,10 @@ class DataStreamTest extends WordSpec with Matchers {
   "DataStream.renameField" should {
     "update the schema" in {
       source.toDataStream().renameField("web", "website").schema.fieldNames() shouldBe
+        Vector("first_name", "last_name", "company_name", "address", "city", "county", "postal", "phone1", "phone2", "email", "website")
+    }
+    "copy the rows with updated schema" in {
+      source.toDataStream().renameField("web", "website").take(1).collect.head.schema.fieldNames() shouldBe
         Vector("first_name", "last_name", "company_name", "address", "city", "county", "postal", "phone1", "phone2", "email", "website")
     }
   }
@@ -362,7 +366,7 @@ class DataStreamTest extends WordSpec with Matchers {
     "not add column if already exists" in {
       val ds = ds1.addFieldIfNotExists("artist", "bibble")
       ds.schema shouldBe schema1
-      ds.head shouldBe Vector("Elton John", 1969, "Empty Sky", 1433)
+      ds.head.values shouldBe Vector("Elton John", 1969, "Empty Sky", 1433)
     }
     "add column if it does not exist" in {
       val ds = ds3.addFieldIfNotExists("testy", "bibble")
@@ -371,7 +375,7 @@ class DataStreamTest extends WordSpec with Matchers {
         Field("gender"),
         Field("testy")
       )
-      ds.head shouldBe Vector("Elton John", "m", "bibble")
+      ds.head.values shouldBe Vector("Elton John", "m", "bibble")
     }
   }
 
@@ -381,7 +385,7 @@ class DataStreamTest extends WordSpec with Matchers {
       val ds1 = DataStream.fromValues(schema, Vector(Vector("a", 1), Vector("b", 2)))
       val ds2 = ds1.replaceFieldType(StringType, BooleanType)
       ds2.schema shouldBe StructType(Field("a", BooleanType), Field("b", LongType(true)))
-      ds2.collect shouldBe Seq(Vector("a", 1), Vector("b", 2))
+      ds2.collect.map(_.values) shouldBe Seq(Vector("a", 1), Vector("b", 2))
     }
     "accept regex" in {
       val schema = StructType(Field("aaa", StringType), Field("aab", LongType(true)))
@@ -399,7 +403,7 @@ class DataStreamTest extends WordSpec with Matchers {
     "support adding columns" in {
       val ds2 = ds3.addField("testy", "bibble")
       ds2.schema shouldBe StructType("artist", "gender", "testy")
-      ds2.head shouldBe Vector("Elton John", "m", "bibble")
+      ds2.head.values shouldBe Vector("Elton John", "m", "bibble")
     }
   }
 
@@ -445,11 +449,11 @@ class DataStreamTest extends WordSpec with Matchers {
     "return multiple independant branches of the stream" in {
       val ds = DataStream.fromIterator(
         StructType("a"),
-        Iterator.tabulate(5)(k => Seq(k.toString))
+        Iterator.tabulate(5)(k => Row(StructType("a"), Seq(k.toString)))
       )
       val multis = ds.multiplex(2)
-      multis.head.take(2).collect shouldBe Vector(List("0"), List("1"))
-      multis.last.drop(2).collect shouldBe Vector(List("2"), List("3"), List("4"))
+      multis.head.take(2).collect.map(_.values) shouldBe Vector(List("0"), List("1"))
+      multis.last.drop(2).collect.map(_.values) shouldBe Vector(List("2"), List("3"), List("4"))
     }
   }
 

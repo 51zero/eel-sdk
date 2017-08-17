@@ -15,23 +15,23 @@ case class SequenceSource(path: Path)(implicit conf: Configuration) extends Sour
   logger.debug(s"Creating sequence source from $path")
 
   override def schema: StructType = SequenceSupport.schema(path)
-  override def parts(): Seq[Publisher[Chunk]] = List(new SequencePublisher(path))
+  override def parts(): Seq[Publisher[Seq[Row]]] = List(new SequencePublisher(path))
 }
 
 object SequenceReaderIterator {
-  def apply(schema: StructType, reader: SequenceFile.Reader): Iterator[Rec] = new Iterator[Rec] {
+  def apply(schema: StructType, reader: SequenceFile.Reader): Iterator[Row] = new Iterator[Row] {
     private val k = new IntWritable()
     private val v = new BytesWritable()
     // throw away the header
     reader.next(k, v)
-    override def next(): Rec = SequenceSupport.toValues(v).toArray
+    override def next(): Row = Row(schema, SequenceSupport.toValues(v).toVector)
     override def hasNext(): Boolean = reader.next(k, v)
   }
 }
 
-class SequencePublisher(val path: Path)(implicit conf: Configuration) extends Publisher[Chunk] with Logging with Using {
+class SequencePublisher(val path: Path)(implicit conf: Configuration) extends Publisher[Seq[Row]] with Logging with Using {
 
-  override def subscribe(subscriber: Subscriber[Chunk]): Unit = {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
     try {
       using(SequenceSupport.createReader(path)) { reader =>
         val schema = SequenceSupport.schema(path)

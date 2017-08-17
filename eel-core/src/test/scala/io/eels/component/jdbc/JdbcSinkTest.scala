@@ -16,7 +16,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
   conn.createStatement().executeUpdate("create table mytab (a integer, b integer, c integer)")
 
   private val schema = StructType(Field("a"), Field("b"), Field("c"))
-  private val frame = DataStream.fromRows(schema, Vector("1", "2", "3"), Vector("4", "5", "6"))
+  private val frame = DataStream.fromRows(schema, Row(schema, Vector("1", "2", "3")), Row(schema, Vector("4", "5", "6")))
 
   "JdbcSink" should {
     "write frame to table" in {

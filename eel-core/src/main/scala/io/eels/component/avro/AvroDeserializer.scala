@@ -1,7 +1,7 @@
 package io.eels.component.avro
 
 import com.typesafe.config.ConfigFactory
-import io.eels.Rec
+import io.eels.Row
 import io.eels.schema.StructType
 import org.apache.avro.Schema.Field
 import org.apache.avro.generic.GenericRecord
@@ -31,20 +31,20 @@ class AvroDeserializer(useJavaString: Boolean = ConfigFactory.load().getBoolean(
     }
   }
 
-  def toValues(record: GenericRecord): Rec = {
-    val array = Array.ofDim[Any](record.getSchema.getFields.size)
-    for (k <- array.indices) {
+  def toValues(record: GenericRecord): Vector[Any] = {
+    val vector = Vector.newBuilder[Any]
+    for (k <- 0 until record.getSchema.getFields.size) {
       val value = record.get(k)
-      array.updated(k, toScala(value))
+      vector += toScala(value)
     }
-    array
+    vector.result
   }
 
-  //  def toRow(record: GenericRecord): Row = {
-  //    // take the schema from the first record
-  //    if (schema == null) {
-  //      schema = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
-  //    }
-  //    Row(schema, toValues(record))
-  //  }
+  def toRow(record: GenericRecord): Row = {
+    // take the schema from the first record
+    if (schema == null) {
+      schema = AvroSchemaFns.fromAvroSchema(record.getSchema, deserializeAsNullable)
+    }
+    Row(schema, toValues(record))
+  }
 }

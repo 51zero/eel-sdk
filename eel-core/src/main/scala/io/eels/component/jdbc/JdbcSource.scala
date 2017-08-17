@@ -5,10 +5,10 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.metrics.Timed
+import io.eels.{Row, Source}
 import io.eels.component.jdbc.dialect.{GenericJdbcDialect, JdbcDialect}
 import io.eels.datastream.Publisher
 import io.eels.schema.StructType
-import io.eels.{Chunk, Source}
 
 object JdbcSource {
   def apply(url: String, query: String): JdbcSource = JdbcSource(() => DriverManager.getConnection(url), query)
@@ -33,7 +33,7 @@ case class JdbcSource(connFn: () => Connection,
 
   private def dialect(): JdbcDialect = providedDialect.getOrElse(new GenericJdbcDialect())
 
-  override def parts(): Seq[Publisher[Chunk]] = partitionStrategy.parts(connFn, query, bindFn, fetchSize, dialect())
+  override def parts(): Seq[Publisher[Seq[Row]]] = partitionStrategy.parts(connFn, query, bindFn, fetchSize, dialect())
 
   def fetchSchema(): StructType = {
     using(connFn()) { conn =>

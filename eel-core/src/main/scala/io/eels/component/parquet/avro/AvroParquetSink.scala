@@ -4,7 +4,7 @@ import com.sksamuel.exts.Logging
 import com.typesafe.config.ConfigFactory
 import io.eels.component.avro.{AvroSchemaFns, RowSerializer}
 import io.eels.schema.StructType
-import io.eels.{Rec, Row, Sink, SinkWriter}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.fs.{FileSystem, Path}
 
 object AvroParquetSink {
@@ -27,7 +27,7 @@ case class AvroParquetSink(path: Path, overwrite: Boolean = false)(implicit fs: 
     private val writer = new AvroParquetRowWriter(path, avroSchema)
     private val serializer = new RowSerializer(avroSchema)
 
-    override def write(row: Rec): Unit = {
+    override def write(row: Row): Unit = {
       this.synchronized {
         val record = serializer.serialize(row)
         writer.write(record)

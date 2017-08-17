@@ -3,7 +3,7 @@ package io.eels.component.avro
 import java.io.File
 
 import io.eels.schema.StructType
-import io.eels.{Rec, Sink, SinkWriter}
+import io.eels.{Row, Sink, SinkWriter}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.permission.FsPermission
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -22,7 +22,7 @@ case class AvroSink(path: Path,
 
     private val writer = new AvroWriter(schema, fs.create(path, overwrite))
 
-    override def write(row: Rec): Unit = writer.write(row)
+    override def write(row: Row): Unit = writer.write(row)
 
     override def close(): Unit = {
       writer.close()

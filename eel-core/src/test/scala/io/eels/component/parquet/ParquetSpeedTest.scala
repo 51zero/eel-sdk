@@ -3,6 +3,7 @@ package io.eels.component.parquet
 import java.io.File
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.Row
 import io.eels.component.parquet.avro.{AvroParquetSink, AvroParquetSource}
 import io.eels.component.parquet.util.ParquetLogMute
 import io.eels.datastream.DataStream
@@ -43,7 +44,7 @@ object ParquetSpeedTest extends App with Timed {
 
   val size = 2000000
   val schema = StructType("a", "b", "c", "d", "e")
-  val createRow = Seq(Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4))
+  val createRow = Row(schema, Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(4))
   val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
 
   implicit val conf = new Configuration()

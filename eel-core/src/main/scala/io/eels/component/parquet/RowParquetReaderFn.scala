@@ -2,7 +2,7 @@ package io.eels.component.parquet
 
 import com.sksamuel.exts.Logging
 import io.eels.schema.StructType
-import io.eels.{Predicate, Rec}
+import io.eels.{Predicate, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
@@ -12,19 +12,17 @@ import org.apache.parquet.hadoop.{ParquetFileReader, ParquetInputFormat, Parquet
 import org.apache.parquet.schema.Type
 
 /**
-  * Helper function to create a native parquet reader objects which are arrays of values,
-  * using the apache parquet library.
-  *
+  * Helper function to create a native parquet reader for Row objects, using the apache parquet library.
   * The reader supports optional predicate (for row filtering) and a
   * projection schema (for column filtering).
   */
-object RecordParquetReaderFn extends Logging {
+object RowParquetReaderFn extends Logging {
 
   private val config = ParquetReaderConfig()
 
   def schema(path: Path)(implicit conf: Configuration): StructType = {
-    val messageType = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER).getFileMetaData.getSchema
-    ParquetSchemaFns.fromParquetMessageType(messageType)
+    val mt = ParquetFileReader.readFooter(conf, path, ParquetMetadataConverter.NO_FILTER).getFileMetaData.getSchema
+    ParquetSchemaFns.fromParquetMessageType(mt)
   }
 
   /**
@@ -36,7 +34,7 @@ object RecordParquetReaderFn extends Logging {
   def apply(path: Path,
             predicate: Option[Predicate],
             readSchema: Option[Type],
-            dictionaryFiltering: Boolean)(implicit conf: Configuration): ParquetReader[Rec] = {
+            dictionaryFiltering: Boolean)(implicit conf: Configuration): ParquetReader[Row] = {
     logger.debug(s"Opening parquet reader for $path")
 
     // The parquet reader can use a projection by setting a projected schema onto the supplied conf object
@@ -55,7 +53,7 @@ object RecordParquetReaderFn extends Logging {
       .map(FilterCompat.get)
       .getOrElse(FilterCompat.NOOP)
 
-    ParquetReader.builder(new ArrayReadSupport, path)
+    ParquetReader.builder(new RowReadSupport, path)
       .withConf(configuration())
       .withFilter(filter())
       .build()

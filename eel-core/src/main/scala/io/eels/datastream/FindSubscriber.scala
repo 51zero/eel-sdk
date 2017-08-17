@@ -3,14 +3,14 @@ package io.eels.datastream
 import java.util.concurrent.atomic.AtomicReference
 
 import com.sksamuel.exts.Logging
-import io.eels.{Chunk, Rec, Row}
+import io.eels.Row
 
-class FindSubscriber(p: Rec => Boolean) extends Subscriber[Chunk] with Logging {
+class FindSubscriber(p: Row => Boolean) extends Subscriber[Seq[Row]] with Logging {
 
-  val result = new AtomicReference[Either[Throwable, Option[Rec]]](null)
+  val result = new AtomicReference[Either[Throwable, Option[Row]]](null)
 
   private var subscription: Subscription = null
-  private var value: Option[Rec] = None
+  private var value: Option[Row] = None
 
   override def subscribed(c: Subscription): Unit = this.subscription = c
 
@@ -19,7 +19,7 @@ class FindSubscriber(p: Rec => Boolean) extends Subscriber[Chunk] with Logging {
     result.set(Left(t))
   }
 
-  override def next(t: Chunk): Unit = {
+  override def next(t: Seq[Row]): Unit = {
     if (value.isEmpty) {
       value = t.find(p)
       if (value.isDefined) {

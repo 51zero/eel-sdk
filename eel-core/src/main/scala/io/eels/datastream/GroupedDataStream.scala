@@ -1,8 +1,8 @@
 package io.eels.datastream
 
 import com.sksamuel.exts.Logging
+import io.eels.Row
 import io.eels.schema.{DataType, DoubleType, Field, StructType}
-import io.eels.{Chunk, Rec, Row}
 
 object GroupedDataStream {
   val FullDatasetKeyFn: Row => Any = { _ => 0 }
@@ -59,7 +59,7 @@ trait GroupedDataStream {
     //
     //      Seq(Flow(rows))
     //    }
-    override def subscribe(subscriber: Subscriber[Chunk]): Unit = ???
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = ???
   }
 
   def aggregation(agg: Aggregation): GroupedDataStream = new GroupedDataStream {
@@ -70,7 +70,7 @@ trait GroupedDataStream {
 
   // actions
   def size: Long = toDataStream.size
-  def collect: Vector[Rec] = toDataStream.collect
+  def collect: Vector[Row] = toDataStream.collect
 
   // convenience methods to add aggregations for the named fields
   def sum(field: String): GroupedDataStream = aggregation(Aggregation.sum(field))

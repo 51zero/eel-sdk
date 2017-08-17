@@ -70,7 +70,7 @@ case class AvroParquetSource(pattern: FilePattern,
     }
   }
 
-  override def parts(): Seq[Publisher[Chunk]] = {
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
     logger.debug(s"AvroParquetSource source has ${paths.size} files: $paths")
     paths.map { it => new AvroParquetPublisher(it, predicate) }
   }
