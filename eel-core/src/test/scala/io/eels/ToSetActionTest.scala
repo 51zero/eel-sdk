@@ -15,19 +15,19 @@ class ToSetActionTest extends WordSpec with Matchers {
       val ds = DataStream.fromValues(
         schema,
         Seq(
-          Vector("sam", "aylesbury"),
-          Vector("sam", "aylesbury"),
-          Vector("sam", "aylesbury"),
-          Vector("jam", "aylesbury"),
-          Vector("jam", "aylesbury"),
-          Vector("jam", "aylesbury"),
-          Vector("ham", "buckingham")
+          Array("sam", "aylesbury"),
+          Array("sam", "aylesbury"),
+          Array("sam", "aylesbury"),
+          Array("jam", "aylesbury"),
+          Array("jam", "aylesbury"),
+          Array("jam", "aylesbury"),
+          Array("ham", "buckingham")
         )
       )
       ds.toSet shouldBe Set(
-        Vector("sam", "aylesbury"),
-        Vector("jam", "aylesbury"),
-        Vector("ham", "buckingham")
+        Row(ds.schema, "sam", "aylesbury"),
+        Row(ds.schema, "jam", "aylesbury"),
+        Row(ds.schema, "ham", "buckingham")
       )
     }
   }

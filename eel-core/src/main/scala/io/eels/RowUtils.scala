@@ -18,7 +18,7 @@ object RowUtils {
     val map = RowUtils.toMap(row, inputSchema)
     outputSchema.fieldNames.map { name =>
       map.getOrElse(name, lookup(name))
-    }
+    }.toVector
   }
 
   def dropIndexes(rec: Rec, indexesToDrop: Array[Int]): Rec = {
@@ -55,7 +55,7 @@ object RowUtils {
     val values = targetSchema.fieldNames().map { name =>
       if (lookup.contains(name)) lookup(name) else row.get(name)
     }
-    Row(targetSchema, values)
+    Row(targetSchema, values.toVector)
   }
 
   /**

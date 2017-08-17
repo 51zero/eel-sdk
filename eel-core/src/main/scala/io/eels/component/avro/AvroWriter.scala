@@ -14,7 +14,7 @@ class AvroWriter(structType: StructType, out: OutputStream) {
   private val schema = AvroSchemaFns.toAvroSchema(structType)
   private val datumWriter = new generic.GenericDatumWriter[GenericRecord](schema)
   private val dataFileWriter = new DataFileWriter[GenericRecord](datumWriter)
-  private val serializer = new RecordSerializer(schema)
+  private val serializer = new RowSerializer(schema)
   private val _records = new AtomicInteger(0)
 
   dataFileWriter.create(schema, out)

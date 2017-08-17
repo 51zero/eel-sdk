@@ -63,7 +63,7 @@ class HivePartitionPublisher(dbName: String,
         // first we build a map of the keys to values, then use that map to return a Row with
         // values in the order set by the fieldNames parameter
         val map = partitionKeys.zip(part.getValues.asScala).toMap
-        projectionSchema.fieldNames.map(map(_))
+        projectionSchema.fieldNames.map(map(_)).toArray[Any]
       }
 
       logger.debug(s"After scanning partitions and files we have ${rows.size} rows")

@@ -23,7 +23,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
 
     val subscriber = new Subscriber[Chunk] {
       override def subscribed(sub: Subscription): Unit = {
-        logger.debug(s"Subscribing to datastream for sink action")
+        logger.debug(s"Subscribing to datastream for sink action [subscription=$sub]")
         subscription = sub
       }
 

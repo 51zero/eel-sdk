@@ -2,6 +2,7 @@ package io.eels.component.hive
 
 import java.io.File
 
+import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.scalatest.{FunSuite, Matchers}
@@ -36,7 +37,7 @@ class HiveEvolutionTest extends FunSuite with Matchers {
     DataStream.fromValues(schema.removeField("b"), Seq(Seq("a"))).to(HiveSink(dbname, table))
 
     HiveSource(dbname, table).toDataStream().collect shouldBe Vector(
-      Vector("a", null)
+      Row(schema, Vector("a", null))
     )
   }
 
@@ -54,8 +55,8 @@ class HiveEvolutionTest extends FunSuite with Matchers {
     DataStream.fromValues(schema2, Seq(Seq("b", "a"))).to(HiveSink(dbname, table))
 
     HiveSource(dbname, table).toDataStream().collect shouldBe Vector(
-       Vector("a", "b"),
-       Vector("a", "b")
+      Row(schema1, Vector("a", "b")),
+      Row(schema1, Vector("a", "b"))
     )
   }
 }

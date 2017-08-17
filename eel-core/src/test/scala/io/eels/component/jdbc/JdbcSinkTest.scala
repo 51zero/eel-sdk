@@ -3,6 +3,7 @@ package io.eels.component.jdbc
 import java.sql.DriverManager
 import java.util.UUID
 
+import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StructType}
 import org.scalatest.{Matchers, OneInstancePerTest, WordSpec}
@@ -33,7 +34,7 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
       rs.close()
     }
     "support multiple writers" in {
-      val rows = Vector.fill(10000)(Vector("1", "2", "3"))
+      val rows = List.fill(10000)(Row(schema, Vector("1", "2", "3")))
       val mframe = DataStream.fromRows(schema, rows)
       val sink = JdbcSink(url, "multithreads").withCreateTable(true).withThreads(4)
       mframe.to(sink)

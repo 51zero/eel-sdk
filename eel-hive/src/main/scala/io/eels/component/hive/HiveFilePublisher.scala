@@ -48,9 +48,9 @@ class HiveFilePublisher(dialect: HiveDialect,
       override def next(chunk: Chunk): Unit = {
         val aligned: Chunk = chunk.map { row =>
           // if we had no projection fields, then that means we just had a partition only projection,
-          // and so the vector of values can come directly from the partition map
+          // and so the array of values can come directly from the partition map
           if (projectionFields.isEmpty) {
-            projectionSchema.fieldNames().map(partitionMap.apply)
+            projectionSchema.fieldNames().map(partitionMap.apply).toArray
           } else {
             RowUtils.rowAlign(row, projectionSchema, readSchema, partitionMap)
           }

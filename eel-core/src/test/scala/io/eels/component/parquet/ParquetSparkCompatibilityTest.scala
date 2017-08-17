@@ -123,7 +123,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       ))
 
       val path = new Path("spark.parquet.structs")
-      DataStream.fromRows(eelSchema, Seq(Seq(Seq(Tuple2("prince", "queen"))))).to(ParquetSink(path).withOverwrite(true))
+      DataStream.fromRows(eelSchema, Seq(Seq(Tuple2("prince", "queen")))).to(ParquetSink(path).withOverwrite(true))
 
       val df = session.sqlContext.read.parquet(path.toString)
       df.schema shouldBe sparkSchema
@@ -235,7 +235,7 @@ class ParquetSparkCompatibilityTest extends WordSpec with Matchers {
       df2.write.mode(SaveMode.Overwrite).parquet("/tmp/structs")
       val ds = ParquetSource(FilePattern("/tmp/structs").withFilter(path => path.getName.contains(".parquet"))).toDataStream()
       ds.schema shouldBe eelSchema
-      ds.head shouldBe Seq(Seq(Seq("prince", "queen")))
+      ds.head shouldBe Row(eelSchema, Seq(Seq(Seq("prince", "queen"))))
     }
   }
 }

@@ -18,13 +18,13 @@ import org.apache.parquet.schema.MessageType
 import scala.collection.mutable.ArrayBuffer
 
 // required by the parquet reader builder, and returns a record materializer for eel records
-class VectorReadSupport extends ReadSupport[IndexedSeq[Any]] with Logging {
+class VectorReadSupport extends ReadSupport[Vector[Any]] with Logging {
 
   override def prepareForRead(configuration: Configuration,
                               keyValueMetaData: java.util.Map[String, String],
                               fileSchema: MessageType,
                               readContext: ReadContext): RecordMaterializer[Rec] = {
-    new InternalRecordMaterializer(fileSchema, readContext)
+    new ArrayRecordMaterializer(fileSchema, readContext)
   }
 
   override def init(configuration: Configuration,
@@ -42,15 +42,15 @@ class VectorReadSupport extends ReadSupport[IndexedSeq[Any]] with Logging {
 // converts is in turn called with the basic value.
 // The converter must know what to do with the basic value so where basic values
 // overlap, eg byte arrays, you must have different converters
-class InternalRecordMaterializer(fileSchema: MessageType,
-                                 readContext: ReadContext) extends RecordMaterializer[Rec] with Logging {
+class ArrayRecordMaterializer(fileSchema: MessageType,
+                              readContext: ReadContext) extends RecordMaterializer[Rec] with Logging {
 
   private val schema = ParquetSchemaFns.fromParquetMessageType(readContext.getRequestedSchema)
   logger.trace(s"Record materializer will create arrays with schema $schema")
 
   override val getRootConverter: StructConverter = new StructConverter(schema, -1, None)
   override def skipCurrentRecord(): Unit = getRootConverter.start()
-  override def getCurrentRecord: IndexedSeq[Any] = getRootConverter.builder.result
+  override def getCurrentRecord: Vector[Any] = getRootConverter.builder.result
 }
 
 object Converter {
@@ -98,7 +98,7 @@ class ArrayConverter(elementType: DataType,
                      index: Int,
                      parent: ValuesBuilder) extends GroupConverter with Logging {
 
-  private val builder = new ArrayBufferBuilder()
+  private val builder = new VectorBuilder()
 
   // this converter is for the group called 'list'
   private val converter = new GroupConverter { // getting a convertor for 'list'
@@ -133,8 +133,8 @@ class MapConverter(index: Int,
                    parent: ValuesBuilder,
                    mapType: MapType) extends GroupConverter {
 
-  private val keys = new ArrayBufferBuilder()
-  private val values = new ArrayBufferBuilder()
+  private val keys = new VectorBuilder()
+  private val values = new VectorBuilder()
 
   override def getConverter(fieldIndex: Int): Converter = new GroupConverter {
     override def getConverter(fieldIndex: Int): Converter = fieldIndex match {
@@ -231,7 +231,7 @@ class DateConverter(index: Int,
 trait ValuesBuilder {
   def reset(): Unit
   def put(pos: Int, value: Any): Unit
-  def result: IndexedSeq[Any]
+  def result: Vector[Any]
 }
 
 class VectorBuilder extends ValuesBuilder with Logging {
@@ -242,7 +242,7 @@ class VectorBuilder extends ValuesBuilder with Logging {
   override def put(pos: Int, value: Any): Unit = {
     vector.+=(value)
   }
-  override def result: IndexedSeq[Any] = vector.result()
+  override def result: Vector[Any] = vector.result()
 }
 
 class ArrayBufferBuilder extends ValuesBuilder {
@@ -261,7 +261,7 @@ class ArrayBuilder(size: Int) extends ValuesBuilder {
   private var array: Array[Any] = _
   reset()
 
-  def result: IndexedSeq[Any] = array
+  def result: Vector[Any] = array.toVector
 
   def reset(): Unit = array = Array.ofDim(size)
   def put(pos: Int, value: Any): Unit = array(pos) = value

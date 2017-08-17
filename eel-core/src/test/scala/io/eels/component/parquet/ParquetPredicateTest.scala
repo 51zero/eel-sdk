@@ -42,7 +42,7 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     rows.size shouldBe 1
   }
 
-  it should "support timestamp predicates" ignore {
+  it should "support timestamp predicates" in {
 
     val schema = StructType(
       Field("id", StringType),
@@ -50,28 +50,25 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     )
 
     val ds = DataStream.fromValues(schema, Seq(
-      Vector("a", Timestamp.valueOf("2017-05-01 12:12:12")),
-      Vector("b", Timestamp.valueOf("2017-06-02 11:11:11")),
-      Vector("c", Timestamp.valueOf("2017-07-03 10:10:10"))
+      Array("a", Timestamp.valueOf("2017-05-01 12:12:12")),
+      Array("b", Timestamp.valueOf("2017-06-02 11:11:11")),
+      Array("c", Timestamp.valueOf("2017-07-03 10:10:10"))
     ))
 
     val path = new Path("timestamp_predicate.pq")
-    if (fs.exists(path))
-      fs.delete(path, false)
-
     ds.to(ParquetSink(path))
 
     ParquetSource(path).withPredicate(Predicate.gte("timestamp", Timestamp.valueOf("2017-06-02 11:11:11"))).toDataStream().collect shouldBe
       Seq(
-         Vector("a", Timestamp.valueOf("2017-05-01 12:12:12")),
-         Vector("b", Timestamp.valueOf("2017-06-02 11:11:11")),
-         Vector("c", Timestamp.valueOf("2017-07-03 10:10:10"))
+        Row(schema, Array("a", Timestamp.valueOf("2017-05-01 12:12:12"))),
+        Row(schema, Array("b", Timestamp.valueOf("2017-06-02 11:11:11"))),
+        Row(schema, Array("c", Timestamp.valueOf("2017-07-03 10:10:10")))
       )
 
     fs.delete(path, false)
   }
 
-  it should "support decimal type predicate via user defined predicate" ignore {
+  it should "support decimal type predicate via user defined predicate" in {
 
     val schema = StructType(
       Field("ticker", StringType, nullable = false),

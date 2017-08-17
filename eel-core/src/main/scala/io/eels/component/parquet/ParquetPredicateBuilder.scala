@@ -113,7 +113,7 @@ object ParquetPredicateBuilder extends PredicateBuilder[FilterPredicate] {
           override def keep(value: Binary): Boolean = BigInt(value.getBytes).compare(big) >= 0
         })
 
-      case other => sys.error(s"Unsupported predicate $other")
+      case _ => sys.error("Unsupported predicate")
     }
   }
 }

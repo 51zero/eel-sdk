@@ -4,8 +4,8 @@ import java.util
 import java.util.function.Consumer
 
 import com.sksamuel.exts.Logging
-import io.eels.Row
 import io.eels.coercion.SequenceCoercer
+import io.eels.{Rec, Row}
 import org.apache.avro.Schema
 import org.apache.avro.generic.{GenericData, GenericRecord}
 
@@ -40,7 +40,7 @@ object AvroSerializer extends Logging {
       case Schema.Type.INT => IntSerializer
       case Schema.Type.LONG => LongSerializer
       case Schema.Type.MAP => new MapSerializer(AvroSerializer(schema.getValueType))
-      case Schema.Type.RECORD => new RecordSerializer(schema)
+      case Schema.Type.RECORD => new RowSerializer(schema)
       case Schema.Type.STRING => StringSerializer
       case Schema.Type.UNION =>
         val nonNullType = schema.getTypes.asScala.find(_.getType != Schema.Type.NULL).getOrElse(sys.error("Bug"))
@@ -53,12 +53,12 @@ object AvroSerializer extends Logging {
 }
 
 /**
-  * Marshalls eel records as avro records using the given schema.
+  * Marshalls rows as avro records using the given schema.
   *
   * @param schema the schema to be used in the record. Each input value must
   *               provide all the fields listed in the schema.
   */
-class RecordSerializer(schema: Schema) extends AvroSerializer {
+class RowSerializer(schema: Schema) extends AvroSerializer {
 
   private val fields: Seq[Schema.Field] = schema.getFields.asScala
   private val serializers = fields.map { it => AvroSerializer(it.schema) }
@@ -78,6 +78,14 @@ class RecordSerializer(schema: Schema) extends AvroSerializer {
       record.put(field.name(), converted)
     }
     record
+  }
+
+  // only rows can support out of order writing
+  private def writeRow(row: Rec): GenericRecord = {
+    require(row.length == schema.getFields.size, s"row size $row must match the target schema $schema")
+    // order the values by the write schema
+    // val values = fields.map(_.name).map(row.get(_, false))
+    writeValues(row)
   }
 
   override def serialize(value: Any): GenericRecord = {

@@ -17,7 +17,7 @@ class ListenerTest extends WordSpec with Matchers {
   implicit val fs = FileSystem.get(conf)
 
   val schema = StructType("a", "b", "c", "d", "e")
-  val rows = Vector.fill(1000)(Vector(Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
+  val rows = List.fill(1000)(Array(Random.nextBoolean(), Random.nextFloat(), Random.nextGaussian(), Random.nextLong(), Random.nextString(10)))
   val ds = DataStream.fromRows(schema, rows)
 
   val path = new Path("listener_test.csv")

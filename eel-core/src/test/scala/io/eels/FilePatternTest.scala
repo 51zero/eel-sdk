@@ -8,20 +8,20 @@ import org.scalatest.{Matchers, WordSpec}
 
 class FilePatternTest extends WordSpec with Matchers {
 
-  implicit val fs = FileSystem.getLocal(new Configuration())
+  implicit val fs = FileSystem.get(new Configuration())
 
   "FilePattern" should {
     "detect single hdfs path without name server" in {
-      FilePattern("file:///mypath").toPaths() shouldBe List(new Path("file:///mypath"))
+      FilePattern("hdfs:///mypath").toPaths() shouldBe List(new Path("hdfs:///mypath"))
     }
-    "detect single hdfs path with name server" ignore {
-      FilePattern("file://nameserver/mypath").toPaths() shouldBe List(new Path("file://nameserver/mypath"))
+    "detect single hdfs path with name server" in {
+      FilePattern("hdfs://nameserver/mypath").toPaths() shouldBe List(new Path("hdfs://nameserver/mypath"))
     }
     "detect absolute local file" in {
       FilePattern("file:///absolute/file").toPaths() shouldBe List(new Path("file:///absolute/file"))
     }
     "detect relative local file" in {
-      FilePattern("file:///local/file").toPaths() shouldBe List(new Path("file:///local/file"))
+      FilePattern("file://local/file").toPaths() shouldBe List(new Path("file://local/file"))
     }
     "detect relative local file expansion" in {
       val dir = Files.createTempDirectory("filepatterntest")
