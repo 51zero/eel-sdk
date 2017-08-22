@@ -956,6 +956,9 @@ object DataStream {
   val DefaultBufferSize: Int = ConfigFactory.load().getInt("eel.default-buffer-size")
   val DefaultBatchSize: Int = ConfigFactory.load().getInt("eel.default-batch-size")
 
+  def fromRowIterator(schema: StructType, iterator: Iterator[Row]): DataStream = fromIterator(schema, iterator)
+
+  @deprecated("use fromRowIterator", "1.3.0")
   def fromIterator(_schema: StructType, _iterator: Iterator[Row]): DataStream = new DataStream {
     override def schema: StructType = _schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {

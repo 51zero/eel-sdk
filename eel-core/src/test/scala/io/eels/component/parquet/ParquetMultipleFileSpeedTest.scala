@@ -39,7 +39,7 @@ object ParquetMultipleFileSpeedTest extends App with Timed {
 
   new File(dir.toString).listFiles().foreach(_.delete)
   timed("Insertion") {
-    val ds = DataStream.fromIterator(schema, Iterator.continually(createRow).take(size))
+    val ds = DataStream.fromRowIterator(schema, Iterator.continually(createRow).take(size))
     ds.to(ParquetSink(new Path("parquet-speed-test/parquet_speed.pq")), count)
   }
 

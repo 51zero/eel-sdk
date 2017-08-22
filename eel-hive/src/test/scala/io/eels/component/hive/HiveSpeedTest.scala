@@ -1,6 +1,7 @@
 package io.eels.component.hive
 
 import com.sksamuel.exts.metrics.Timed
+import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.StructType
 import org.apache.hadoop.fs.permission.FsPermission
@@ -30,6 +31,7 @@ object HiveSpeedTest extends App with Timed {
   val Database = "sam"
   val Table = "speedtest"
 
+  val schema = StructType("artist", "album", "year")
   val data = Array(
     Vector("elton", "yellow brick road ", "1972"),
     Vector("elton", "tumbleweed connection", "1974"),
@@ -41,15 +43,19 @@ object HiveSpeedTest extends App with Timed {
     Vector("pinkfloyd", "emily", "1966")
   )
 
-  val rows = List.fill(3000000)(data(Random.nextInt(data.length)))
-  val ds = DataStream.fromValues(StructType("artist", "album", "year"), rows)
-    .addField("bibble", "myvalue")
-    .addField("timestamp", System.currentTimeMillis.toString)
-  println(ds.schema.show())
+  def createRow = Row(schema, data(Random.nextInt(data.length)))
+  val size = 10000000
 
   while (true) {
 
-    new HiveOps(client).createTable(
+    val ds = DataStream.fromRowIterator(schema, Iterator.continually(createRow).take(size))
+      .addField("bibble", "myvalue")
+      .addField("timestamp", System.currentTimeMillis.toString)
+    println(ds.schema.show())
+
+    HiveTable(Database, Table).drop(true)
+
+    ops.createTable(
       Database,
       Table,
       ds.schema,

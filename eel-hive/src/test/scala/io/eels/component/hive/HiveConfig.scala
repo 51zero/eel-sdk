@@ -19,4 +19,6 @@ object HiveConfig {
   hiveConf.reloadConfiguration()
 
   implicit val client = new HiveMetaStoreClient(hiveConf)
+
+  val ops = new HiveOps(client)
 }

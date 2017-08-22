@@ -3,6 +3,7 @@ package io.eels.yarn
 import java.util
 import javax.servlet.Servlet
 
+import io.eels.component.parquet.ParquetSource
 import org.apache.commons.cli.CommandLine
 import org.apache.commons.codec.binary.BinaryCodec
 import org.apache.hadoop.conf.Configuration
@@ -14,7 +15,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration
 
 object YarnSampleApp extends App {
 
-  val conf = new YarnConfiguration()
+  implicit val conf = new YarnConfiguration()
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml"))
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/hdfs-site.xml"))
   conf.addResource(new Path("/home/sam/development/hadoop-2.7.2/etc/hadoop/yarn-site.xml"))
@@ -22,6 +23,8 @@ object YarnSampleApp extends App {
   println(conf)
 
   implicit val fs = FileSystem.get(conf)
+
+  val fn = ParquetSource("/home/sam").toDataStream().collect _
 
   val yarnClient = YarnClient.createYarnClient()
   yarnClient.init(conf)
