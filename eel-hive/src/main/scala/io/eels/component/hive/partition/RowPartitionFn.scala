@@ -19,7 +19,7 @@ object RowPartitionFn extends Logging {
   def apply(row: Row, partitionKeys: Seq[String]): Partition = {
     require(
       partitionKeys.forall { key => row.schema.fieldNames().contains(key) },
-      s"The schema must include data for all partitions; otherwise the writer wouldn't be able to create the correct partition path; schema fields=${row.schema.fieldNames()}; expected partitions=$partitionKeys"
+      s"The row schema must include data for all partitions; schema fields=${row.schema.fieldNames()}; expected partitions=$partitionKeys"
     )
 
     val entries = partitionKeys.map { fieldName =>

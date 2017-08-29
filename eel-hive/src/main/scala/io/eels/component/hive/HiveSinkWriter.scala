@@ -3,8 +3,8 @@ package io.eels.component.hive
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.OptionImplicits._
 import com.typesafe.config.ConfigFactory
-import io.eels.component.hive.partition.{PartitionStrategy, RowPartitionFn}
-import io.eels.schema.StructType
+import io.eels.component.hive.partition.PartitionStrategy
+import io.eels.schema.{Partition, PartitionEntry, StructType}
 import io.eels.util.HdfsIterator
 import io.eels.{Row, SinkWriter}
 import org.apache.hadoop.conf.Configuration
@@ -52,6 +52,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   private val tablePath = hiveOps.tablePath(dbName, tableName)
   private val writeSchema = outputSchemaStrategy.resolve(metastoreSchema, partitionKeys, client)
   private val aligner = alignStrategy.create(writeSchema)
+  private val partitionExtractor = new HivePartitionExtractor(metastoreSchema, partitionKeys)
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
@@ -138,9 +139,29 @@ class HiveSinkWriter(sourceSchema: StructType,
     if (partitionKeys.isEmpty) {
       streams.getOrElseUpdate(tablePath, createWriter(tablePath))
     } else {
-      val partition = RowPartitionFn(row, partitionKeys)
+      val partition = partitionExtractor(row)
       val partitionPath = partitionStrategy.ensurePartition(partition, dbName, tableName, inheritPermissions.getOrElse(inheritPermissionsDefault), client)
       streams.getOrElseUpdate(partitionPath, createWriter(partitionPath))
     }
+  }
+}
+
+class HivePartitionExtractor(schema: StructType, partitionKeys: Seq[String]) {
+
+  require(
+    partitionKeys.forall { key => schema.fieldNames().contains(key) },
+    s"The row schema must include data for all partitions; schema fields=${schema.fieldNames()}; expected partitions=$partitionKeys"
+  )
+
+  private val indexes = partitionKeys.map(schema.indexOf)
+
+  def apply(row: Row): Partition = {
+    val values = indexes.map(row.get)
+    val entries = partitionKeys.zip(values).map { case (name, value) =>
+      require(value != null, s"Partition value cannot be null for $name")
+      require(!value.toString.contains(" "), s"Values for partitions cannot contain spaces $name=$value")
+      PartitionEntry(name, value.toString)
+    }
+    Partition(entries)
   }
 }
