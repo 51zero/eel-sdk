@@ -762,8 +762,15 @@ trait DataStream extends Logging {
     * The datatype for the field is assumed to be String.
     * The value for the field is taken from the function which is invoked for each row.
     */
+  @deprecated("Use addFieldFn for better type inference", "1.3.0")
   def addField(name: String, fn: Row => Any): DataStream = addField(name, fn, true)
+  @deprecated("Use addFieldFn for better type inference", "1.3.0")
   def addField(name: String, fn: Row => Any, errorIfFieldExists: Boolean): DataStream =
+    addField(Field(name, StringType), fn, errorIfFieldExists)
+
+
+  def addFieldFn(name: String, fn: Row => Any): DataStream = addField(name, fn, true)
+  def addFieldFn(name: String, fn: Row => Any, errorIfFieldExists: Boolean): DataStream =
     addField(Field(name, StringType), fn, errorIfFieldExists)
 
   /**

@@ -68,7 +68,7 @@ case class SinkAction(ds: DataStream, sink: Sink, parallelism: Int) extends Logg
               logger.error(s"Error writing chunk ${completed.incrementAndGet}: ${t.getMessage}; cancelling upstream")
               queue.clear()
               queue.put(Row.Sentinel)
-              failure.set(t)
+              failure.compareAndSet(null, t)
               subscription.cancel()
           }
           logger.info(s"Ending thread writer $k")

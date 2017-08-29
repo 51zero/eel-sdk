@@ -3,7 +3,7 @@ package io.eels.datastream
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 
-import io.eels.Row
+import io.eels.{DevNullSink, Row}
 import io.eels.component.csv.CsvSource
 import io.eels.schema._
 import org.scalatest.{Matchers, WordSpec}
@@ -429,7 +429,7 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
-  "DataStream.addField with function" should {
+  "DataStream.addFieldFn" should {
     "invoke function for each row to return new row" in {
       val ds = DataStream.fromValues(
         StructType("a", "b"),
@@ -442,6 +442,12 @@ class DataStreamTest extends WordSpec with Matchers {
         Row(ds.schema.addField("c"), List("1", "2", 3)),
         Row(ds.schema.addField("c"), List("3", "4", 5))
       )
+    }
+    "propogate errors" in {
+      intercept[RuntimeException] {
+        ds1.addFieldFn("foo", (_: Row) => sys.error("woo"))
+          .to(DevNullSink)
+      }
     }
   }
 
