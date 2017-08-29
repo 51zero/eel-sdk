@@ -41,12 +41,11 @@ object RowParquetWriterFn {
     new RowParquetWriterBuilder(path, messageType, roundingMode, metadata)
       .withCompressionCodec(config.compressionCodec)
       .withDictionaryEncoding(dictionary)
-      .withDictionaryPageSize(ParquetProperties.DEFAULT_DICTIONARY_PAGE_SIZE)
       .withPageSize(config.pageSize)
       .withRowGroupSize(config.blockSize)
       .withValidation(config.validating)
       .withWriteMode(ParquetFileWriter.Mode.CREATE)
-      .withWriterVersion(ParquetProperties.DEFAULT_WRITER_VERSION)
+      .withWriterVersion(ParquetProperties.WriterVersion.PARQUET_1_0)
       .build()
   }
 }
