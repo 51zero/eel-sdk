@@ -215,6 +215,8 @@ case class HiveTable(dbName: String,
     io.eels.component.hive.HiveDialect(client.getTable(dbName, tableName))
   }
 
+  def exists(): Boolean = ops.tableExists(dbName, tableName)
+
   // todo use dialect to return correct stats
   def stats(): HiveStats = new ParquetHiveStats(dbName, tableName, this)
 
