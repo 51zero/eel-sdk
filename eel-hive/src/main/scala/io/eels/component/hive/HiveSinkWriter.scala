@@ -52,7 +52,9 @@ class HiveSinkWriter(sourceSchema: StructType,
   private val tablePath = hiveOps.tablePath(dbName, tableName)
   private val writeSchema = outputSchemaStrategy.resolve(metastoreSchema, partitionKeys, client)
   private val aligner = alignStrategy.create(writeSchema)
-  private val partitionExtractor = new HivePartitionExtractor(metastoreSchema, partitionKeys)
+
+  // the extractor should use the same schema as the incoming rows
+  private val partitionExtractor = new HivePartitionExtractor(sourceSchema, partitionKeys)
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
