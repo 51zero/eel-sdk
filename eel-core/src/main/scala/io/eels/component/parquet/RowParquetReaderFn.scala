@@ -8,7 +8,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.parquet.filter2.compat.FilterCompat
 import org.apache.parquet.format.converter.ParquetMetadataConverter
 import org.apache.parquet.hadoop.api.ReadSupport
-import org.apache.parquet.hadoop.{ParquetFileReader, ParquetInputFormat, ParquetReader}
+import org.apache.parquet.hadoop.{ParquetFileReader, ParquetReader}
 import org.apache.parquet.schema.Type
 
 /**
@@ -43,7 +43,7 @@ object RowParquetReaderFn extends Logging {
       readSchema.foreach { it =>
         newconf.set(ReadSupport.PARQUET_READ_SCHEMA, it.toString)
       }
-      newconf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, dictionaryFiltering.toString)
+      //newconf.set(ParquetInputFormat.DICTIONARY_FILTERING_ENABLED, dictionaryFiltering.toString)
       newconf.set(org.apache.parquet.hadoop.ParquetFileReader.PARQUET_READ_PARALLELISM, config.parallelism.toString)
       newconf
     }
