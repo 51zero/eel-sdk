@@ -22,6 +22,8 @@ import scala.util.Random
   * 8m rows, 4500ms, 4 threads
   * 8m rows, 4167ms, 4 threads
   *
+  * version 1.3
+  * 10m ros, parquet, writer, 4 threads = ~45000
   *
   */
 object HiveSpeedTest extends App with Timed {
@@ -65,7 +67,7 @@ object HiveSpeedTest extends App with Timed {
 
     timed("writing data") {
       val sink = HiveSink(Database, Table).withPermission(new FsPermission("700"))
-      ds.to(sink)
+      ds.to(sink, 4)
       logger.info("Write complete")
     }
 

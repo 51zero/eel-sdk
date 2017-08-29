@@ -51,6 +51,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   private val streams = TrieMap.empty[Path, HiveOutputStream]
   private val tablePath = hiveOps.tablePath(dbName, tableName)
   private val writeSchema = outputSchemaStrategy.resolve(metastoreSchema, partitionKeys, client)
+  private val aligner = alignStrategy.create(writeSchema)
 
   case class WriteStatus(path: Path, fileSizeInBytes: Long, records: Int)
 
@@ -62,7 +63,7 @@ class HiveSinkWriter(sourceSchema: StructType,
   override def write(row: Row): Unit = {
     val stream = getOrCreateHiveWriter(row)
     // need to ensure the row is compatible with the write schema
-    stream.write(alignStrategy.align(row, writeSchema))
+    stream.write(aligner.align(row))
   }
 
   override def close(): Unit = {
