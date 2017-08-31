@@ -108,7 +108,6 @@ class ArrayConverter(elementType: DataType,
     // so we only ever expect fieldIndex to be 0
     override def getConverter(fieldIndex: Int): Converter = {
       require(fieldIndex == 0)
-      logger.info(s"Getting array converter for field $fieldIndex $elementType")
       converter
     }
 
@@ -173,7 +172,6 @@ class StringConverter(index: Int,
   private var dict: Array[String] = _
 
   override def addBinary(value: Binary): Unit = {
-    logger.info(s"Adding ${value.toStringUsingUTF8} to builder $builder")
     builder.put(index, value.toStringUsingUTF8)
   }
 
@@ -240,10 +238,7 @@ class VectorBuilder extends ValuesBuilder with Logging {
   private var vector = Vector.newBuilder[Any]
 
   override def reset(): Unit = vector = Vector.newBuilder[Any]
-  override def put(pos: Int, value: Any): Unit = {
-    logger.info(s"PUTTING $pos $value")
-    vector.+=(value)
-  }
+  override def put(pos: Int, value: Any): Unit = vector.+=(value)
   override def result: Seq[Any] = vector.result()
 }
 
