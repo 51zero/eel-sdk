@@ -1,7 +1,8 @@
 package io.eels.datastream
 
 import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.{CountDownLatch, TimeUnit}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import io.eels.{DevNullSink, Row}
 import io.eels.component.csv.CsvSource
@@ -330,6 +331,28 @@ class DataStreamTest extends WordSpec with Matchers {
           Vector("Evan", "Zigomalas", "Cap Gemini America", "5 Binney St", "Abbey Ward", "Buckinghamshire", "HP11 2AX", "01937-864715", "01714-737668", "evan.zigomalas@gmail.com", "http://www.capgeminiamerica.co.uk"),
           Vector("France", "Andrade", "Elliott, John W Esq", "8 Moor Place", "East Southbourne and Tuckton W", "Bournemouth", "BH6 3BE", "01347-368222", "01935-821636", "france.andrade@hotmail.com", "http://www.elliottjohnwesq.co.uk")
         )
+    }
+    "cancel downstream once limit is reached" in {
+      val schema = StructType(Field("foo"))
+      val row = Row(schema, Vector("f"))
+      val latch = new CountDownLatch(1)
+      val ds = new DataStream {
+        val running = new AtomicBoolean(true)
+        override def schema: StructType = schema
+        override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+          subscriber.subscribed(new Subscription {
+            override def cancel(): Unit = running.set(false)
+          })
+          val chunk = List.fill(10)(row)
+          while (running.get) {
+            subscriber.next(chunk)
+          }
+          latch.countDown()
+        }
+      }
+      val result = ds.take(10).collect
+      result.size shouldBe 10
+      latch.await(10, TimeUnit.MINUTES) shouldBe true
     }
   }
 

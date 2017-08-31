@@ -138,8 +138,12 @@ trait DataStream extends Logging {
   def take(n: Int): DataStream = new DataStream {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
-      val count = new AtomicInteger(0)
-      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+
+      self.subscribe(new Subscriber[Seq[Row]] {
+
+        val count = new AtomicInteger(0)
+        var sub: Subscription = null
+
         override def next(t: Seq[Row]): Unit = {
           val remaining = n - count.get
           if (remaining > 0) {
@@ -147,6 +151,20 @@ trait DataStream extends Logging {
             count.addAndGet(ts.size)
             subscriber.next(ts)
           }
+          if (count.get == n)
+            sub.cancel()
+        }
+
+        override def subscribed(subscription: Subscription): Unit = {
+          this.sub = subscription
+          subscriber.subscribed(subscription)
+        }
+
+        override def completed(): Unit = subscriber.completed()
+
+        override def error(t: Throwable): Unit = {
+          this.sub.cancel()
+          subscriber.error(t)
         }
       })
     }
@@ -731,12 +749,18 @@ trait DataStream extends Logging {
     if (exists) this else addField(field, defaultValue, false)
   }
 
+  @deprecated("use addFieldFn", "1.3.0")
+  def addField(field: Field, fn: Row => Any): DataStream = addFieldFn(field, fn, true)
+
+  @deprecated("use addFieldFn", "1.3.0")
+  def addField(field: Field, fn: Row => Any, errorIfFieldExists: Boolean): DataStream = addFieldFn(field, fn, errorIfFieldExists)
+
   /**
     * Returns a new DataStream with a new field added at the end.
     * The value for the field is taken from the function which is invoked for each row.
     */
-  def addField(field: Field, fn: Row => Any): DataStream = addField(field, fn, true)
-  def addField(field: Field, fn: Row => Any, errorIfFieldExists: Boolean): DataStream = new DataStream {
+  def addFieldFn(field: Field, fn: Row => Any): DataStream = addFieldFn(field, fn, true)
+  def addFieldFn(field: Field, fn: Row => Any, errorIfFieldExists: Boolean): DataStream = new DataStream {
     override def schema: StructType = {
       val original = self.schema
       val exists = original.contains(field.name)
@@ -831,12 +855,19 @@ trait DataStream extends Logging {
     */
   def collect: Vector[Row] = {
     val vector = Vector.newBuilder[Row]
+    val errorref = new AtomicReference[Throwable](null)
     subscribe(new Subscriber[Seq[Row]] {
+      var sub: Subscription = null
       override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
-      override def subscribed(subscription: Subscription): Unit = ()
+      override def subscribed(subscription: Subscription): Unit = this.sub = subscription
       override def completed(): Unit = ()
-      override def error(t: Throwable): Unit = ()
+      override def error(t: Throwable): Unit = {
+        sub.cancel
+        errorref.compareAndSet(null, t)
+      }
     })
+    if (errorref.get != null)
+      throw errorref.get
     vector.result()
   }
 
