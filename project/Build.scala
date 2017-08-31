@@ -11,24 +11,22 @@ object Build extends Build {
 
   val AvroVersion = "1.8.2"
   val ConfigVersion = "1.3.0"
-  val Elastic4sVersion = "5.4.6"
-  val ExtsVersion = "1.49.0"
+  val Elastic4sVersion = "5.4.11"
+  val ExtsVersion = "1.51.0"
   val H2Version = "1.4.196"
   val HadoopVersion = "2.7.2"
   val HiveVersion = "1.2.2"
-  val JacksonVersion = "2.8.9"
+  val JacksonVersion = "2.9.0"
   val KafkaVersion = "0.11.0.0"
   val KuduVersion = "1.4.0"
   val Log4jVersion = "2.7"
-  val MetricsVersion = "3.1.2"
   val MysqlVersion = "5.1.42"
   val OrcVersion = "1.4.0"
   val ParquetVersion = "1.8.1"
-  val RxJavaVersion = "2.1.1"
   val ScalatestVersion = "3.0.3"
   val Slf4jVersion = "1.7.12"
   val SparkVersion = "2.2.0"
-  val UnivocityVersion = "2.4.1"
+  val UnivocityVersion = "2.5.3"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -103,8 +101,6 @@ object Build extends Build {
       "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
       "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion,
       "com.h2database"              % "h2"                                  % H2Version,
-      "io.dropwizard.metrics"       % "metrics-core"            % MetricsVersion,
-      "io.dropwizard.metrics"       % "metrics-jvm"             % MetricsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
       "org.apache.spark"            %% "spark-core"             % SparkVersion             % "test",
