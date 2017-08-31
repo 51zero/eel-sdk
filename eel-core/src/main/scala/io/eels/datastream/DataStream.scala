@@ -764,7 +764,9 @@ trait DataStream extends Logging {
     override def schema: StructType = {
       val original = self.schema
       val exists = original.contains(field.name)
-      if (exists && errorIfFieldExists) sys.error(s"Field ${field.name} already exists") else self.schema.addField(field)
+      if (exists && errorIfFieldExists) sys.error(s"Field ${field.name} already exists")
+      else if (exists) original
+      else self.schema.addField(field)
     }
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
       self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
@@ -793,9 +795,9 @@ trait DataStream extends Logging {
     addField(Field(name, StringType), fn, errorIfFieldExists)
 
 
-  def addFieldFn(name: String, fn: Row => Any): DataStream = addField(name, fn, true)
+  def addFieldFn(name: String, fn: Row => Any): DataStream = addFieldFn(name, fn, true)
   def addFieldFn(name: String, fn: Row => Any, errorIfFieldExists: Boolean): DataStream =
-    addField(Field(name, StringType), fn, errorIfFieldExists)
+    addFieldFn(Field(name, StringType), fn, errorIfFieldExists)
 
   /**
     * Returns a new DataStream with the new field of type String added at the end. The value of
@@ -807,7 +809,7 @@ trait DataStream extends Logging {
 
   def addField(field: Field, expression: Expression): DataStream = addField(field, expression, true)
   def addField(field: Field, expression: Expression, errorIfFieldExists: Boolean): DataStream =
-    addField(field, (row: Row) => expression.evalulate(row), errorIfFieldExists)
+    addFieldFn(field, (row: Row) => expression.evalulate(row), errorIfFieldExists)
 
   /**
     * Returns a new DataStream with the given field added at the end. The value of this field
@@ -817,7 +819,7 @@ trait DataStream extends Logging {
     */
   def addField(name: Field, defaultValue: Any): DataStream = addField(name, defaultValue, true)
   def addField(field: Field, defaultValue: Any, errorIfFieldExists: Boolean): DataStream =
-    addField(field, (_: Row) => defaultValue, errorIfFieldExists)
+    addFieldFn(field, (_: Row) => defaultValue, errorIfFieldExists)
 
   def explode(fn: (Row) => Seq[Row]): DataStream = new DataStream {
     override def schema: StructType = self.schema

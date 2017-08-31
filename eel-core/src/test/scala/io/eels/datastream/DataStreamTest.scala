@@ -387,12 +387,12 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.addFieldIfNotExists" should {
     "not add column if already exists" in {
-      val ds = ds1.addFieldIfNotExists("artist", "bibble")
+      val ds = ds1.addField("artist", "bibble", false)
       ds.schema shouldBe schema1
       ds.head.values shouldBe Vector("Elton John", 1969, "Empty Sky", 1433)
     }
     "add column if it does not exist" in {
-      val ds = ds3.addFieldIfNotExists("testy", "bibble")
+      val ds = ds3.addField("testy", "bibble", false)
       ds.schema shouldBe StructType(
         Field("artist"),
         Field("gender"),
