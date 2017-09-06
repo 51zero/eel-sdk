@@ -44,12 +44,12 @@ object Build extends Build {
     )
   )
 
-  val kafkaSettings = Seq(
-    libraryDependencies ++= Seq(
-      "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
-      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.15.0"     % "test"
-    )
-  )
+//  val kafkaSettings = Seq(
+//    libraryDependencies ++= Seq(
+//      "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
+//      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.15.0"     % "test"
+//    )
+//  )
 
   val kuduSettings = Seq(
     libraryDependencies ++= Seq(
@@ -72,8 +72,8 @@ object Build extends Build {
 
   val rootSettings = Seq(
     organization := org,
-    scalaVersion := "2.11.11",
-    crossScalaVersions := Seq("2.11.11"),
+    scalaVersion := "2.10.6",
+    crossScalaVersions := Seq("2.10.6", "2.11.11"),
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
     publishArtifact in Test := false,
@@ -150,7 +150,7 @@ object Build extends Build {
       orc,
       hive,
       spark,
-      kafka,
+//      kafka,
       kudu
     //  elasticsearch
     )
@@ -177,11 +177,11 @@ object Build extends Build {
     .settings(name := "eel-spark")
     .dependsOn(core)
 
-  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
-    .settings(rootSettings: _*)
-    .settings(kafkaSettings: _*)
-    .settings(name := "eel-kafka")
-    .dependsOn(core)
+//  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
+//    .settings(rootSettings: _*)
+//    .settings(kafkaSettings: _*)
+//    .settings(name := "eel-kafka")
+//    .dependsOn(core)
 
   lazy val kudu = Project("eel-kudu", file("eel-kudu"))
     .settings(rootSettings: _*)

@@ -270,10 +270,10 @@ object StructType {
   def from[T <: Product : TypeTag](implicit fieldNameStrategy: FieldNameStrategy = JvmFieldNameStrategy): StructType = {
 
     def struct(tpe: universe.Type): StructType = {
-      val fields = tpe.decls.collect {
+      val fields = tpe.declarations.collect {
         case m: MethodSymbol if m.isCaseAccessor =>
           val dataType = process(m.returnType)
-          val nullable = dataType.isInstanceOf[Option[_]]
+          val nullable = m.returnType.isInstanceOf[Option[_]]
           Field(fieldNameStrategy.fieldName(m.name.toString), dataType, nullable)
       }
       StructType(fields.toList)
@@ -282,8 +282,8 @@ object StructType {
     def process(tpe: universe.Type): DataType = {
 
       if (tpe <:< typeOf[scala.collection.Seq[Any]]) {
-        val dataType = process(tpe.typeArgs.head)
-        ArrayType(dataType)
+        // val dataType = process(tpe.typeConstructor..head)
+        ArrayType(StringType)
       } else if (tpe <:< typeOf[Product]) {
         struct(tpe)
       } else {
