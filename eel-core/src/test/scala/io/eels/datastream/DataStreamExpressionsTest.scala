@@ -35,21 +35,21 @@ class DataStreamExpressionsTest extends FlatSpec with Matchers {
     import io.eels._
     ds.filter(select("album") === "Lionheart")
       .addField(Field("woo", DoubleType), select("year") * 1.2)
-      .collectValues shouldBe Vector(Vector("Kate Bush", 1978, "Lionheart", 745, 2373.6))
+      .collectValues shouldBe Vector(Vector("Kate Bush", 1978, "Lionheart", 745, BigDecimal(2373.6)))
   }
 
   "DataStream.addField" should "support addition expressions" in {
     import io.eels._
     ds.filter(select("album") === "Lionheart")
       .addField(Field("woo", DoubleType), select("year") + 1.2)
-      .collectValues shouldBe Vector(Vector("Kate Bush", 1978, "Lionheart", 745, 1979.2))
+      .collectValues shouldBe Vector(Vector("Kate Bush", 1978, "Lionheart", 745, BigDecimal(1979.2)))
   }
 
   "DataStream.addField" should "support subtraction expressions" in {
     import io.eels._
     ds.filter(select("album") === "Lionheart")
       .addField(Field("woo", DoubleType), select("year") - 1.2)
-      .collectValues shouldBe Vector(Vector("Kate Bush", 1978, "Lionheart", 745, 1976.8))
+      .collectValues shouldBe Vector(Vector("Kate Bush", 1978, "Lionheart", 745, BigDecimal(1976.8)))
   }
 
   "DataStream.addField" should "support division expressions" in {

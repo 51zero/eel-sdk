@@ -6,8 +6,8 @@ import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema._
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.hadoop.fs.permission.FsPermission
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.orc.TypeDescription
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
 
@@ -32,7 +32,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       val desc = TypeDescription.createStruct()
         .addField("maps", TypeDescription.createMap(TypeDescription.createString, TypeDescription.createBoolean))
         .addField("lists", TypeDescription.createList(TypeDescription.createString))
-      val batch = desc.createRowBatch(1000)
+      desc.createRowBatch(1000)
 
       val schema = StructType(
         Field("string", StringType),
@@ -48,7 +48,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Field("map", MapType(StringType, BooleanType))
       )
 
-      val batch2 = desc.createRowBatch(3332)
+      desc.createRowBatch(3332)
 
       val ds = DataStream.fromRows(
         schema,
@@ -66,8 +66,8 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       rows.head.schema shouldBe ds.schema
 
       rows shouldBe Set(
-        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, BigDecimal(9.91), new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L,BigDecimal(3.9), new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
     }
     "handle null values" in {
