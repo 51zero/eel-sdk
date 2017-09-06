@@ -132,6 +132,7 @@ object DoubleCoercer extends Coercer[Double] {
     case l: Long => l
     case s: Short => s
     case s: String => s.toDouble
+    case b: BigDecimal => b.doubleValue()
   }
 }
 
