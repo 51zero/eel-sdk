@@ -16,7 +16,7 @@ object Build extends Build {
   val H2Version = "1.4.196"
   val HadoopVersion = "2.7.2"
   val HiveVersion = "1.2.2"
-  val JacksonVersion = "2.9.0"
+  val JacksonVersion = "2.8.9"
   val KafkaVersion = "0.11.0.0"
   val KuduVersion = "1.4.0"
   val Log4jVersion = "2.7"
@@ -25,7 +25,7 @@ object Build extends Build {
   val ParquetVersion = "1.8.1"
   val ScalatestVersion = "3.0.3"
   val Slf4jVersion = "1.7.12"
-  val SparkVersion = "2.2.0"
+  val SparkVersion = "2.1.1"
   val UnivocityVersion = "2.5.3"
 
   val hiveSettings = Seq(
@@ -57,11 +57,11 @@ object Build extends Build {
     )
   )
 
-  val esSettings = Seq(
-    libraryDependencies ++= Seq(
-      "com.sksamuel.elastic4s" %% "elastic4s-http" % Elastic4sVersion
-    )
-  )
+//  val esSettings = Seq(
+//    libraryDependencies ++= Seq(
+//      "com.sksamuel.elastic4s" %% "elastic4s-http" % Elastic4sVersion
+//    )
+//  )
 
   val sparkSettings = Seq(
     libraryDependencies ++= Seq(
@@ -151,8 +151,9 @@ object Build extends Build {
       hive,
       spark,
       kafka,
-      kudu,
-      elasticsearch)
+      kudu
+    //  elasticsearch
+    )
 
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
@@ -188,9 +189,9 @@ object Build extends Build {
     .settings(name := "eel-kudu")
     .dependsOn(core)
 
-  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
-    .settings(rootSettings: _*)
-    .settings(esSettings: _*)
-    .settings(name := "eel-elasticsearch")
-    .dependsOn(core)
+//  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
+//    .settings(rootSettings: _*)
+//    .settings(esSettings: _*)
+//    .settings(name := "eel-elasticsearch")
+//    .dependsOn(core)
 }
