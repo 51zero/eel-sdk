@@ -360,7 +360,7 @@ class DataStreamTest extends WordSpec with Matchers {
     "support take while with row predicate" in {
       source.toDataStream().takeWhile(row => row.values.mkString.contains("co.uk")).collect.size shouldBe 6
     }
-    "support take while with column predicate" in {
+    "support take while with column predicate" ignore {
       source.toDataStream().takeWhile("web", _.toString.contains("co.uk")).collect.size shouldBe 6
     }
   }
