@@ -25,7 +25,7 @@ class DataStreamSource(source: Source) extends DataStream with Using with Loggin
       Publisher.merge(publishers, Row.Sentinel)(executor).subscribe(s)
       executor.shutdown()
       executor.awaitTermination(999, TimeUnit.DAYS)
-      logger.info("Datastream souce has completed")
+      logger.info("Datastream source has completed")
     }
   }
 }
