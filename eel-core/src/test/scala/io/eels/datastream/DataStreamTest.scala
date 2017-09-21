@@ -13,6 +13,7 @@ class DataStreamTest extends WordSpec with Matchers {
 
   val file = getClass.getResource("/uk-500.csv").toURI()
   val source = CsvSource(Paths.get(file))
+  require(source.toDataStream.collect.size == 500)
 
   val schema1 = StructType(
     Field("artist"),
