@@ -12,7 +12,7 @@ object Build extends Build {
   val AvroVersion = "1.8.2"
   val ConfigVersion = "1.3.0"
   val Elastic4sVersion = "5.4.11"
-  val ExtsVersion = "1.51.0"
+  val ExtsVersion = "1.54.0"
   val H2Version = "1.4.196"
   val HadoopVersion = "2.7.2"
   val HiveVersion = "1.2.2"
@@ -35,6 +35,22 @@ object Build extends Build {
       "org.apache.logging.log4j" % "log4j-api"            % Log4jVersion     % "test",
       "org.apache.logging.log4j" % "log4j-core"           % Log4jVersion     % "test",
       "org.apache.logging.log4j" % "log4j-slf4j-impl"     % Log4jVersion     % "test"
+    )
+  )
+
+  val coreSettings = Seq(
+    libraryDependencies ++= Seq(
+      "com.univocity"               % "univocity-parsers"                   % UnivocityVersion,
+      "org.apache.hadoop"           % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
+      "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce-client"             % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
+      "com.h2database"              % "h2"                                  % H2Version,
+      "org.apache.avro"             % "avro"                                % AvroVersion,
+      "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion
     )
   )
 
@@ -87,21 +103,11 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "kudu"),
     libraryDependencies ++= Seq(
-      "org.scala-lang"              % "scala-reflect"                       % scalaVersion.value,
-      "com.typesafe"                % "config"                              % ConfigVersion,
-      "com.sksamuel.exts"           %% "exts"                               % ExtsVersion,
-      "com.univocity"               % "univocity-parsers"                   % UnivocityVersion,
-      "org.apache.avro"             % "avro"                                % AvroVersion,
-      "org.apache.hadoop"           % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
-      "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce-client"             % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
-      "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion,
-      "com.h2database"              % "h2"                                  % H2Version,
+      "org.scala-lang"              % "scala-reflect"           % scalaVersion.value,
+      "com.typesafe"                % "config"                  % ConfigVersion,
+      "com.sksamuel.exts"           %% "exts"                   % ExtsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
+      "commons-lang"                % "commons-lang"            % "2.6",
       "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
       "org.apache.spark"            %% "spark-core"             % SparkVersion             % "test",
       "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
@@ -146,7 +152,9 @@ object Build extends Build {
   lazy val root = Project("eel", file("."))
     .settings(rootSettings: _*)
     .settings(name := "eel")
-    .aggregate(core,
+    .aggregate(
+      core,
+      schema,
       orc,
       hive,
       spark,
@@ -155,9 +163,15 @@ object Build extends Build {
     //  elasticsearch
     )
 
+  lazy val schema = Project("eel-schema", file("eel-schema"))
+    .settings(rootSettings: _*)
+    .settings(name := "eel-schema")
+
   lazy val core = Project("eel-core", file("eel-core"))
     .settings(rootSettings: _*)
+    .settings(coreSettings: _*)
     .settings(name := "eel-core")
+    .dependsOn(schema)
 
   lazy val orc = Project("eel-orc", file("eel-orc"))
     .settings(rootSettings: _*)
