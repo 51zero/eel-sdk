@@ -40,6 +40,7 @@ object Build extends Build {
 
   val coreSettings = Seq(
     libraryDependencies ++= Seq(
+      "com.fasterxml.jackson.module"%% "jackson-module-scala"               % JacksonVersion,
       "com.univocity"               % "univocity-parsers"                   % UnivocityVersion,
       "org.apache.hadoop"           % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
       "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
@@ -107,7 +108,6 @@ object Build extends Build {
       "com.sksamuel.exts"           %% "exts"                   % ExtsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "commons-lang"                % "commons-lang"            % "2.6",
-      "com.fasterxml.jackson.module"%% "jackson-module-scala"   % JacksonVersion,
       "org.apache.spark"            %% "spark-core"             % SparkVersion             % "test",
       "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
