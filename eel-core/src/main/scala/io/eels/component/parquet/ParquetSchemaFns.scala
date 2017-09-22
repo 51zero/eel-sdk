@@ -165,7 +165,7 @@ object ParquetSchemaFns {
       case BooleanType => Types.primitive(PrimitiveTypeName.BOOLEAN, repetition).named(name)
       case ByteType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.INT_8).named(name)
       case ByteType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_8).named(name)
-      case CharType(_) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
+      case CharType(length) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).length(length).named(name)
       case DateType => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.DATE).named(name)
       // https://github.com/Parquet/parquet-format/blob/master/LogicalTypes.md#decimal
       // The scale stores the number of digits of that value that are to the right of the decimal point,
@@ -200,7 +200,7 @@ object ParquetSchemaFns {
       // spark doesn't annotate timestamps, just uses int96?
       case TimestampMillisType => Types.primitive(PrimitiveTypeName.INT96, repetition).named(name)
    //   case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
-      case VarcharType(_) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
+      case VarcharType(length) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).length(length).named(name)
     }
   }
 }
