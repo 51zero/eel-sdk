@@ -18,6 +18,10 @@ object ParquetSchemaFns {
 
   def fromParquetPrimitiveType(tpe: PrimitiveType): DataType = {
     val baseType = tpe.getPrimitiveTypeName match {
+      // we have no way of knowing if this was meant to be a varchar or char, but varchar seems more common
+      // so we'll go for that
+      case PrimitiveTypeName.BINARY if tpe.getOriginalType == OriginalType.UTF8 && tpe.getTypeLength > 0 =>
+        VarcharType(tpe.getTypeLength)
       case PrimitiveTypeName.BINARY =>
         tpe.getOriginalType match {
           case OriginalType.ENUM => EnumType(tpe.getName, Nil)
