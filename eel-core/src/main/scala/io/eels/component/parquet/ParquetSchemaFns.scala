@@ -180,8 +180,8 @@ object ParquetSchemaFns {
           .id(1)
           .named(name)
       case DoubleType => Types.primitive(PrimitiveTypeName.DOUBLE, repetition).named(name)
-      case EnumType(enumName, _) => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, enumName, OriginalType.ENUM)
-      case FloatType => new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, name)
+      case EnumType(enumName, _) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.ENUM).named(enumName)
+      case FloatType => Types.primitive(PrimitiveTypeName.FLOAT, repetition).named(name)
       case IntType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).named(name)
       case IntType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_32).named(name)
       case LongType(true) => Types.primitive(PrimitiveTypeName.INT64, repetition).named(name)
@@ -192,11 +192,12 @@ object ParquetSchemaFns {
         Types.map(repetition).key(key).value(value).named(name)
       case ShortType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.INT_16).named(name)
       case ShortType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_16).named(name)
-      case StringType => new PrimitiveType(repetition, PrimitiveTypeName.BINARY, name, OriginalType.UTF8)
-      case TimeMillisType => new PrimitiveType(repetition, PrimitiveTypeName.INT32, name, OriginalType.TIME_MILLIS)
+      case StringType => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
+      // this is just the time of the day, no date component. not the same as a timestamp!
+      case TimeMillisType => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.TIME_MILLIS).named(name)
    //   case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIME_MICROS)
-      // spark doesn't annotate timestamps, just uses int96, so same here
-      case TimestampMillisType => Types.primitive(PrimitiveTypeName.INT96, repetition).named(name)
+      // spark doesn't annotate timestamps, just uses int96?
+      case TimestampMillisType => Types.primitive(PrimitiveTypeName.INT96, repetition).as(OriginalType.TIMESTAMP_MILLIS).named(name)
    //   case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
       case VarcharType(_) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
     }
