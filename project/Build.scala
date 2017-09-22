@@ -30,11 +30,16 @@ object Build extends Build {
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.hadoop"   % "hadoop-yarn"               % HadoopVersion,
-      "org.apache.hive"     % "hive-exec"                 % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
-      "org.apache.logging.log4j" % "log4j-api"            % Log4jVersion     % "test",
-      "org.apache.logging.log4j" % "log4j-core"           % Log4jVersion     % "test",
-      "org.apache.logging.log4j" % "log4j-slf4j-impl"     % Log4jVersion     % "test"
+      "org.apache.hadoop"           % "hadoop-yarn"               % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce-client"             % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
+      "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
+      "org.apache.hive"             % "hive-exec"                 % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
+      "org.apache.logging.log4j"    % "log4j-api"            % Log4jVersion     % "test",
+      "org.apache.logging.log4j"    % "log4j-core"           % Log4jVersion     % "test",
+      "org.apache.logging.log4j"    % "log4j-slf4j-impl"     % Log4jVersion     % "test"
     )
   )
 
@@ -44,11 +49,6 @@ object Build extends Build {
       "com.univocity"               % "univocity-parsers"                   % UnivocityVersion,
       "org.apache.hadoop"           % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
       "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce-client"             % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
       "com.h2database"              % "h2"                                  % H2Version,
       "org.apache.avro"             % "avro"                                % AvroVersion,
       "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion
