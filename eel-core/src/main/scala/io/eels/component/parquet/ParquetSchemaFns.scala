@@ -52,7 +52,7 @@ object ParquetSchemaFns {
             DecimalType(Precision(meta.getPrecision), Scale(meta.getScale))
           case _ => IntType.Signed
         }
-      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.UINT_64 => IntType.Unsigned
+      case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.UINT_64 => LongType.Unsigned
    //   case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIME_MICROS => TimeMicrosType
       case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampMillisType
    //   case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampMicrosType

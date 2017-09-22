@@ -16,7 +16,7 @@ object Build extends Build {
   val H2Version = "1.4.196"
   val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
-  val JacksonVersion = "2.9.1"
+  val JacksonVersion = "2.6.5"
   val KafkaVersion = "0.11.0.1"
   val KuduVersion = "1.5.0"
   val Log4jVersion = "2.7"

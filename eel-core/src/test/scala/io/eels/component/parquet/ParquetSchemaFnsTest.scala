@@ -38,16 +38,14 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
       )
   }
 
-  it should "store char as BINARY with UTF8" in {
-    val schema = StructType(Field("a", CharType(255)))
-    ParquetSchemaFns.toParquetMessageType(schema) shouldBe
-      new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a", OriginalType.UTF8))
+  it should "store char as BINARY with UTF8 and length" in {
+    ParquetSchemaFns.toParquetType(Field("a", CharType(25))) shouldBe
+      Types.primitive(PrimitiveTypeName.BINARY, Repetition.OPTIONAL).as(OriginalType.UTF8).length(25).named("a")
   }
 
   it should "store varchar as BINARY with UTF8" in {
-    val schema = StructType(Field("a", VarcharType(255)))
-    ParquetSchemaFns.toParquetMessageType(schema) shouldBe
-      new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "a", OriginalType.UTF8))
+    ParquetSchemaFns.toParquetType(Field("a", CharType(43))) shouldBe
+      Types.primitive(PrimitiveTypeName.BINARY, Repetition.OPTIONAL).as(OriginalType.UTF8).length(43).named("a")
   }
 
   it should "store times as INT32 with original type tag TIME_MILLIS" in {
@@ -92,6 +90,18 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
       new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT32, "a"))
   }
 
+  it should "read unsigned INT32 as IntType.Unsigned" in {
+    ParquetSchemaFns.fromParquetPrimitiveType(
+      Types.primitive(PrimitiveTypeName.INT32, Type.Repetition.OPTIONAL).as(OriginalType.UINT_32).named("a")
+    ) shouldBe IntType.Unsigned
+  }
+
+  it should "read signed INT32 as IntType.Signed" in {
+    ParquetSchemaFns.fromParquetPrimitiveType(
+      Types.primitive(PrimitiveTypeName.INT32, Type.Repetition.OPTIONAL).as(OriginalType.INT_32).named("a")
+    ) shouldBe IntType.Signed
+  }
+
   it should "store unsigned ints as INT32 with unsigned original type UINT_32" in {
     val schema = StructType(Field("a", IntType(false)))
     ParquetSchemaFns.toParquetMessageType(schema) shouldBe
@@ -110,6 +120,18 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
       new MessageType("eel_schema", new PrimitiveType(Repetition.OPTIONAL, PrimitiveTypeName.INT64, "a", OriginalType.UINT_64))
   }
 
+    it should "read unsigned INT64 (UINT_64) as LongType.Unsigned" in {
+    ParquetSchemaFns.fromParquetPrimitiveType(
+      Types.primitive(PrimitiveTypeName.INT64, Type.Repetition.OPTIONAL).as(OriginalType.UINT_64).named("a")
+    ) shouldBe LongType.Unsigned
+  }
+
+  it should "read signed INT64 as LongType.Signed" in {
+    ParquetSchemaFns.fromParquetPrimitiveType(
+      Types.primitive(PrimitiveTypeName.INT64, Type.Repetition.OPTIONAL).as(OriginalType.INT_64).named("a")
+    ) shouldBe LongType.Signed
+  }
+
   it should "store dates as int32 with original type tag DATE" in {
     val schema = StructType(Field("a", DateType))
     ParquetSchemaFns.toParquetMessageType(schema) shouldBe
@@ -125,11 +147,7 @@ class ParquetSchemaFnsTest extends FlatSpec with Matchers {
   it should "read optional LIST types as nullable arrays" in {
     val messageType = new MessageType(
       "eel_schema",
-      new GroupType(Repetition.OPTIONAL, "a", OriginalType.LIST,
-        new GroupType(Repetition.REPEATED, "list",
-          new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.DOUBLE, "element")
-        )
-      )
+      Types.optionalList.element(Types.primitive(PrimitiveTypeName.DOUBLE, Repetition.REQUIRED).named("element")).named("a")
     )
     ParquetSchemaFns.fromParquetMessageType(messageType) shouldBe StructType(
       Field("a", ArrayType(DoubleType), nullable = true)
