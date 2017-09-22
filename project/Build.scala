@@ -14,7 +14,7 @@ object Build extends Build {
   val Elastic4sVersion = "5.4.11"
   val ExtsVersion = "1.54.0"
   val H2Version = "1.4.196"
-  val HadoopVersion = "2.7.2"
+  val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
   val JacksonVersion = "2.9.1"
   val KafkaVersion = "0.11.0.1"
@@ -30,10 +30,11 @@ object Build extends Build {
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.hive"             % "hive-exec"            % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
-      "org.apache.logging.log4j"    % "log4j-api"            % Log4jVersion     % "test",
-      "org.apache.logging.log4j"    % "log4j-core"           % Log4jVersion     % "test",
-      "org.apache.logging.log4j"    % "log4j-slf4j-impl"     % Log4jVersion     % "test"
+      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
+      "org.apache.hive"             % "hive-exec"                           % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
+      "org.apache.logging.log4j"    % "log4j-api"                           % Log4jVersion     % "test",
+      "org.apache.logging.log4j"    % "log4j-core"                          % Log4jVersion     % "test",
+      "org.apache.logging.log4j"    % "log4j-slf4j-impl"                    % Log4jVersion     % "test"
     )
   )
 

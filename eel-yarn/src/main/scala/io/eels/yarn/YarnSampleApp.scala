@@ -64,8 +64,8 @@ object YarnSampleApp extends App {
     classOf[org.apache.hadoop.security.authentication.client.Authenticator], //hadoop-auth
     classOf[org.slf4j.Logger], // slf4j-api
     classOf[org.apache.commons.io.Charsets], // commons-io
-    classOf[com.google.protobuf.AbstractMessage], // protobuf-java
-    classOf[org.apache.htrace.Trace] // htrace-core
+    classOf[com.google.protobuf.AbstractMessage] // protobuf-java
+    // classOf[org.apache.htrace.Trace] // htrace-core
   )
 
   val ApplicationMasterClass = "io.eels.yarn.EelApplicationMaster"
