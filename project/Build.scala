@@ -10,23 +10,23 @@ object Build extends Build {
   val org = "io.eels"
 
   val AvroVersion = "1.8.2"
-  val ConfigVersion = "1.3.0"
+  val ConfigVersion = "1.3.1"
   val Elastic4sVersion = "5.4.11"
   val ExtsVersion = "1.54.0"
   val H2Version = "1.4.196"
   val HadoopVersion = "2.7.2"
   val HiveVersion = "1.2.2"
-  val JacksonVersion = "2.8.9"
-  val KafkaVersion = "0.11.0.0"
-  val KuduVersion = "1.4.0"
+  val JacksonVersion = "2.9.1"
+  val KafkaVersion = "0.11.0.1"
+  val KuduVersion = "1.5.0"
   val Log4jVersion = "2.7"
-  val MysqlVersion = "5.1.42"
+  val MysqlVersion = "5.1.44"
   val OrcVersion = "1.4.0"
   val ParquetVersion = "1.8.1"
   val ScalatestVersion = "3.0.3"
-  val Slf4jVersion = "1.7.12"
+  val Slf4jVersion = "1.7.25"
   val SparkVersion = "2.1.1"
-  val UnivocityVersion = "2.5.3"
+  val UnivocityVersion = "2.5.6"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -45,13 +45,13 @@ object Build extends Build {
 
   val coreSettings = Seq(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.module"%% "jackson-module-scala"               % JacksonVersion,
-      "com.univocity"               % "univocity-parsers"                   % UnivocityVersion,
-      "org.apache.hadoop"           % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
-      "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion,
-      "com.h2database"              % "h2"                                  % H2Version,
-      "org.apache.avro"             % "avro"                                % AvroVersion,
-      "org.apache.parquet"          % "parquet-avro"                        % ParquetVersion
+      "com.fasterxml.jackson.module"  %% "jackson-module-scala"               % JacksonVersion,
+      "com.univocity"                 % "univocity-parsers"                   % UnivocityVersion,
+      "org.apache.hadoop"             % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
+      "org.apache.hadoop"             % "hadoop-hdfs"                         % HadoopVersion,
+      "com.h2database"                % "h2"                                  % H2Version,
+      "org.apache.avro"               % "avro"                                % AvroVersion,
+      "org.apache.parquet"            % "parquet-avro"                        % ParquetVersion
     )
   )
 
