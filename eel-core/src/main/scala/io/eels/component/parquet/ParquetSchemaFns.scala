@@ -192,6 +192,7 @@ object ParquetSchemaFns {
         Types.map(repetition).key(key).value(value).named(name)
       case ShortType(true) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.INT_16).named(name)
       case ShortType(false) => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.UINT_16).named(name)
+      // careful, a string type in parquet with a length set cannot be read in hive, so never set a length with a string here
       case StringType => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
       // this is just the time of the day, no date component. not the same as a timestamp!
       case TimeMillisType => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.TIME_MILLIS).named(name)
