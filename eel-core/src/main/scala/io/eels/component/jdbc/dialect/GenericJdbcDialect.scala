@@ -45,7 +45,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
 
   override def fromJdbcType(column: Int, metadata: ResultSetMetaData): DataType = {
     metadata.getColumnType(column) match {
-      case Types.BIGINT => BigIntType
+      case Types.BIGINT => LongType.Signed
       case Types.BINARY => BinaryType
       case Types.BIT => BooleanType
       case Types.BLOB => BinaryType
