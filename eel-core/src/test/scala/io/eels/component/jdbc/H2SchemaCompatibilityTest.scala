@@ -34,7 +34,7 @@ class H2SchemaCompatibilityTest extends FlatSpec with Matchers {
         Vector(
           Field("A", IntType(true), true, false),
           Field("B", io.eels.schema.BooleanType, true, false),
-          Field("C", io.eels.schema.BigIntType, true, false),
+          Field("C", io.eels.schema.LongType.Signed, true, false),
           Field("D", io.eels.schema.DoubleType, true, false),
           Field("E", io.eels.schema.TimeMillisType, true, false),
           Field("F", io.eels.schema.DateType, true, false),
