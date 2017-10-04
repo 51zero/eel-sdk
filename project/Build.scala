@@ -31,6 +31,7 @@ object Build extends Build {
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
+      "org.apache.hive"             % "hive-common"                         % HiveVersion,
       "org.apache.hive"             % "hive-exec"                           % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
       "org.apache.logging.log4j"    % "log4j-api"                           % Log4jVersion     % "test",
       "org.apache.logging.log4j"    % "log4j-core"                          % Log4jVersion     % "test",
@@ -219,7 +220,7 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(clouderaSettings: _*)
     .settings(name := "eel-cloudera")
-    .dependsOn(core)
+    .dependsOn(hive)
 
 //  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
 //    .settings(rootSettings: _*)

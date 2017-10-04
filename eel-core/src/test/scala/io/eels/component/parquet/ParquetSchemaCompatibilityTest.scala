@@ -1,6 +1,7 @@
 package io.eels.component.parquet
 
 import io.eels.schema._
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
 import org.apache.parquet.schema.Type.Repetition
 import org.apache.parquet.schema._
 import org.scalatest.{FunSuite, Matchers}
@@ -19,6 +20,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "requiredInt"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, "requiredLong"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "requiredString", OriginalType.UTF8),
+      Types.primitive(PrimitiveTypeName.BINARY, Type.Repetition.REQUIRED).as(OriginalType.UTF8).length(200).named("requiredVarchar"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "reqEnum", OriginalType.ENUM),
       Types.required(PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY).precision(14).scale(6).id(1).length(6).as(OriginalType.DECIMAL).named("requiredDecimal"),
       new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT32, "timeMillis", OriginalType.TIME_MILLIS),
@@ -35,6 +37,7 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
       Field("requiredInt", IntType(true), false, false),
       Field("requiredLong", LongType(true), false, false),
       Field("requiredString", StringType, false, false),
+      Field("requiredVarchar", VarcharType(200), false, false),
       Field("reqEnum", EnumType("reqEnum", Nil), false, false),
       Field("requiredDecimal", DecimalType(14, 6), false, false),
       Field("timeMillis", TimeMillisType, false, false),
@@ -47,17 +50,17 @@ class ParquetSchemaCompatibilityTest extends FunSuite with Matchers {
     ParquetSchemaFns.toParquetMessageType(struct) shouldBe messageType
   }
 
-  test("parquet schema fns should convert char and varchar to strings") {
+  test("parquet schema fns should convert utf8 with length to varchar") {
 
     val messageType = new MessageType(
       "eel_schema",
-      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "varchar", OriginalType.UTF8),
-      new PrimitiveType(Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, "char", OriginalType.UTF8)
+      Types.primitive(PrimitiveTypeName.BINARY, Type.Repetition.REQUIRED).as(OriginalType.UTF8).length(244).named("varchar"),
+      Types.primitive(PrimitiveTypeName.BINARY, Type.Repetition.REQUIRED).as(OriginalType.UTF8).length(15).named("char")
     )
 
     val outputStruct = StructType(Vector(
-      Field("varchar", StringType, false),
-      Field("char", StringType, false)
+      Field("varchar", VarcharType(244), false),
+      Field("char", VarcharType(15), false)
     ))
 
     val inputStruct = StructType(Vector(
