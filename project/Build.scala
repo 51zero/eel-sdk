@@ -11,12 +11,12 @@ object Build extends Build {
 
   val AvroVersion = "1.8.2"
   val ConfigVersion = "1.3.1"
-  val Elastic4sVersion = "5.4.11"
+  val Elastic4sVersion = "5.5.3"
   val ExtsVersion = "1.54.0"
   val H2Version = "1.4.196"
   val HadoopVersion = "2.6.5"
   val HiveVersion = "1.2.2"
-  val JacksonVersion = "2.6.5"
+  val JacksonVersion = "2.9.1"
   val KafkaVersion = "0.11.0.1"
   val KuduVersion = "1.5.0"
   val Log4jVersion = "2.7"
@@ -77,17 +77,25 @@ object Build extends Build {
 //    )
 //  )
 
+  val clouderaSettings = Seq(
+    resolvers += "cloudera" at "https://repository.cloudera.com/artifactory/cloudera-repos",
+    libraryDependencies ++= Seq(
+      "org.scalaj"                    %% "scalaj-http"                        % "2.3.0",
+      "com.fasterxml.jackson.module"  %% "jackson-module-scala"               % JacksonVersion
+    )
+  )
+
   val kuduSettings = Seq(
     libraryDependencies ++= Seq(
       "org.apache.kudu" % "kudu-client" % KuduVersion
     )
   )
 
-//  val esSettings = Seq(
-//    libraryDependencies ++= Seq(
-//      "com.sksamuel.elastic4s" %% "elastic4s-http" % Elastic4sVersion
-//    )
-//  )
+  val esSettings = Seq(
+    libraryDependencies ++= Seq(
+      "com.sksamuel.elastic4s" %% "elastic4s-http" % Elastic4sVersion
+    )
+  )
 
   val sparkSettings = Seq(
     libraryDependencies ++= Seq(
@@ -167,9 +175,10 @@ object Build extends Build {
       hive,
       yarn,
       spark,
-//      kafka,
-      kudu
-    //  elasticsearch
+      kudu,
+      elasticsearch,
+      cloudera
+      //      kafka,
     )
 
   lazy val schema = Project("eel-schema", file("eel-schema"))
@@ -206,6 +215,12 @@ object Build extends Build {
     .settings(name := "eel-spark")
     .dependsOn(core)
 
+  lazy val cloudera = Project("eel-cloudera", file("eel-cloudera"))
+    .settings(rootSettings: _*)
+    .settings(clouderaSettings: _*)
+    .settings(name := "eel-cloudera")
+    .dependsOn(core)
+
 //  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
 //    .settings(rootSettings: _*)
 //    .settings(kafkaSettings: _*)
@@ -218,9 +233,9 @@ object Build extends Build {
     .settings(name := "eel-kudu")
     .dependsOn(core)
 
-//  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
-//    .settings(rootSettings: _*)
-//    .settings(esSettings: _*)
-//    .settings(name := "eel-elasticsearch")
-//    .dependsOn(core)
+  lazy val elasticsearch = Project("eel-elasticsearch", file("eel-elasticsearch"))
+    .settings(rootSettings: _*)
+    .settings(esSettings: _*)
+    .settings(name := "eel-elasticsearch")
+    .dependsOn(core)
 }
