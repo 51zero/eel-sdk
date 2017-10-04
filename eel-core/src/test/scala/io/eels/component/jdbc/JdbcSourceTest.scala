@@ -19,7 +19,7 @@ class JdbcSourceTest extends WordSpec with Matchers {
         StructType(
           Field("A", IntType(true), true),
           Field("B", BooleanType, true),
-          Field("C", BigIntType, true)
+          Field("C", LongType.Signed, true)
         )
     }
     "use supplied query" in {
