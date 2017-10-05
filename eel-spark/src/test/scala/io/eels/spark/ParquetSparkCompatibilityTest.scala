@@ -1,13 +1,14 @@
-package io.eels.component.parquet
+package io.eels.spark
 
 import java.sql.{Date, Timestamp}
 
+import io.eels.component.parquet.{ParquetSink, ParquetSource}
 import io.eels.datastream.DataStream
 import io.eels.schema._
 import io.eels.{FilePattern, Row}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.spark.sql.catalyst.expressions.{GenericRow, GenericRowWithSchema}
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}

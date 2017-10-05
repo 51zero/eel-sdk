@@ -34,8 +34,7 @@ class CsvSourceTest extends WordSpec with Matchers {
       CsvSource(path).withNullValue("foo").toDataStream().toSet.map(_.values) shouldBe
         Set(Vector("1", "foo", "3"))
     }
-    // todo why does this fail intermittently in sbt ?
-    "read from path" ignore {
+    "read from path" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
       CsvSource(path).withHeader(Header.FirstRow).toDataStream().size shouldBe 3
@@ -57,8 +56,7 @@ class CsvSourceTest extends WordSpec with Matchers {
       CsvSource(path).withHeader(Header.FirstRow).toDataStream().collect.map(_.values).toSet shouldBe
         Set(Vector("e", "f", "g"), Vector("1", "2", "3"), Vector("4", "5", "6"))
     }
-    // todo why does this fail intermittently in sbt ?
-    "support skipping header" ignore {
+    "support skipping header" in {
       val file = getClass.getResource("/io/eels/component/csv/csvtest.csv").toURI()
       val path = Paths.get(file)
       CsvSource(path).withHeader(Header.None).toDataStream().toSet.map(_.values) shouldBe

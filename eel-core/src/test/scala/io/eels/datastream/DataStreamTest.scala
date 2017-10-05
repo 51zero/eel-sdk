@@ -1,18 +1,18 @@
 package io.eels.datastream
 
-import java.nio.file.Paths
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import io.eels.{DevNullSink, Row}
 import io.eels.component.csv.CsvSource
 import io.eels.schema._
+import org.apache.commons.io.IOUtils
 import org.scalatest.{Matchers, WordSpec}
 
 class DataStreamTest extends WordSpec with Matchers {
 
-  val file = getClass.getResource("/uk-500.csv").toURI()
-  val source = CsvSource(Paths.get(file))
+  val data = IOUtils.toByteArray(getClass.getResourceAsStream("/uk-500.csv"))
+  val source = CsvSource(data)
   require(source.toDataStream.collect.size == 500)
 
   val schema1 = StructType(
@@ -462,7 +462,7 @@ class DataStreamTest extends WordSpec with Matchers {
           List("3", "4")
         )
       )
-      ds.addField(Field("c"), (row: Row) => row("b").toString.toInt + 1).collect shouldBe Seq(
+      ds.addFieldFn(Field("c"), (row: Row) => row("b").toString.toInt + 1).collect shouldBe Seq(
         Row(ds.schema.addField("c"), List("1", "2", 3)),
         Row(ds.schema.addField("c"), List("3", "4", 5))
       )
@@ -477,7 +477,7 @@ class DataStreamTest extends WordSpec with Matchers {
 
   "DataStream.multiplex" should {
     "return multiple independant branches of the stream" in {
-      val ds = DataStream.fromIterator(
+      val ds = DataStream.fromRowIterator(
         StructType("a"),
         Iterator.tabulate(5)(k => Row(StructType("a"), Seq(k.toString)))
       )

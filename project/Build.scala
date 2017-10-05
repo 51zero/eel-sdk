@@ -126,8 +126,6 @@ object Build extends Build {
       "com.sksamuel.exts"           %% "exts"                   % ExtsVersion,
       "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
       "commons-lang"                % "commons-lang"            % "2.6",
-      "org.apache.spark"            %% "spark-core"             % SparkVersion             % "test",
-      "org.apache.spark"            %% "spark-sql"              % SparkVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-core"              % Log4jVersion             % "test",
       "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % Log4jVersion             % "test",
