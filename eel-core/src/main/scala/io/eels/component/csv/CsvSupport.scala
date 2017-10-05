@@ -27,6 +27,8 @@ object CsvSupport {
     settings.setCommentCollectionEnabled(true)
     settings.setEmptyValue(emptyCellValue)
     settings.setNullValue(nullValue)
+    settings.setMaxCharsPerColumn(-1)
+    settings.setMaxColumns(2048)
     settings.setReadInputOnSeparateThread(false)
     skipRows.foreach(settings.setNumberOfRowsToSkip)
     selectedColumns.headOption.foreach(_ => settings.selectFields(selectedColumns: _*))
