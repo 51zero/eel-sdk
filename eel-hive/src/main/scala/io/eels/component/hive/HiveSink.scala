@@ -29,13 +29,13 @@ case class HiveSink(dbName: String,
                     partitionStrategy: PartitionStrategy = new DynamicPartitionStrategy,
                     filenameStrategy: FilenameStrategy = DefaultFilenameStrategy,
                     stagingStrategy: StagingStrategy = DefaultStagingStrategy,
-                    evolutionStrategy: EvolutionStrategy = LockedEvolutionStrategy,
+                    metastoreSchemaHandler: MetastoreSchemaHandler = RequireCompatibilityMetastoreSchemaHandler,
                     alignStrategy: AlignmentStrategy = RowPaddingAlignmentStrategy,
                     outputSchemaStrategy: OutputSchemaStrategy = SkipPartitionsOutputSchemaStrategy,
                     keytabPath: Option[java.nio.file.Path] = None,
                     fileListener: FileListener = FileListener.noop,
                     createTable: Boolean = false,
-                   // dialect used to create a new table, for existing tables the dialect will always be detected
+                    // dialect used to create a new table, for existing tables the dialect will always be detected
                     dialect: Option[HiveDialect] = None,
                     callbacks: Seq[CommitCallback] = Nil,
                     roundingMode: RoundingMode = RoundingMode.UNNECESSARY,
@@ -62,7 +62,7 @@ case class HiveSink(dbName: String,
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
   def withRoundingMode(mode: RoundingMode): HiveSink = copy(roundingMode = mode)
   def withStagingStrategy(strategy: StagingStrategy): HiveSink = copy(stagingStrategy = strategy)
-  def withEvolutionStrategy(strategy: EvolutionStrategy): HiveSink = copy(evolutionStrategy = strategy)
+  def withEvolutionStrategy(strategy: MetastoreSchemaHandler): HiveSink = copy(metastoreSchemaHandler = strategy)
   def withAlignmentStrategy(strategy: AlignmentStrategy): HiveSink = copy(alignStrategy = strategy)
   def withOutputSchemaStrategy(strategy: OutputSchemaStrategy): HiveSink = copy(outputSchemaStrategy = strategy)
 
@@ -114,9 +114,9 @@ case class HiveSink(dbName: String,
     val metastoreSchema = ops.schema(dbName, tableName)
     logger.trace(s"Retrieved metastore schema: $metastoreSchema")
 
-    // call the evolve method on the evolution strategy to ensure the metastore is good to go
+    // use the metastore handler to allow custom logic for handling schema differences between metastore and input
     logger.debug("Invoking evolution strategy to align metastore schema")
-    evolutionStrategy.evolve(dbName, tableName, metastoreSchema, schema, client)
+    metastoreSchemaHandler.evolve(dbName, tableName, metastoreSchema, schema, client)
 
     val readDialect = detectDialect
     val partitionKeyNames = ops.partitionKeys(dbName, tableName)
@@ -133,7 +133,7 @@ case class HiveSink(dbName: String,
         partitionStrategy,
         filenameStrategy,
         stagingStrategy,
-        evolutionStrategy,
+        metastoreSchemaHandler,
         alignStrategy,
         outputSchemaStrategy,
         inheritPermissions,
