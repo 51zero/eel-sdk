@@ -62,7 +62,7 @@ case class HiveSink(dbName: String,
   def withMetaData(map: Map[String, String]): HiveSink = copy(metadata = map)
   def withRoundingMode(mode: RoundingMode): HiveSink = copy(roundingMode = mode)
   def withStagingStrategy(strategy: StagingStrategy): HiveSink = copy(stagingStrategy = strategy)
-  def withEvolutionStrategy(strategy: MetastoreSchemaHandler): HiveSink = copy(metastoreSchemaHandler = strategy)
+  def withMetastoreSchemaHandler(strategy: MetastoreSchemaHandler): HiveSink = copy(metastoreSchemaHandler = strategy)
   def withAlignmentStrategy(strategy: AlignmentStrategy): HiveSink = copy(alignStrategy = strategy)
   def withOutputSchemaStrategy(strategy: OutputSchemaStrategy): HiveSink = copy(outputSchemaStrategy = strategy)
 
