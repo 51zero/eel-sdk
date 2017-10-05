@@ -20,10 +20,32 @@ trait EvolutionStrategy {
              client: IMetaStoreClient): Unit
 }
 
+object NoopEvolutionStrategy extends EvolutionStrategy {
+  override def evolve(dbName: String,
+                      tableName: String,
+                      metastoreSchema: StructType,
+                      targetSchema: StructType,
+                      client: IMetaStoreClient): Unit = ()
+}
+
+// will error if the target schema does not match the input schema
+object LockedEvolutionStrategy extends EvolutionStrategy {
+  override def evolve(dbName: String,
+                      tableName: String,
+                      metastoreSchema: StructType,
+                      targetSchema: StructType,
+                      client: IMetaStoreClient): Unit = {
+    assert(
+      metastoreSchema.fields.map(field => field.name -> field.dataType) == targetSchema.fields.map(field => field.name -> field.dataType),
+      s"Input schema $targetSchema is not compatible with the metastore schema $metastoreSchema. If you wish eel-sdk to automatically evolve the target schema (where possible) then set evolutionStrategy=AdditionEvolutionStrategy on the HiveSink"
+    )
+  }
+}
+
 /**
   * The AdditionEvolutionStrategy will add any missing fields to the schema in the hive metastore.
   * It will not check that any existing fields are of the same type as in the metastore.
-  * The new fields cannot be added as partition fields.
+  * The new fields cannot be added as partition fields as the table will already have been created.
   */
 object AdditionEvolutionStrategy extends EvolutionStrategy with Logging {
 
