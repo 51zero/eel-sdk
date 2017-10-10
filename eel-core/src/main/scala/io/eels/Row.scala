@@ -10,6 +10,10 @@ object Row {
   def apply(schema: StructType, first: Any, rest: Any*): Row = new Row(schema, (first +: rest).toIndexedSeq)
   // this is needed so that apply(first,rest) doesn't override the apply from the case class
   def apply(schema: StructType, array: Array[Any]) = new Row(schema, array)
+
+  def fromMap(schema: StructType, map: Map[String, Any]): Row = {
+    Row(schema, schema.fieldNames.map(map.apply))
+  }
 }
 
 case class Row(schema: StructType, values: IndexedSeq[Any]) {
