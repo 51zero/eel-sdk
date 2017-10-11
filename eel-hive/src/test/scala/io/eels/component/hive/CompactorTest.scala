@@ -11,17 +11,18 @@ class CompactorTest extends HiveTests {
 
   HiveTable("default", "wibble").drop(true)
 
-  val schema = StructType(Field("a"), Field("b"))
-  val ds = DataStream.fromValues(schema, Seq(
-    Array("1", "2"),
-    Array("3", "4"),
-    Array("5", "6"),
-    Array("7", "8")
-  ))
-  ds.to(HiveSink("default", "wibble").withCreateTable(true))
-
   "Compactor" should {
-    "delete the originals" in {
+    "delete the originals" ignore {
+
+      val schema = StructType(Field("a"), Field("b"))
+      val ds = DataStream.fromValues(schema, Seq(
+        Array("1", "2"),
+        Array("3", "4"),
+        Array("5", "6"),
+        Array("7", "8")
+      ))
+      ds.to(HiveSink("default", "wibble").withCreateTable(true))
+
       assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
 
       HiveTable("default", "wibble").paths(false, false).size should be > 1
@@ -29,7 +30,7 @@ class CompactorTest extends HiveTests {
       HiveTable("default", "wibble").paths(false, false).size should be
       1
     }
-    "merge the contents" in {
+    "merge the contents" ignore {
       assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
 
       HiveSource("default", "wibble").toDataStream().collectValues shouldBe Seq(
