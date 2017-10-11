@@ -33,6 +33,9 @@ object Build extends Build {
       "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
       "org.apache.hive"             % "hive-common"                         % HiveVersion,
       "org.apache.hive"             % "hive-exec"                           % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
+      //  "org.apache.hadoop"           % "hadoop-minicluster"                  % HadoopVersion    % "test",
+      //  "com.github.sakserv"          % "hadoop-mini-clusters-hdfs"           % "0.1.13"         % "test",
+      //  "com.github.sakserv"          % "hadoop-mini-clusters-hivemetastore"  % "0.1.13"         % "test",
       "org.apache.logging.log4j"    % "log4j-api"                           % Log4jVersion     % "test",
       "org.apache.logging.log4j"    % "log4j-core"                          % Log4jVersion     % "test",
       "org.apache.logging.log4j"    % "log4j-slf4j-impl"                    % Log4jVersion     % "test"
