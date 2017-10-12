@@ -11,9 +11,28 @@ sealed trait DataType {
   def matches(from: DataType): Boolean = this == from
 }
 
+object DataType {
+  def apply(str: String): DataType = str match {
+    case "byte" => ByteType.Signed
+    case "ubyte" => ByteType.Unsigned
+    case "short" => ShortType.Signed
+    case "ushort" => ShortType.Unsigned
+    case "int" => IntType.Signed
+    case "uint" => IntType.Unsigned
+    case "long" => LongType.Signed
+    case "ulong" => LongType.Unsigned
+    case "double" => DoubleType
+    case "float" => FloatType
+    case "bool" => BooleanType
+    case "string" => StringType
+  }
+}
+
 object BigIntType extends DataType
 object BinaryType extends DataType
-object BooleanType extends DataType
+object BooleanType extends DataType {
+  override def canonicalName: String = "bool"
+}
 object DateType extends DataType
 object DoubleType extends DataType
 object FloatType extends DataType
@@ -36,28 +55,36 @@ object EnumType {
   def apply(name: String, first: String, rest: String*): EnumType = new EnumType(name, first +: rest)
 }
 
-case class ByteType(signed: Boolean = true) extends DataType
+case class ByteType(signed: Boolean = true) extends DataType {
+  override def canonicalName: String = if (signed) "byte" else "ubyte"
+}
 
 object ByteType {
   val Signed = ByteType(true)
   val Unsigned = ByteType(false)
 }
 
-case class ShortType(signed: Boolean = true) extends DataType
+case class ShortType(signed: Boolean = true) extends DataType {
+  override def canonicalName: String = if (signed) "short" else "ushort"
+}
 
 object ShortType {
   val Signed = ShortType(true)
   val Unsigned = ShortType(false)
 }
 
-case class IntType(signed: Boolean = true) extends DataType
+case class IntType(signed: Boolean = true) extends DataType {
+  override def canonicalName: String = if (signed) "int" else "uint"
+}
 
 object IntType {
   val Signed = IntType(true)
   val Unsigned = IntType(false)
 }
 
-case class LongType(signed: Boolean = true) extends DataType
+case class LongType(signed: Boolean = true) extends DataType {
+  override def canonicalName: String = if (signed) "long" else "ulong"
+}
 
 object LongType {
   val Signed = LongType(true)
