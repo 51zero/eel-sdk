@@ -15,6 +15,9 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
   * Returns a Map of each partition to the files in that partition.
   *
   * If partition constraints are specified then those partitions are filtered out.
+  *
+  * If there are no partitions then the Map will contain a single key, of Partition.empty
+  * which acts as the root.
   */
 object HiveTableFilesFn extends Logging {
 

@@ -13,7 +13,7 @@ import org.apache.hadoop.hive.metastore.IMetaStoreClient
 import org.apache.hadoop.security.UserGroupInformation
 
 /**
-  * @param constraints optional constraits on the partition data to narrow which partitions are read
+  * @param partitionConstraints optional constraits on the partition data to narrow which partitions are read
   * @param projection  sets which fields are required by the caller.
   * @param predicate   optional predicate which will filter rows at the read level
   *
@@ -115,7 +115,7 @@ case class HiveSource(dbName: String,
     // if we requested only partition columns, then we can get this information by scanning the metatstore
     // to see which partitions have been created.
     if (isPartitionOnlyProjection) {
-      logger.info("Requested projection only uses partitions; reading directly from metastore")
+      logger.debug("The requested projection only uses partitions; reading directly from metastore")
       // we pass in the schema so we can order the results to keep them aligned with the given projection
       List(new HivePartitionPublisher(dbName, tableName, schema, partitionKeys, dialect))
     } else {
