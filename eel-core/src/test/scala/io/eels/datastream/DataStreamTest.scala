@@ -578,6 +578,37 @@ class DataStreamTest extends WordSpec with Matchers {
     }
   }
 
+  "DataStream.align" should {
+    "keep only the values that match the new schema" in {
+      ds1.align(StructType("artist", "year")).collectValues shouldBe Seq(
+        Vector("Elton John", 1969),
+        Vector("Elton John", 1971),
+        Vector("Elton John", 1972),
+        Vector("Elton John", 1973),
+        Vector("Elton John", 1975),
+        Vector("Kate Bush", 1978),
+        Vector("Kate Bush", 1978),
+        Vector("Kate Bush", 1980),
+        Vector("Kate Bush", 1982),
+        Vector("Kate Bush", 1985)
+      )
+    }
+    "rearrange to match the schema" in {
+      ds1.align(StructType("year", "artist")).collectValues shouldBe Seq(
+        Vector(1969, "Elton John"),
+        Vector(1971, "Elton John"),
+        Vector(1972, "Elton John"),
+        Vector(1973, "Elton John"),
+        Vector(1975, "Elton John"),
+        Vector(1978, "Kate Bush"),
+        Vector(1978, "Kate Bush"),
+        Vector(1980, "Kate Bush"),
+        Vector(1982, "Kate Bush"),
+        Vector(1985, "Kate Bush")
+      )
+    }
+  }
+
   "DataStream.apply" should {
     "convert from a Seq[T<:Product]" in {
 

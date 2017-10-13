@@ -107,6 +107,33 @@ trait DataStream extends Logging {
 
   def filterNot(p: (Row) => Boolean): DataStream = filter { row => !p(row) }
 
+  /**
+    * Accepts a schema and 'aligns' this datastream to match the schema.
+    * In this sense, align means the values of each row will be re-ordered to match
+    * the schema, and extraneous fields will be dropped. Any missing values will cause
+    * an exception to the thrown.
+    *
+    * For example, given a DataStream of schema a,b,c and align is called with a
+    * schema of c,a then the row with values (1,2,3) would become (3,1).
+    *
+    * If a DataStream of schema a,b,c was invoked with align with the schema d,a
+    * then an exception would be raised because d was not in the original schema.
+    */
+  def align(_schema: StructType): DataStream = new DataStream {
+    override def schema: StructType = _schema
+    override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+      self.subscribe(new DelegateSubscriber[Seq[Row]](subscriber) {
+        override def next(ts: Seq[Row]): Unit = {
+          subscriber.next(ts.map { row =>
+            val map = row.map()
+            val values = _schema.fields.map { field => map(field.name) }
+            Row(_schema, values)
+          })
+        }
+      })
+    }
+  }
+
   def takeWhile(p: Row => Boolean): DataStream = new DataStream {
     override def schema: StructType = self.schema
     override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
@@ -142,7 +169,7 @@ trait DataStream extends Logging {
       self.subscribe(new Subscriber[Seq[Row]] {
 
         val count = new AtomicInteger(0)
-        var sub: Subscription = null
+        var sub: Subscription = _
 
         override def next(t: Seq[Row]): Unit = {
           val remaining = n - count.get
@@ -596,6 +623,8 @@ trait DataStream extends Logging {
     }
   }
 
+  def update(fieldName: String, from: String, target: Any): DataStream = update(fieldName, from, target, true)
+
   /**
     * Replaces any values that match "form" with the value "target".
     * This operation only applies to the field name specified.
@@ -604,7 +633,6 @@ trait DataStream extends Logging {
     *                            If set to false, then this operation will be a no-op if the field
     *                            does not exist.
     */
-  def update(fieldName: String, from: String, target: Any): DataStream = update(fieldName, from, target, true)
   def update(fieldName: String, from: String, target: Any, errorIfUnknownField: Boolean = true): DataStream =
     replace(fieldName, from, target, errorIfUnknownField)
 
@@ -859,7 +887,7 @@ trait DataStream extends Logging {
     val vector = Vector.newBuilder[Row]
     val errorref = new AtomicReference[Throwable](null)
     subscribe(new Subscriber[Seq[Row]] {
-      var sub: Subscription = null
+      var sub: Subscription = _
       override def next(t: Seq[Row]): Unit = t.foreach(vector.+=)
       override def subscribed(subscription: Subscription): Unit = this.sub = subscription
       override def completed(): Unit = ()

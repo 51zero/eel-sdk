@@ -26,7 +26,7 @@ object Build extends Build {
   val ScalatestVersion = "3.0.3"
   val Slf4jVersion = "1.7.25"
   val SparkVersion = "2.1.1"
-  val UnivocityVersion = "2.5.6"
+  val UnivocityVersion = "2.5.7"
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
