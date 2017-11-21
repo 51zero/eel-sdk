@@ -3,7 +3,6 @@ package io.eels.component.hive
 import java.nio.file.Paths
 
 import com.sksamuel.exts.Logging
-import io.eels.util.HdfsIterator
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.hdfs.MiniDFSCluster
