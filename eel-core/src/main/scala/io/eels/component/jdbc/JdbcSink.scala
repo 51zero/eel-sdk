@@ -28,6 +28,7 @@ object JdbcSink extends Logging {
 case class JdbcSink(connFn: () => Connection,
                     table: String,
                     createTable: Boolean = false,
+                    dropTable: Boolean = false,
                     batchSize: Int = 1000, // the number of rows before a commit is made
                     batchesPerCommit: Int = 0, // 0 means commit at the end, otherwise how many batches before a commit
                     dialect: Option[JdbcDialect] = None,
@@ -38,11 +39,12 @@ case class JdbcSink(connFn: () => Connection,
   private val autoCommit = config.getBoolean("eel.jdbc.sink.autoCommit")
 
   def withCreateTable(createTable: Boolean): JdbcSink = copy(createTable = createTable)
+  def withDropTable(dropTable: Boolean): JdbcSink = copy(dropTable = dropTable)
   def withBatchSize(batchSize: Int): JdbcSink = copy(batchSize = batchSize)
   def withThreads(threads: Int): JdbcSink = copy(threads = threads)
   def withBatchesPerCommit(commitSize: Int): JdbcSink = copy(batchesPerCommit = batchesPerCommit)
   def withDialect(dialect: JdbcDialect): JdbcSink = copy(dialect = dialect.some)
 
   override def open(schema: StructType) =
-    new JdbcSinkWriter(schema, connFn, table, createTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, batchesPerCommit, autoCommit, bufferSize)
+    new JdbcSinkWriter(schema, connFn, table, createTable, dropTable, dialect.getOrElse(new GenericJdbcDialect), threads, batchSize, batchesPerCommit, autoCommit, bufferSize)
 }

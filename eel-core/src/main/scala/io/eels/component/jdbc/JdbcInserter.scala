@@ -3,6 +3,7 @@ package io.eels.component.jdbc
 import java.sql.Connection
 
 import com.sksamuel.exts.Logging
+import com.sksamuel.exts.io.Using
 import com.sksamuel.exts.jdbc.ResultSetIterator
 import io.eels.Row
 import io.eels.component.jdbc.dialect.JdbcDialect
@@ -13,7 +14,7 @@ class JdbcInserter(val connFn: () => Connection,
                    val schema: StructType,
                    val autoCommit: Boolean,
                    val batchesPerCommit: Int,
-                   val dialect: JdbcDialect) extends Logging {
+                   val dialect: JdbcDialect) extends Logging with Using {
 
   logger.debug("Connecting to JDBC to insert.. ..")
   private val conn = connFn()
@@ -49,17 +50,19 @@ class JdbcInserter(val connFn: () => Connection,
     }
   }
 
+  def dropTable(): Unit = using(conn.createStatement)(_.execute(s"DROP TABLE IF EXISTS $table"))
+
+  def tableExists(): Boolean = {
+    logger.debug(s"Fetching list of tables to detect if $table exists")
+    val tables = ResultSetIterator.strings(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
+    val tableNames = tables.map(x => x(3).toLowerCase)
+    val exists = tableNames.contains(table.toLowerCase())
+    logger.debug(s"${tables.size} tables found; $table exists == $exists")
+    exists
+  }
+
   def ensureTableCreated(): Unit = {
     logger.info(s"Ensuring table [$table] is created")
-
-    def tableExists(): Boolean = {
-      logger.debug(s"Fetching list of tables to detect if $table exists")
-      val tables = ResultSetIterator.strings(conn.getMetaData.getTables(null, null, null, Array("TABLE"))).toList
-      val tableNames = tables.map(x => x(3).toLowerCase)
-      val exists = tableNames.contains(table.toLowerCase())
-      logger.debug(s"${tables.size} tables found; $table exists == $exists")
-      exists
-    }
 
     if (!tableExists()) {
       val sql = dialect.create(schema, table)

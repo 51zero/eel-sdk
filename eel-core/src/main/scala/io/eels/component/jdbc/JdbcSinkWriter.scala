@@ -12,6 +12,7 @@ class JdbcSinkWriter(schema: StructType,
                      connFn: () => Connection,
                      table: String,
                      createTable: Boolean,
+                     dropTable: Boolean,
                      dialect: JdbcDialect,
                      threads: Int,
                      batchSize: Int,
@@ -35,6 +36,9 @@ class JdbcSinkWriter(schema: StructType,
 
   private lazy val inserter = {
     val inserter = new JdbcInserter(connFn, table, schema, autoCommit, batchesPerCommit, dialect)
+    if (dropTable) {
+      inserter.dropTable()
+    }
     if (createTable) {
       inserter.ensureTableCreated()
     }
