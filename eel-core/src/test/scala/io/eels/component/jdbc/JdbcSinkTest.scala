@@ -35,12 +35,22 @@ class JdbcSinkTest extends WordSpec with Matchers with OneInstancePerTest {
     }
     "support multiple writers" in {
       val rows = List.fill(10000)(Row(schema, Vector("1", "2", "3")))
-      val mframe = DataStream.fromRows(schema, rows)
+      val ds = DataStream.fromRows(schema, rows)
       val sink = JdbcSink(url, "multithreads").withCreateTable(true).withThreads(4)
-      mframe.to(sink)
+      ds.to(sink)
       val rs = conn.createStatement().executeQuery("select count(*) from multithreads")
       rs.next()
       rs.getLong(1) shouldBe 10000L
+      rs.close()
+    }
+    "handle rows larger than batch size" in {
+      val rows = List.fill(5000)(Row(schema, Vector("1", "2", "3")))
+      val ds = DataStream.fromRows(schema, rows)
+      val sink = JdbcSink(url, "batches").withCreateTable(true).withThreads(1).withBatchSize(100)
+      ds.to(sink)
+      val rs = conn.createStatement().executeQuery("select count(*) from batches")
+      rs.next()
+      rs.getLong(1) shouldBe 5000
       rs.close()
     }
   }
