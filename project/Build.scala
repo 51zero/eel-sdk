@@ -27,6 +27,8 @@ object Build extends Build {
   val Slf4jVersion = "1.7.25"
   val SparkVersion = "2.1.1"
   val UnivocityVersion = "2.5.7"
+  val HBaseVersion = "1.3.0"
+
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
@@ -111,6 +113,16 @@ object Build extends Build {
     )
   )
 
+  val hbaseSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.hbase"            % "hbase-client"                        % HBaseVersion,
+      "org.apache.hbase"            % "hbase-common"                        % HBaseVersion,
+      "org.apache.hbase"            % "hbase-testing-util"                  % HBaseVersion     % "test" classifier "tests",
+      "commons-dbcp"                % "commons-dbcp"                        % "1.4"            % "test",
+      "org.mockito"                 % "mockito-core"                        % "2.10.0"         % "test"
+    )
+  )
+
   val rootSettings = Seq(
     organization := org,
     scalaVersion := "2.11.12",
@@ -148,7 +160,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/eel-sdk/eel</url>
+      <url>https://github.com/51zero/eel-sdk</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -157,14 +169,14 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:eel-sdk/eel.git</url>
-          <connection>scm:git@github.com:eel-sdk/eel.git</connection>
+          <url>git@github.com:51zero/eel-sdk.git</url>
+          <connection>scm:git@github.com:51zero/eel-sdk.git</connection>
         </scm>
         <developers>
           <developer>
-            <id>sksamuel</id>
-            <name>sksamuel</name>
-            <url>http://github.com/sksamuel</url>
+            <id>hannesmiller</id>
+            <name>hannesmiller</name>
+            <url>https://github.com/51zero</url>
           </developer>
         </developers>
     }
@@ -182,7 +194,8 @@ object Build extends Build {
       spark,
       kudu,
       elasticsearch,
-      cloudera
+      cloudera,
+      hbase
       //      kafka,
     )
 
@@ -242,5 +255,12 @@ object Build extends Build {
     .settings(rootSettings: _*)
     .settings(esSettings: _*)
     .settings(name := "eel-elasticsearch")
+    .dependsOn(core)
+
+  lazy val hbase = Project("eel-hbase", file("eel-hbase"))
+    .settings(rootSettings: _*)
+    .settings(hiveSettings: _*)
+    .settings(hbaseSettings: _*)
+    .settings(name := "eel-hbase")
     .dependsOn(core)
 }
