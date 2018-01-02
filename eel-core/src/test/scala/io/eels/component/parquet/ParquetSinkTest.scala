@@ -2,6 +2,7 @@ package io.eels.component.parquet
 
 import java.sql.DriverManager
 
+import com.sun.javafx.PlatformUtil
 import io.eels.{FilePattern, Row}
 import io.eels.component.jdbc.{JdbcSource, RangePartitionStrategy}
 import io.eels.datastream.DataStream
@@ -78,7 +79,7 @@ class ParquetSinkTest extends FlatSpec with Matchers {
     )
 
     ds.to(ParquetSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
-    fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
+    if (!PlatformUtil.isWindows) fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
     fs.delete(path, false)
   }
 

@@ -14,7 +14,7 @@ class HiveCompactTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   import HiveConfig._
 
-  val dbname = "sam"
+  val dbname = "default"
   val table = "compact_test_" + System.currentTimeMillis()
 
   override def afterAll(): Unit = {
@@ -22,7 +22,7 @@ class HiveCompactTest extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   test("compact should result in a single file") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
 
     HiveTable(dbname, table).drop()
 

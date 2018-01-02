@@ -35,7 +35,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       )
 
       frame.to(CsvSink(temp))
-      val result = Source.fromInputStream(fs.open(temp)).mkString
+      val result = Source.fromInputStream(fs.open(temp)).mkString.replace("\r", "")
       result shouldBe "name,job,location\nclint eastwood,actor,carmel\nelton john,musician,pinner\n"
     }
     "support setting delimiter" in {
@@ -48,7 +48,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       )
 
       frame.to(CsvSink(temp, format = CsvFormat().copy(delimiter = '>')))
-      val result = Source.fromInputStream(fs.open(temp)).mkString
+      val result = Source.fromInputStream(fs.open(temp)).mkString.replace("\r", "")
       result shouldBe "name>job>location\nclint eastwood>actor>carmel\nelton john>musician>pinner\n"
     }
     "write headers when specified" in {
@@ -59,7 +59,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("elton john", "musician", "pinner"))
       )
       frame.to(CsvSink(temp).withHeaders(Header.FirstRow))
-      val result = Source.fromInputStream(fs.open(temp)).mkString
+      val result = Source.fromInputStream(fs.open(temp)).mkString.replace("\r", "")
       result shouldBe "name,job,location\nclint eastwood,actor,carmel\nelton john,musician,pinner\n"
     }
     "write null values as empty strings" in {
@@ -70,7 +70,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("elton john", null, "pinner"))
       )
       frame.to(CsvSink(temp))
-      val result = Source.fromInputStream(fs.open(temp)).mkString
+      val result = Source.fromInputStream(fs.open(temp)).mkString.replace("\r", "")
       result shouldBe "name,job,location\nclint eastwood,,carmel\nelton john,,pinner\n"
     }
     "support overwrite" in {

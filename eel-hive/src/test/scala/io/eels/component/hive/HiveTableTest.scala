@@ -13,7 +13,7 @@ class HiveTableTest extends FunSuite with Matchers {
 
   import HiveConfig._
 
-  val dbname = "sam"
+  val dbname = "default"
   val table = "test_table_" + System.currentTimeMillis()
 
   Try {
@@ -21,7 +21,7 @@ class HiveTableTest extends FunSuite with Matchers {
   }
 
   test("partition values should return values for the matching key") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
 
     val schema = StructType(
       Field("a", StringType),

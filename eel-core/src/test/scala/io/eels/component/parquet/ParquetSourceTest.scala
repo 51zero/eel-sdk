@@ -17,7 +17,7 @@ class ParquetSourceTest extends WordSpec with Matchers {
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(conf)
 
-  private val personFile = Paths.get(getClass.getResource("/io/eels/component/parquet/person.avro.pq").getFile)
+  private val personFile = Paths.get(getClass.getResource("/io/eels/component/parquet/person.avro.pq").toURI)
   private val resourcesDir = personFile.getParent
 
   "ParquetSource" should {
@@ -53,7 +53,8 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().collect.map(_.values).toSet
+      import io.eels.FilePattern._
+      val people = ParquetSource(s"${resourcesDir.toUri.toString}/*.pq").toDataStream().collect.map(_.values).toSet
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),
@@ -62,7 +63,8 @@ class ParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "support iteration from multiple sources" in {
-      ParquetSource(resourcesDir.resolve("*.pq")).toDataStream().iterator.toSeq.size shouldBe 4
+      import io.eels.FilePattern._
+      ParquetSource(s"${resourcesDir.toUri.toString}/*.pq").toDataStream().iterator.toSeq.size shouldBe 4
     }
     // todo add merge to parquet source
     "merge schemas" ignore {

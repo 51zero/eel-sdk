@@ -29,10 +29,10 @@ class FilePatternTest extends WordSpec with Matchers {
         dir.resolve(it)
       }
       val hdfsPaths = files.map { it =>
-        new Path("file://" + it)
+        new Path(it.toUri)
       }
       files.foreach(file => Files.createFile(file))
-      FilePattern("file://" + dir.toAbsolutePath().toString() + "/*").toPaths().toSet shouldBe hdfsPaths.toSet
+      FilePattern(dir.toUri.toString() + "/*").toPaths().toSet shouldBe hdfsPaths.toSet
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }
@@ -44,10 +44,10 @@ class FilePatternTest extends WordSpec with Matchers {
         dir.resolve(it)
       }
       val hdfsPaths = files.map { it =>
-        new Path("file://" + it)
+        new Path(it.toUri)
       }
       files.foreach(file => Files.createFile(file))
-      FilePattern(dir.toAbsolutePath().toString() + "/*").toPaths().toSet shouldBe hdfsPaths.toSet
+      FilePattern(dir.toUri.toString() + "/*").toPaths().toSet shouldBe hdfsPaths.toSet
       files.foreach(Files.deleteIfExists)
       Files.deleteIfExists(dir)
     }

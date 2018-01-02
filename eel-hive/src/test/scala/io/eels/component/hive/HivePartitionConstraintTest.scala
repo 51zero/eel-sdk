@@ -12,7 +12,7 @@ class HivePartitionConstraintTest extends FunSuite with Matchers with BeforeAndA
 
   import HiveConfig._
 
-  private val dbname = "sam"
+  private val dbname = "default"
   private val table = "constraints_test_" + System.currentTimeMillis()
 
   override def afterAll(): Unit = Try {
@@ -33,7 +33,7 @@ class HivePartitionConstraintTest extends FunSuite with Matchers with BeforeAndA
   }
 
   test("hive source with partition constraint should return matching data") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
 
     HiveSource(dbname, table)
       .addPartitionConstraint(PartitionConstraint.equals("state", "iowa"))
@@ -42,7 +42,7 @@ class HivePartitionConstraintTest extends FunSuite with Matchers with BeforeAndA
   }
 
   test("hive source with non-existing partitions in constraint should return no data") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
 
     HiveSource(dbname, table)
       .addPartitionConstraint(PartitionConstraint.equals("state", "pa"))

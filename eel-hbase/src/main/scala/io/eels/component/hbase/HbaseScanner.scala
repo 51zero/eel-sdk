@@ -13,7 +13,7 @@ object HbaseScanner {
     hbaseSource.cacheBlocks.map(scan.setCacheBlocks)
     hbaseSource.caching.map(scan.setCaching)
     hbaseSource.batch.map(scan.setBatch)
-    hbaseSource.startKey.map(startKey => scan.setStartRow(copy(serializer.toBytes(startKey, keyField.name, keyField.dataType))))
+    hbaseSource.startKey.map(startKey => scan.withStartRow(copy(serializer.toBytes(startKey, keyField.name, keyField.dataType))))
     hbaseSource.stopKey.map { key =>
       val stopKey = copy(serializer.toBytes(key, keyField.name, keyField.dataType))
       // If the stop key is marked as inclusive then increment the last byte by one - not fully tested
@@ -21,7 +21,7 @@ object HbaseScanner {
         val lastByteIncremented = (stopKey.last.toShort + 1).toByte
         stopKey(stopKey.length - 1) = if (lastByteIncremented > stopKey.last) lastByteIncremented else stopKey.last
       }
-      scan.setStopRow(stopKey)
+      scan.withStopRow(stopKey)
     }
     hbaseSource.consistency.map(scan.setConsistency)
     hbaseSource.isolationLevel.map(scan.setIsolationLevel)

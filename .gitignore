@@ -26,3 +26,5 @@ parquet-par-test
 parquet-speed-test
 .eelstaging*
 orc-speed-test
+miniclusters
+*.crc

@@ -153,6 +153,8 @@ case class HbaseSource(namespace: String,
 
   def withConfiguration(configuration: HBaseConfiguration): HbaseSource = copy(connection = ConnectionFactory.createConnection(configuration))
 
+  def withSerializer(serializer: HbaseSerializer): HbaseSource = copy(serializer = serializer)
+
   private def addFilterList(newFilterList: FilterList): HbaseSource = {
     copy(filterList = Option(if (filterList.nonEmpty) new FilterList(filterList.head, newFilterList) else newFilterList))
   }

@@ -1,7 +1,9 @@
 package io.eels.component.orc
 
+import java.io.{File, FilenameFilter}
 import java.sql.Timestamp
 
+import com.sun.javafx.PlatformUtil
 import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema._
@@ -16,15 +18,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
   implicit val conf = new Configuration()
   implicit val fs = FileSystem.get(conf)
 
-  val path = new Path("test.orc")
-
-  before {
-    fs.delete(path, false)
-  }
-
-  after {
-    fs.delete(path, false)
-  }
+  cleanUpResidualOrcTestFiles
 
   "OrcComponent" should {
     "read and write orc files for all supported types" in {
@@ -55,7 +49,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
         Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
-
+      val path = new Path(s"test_${System.currentTimeMillis()}.orc")
       fs.delete(path, false)
       ds.to(OrcSink(path))
 
@@ -67,7 +61,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
 
       rows shouldBe Set(
         Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, BigDecimal(9.91), new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L,BigDecimal(3.9), new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, BigDecimal(3.9), new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
     }
     "handle null values" in {
@@ -83,6 +77,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("a2", "b2", null))
       )
 
+      val path = new Path(s"test_${System.currentTimeMillis()}.orc")
       ds.to(OrcSink(path))
 
       val rows = OrcSource(path).toDataStream().toSet
@@ -107,6 +102,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("a2", Vector("c2")))
       )
 
+      val path = new Path(s"test_${System.currentTimeMillis()}.orc")
       ds.to(OrcSink(path))
 
       val rows = OrcSource(path).toDataStream().toSet
@@ -125,6 +121,7 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("x", true, 1)),
         Row(schema, Vector("y", false, 2))
       )
+      val path = new Path(s"test_${System.currentTimeMillis()}.orc")
       ds.to(OrcSink(path))
 
       val rows = OrcSource(path).withProjection("a", "c").toDataStream().toSet
@@ -159,8 +156,16 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       )
 
       ds.to(OrcSink(path).withOverwrite(true).withPermission(FsPermission.valueOf("-rw-r----x")))
-      fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
+      if (!PlatformUtil.isWindows) fs.getFileStatus(path).getPermission.toString shouldBe "rw-r----x"
       fs.delete(path, false)
     }
+  }
+
+  private def cleanUpResidualOrcTestFiles = {
+    new File(".").listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = {
+        (name.startsWith("test_") && name.endsWith(".orc")) || (name.startsWith(".test_") && name.endsWith(".orc.crc"))
+      }
+    }).foreach(_.delete())
   }
 }

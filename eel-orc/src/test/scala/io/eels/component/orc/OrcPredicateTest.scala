@@ -1,6 +1,6 @@
 package io.eels.component.orc
 
-import java.io.File
+import java.io.{File, FilenameFilter}
 
 import io.eels.Predicate
 import io.eels.datastream.DataStream
@@ -10,6 +10,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 
 class OrcPredicateTest extends FlatSpec with Matchers with BeforeAndAfterAll {
+  cleanUpResidualOrcTestFiles
 
   val schema = StructType(
     Field("name", StringType, nullable = true),
@@ -61,5 +62,13 @@ class OrcPredicateTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     val rows = OrcSource(path).withPredicate(Predicate.equals("name", "sam")).toDataStream().collect
     rows.head.schema shouldBe schema
     rows.head.values shouldBe Vector("sam", "middlesbrough", 37L)
+  }
+
+  private def cleanUpResidualOrcTestFiles = {
+    new File(".").listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = {
+        (name.startsWith("test_") && name.endsWith(".orc")) || (name.startsWith(".test_") && name.endsWith(".orc.crc"))
+      }
+    }).foreach(_.delete())
   }
 }

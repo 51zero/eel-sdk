@@ -10,11 +10,11 @@ class MetastoreSchemaHandlerTest extends FunSuite with Matchers {
 
   import HiveConfig._
 
-  private val dbname = "sam"
+  private val dbname = "default"
   private val table = "evolution_test_" + System.currentTimeMillis()
 
   test("Evolution handler should allow columns to be added to a hive table") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
 
     val schema1 = StructType(Field("a", StringType))
     DataStream.fromValues(schema1, Seq(Seq("a"))).to(HiveSink(dbname, table).withCreateTable(true))

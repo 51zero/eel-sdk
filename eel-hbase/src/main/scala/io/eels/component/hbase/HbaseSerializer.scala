@@ -103,7 +103,7 @@ abstract class OrderingHbaseSerializerBase(ascending: Boolean) extends HbaseSeri
     case FloatType => FloatSerDe.decode(populateBuffer(value))
     case BooleanType => BooleanSerDe.decode(populateBuffer(value))
     case BinaryType => BinarySerDe.decode(populateBuffer(value))
-    case TimestampMillisType => TimestampSerDe.decode(populateBuffer(value))
+    case TimestampMillisType => new Timestamp(TimestampSerDe.decode(populateBuffer(value)))
     case _ => sys.error(s"DataType '${dataType.canonicalName}' is not supported for field '$name'")
   }
 
