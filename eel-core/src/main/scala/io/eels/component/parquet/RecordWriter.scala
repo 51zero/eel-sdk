@@ -148,11 +148,12 @@ class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMo
     val bytes = unscaled.toByteArray
     if (bytes.length == byteSizeForPrecision) Binary.fromReusedByteArray(bytes)
     else if (bytes.length < byteSizeForPrecision) {
-      val newBytes = new Array[Byte](byteSizeForPrecision)
-      val minuteOne: Byte = -1
-      if (unscaled.signum < 0) java.util.Arrays.fill(newBytes, 0, newBytes.length - bytes.length, minuteOne)
-      System.arraycopy(bytes, 0, newBytes, newBytes.length - bytes.length, bytes.length)
-      Binary.fromReusedByteArray(newBytes)
+      val decimalBuffer = new Array[Byte](byteSizeForPrecision)
+      // For negatives all high bits need to be 1 hence -1 used
+      val signByte = if (unscaled.signum < 0) -1: Byte else 0: Byte
+      java.util.Arrays.fill(decimalBuffer, 0, decimalBuffer.length - bytes.length, signByte)
+      System.arraycopy(bytes, 0, decimalBuffer, decimalBuffer.length - bytes.length, bytes.length)
+      Binary.fromReusedByteArray(decimalBuffer)
     } else throw new IllegalStateException(s"Decimal precision too small, value=$original, precision=${precision.value}")
   }
 
