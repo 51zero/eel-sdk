@@ -13,7 +13,7 @@ class HiveDynamicPartitionTest extends FunSuite with Matchers with BeforeAndAfte
 
   import HiveConfig._
 
-  val dbname = "sam"
+  val dbname = HiveTestUtils.createTestDatabase
   val table = "dynp_test_" + System.currentTimeMillis()
 
   val schema = StructType(Field("a"), Field("b"))
@@ -27,14 +27,14 @@ class HiveDynamicPartitionTest extends FunSuite with Matchers with BeforeAndAfte
   }
 
   test("dynamic partition strategy should create new partitions") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
     HiveTable(dbname, table).partitionValues("a") shouldBe Set.empty
     DataStream.fromValues(schema, Seq(Seq("1", "2"), Seq("3", "4"))).to(HiveSink(dbname, table))
     HiveTable(dbname, table).partitionValues("a") shouldBe Set("1", "3")
   }
 
   test("skip partition if partition already exists") {
-    assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+    assume(new File(s"$basePath/core-site.xml").exists)
     new DynamicPartitionStrategy().ensurePartition(Partition("a" -> "1"), dbname, table, false, client)
     new DynamicPartitionStrategy().ensurePartition(Partition("a" -> "1"), dbname, table, false, client)
   }

@@ -18,7 +18,7 @@ class AvroParquetSourceTest extends WordSpec with Matchers {
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(conf)
 
-  private val personFile = Paths.get(getClass.getResource("/io/eels/component/parquet/person.avro.pq").getFile)
+  private val personFile = Paths.get(getClass.getResource("/io/eels/component/parquet/person.avro.pq").toURI)
   private val resourcesDir = personFile.getParent
 
   "AvroParquetSource" should {
@@ -38,7 +38,8 @@ class AvroParquetSourceTest extends WordSpec with Matchers {
       )
     }
     "read multiple parquet files using file expansion" in {
-      val people = AvroParquetSource(resourcesDir.resolve("*.pq")).toDataStream().toSet.map(_.values)
+      import io.eels.FilePattern._
+      val people = AvroParquetSource(s"${resourcesDir.toUri.toString}/*.pq").toDataStream().toSet.map(_.values)
       people shouldBe Set(
         Vector("clint eastwood", "actor", "carmel"),
         Vector("elton john", "musician", "pinner"),

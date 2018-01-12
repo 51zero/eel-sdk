@@ -1,7 +1,6 @@
 package io.eels.component.parquet
 
 import java.io.File
-import java.nio.file.Paths
 
 import io.eels.Row
 import io.eels.datastream.DataStream
@@ -46,12 +45,16 @@ class ParquetComponentTest extends WordSpec with Matchers {
     }
     "read multiple parquet files using file expansion" in {
 
-      val path1 = new Path("test1.pq")
+      val file1 = new File("test1.pq")
+      val file2 = new File("test2.pq")
+      file1.deleteOnExit()
+      file2.deleteOnExit()
+
+      val path1 = new Path(file1.getAbsolutePath)
       if (fs.exists(path1))
         fs.delete(path1, false)
-      new File(path1.toString).deleteOnExit()
 
-      val path2 = new Path("test2.pq")
+      val path2 = new Path(file2.getAbsolutePath)
       if (fs.exists(path2))
         fs.delete(path2, false)
 
@@ -70,9 +73,7 @@ class ParquetComponentTest extends WordSpec with Matchers {
 
       ds.to(ParquetSink(path1))
       ds.to(ParquetSink(path2))
-
-      val parent = Paths.get(path1.toString).toAbsolutePath.resolve("*")
-      val actual = ParquetSource(parent.toString).toDataStream().toSet
+      val actual = ParquetSource(s"${path1.toUri.toString}/*").toDataStream().toSet
       actual shouldBe Set(
         Row(structType, "clint eastwood", "carmel"),
         Row(structType, "elton john", "pinner"),

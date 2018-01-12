@@ -23,7 +23,7 @@ class CompactorTest extends HiveTests {
       ))
       ds.to(HiveSink("default", "wibble").withCreateTable(true))
 
-      assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+      assume(new File(s"$basePath/core-site.xml").exists)
 
       HiveTable("default", "wibble").paths(false, false).size should be > 1
       Compactor("default", "wibble").compactTo(1)
@@ -31,7 +31,7 @@ class CompactorTest extends HiveTests {
       1
     }
     "merge the contents" ignore {
-      assume(new File("/home/sam/development/hadoop-2.7.2/etc/hadoop/core-site.xml").exists)
+      assume(new File(s"$basePath/core-site.xml").exists)
 
       HiveSource("default", "wibble").toDataStream().collectValues shouldBe Seq(
         Array("1", "2"),

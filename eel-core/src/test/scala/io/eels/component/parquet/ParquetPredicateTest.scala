@@ -1,6 +1,6 @@
 package io.eels.component.parquet
 
-import java.io.File
+import java.io.{File, FilenameFilter}
 import java.sql.Timestamp
 
 import io.eels.datastream.DataStream
@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.scalatest.{FlatSpec, Matchers}
 
 class ParquetPredicateTest extends FlatSpec with Matchers {
+  cleanUpResidualParquetTestFiles
 
   private val schema = StructType(
     Field("name", StringType, nullable = false),
@@ -28,14 +29,16 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
 
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(new Configuration())
-  private val path = new Path("test.pq")
+  private val file = new File(s"test_${System.currentTimeMillis()}.pq")
+  file.deleteOnExit()
+  private val path = new Path(file.toURI)
 
   if (fs.exists(path))
     fs.delete(path, false)
 
   new File(path.toString).deleteOnExit()
 
-  ds.to(ParquetSink(path))
+  ds.to(ParquetSink(path).withOverwrite(true))
 
   "ParquetSource" should "support predicates" in {
     val rows = ParquetSource(path).withPredicate(Predicate.equals("job", "actor")).toDataStream().collect
@@ -56,7 +59,7 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     ))
 
     val path = new Path("timestamp_predicate.pq")
-    ds.to(ParquetSink(path))
+    ds.to(ParquetSink(path).withOverwrite(true))
 
     ParquetSource(path).withPredicate(Predicate.gte("timestamp", Timestamp.valueOf("2017-06-02 11:11:11"))).toDataStream().collect shouldBe
       Seq(
@@ -80,7 +83,7 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
     if (fs.exists(path))
       fs.delete(path, false)
 
-    ds.to(ParquetSink(path))
+    ds.to(ParquetSink(path).withOverwrite(true))
 
     val source = ParquetSource(path)
       .withDictionaryFiltering(false)
@@ -116,5 +119,13 @@ class ParquetPredicateTest extends FlatSpec with Matchers {
       .toDataStream().collect.map(_.values.head) shouldBe Vector("tsla")
 
     fs.delete(path, false)
+  }
+
+  private def cleanUpResidualParquetTestFiles = {
+    new File(".").listFiles(new FilenameFilter {
+      override def accept(dir: File, name: String): Boolean = {
+        (name.startsWith("test_") && name.endsWith(".pq")) || (name.startsWith(".test_") && name.endsWith(".pq.crc"))
+      }
+    }).foreach(_.delete())
   }
 }

@@ -1,6 +1,6 @@
 import com.typesafe.sbt.pgp.PgpKeys
-import sbt._
 import sbt.Keys._
+import sbt._
 
 import scala.languageFeature.experimental
 import scala.languageFeature.experimental.macros
@@ -14,7 +14,7 @@ object Build extends Build {
   val Elastic4sVersion = "5.5.3"
   val ExtsVersion = "1.54.0"
   val H2Version = "1.4.196"
-  val HadoopVersion = "2.6.5"
+  val HadoopVersion = "2.7.4"
   val HiveVersion = "1.2.2"
   val JacksonVersion = "2.9.1"
   val KafkaVersion = "0.11.0.1"
@@ -27,68 +27,75 @@ object Build extends Build {
   val Slf4jVersion = "1.7.25"
   val SparkVersion = "2.1.1"
   val UnivocityVersion = "2.5.7"
+  val HBaseVersion = "1.4.0"
+  // val HbaseTestVersion = "1.2.2"
+  val HbaseTestVersion = HBaseVersion
+
 
   val hiveSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
-      "org.apache.hive"             % "hive-common"                         % HiveVersion,
-      "org.apache.hive"             % "hive-exec"                           % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
-//      "com.github.sakserv"          % "hadoop-mini-clusters"                % "0.1.14"         % "test",
-//      "com.github.sakserv"          % "hadoop-mini-clusters-hdfs"           % "0.1.14"         % "test",
-//      "com.github.sakserv"          % "hadoop-mini-clusters-hivemetastore"  % "0.1.14"         % "test",
-      "org.apache.hadoop"           % "hadoop-common"                       % HadoopVersion    % "test" classifier "tests",
-      "org.apache.hadoop"           % "hadoop-hdfs"                         % HadoopVersion    % "test" classifier "tests",
-      "org.apache.logging.log4j"    % "log4j-api"                           % Log4jVersion     % "test",
-      "org.apache.logging.log4j"    % "log4j-core"                          % Log4jVersion     % "test",
-      "org.apache.logging.log4j"    % "log4j-slf4j-impl"                    % Log4jVersion     % "test",
-      "org.mockito"                 % "mockito-core"                        % "2.10.0"         % "test"
+      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
+      "org.apache.hive" % "hive-common" % HiveVersion,
+      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
+      //      "com.github.sakserv" % "hadoop-mini-clusters" % "0.1.14"  % "test" exclude("org.apache.hadoop", "hadoop-client"),
+      //      "com.github.sakserv" % "hadoop-mini-clusters-hdfs" % "0.1.14" % "test" exclude("org.apache.hadoop", "hadoop-client"),
+      //      "com.github.sakserv" % "hadoop-mini-clusters-hivemetastore" % "0.1.13" % "test" exclude("org.apache.hadoop", "hadoop-client"),
+      "org.apache.hive" % "hive-common" % HiveVersion,
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test" classifier "tests",
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test",
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion % "test" classifier "tests",
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion % "test",
+      "org.apache.logging.log4j" % "log4j-api" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-core" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl" % Log4jVersion % "test",
+      "org.mockito" % "mockito-core" % "2.10.0" % "test"
     )
   )
 
   val yarnSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.hadoop"           % "hadoop-yarn"                         % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce"                    % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce-client"             % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-mapreduce-client-core"        % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-yarn-client"                  % HadoopVersion,
-      "org.apache.hadoop"           % "hadoop-yarn-server-resourcemanager"  % HadoopVersion,
-      "org.apache.logging.log4j"    % "log4j-api"                           % Log4jVersion     % "test",
-      "org.apache.logging.log4j"    % "log4j-core"                          % Log4jVersion     % "test",
-      "org.apache.logging.log4j"    % "log4j-slf4j-impl"                    % Log4jVersion     % "test"
+      "org.apache.hadoop" % "hadoop-yarn" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce-client" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-yarn-client" % HadoopVersion,
+      "org.apache.hadoop" % "hadoop-yarn-server-resourcemanager" % HadoopVersion,
+      "org.apache.logging.log4j" % "log4j-api" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-core" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl" % Log4jVersion % "test"
     )
   )
 
   val coreSettings = Seq(
     libraryDependencies ++= Seq(
-      "com.fasterxml.jackson.module"  %% "jackson-module-scala"               % JacksonVersion,
-      "com.univocity"                 % "univocity-parsers"                   % UnivocityVersion,
-      "org.apache.hadoop"             % "hadoop-common"                       % HadoopVersion exclude("org.slf4j","slf4j-log4j12"),
-      "org.apache.hadoop"             % "hadoop-hdfs"                         % HadoopVersion,
-      "com.h2database"                % "h2"                                  % H2Version,
-      "org.apache.avro"               % "avro"                                % AvroVersion,
-      "org.apache.parquet"            % "parquet-avro"                        % ParquetVersion
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % JacksonVersion,
+      "com.univocity" % "univocity-parsers" % UnivocityVersion,
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion exclude("org.slf4j", "slf4j-log4j12"),
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion,
+      "com.h2database" % "h2" % H2Version,
+      "org.apache.avro" % "avro" % AvroVersion,
+      "org.apache.parquet" % "parquet-avro" % ParquetVersion
     )
   )
 
   val orcSettings = Seq(
     libraryDependencies ++= Seq(
-      "org.apache.orc"                          % "orc-core"                % OrcVersion
+      "org.apache.orc" % "orc-core" % OrcVersion
     )
   )
 
-//  val kafkaSettings = Seq(
-//    libraryDependencies ++= Seq(
-//      "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
-//      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.15.0"     % "test"
-//    )
-//  )
+  //  val kafkaSettings = Seq(
+  //    libraryDependencies ++= Seq(
+  //      "org.apache.kafka"            %  "kafka-clients"                  % KafkaVersion,
+  //      "net.manub"                   %% "scalatest-embedded-kafka"       % "0.15.0"     % "test"
+  //    )
+  //  )
 
   val clouderaSettings = Seq(
     resolvers += "cloudera" at "https://repository.cloudera.com/artifactory/cloudera-repos",
     libraryDependencies ++= Seq(
-      "org.scalaj"                    %% "scalaj-http"                        % "2.3.0",
-      "com.fasterxml.jackson.module"  %% "jackson-module-scala"               % JacksonVersion
+      "org.scalaj" %% "scalaj-http" % "2.3.0",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % JacksonVersion
     )
   )
 
@@ -111,6 +118,38 @@ object Build extends Build {
     )
   )
 
+  val hbaseSettings = Seq(
+    libraryDependencies ++= Seq(
+      "org.apache.hbase" % "hbase-client" % HBaseVersion,
+      "org.apache.hbase" % "hbase-common" % HBaseVersion,
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test" classifier "tests",
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion % "test" classifier "tests",
+      "org.apache.hadoop" % "hadoop-hdfs" % HadoopVersion % "test",
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test" classifier "tests",
+      "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test",
+      "org.apache.hbase" % "hbase-common" % HbaseTestVersion % "test" classifier "tests",
+      "org.apache.hbase" % "hbase-common" % HbaseTestVersion % "test",
+      "org.apache.hbase" % "hbase-server" % HbaseTestVersion % "test" classifier "tests",
+      "org.apache.hbase" % "hbase-server" % HbaseTestVersion % "test",
+      "org.apache.hbase" % "hbase-hadoop-compat" % HbaseTestVersion % "test" classifier "tests",
+      "org.apache.hbase" % "hbase-hadoop-compat" % HbaseTestVersion % "test",
+      "org.apache.hbase" % "hbase-hadoop2-compat" % HbaseTestVersion % "test" classifier "tests",
+      "org.apache.hbase" % "hbase-hadoop2-compat" % HbaseTestVersion % "test",
+      "org.apache.hbase" % "hbase-metrics-api" % HbaseTestVersion % "test",
+      "org.apache.hbase" % "hbase-metrics-api" % HbaseTestVersion % "test" classifier "tests",
+      "org.apache.hbase" % "hbase-metrics" % HbaseTestVersion % "test",
+      "org.apache.hbase" % "hbase-metrics" % HbaseTestVersion % "test" classifier "tests",
+      "org.apache.logging.log4j" % "log4j-api" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-core" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl" % Log4jVersion % "test",
+      "commons-dbcp" % "commons-dbcp" % "1.4" % "test",
+      "org.mockito" % "mockito-core" % "2.10.0" % "test",
+      "org.apache.hive" % "hive-common" % HiveVersion,
+      "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl")
+
+    )
+  )
+
   val rootSettings = Seq(
     organization := org,
     scalaVersion := "2.11.12",
@@ -127,16 +166,16 @@ object Build extends Build {
     sbtrelease.ReleasePlugin.autoImport.releaseCrossBuild := true,
     testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l", "kudu"),
     libraryDependencies ++= Seq(
-      "org.scala-lang"              % "scala-reflect"           % scalaVersion.value,
-      "com.typesafe"                % "config"                  % ConfigVersion,
-      "com.sksamuel.exts"           %% "exts"                   % ExtsVersion,
-      "org.slf4j"                   % "slf4j-api"               % Slf4jVersion,
-      "commons-lang"                % "commons-lang"            % "2.6",
-      "org.apache.logging.log4j"    % "log4j-api"               % Log4jVersion             % "test",
-      "org.apache.logging.log4j"    % "log4j-core"              % Log4jVersion             % "test",
-      "org.apache.logging.log4j"    % "log4j-slf4j-impl"        % Log4jVersion             % "test",
-      "mysql"                       % "mysql-connector-java"    % MysqlVersion             % "test",
-      "org.scalatest"               %% "scalatest"              % ScalatestVersion         % "test"
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "com.typesafe" % "config" % ConfigVersion,
+      "com.sksamuel.exts" %% "exts" % ExtsVersion,
+      "org.slf4j" % "slf4j-api" % Slf4jVersion,
+      "commons-lang" % "commons-lang" % "2.6",
+      "org.apache.logging.log4j" % "log4j-api" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-core" % Log4jVersion % "test",
+      "org.apache.logging.log4j" % "log4j-slf4j-impl" % Log4jVersion % "test",
+      "mysql" % "mysql-connector-java" % MysqlVersion % "test",
+      "org.scalatest" %% "scalatest" % ScalatestVersion % "test"
     ),
     excludeDependencies += "org.slf4j" % "slf4j-log4j12",
     publishTo <<= version {
@@ -148,7 +187,7 @@ object Build extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
     },
     pomExtra := {
-      <url>https://github.com/eel-sdk/eel</url>
+      <url>https://github.com/51zero/eel-sdk</url>
         <licenses>
           <license>
             <name>MIT</name>
@@ -157,14 +196,14 @@ object Build extends Build {
           </license>
         </licenses>
         <scm>
-          <url>git@github.com:eel-sdk/eel.git</url>
-          <connection>scm:git@github.com:eel-sdk/eel.git</connection>
+          <url>git@github.com:51zero/eel-sdk.git</url>
+          <connection>scm:git@github.com:51zero/eel-sdk.git</connection>
         </scm>
         <developers>
           <developer>
-            <id>sksamuel</id>
-            <name>sksamuel</name>
-            <url>http://github.com/sksamuel</url>
+            <id>hannesmiller</id>
+            <name>hannesmiller</name>
+            <url>https://github.com/51zero</url>
           </developer>
         </developers>
     }
@@ -177,6 +216,7 @@ object Build extends Build {
       core,
       schema,
       orc,
+      hbase,
       hive,
       yarn,
       spark,
@@ -226,11 +266,11 @@ object Build extends Build {
     .settings(name := "eel-cloudera")
     .dependsOn(hive)
 
-//  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
-//    .settings(rootSettings: _*)
-//    .settings(kafkaSettings: _*)
-//    .settings(name := "eel-kafka")
-//    .dependsOn(core)
+  //  lazy val kafka = Project("eel-kafka", file("eel-kafka"))
+  //    .settings(rootSettings: _*)
+  //    .settings(kafkaSettings: _*)
+  //    .settings(name := "eel-kafka")
+  //    .dependsOn(core)
 
   lazy val kudu = Project("eel-kudu", file("eel-kudu"))
     .settings(rootSettings: _*)
@@ -243,4 +283,12 @@ object Build extends Build {
     .settings(esSettings: _*)
     .settings(name := "eel-elasticsearch")
     .dependsOn(core)
+
+  lazy val hbase = Project("eel-hbase", file("eel-hbase"))
+    .settings(rootSettings: _*)
+    // .settings(hiveSettings: _*)
+    .settings(hbaseSettings: _*)
+    .settings(name := "eel-hbase")
+    .dependsOn(core)
+
 }
