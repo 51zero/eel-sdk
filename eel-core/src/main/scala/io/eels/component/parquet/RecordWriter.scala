@@ -5,7 +5,7 @@ import java.time._
 import java.time.temporal.ChronoUnit
 
 import com.sksamuel.exts.Logging
-import io.eels.coercion.{BigDecimalCoercer, BigIntegerCoercer, BooleanCoercer, DoubleCoercer, FloatCoercer, IntCoercer, LongCoercer, MapCoercer, SequenceCoercer, ShortCoercer, StringCoercer, TimestampCoercer}
+import io.eels.coercion._
 import io.eels.schema._
 import org.apache.parquet.io.api.{Binary, RecordConsumer}
 
@@ -133,16 +133,29 @@ object BinaryParquetWriter extends RecordWriter {
 // and the precision stores the maximum number of sig digits supported in the unscaled value.
 class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMode) extends RecordWriter {
 
-  private val bits = ParquetSchemaFns.byteSizeForPrecision(precision.value)
+  private val byteSizeForPrecision = ParquetSchemaFns.byteSizeForPrecision(precision.value)
 
   override def write(record: RecordConsumer, value: Any): Unit = {
     val bd = BigDecimalCoercer.coerce(value)
       .setScale(scale.value, roundingMode)
       .underlying()
-      .unscaledValue()
-    val padded = bd.toByteArray.reverse.padTo(bits, 0: Byte).reverse
-    record.addBinary(Binary.fromReusedByteArray(padded))
+    record.addBinary(decimalAsBinary(bd, bd.unscaledValue()))
   }
+
+  import org.apache.parquet.io.api.Binary
+
+  private def decimalAsBinary(original: java.math.BigDecimal, unscaled: java.math.BigInteger): Binary = {
+    val bytes = unscaled.toByteArray
+    if (bytes.length == byteSizeForPrecision) Binary.fromReusedByteArray(bytes)
+    else if (bytes.length < byteSizeForPrecision) {
+      val newBytes = new Array[Byte](byteSizeForPrecision)
+      val minuteOne: Byte = -1
+      if (unscaled.signum < 0) java.util.Arrays.fill(newBytes, 0, newBytes.length - bytes.length, minuteOne)
+      System.arraycopy(bytes, 0, newBytes, newBytes.length - bytes.length, bytes.length)
+      Binary.fromReusedByteArray(newBytes)
+    } else throw new IllegalStateException(s"Decimal precision too small, value=$original, precision=${precision.value}")
+  }
+
 }
 
 object BigIntRecordWriter extends RecordWriter {

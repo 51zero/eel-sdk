@@ -1,6 +1,9 @@
 package io.eels.component.parquet
 
+import java.math.BigInteger
+
 import io.eels.schema.{StructType, _}
+import org.apache.parquet.io.api.Binary
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName
 import org.apache.parquet.schema.Type.Repetition
 import org.apache.parquet.schema._
@@ -53,9 +56,9 @@ object ParquetSchemaFns {
           case _ => IntType.Signed
         }
       case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.UINT_64 => LongType.Unsigned
-   //   case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIME_MICROS => TimeMicrosType
+      //   case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIME_MICROS => TimeMicrosType
       case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MILLIS => TimestampMillisType
-   //   case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampMicrosType
+      //   case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.TIMESTAMP_MICROS => TimestampMicrosType
       case PrimitiveTypeName.INT64 if tpe.getOriginalType == OriginalType.DECIMAL => DecimalType(Precision(18), Scale(2))
       case PrimitiveTypeName.INT64 => LongType.Signed
       // https://github.com/Parquet/parquet-mr/issues/218
@@ -127,15 +130,12 @@ object ParquetSchemaFns {
   }
 
   def byteSizeForPrecision(precision: Precision): Int = {
-    var fixedArrayLength = 0
-    var base10Digits = 0
-    while (base10Digits < precision.value) {
-      fixedArrayLength = fixedArrayLength + 1
-      base10Digits = Math.floor(Math.log10(Math.pow(2, 8 * fixedArrayLength - 1) - 1)).toInt
+    if (precision == 0) 1
+    else {
+      val bytes = BigInteger.TEN.pow(precision.value).bitLength + 1
+      (bytes + java.lang.Byte.SIZE - 1) / java.lang.Byte.SIZE
     }
-    fixedArrayLength
   }
-
 
   def toParquetMessageType(structType: StructType, name: String = "eel_schema"): MessageType = {
     val types = structType.fields.map(toParquetType)
@@ -143,6 +143,7 @@ object ParquetSchemaFns {
   }
 
   def toParquetType(field: Field): Type = toParquetType(field.dataType, field.name, field.nullable)
+
   def toParquetType(dataType: DataType, name: String, nullable: Boolean): Type = {
     val repetition = if (nullable) Repetition.OPTIONAL else Repetition.REQUIRED
     dataType match {
@@ -200,10 +201,10 @@ object ParquetSchemaFns {
       case StringType => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).named(name)
       // this is just the time of the day, no date component. not the same as a timestamp!
       case TimeMillisType => Types.primitive(PrimitiveTypeName.INT32, repetition).as(OriginalType.TIME_MILLIS).named(name)
-   //   case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIME_MICROS)
+      //   case TimeMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIME_MICROS)
       // spark doesn't annotate timestamps, just uses int96?
       case TimestampMillisType => Types.primitive(PrimitiveTypeName.INT96, repetition).named(name)
-   //   case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
+      //   case TimestampMicrosType => new PrimitiveType(repetition, PrimitiveTypeName.INT64, name, OriginalType.TIMESTAMP_MICROS)
       case VarcharType(length) => Types.primitive(PrimitiveTypeName.BINARY, repetition).as(OriginalType.UTF8).length(length).named(name)
     }
   }
