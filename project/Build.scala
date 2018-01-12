@@ -39,7 +39,7 @@ object Build extends Build {
       "org.apache.hive" % "hive-exec" % HiveVersion exclude("org.pentaho", "pentaho-aggdesigner-algorithm") exclude("org.apache.calcite", "calcite-core") exclude("org.apache.calcite", "calcite-avatica") exclude("org.apache.logging.log4j", "log4j-slf4j-impl"),
       //      "com.github.sakserv" % "hadoop-mini-clusters" % "0.1.14"  % "test" exclude("org.apache.hadoop", "hadoop-client"),
       //      "com.github.sakserv" % "hadoop-mini-clusters-hdfs" % "0.1.14" % "test" exclude("org.apache.hadoop", "hadoop-client"),
-      //      "com.github.sakserv" % "hadoop-mini-clusters-hivemetastore" % "0.1.14" % "test" exclude("org.apache.hadoop", "hadoop-client"),
+      //      "com.github.sakserv" % "hadoop-mini-clusters-hivemetastore" % "0.1.13" % "test" exclude("org.apache.hadoop", "hadoop-client"),
       "org.apache.hive" % "hive-common" % HiveVersion,
       "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test" classifier "tests",
       "org.apache.hadoop" % "hadoop-common" % HadoopVersion % "test",

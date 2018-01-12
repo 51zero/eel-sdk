@@ -10,7 +10,7 @@ class MetastoreSchemaHandlerTest extends FunSuite with Matchers {
 
   import HiveConfig._
 
-  private val dbname = "default"
+  val dbname = HiveTestUtils.createTestDatabase
   private val table = "evolution_test_" + System.currentTimeMillis()
 
   test("Evolution handler should allow columns to be added to a hive table") {

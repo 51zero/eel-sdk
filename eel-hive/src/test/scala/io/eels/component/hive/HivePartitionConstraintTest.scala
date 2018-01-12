@@ -12,7 +12,7 @@ class HivePartitionConstraintTest extends FunSuite with Matchers with BeforeAndA
 
   import HiveConfig._
 
-  private val dbname = "default"
+  val dbname = HiveTestUtils.createTestDatabase
   private val table = "constraints_test_" + System.currentTimeMillis()
 
   override def afterAll(): Unit = Try {

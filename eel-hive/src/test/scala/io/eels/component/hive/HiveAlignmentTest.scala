@@ -11,7 +11,7 @@ class HiveAlignmentTest extends FunSuite with Matchers {
 
   import HiveConfig._
 
-  private val dbname = "default"
+  val dbname = HiveTestUtils.createTestDatabase
   private val table = "align_test_" + System.currentTimeMillis()
 
   test("pad a row with nulls") {

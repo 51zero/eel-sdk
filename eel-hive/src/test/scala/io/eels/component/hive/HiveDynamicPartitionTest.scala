@@ -13,7 +13,7 @@ class HiveDynamicPartitionTest extends FunSuite with Matchers with BeforeAndAfte
 
   import HiveConfig._
 
-  val dbname = "default"
+  val dbname = HiveTestUtils.createTestDatabase
   val table = "dynp_test_" + System.currentTimeMillis()
 
   val schema = StructType(Field("a"), Field("b"))

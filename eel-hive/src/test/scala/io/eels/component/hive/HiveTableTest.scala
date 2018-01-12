@@ -13,7 +13,7 @@ class HiveTableTest extends FunSuite with Matchers {
 
   import HiveConfig._
 
-  val dbname = "default"
+  val dbname = HiveTestUtils.createTestDatabase
   val table = "test_table_" + System.currentTimeMillis()
 
   Try {

@@ -13,7 +13,7 @@ class HiveStatsTest extends FunSuite with Matchers with BeforeAndAfterAll {
 
   import HiveConfig._
 
-  private val dbname = "default"
+  private val dbname = HiveTestUtils.createTestDatabase
   private val table = "stats_test_" + System.currentTimeMillis()
   private val partitioned_table = "stats_test2_" + System.currentTimeMillis()
 
@@ -21,6 +21,7 @@ class HiveStatsTest extends FunSuite with Matchers with BeforeAndAfterAll {
     Field("a", StringType),
     Field("b", IntType.Signed)
   )
+
   def createRow = Row(schema, Seq(Random.shuffle(List("a", "b", "c")).head, Random.shuffle(List(1, 2, 3, 4, 5)).head))
 
   val amount = 10000
