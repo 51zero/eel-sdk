@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.sksamuel.exts.Logging
 import com.typesafe.config.{Config, ConfigFactory}
-import io.eels.schema.{Field, StringType, StructType}
+import io.eels.schema.{DataType, Field, StringType, StructType}
 import io.eels.{Sink, SinkWriter}
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client._
@@ -51,11 +51,18 @@ case class HbaseSink(namespace: String,
 
   def withSerializer(serializer: HbaseSerializer): HbaseSink = copy(serializer = serializer)
 
-  def withFieldKey(name: String): HbaseSink = withFieldKey(Field(name = name))
+  def withField(name: String, dataType: DataType, columnFamily: String): HbaseSink = withField(Field(name = name, dataType = dataType, columnFamily = Option(columnFamily)))
 
-  def withFieldKey(field: Field): HbaseSink = copy(
-    hbaseSchema = hbaseSchema.addField(Field(field.name, field.dataType, field.nullable, field.partition, field.comment, key = true, field.defaultValue, field.metadata))
-  )
+  def withField(field: Field): HbaseSink = copy(hbaseSchema = hbaseSchema.addField(field.copy(key = false)))
+
+  def markFieldAsKey(name: String): HbaseSink = {
+    val foundField = hbaseSchema.fields.find(_.name == name).getOrElse(sys.error(s"Field '$name' not found in schema"))
+    copy(hbaseSchema = hbaseSchema.removeField(foundField.name).addField(foundField.copy(key = true, columnFamily = None)))
+  }
+
+  def withFieldKey(name: String, dataType: DataType): HbaseSink = withFieldKey(Field(name = name, dataType = dataType))
+
+  def withFieldKey(field: Field): HbaseSink = copy(hbaseSchema = hbaseSchema.addField(field.copy(key = true, columnFamily = None)))
 
   def withColumnFamily(cf: String, fields: String*): HbaseSink = withColumnFamily(cf, fields.toList)
 

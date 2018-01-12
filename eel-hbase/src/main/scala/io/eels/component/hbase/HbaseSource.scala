@@ -6,7 +6,7 @@ import com.sksamuel.exts.Logging
 import com.sksamuel.exts.io.Using
 import io.eels._
 import io.eels.datastream.Publisher
-import io.eels.schema.{Field, StringType, StructType}
+import io.eels.schema.{DataType, Field, StringType, StructType}
 import org.apache.commons.net.ntp.TimeStamp
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Consistency, IsolationLevel}
@@ -55,17 +55,23 @@ case class HbaseSource(namespace: String,
                        implicit val connection: Connection = ConnectionFactory.createConnection(HBaseConfiguration.create())
                       ) extends Source with Logging with Using with AutoCloseable {
 
-  override def parts(): Seq[Publisher[Seq[Row]]] = Seq(new HbasePublisher(connection, schema, namespace, table, bufferSize, maxRows, HbaseScanner(this), serializer))
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
+    val mappedSchema = schema.removeField(HbaseSource.unverifiedField.name)
+    Seq(new HbasePublisher(connection, mappedSchema, namespace, table, bufferSize, maxRows, HbaseScanner(mappedSchema, this), serializer))
+  }
 
   override def close(): Unit = connection.close()
 
   def statistics(): HbaseStatistics = HbaseStatistics(namespace, table)
 
-  def withFieldKey(name: String): HbaseSource = withFieldKey(schema.fields.find(_.name == name).getOrElse(sys.error(s"Field '$name' not found in schema")))
+  def markFieldAsKey(name: String): HbaseSource = {
+    val foundField = schema.fields.find(_.name == name).getOrElse(sys.error(s"Field '$name' not found in schema"))
+    copy(schema = schema.removeField(foundField.name).addField(foundField.copy(key = true, columnFamily = None)))
+  }
 
-  def withFieldKey(field: Field): HbaseSource = copy(
-    schema = schema.addField(Field(field.name, field.dataType, field.nullable, field.partition, field.comment, key = true, field.defaultValue, field.metadata))
-  )
+  def withFieldKey(name: String, dataType: DataType): HbaseSource = withFieldKey(Field(name = name, dataType = dataType))
+
+  def withFieldKey(field: Field): HbaseSource = copy(schema = schema.addField(field.copy(key = true, columnFamily = None)))
 
   def withSchema(schema: StructType): HbaseSource = copy(schema = schema)
 
@@ -79,11 +85,9 @@ case class HbaseSource(namespace: String,
     copy(startKey = Option(startKey), stopKey = Option(stopKey), stopKeyInclusive = stopKeyInclusive)
   }
 
-  def withField(cf: String, field: Field): HbaseSource = {
-    copy(schema = schema.addField(
-      Field(field.name, field.dataType, field.nullable, field.partition, field.comment, key = field.key, field.defaultValue, field.metadata, columnFamily = Option(cf)))
-    )
-  }
+  def withField(name: String, dataType: DataType, columnFamily: String): HbaseSource = withField(Field(name = name, dataType = dataType, columnFamily = Option(columnFamily)))
+
+  def withField(field: Field): HbaseSource = copy(schema = schema.addField(field.copy(key = false)))
 
   def withCacheBlocks(cacheBlocks: Boolean): HbaseSource = copy(cacheBlocks = Option(cacheBlocks))
 
@@ -99,7 +103,10 @@ case class HbaseSource(namespace: String,
 
   def withTimeSTamp(timeStamp: Long): HbaseSource = copy(timeStamp = Option(timeStamp))
 
-  def withRowPrefixFilter(rowPrefixFilter: Array[Byte]): HbaseSource = copy(rowPrefixFilter = Option(rowPrefixFilter))
+  def withRowPrefixFilter(value: AnyRef): HbaseSource = {
+    val keyField = schema.fields.find(_.key).getOrElse(sys.error("Key field not defined!"))
+    copy(rowPrefixFilter = Option(serializer.toBytes(value, name = keyField.name, dataType = keyField.dataType)))
+  }
 
   def withMaxVersions(maxVersions: Int): HbaseSource = copy(maxVersions = Option(maxVersions))
 

@@ -3,6 +3,7 @@ package io.eels.component.hbase
 import javax.sql.DataSource
 
 import com.sksamuel.exts.Logging
+import io.eels.Predicate
 import io.eels.component.jdbc.JdbcSource
 import io.eels.schema._
 import org.apache.commons.dbcp.BasicDataSource
@@ -11,6 +12,9 @@ import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, NamespaceDescriptor, TableName}
 
 object HbaseTestApp extends App with HbaseTests with Logging {
+
+  private val serializer: HbaseSerializer = HbaseSerializer.standardSerializer
+
   // Setup JDBC data in H2 in-memory database
   private val dataSource = new BasicDataSource
   dataSource.setDriverClassName("org.h2.Driver")
@@ -18,60 +22,192 @@ object HbaseTestApp extends App with HbaseTests with Logging {
   dataSource.setInitialSize(4)
   createSourceData()
 
+  val hbaseSchema = StructType(
+    Field(name = "NAME", dataType = StringType, key = true),
+    Field(name = "AGE", dataType = IntType.Signed, columnFamily = Option("cf1")),
+    Field(name = "SALARY", dataType = DecimalType(38, 5), columnFamily = Option("cf1"))
+  )
+
   private val cluster = startHBaseCluster("hbase-cluster")
   createHBaseTables()
 
-  testHbase()
+  val hbaseConnection = ConnectionFactory.createConnection(cluster.getConfiguration)
 
+  // readWriteWithSchema()
+  // readWriteWithFieldDefs()
+  // readingWithSpecificRow()
+  // readingHbaseSourceStats()
+  // readWithRowKeyPrefix()
+  // readWithKeyRange()
+  readWithNumericRange()
+
+
+  hbaseConnection.close()
   System.exit(0)
 
-  def testHbase(): Unit = {
-    val hbaseConnection = ConnectionFactory.createConnection(cluster.getConfiguration)
+  def readWriteWithSchema(): Unit = {
+    upsertData()
 
-    val hbaseSchema = StructType(
-      Field(name = "NAME", dataType = StringType, key = true),
-      Field(name = "AGE", dataType = IntType.Signed, columnFamily = Option("cf1")),
-      Field(name = "SALARY", dataType = DecimalType(38, 5), columnFamily = Option("cf1"))
-    )
-
-    val query = "SELECT NAME, AGE, SALARY FROM PERSON"
-
-    logger.info("Writing from JDBC to HBase...")
-    JdbcSource(() => dataSource.getConnection, query)
-      .toDataStream()
-      .to(HbaseSink(namespace = "test", table = "person", connection = hbaseConnection)
-        // .withSerializer(HbaseSerializer.orderedDescendingSerializer)
-        .withSchema(hbaseSchema)
-      )
-
-    logger.info("Reading from HBase...")
+    println("Reading from HBase...")
     HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
-      // .withSerializer(HbaseSerializer.orderedDescendingSerializer)
+      .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .toDataStream()
       .collect
       .foreach(println)
+  }
 
-    logger.info("Reading a specific row using the key...")
+  def readWriteWithFieldDefs(): Unit = {
+    println("Writing from JDBC to HBase...")
+    val query = "SELECT NAME, AGE, SALARY FROM PERSON"
+    JdbcSource(() => dataSource.getConnection, query)
+      .toDataStream()
+      .to(HbaseSink(namespace = "test", table = "person", connection = hbaseConnection)
+        .withSerializer(serializer)
+        .withFieldKey("NAME", StringType)
+        .withField("AGE", IntType.Signed, "cf1")
+        .withField("SALARY", DecimalType(38, 5), "cf1")
+      )
+
+    println("Reading from HBase...")
     HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
-      // .withSerializer(HbaseSerializer.orderedDescendingSerializer)
+      .withSerializer(serializer)
+      .withFieldKey("NAME", StringType)
+      .withField("AGE", IntType.Signed, "cf1")
+      .withField("SALARY", DecimalType(38, 5), "cf1")
+      .toDataStream()
+      .collect
+      .foreach(println)
+  }
+
+
+  def readingWithSpecificRow(): Unit = {
+    upsertData()
+
+    println("Reading a specific row using the key 'Gary'...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withPredicate(HbasePredicate.equals("NAME", "Gary"))
       .toDataStream()
       .collect
       .foreach(println)
 
-    logger.info("Reading rows with projection")
+    println("Reading rows with projection")
     HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
-      // .withSerializer(HbaseSerializer.orderedDescendingSerializer)
+      .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withProjection("AGE")
       .toDataStream()
       .collect
       .foreach(println)
+  }
+
+  def readWithRowKeyPrefix(): Unit = {
+    upsertData()
+
+    println("Reading specific rows using row key prefix of 'G' ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withRowPrefixFilter("G")
+      .toDataStream()
+      .collect
+      .foreach(println)
+  }
+
+  def readWithKeyRange(): Unit = {
+    upsertData()
+
+    println("Reading specific rows with filter: Key >= 'F' and Key <= 'G' ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withKeyValueRange(startKey = "F", stopKey = "G", stopKeyInclusive = true)
+      .toDataStream()
+      .collect
+      .foreach(println)
+
+    println("Reading specific rows with filter: Key >= 'F' and Key < 'G' ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withKeyValueRange(startKey = "F", stopKey = "G")
+      .toDataStream()
+      .collect
+      .foreach(println)
+
+    println("Reading specific rows with filter: Key >= 'F' ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withKeyValue(startKey = "F")
+      .toDataStream()
+      .collect
+      .foreach(println)
+  }
+
+  def readWithNumericRange(): Unit = {
+    upsertData()
+
+    println("Reading specific rows with filter: age >= 50 ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.gte("AGE", 50))
+      .toDataStream()
+      .collect
+      .foreach(println)
+
+    println("Reading specific rows with filter: age >= 30 and age <= 50 ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.and(Predicate.gte("AGE", 30), Predicate.lte("AGE", 50)))
+      .toDataStream()
+      .collect
+      .foreach(println)
+
+    println("Reading specific rows with filter: age = 33 or age = 46 ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.or(Predicate.equals("AGE", 33), Predicate.equals("AGE", 46)))
+      .toDataStream()
+      .collect
+      .foreach(println)
+
+    // todo not returning rows
+    println("Reading specific rows with filter: salary >= 1200000 and salary <= 1200000.99 ...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.and(Predicate.gte("SALARY", BigDecimal("1200000")), Predicate.lte("SALARY", BigDecimal("1200000.99"))))
+      .toDataStream()
+      .collect
+      .foreach(println)
+  }
+
+  def readingHbaseSourceStats(): Unit = {
+    upsertData()
+
+    println("Reading stats...")
+    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .statistics()
+      .columnFamilies
+      .foreach(println)
+  }
 
 
-    hbaseConnection.close()
+  private def upsertData(): Unit = {
+    println("Writing from JDBC to HBase...")
+    val query = "SELECT NAME, AGE, SALARY FROM PERSON"
+    JdbcSource(() => dataSource.getConnection, query)
+      .toDataStream()
+      .to(HbaseSink(namespace = "test", table = "person", connection = hbaseConnection)
+        .withSerializer(serializer)
+        .withSchema(hbaseSchema)
+      )
   }
 
   private def createHBaseTables(): Unit = {

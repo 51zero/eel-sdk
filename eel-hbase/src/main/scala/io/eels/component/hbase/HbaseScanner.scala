@@ -1,5 +1,7 @@
 package io.eels.component.hbase
 
+import io.eels.component.hbase.HbaseScanner.copy
+import io.eels.schema.StructType
 import org.apache.hadoop.hbase.client.Scan
 
 /**
@@ -7,19 +9,22 @@ import org.apache.hadoop.hbase.client.Scan
   */
 object HbaseScanner {
 
-  def apply(hbaseSource: HbaseSource)(implicit serializer: HbaseSerializer): Scan = {
+  def apply(schema: StructType, hbaseSource: HbaseSource)(implicit serializer: HbaseSerializer): Scan = {
     val scan = new Scan
-    val keyField = hbaseSource.schema.fields.find(_.key).getOrElse(sys.error("HBase requires a single column to be define as a key"))
+    val keyField = schema.fields.find(_.key).getOrElse(sys.error("HBase requires a single column to be define as a key"))
     hbaseSource.cacheBlocks.map(scan.setCacheBlocks)
     hbaseSource.caching.map(scan.setCaching)
     hbaseSource.batch.map(scan.setBatch)
     hbaseSource.startKey.map(startKey => scan.withStartRow(copy(serializer.toBytes(startKey, keyField.name, keyField.dataType))))
     hbaseSource.stopKey.map { key =>
-      val stopKey = copy(serializer.toBytes(key, keyField.name, keyField.dataType))
       // If the stop key is marked as inclusive then increment the last byte by one - not fully tested
-      if (hbaseSource.stopKeyInclusive) {
+      val stopKey = if (hbaseSource.stopKeyInclusive) {
+        val stopKey = copy(serializer.toBytes(key, keyField.name, keyField.dataType))
         val lastByteIncremented = (stopKey.last.toShort + 1).toByte
         stopKey(stopKey.length - 1) = if (lastByteIncremented > stopKey.last) lastByteIncremented else stopKey.last
+        stopKey
+      } else {
+        copy(serializer.toBytes(key, keyField.name, keyField.dataType))
       }
       scan.withStopRow(stopKey)
     }
@@ -42,7 +47,7 @@ object HbaseScanner {
     hbaseSource.filterList.foreach(scan.setFilter)
 
     // Set up column projection schema
-    hbaseSource.schema.fields
+    schema.fields
       .filter(!_.key)
       .foreach(f => scan.addColumn(f.columnFamily.get.getBytes, f.name.getBytes))
 
