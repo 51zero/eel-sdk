@@ -10,10 +10,27 @@ import org.apache.commons.dbcp.BasicDataSource
 import org.apache.hadoop.hbase.client.ConnectionFactory
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, NamespaceDescriptor, TableName}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
-object HbaseTestApp extends App with HbaseTests with Logging {
+import scala.util.Try
+
+class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll with Logging {
 
   private val serializer: HbaseSerializer = HbaseSerializer.standardSerializer
+
+  val sqlCmds = Seq(
+    "CREATE TABLE IF NOT EXISTS PERSON(NAME VARCHAR(30), AGE INT, SALARY NUMBER(38,5))",
+    "INSERT INTO PERSON VALUES ('Fred', 55, 650000.34)",
+    "INSERT INTO PERSON VALUES ('Gary', 46, 1200000.45)",
+    "INSERT INTO PERSON VALUES ('Jane', 21, 350000.23)",
+    "INSERT INTO PERSON VALUES ('Steve', 55, 1000000.654)",
+    "INSERT INTO PERSON VALUES ('Geoff', 45, 950000.876)",
+    "INSERT INTO PERSON VALUES ('Neil', 55, 1050000.23)",
+    "INSERT INTO PERSON VALUES ('Alice', 33, 450000.98)",
+    "INSERT INTO PERSON VALUES ('May', 29, 650000.34)",
+    "INSERT INTO PERSON VALUES ('Joanna', 38, 570000.34)",
+    "INSERT INTO PERSON VALUES ('Anne', 58, 880000.34)"
+  )
 
   // Setup JDBC data in H2 in-memory database
   private val dataSource = new BasicDataSource
@@ -29,35 +46,32 @@ object HbaseTestApp extends App with HbaseTests with Logging {
   )
 
   private val cluster = startHBaseCluster("hbase-cluster")
-  createHBaseTables()
 
   val hbaseConnection = ConnectionFactory.createConnection(cluster.getConfiguration)
 
-  // readWriteWithSchema()
-  // readWriteWithFieldDefs()
-  // readingWithSpecificRow()
-  // readingHbaseSourceStats()
-  // readWithRowKeyPrefix()
-  // readWithKeyRange()
-  readWithNumericRange()
+  override def beforeAll(): Unit = Try {
+    createHBaseTables()
+  }
 
+  override def afterAll(): Unit = Try {
+    hbaseConnection.close()
+  }
 
-  hbaseConnection.close()
-  System.exit(0)
-
-  def readWriteWithSchema(): Unit = {
+  test("readWriteWithSchema") {
     upsertData()
 
     println("Reading from HBase...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val list = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .toDataStream()
       .collect
-      .foreach(println)
+
+    list.foreach(println)
+    assert(list.length == sqlCmds.length - 1)
   }
 
-  def readWriteWithFieldDefs(): Unit = {
+  test("readWriteWithFieldDefs") {
     println("Writing from JDBC to HBase...")
     val query = "SELECT NAME, AGE, SALARY FROM PERSON"
     JdbcSource(() => dataSource.getConnection, query)
@@ -81,7 +95,7 @@ object HbaseTestApp extends App with HbaseTests with Logging {
   }
 
 
-  def readingWithSpecificRow(): Unit = {
+  test("readingWithSpecificRow") {
     upsertData()
 
     println("Reading a specific row using the key 'Gary'...")
@@ -91,7 +105,11 @@ object HbaseTestApp extends App with HbaseTests with Logging {
       .withPredicate(HbasePredicate.equals("NAME", "Gary"))
       .toDataStream()
       .collect
-      .foreach(println)
+      .foreach { r =>
+        println(r)
+        assert(r.get("NAME") == "Gary")
+      }
+
 
     println("Reading rows with projection")
     HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
@@ -100,82 +118,105 @@ object HbaseTestApp extends App with HbaseTests with Logging {
       .withProjection("AGE")
       .toDataStream()
       .collect
-      .foreach(println)
+      .foreach { r =>
+        println(r)
+        assert(r.values.length == 2) // Column length of projection always includes the key column
+      }
   }
 
-  def readWithRowKeyPrefix(): Unit = {
+  test("readWithRowKeyPrefix") {
     upsertData()
 
     println("Reading specific rows using row key prefix of 'G' ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val list = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withRowPrefixFilter("G")
       .toDataStream()
       .collect
-      .foreach(println)
+
+    // print them
+    list.foreach(println)
+
+    // Assert the values
+    assert(list.length == 2)
+    assert {
+      list.count(r => r("NAME").toString.startsWith("G")) == list.length
+    }
   }
 
-  def readWithKeyRange(): Unit = {
+  test("readWithKeyRange") {
     upsertData()
 
     println("Reading specific rows with filter: Key >= 'F' and Key <= 'G' ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val names = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withKeyValueRange(startKey = "F", stopKey = "G", stopKeyInclusive = true)
       .toDataStream()
-      .collect
-      .foreach(println)
+      .collect.map(_ ("NAME").toString)
+
+    names.foreach(println)
+    assert(names == Seq("Fred", "Gary", "Geoff"))
+
 
     println("Reading specific rows with filter: Key >= 'F' and Key < 'G' ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val names2 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withKeyValueRange(startKey = "F", stopKey = "G")
       .toDataStream()
-      .collect
-      .foreach(println)
+      .collect.map(_ ("NAME").toString)
 
-    println("Reading specific rows with filter: Key >= 'F' ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
-      .withSerializer(serializer)
-      .withSchema(hbaseSchema)
-      .withKeyValue(startKey = "F")
-      .toDataStream()
-      .collect
-      .foreach(println)
+    names2.foreach(println)
+    assert(names2 == Seq("Fred"))
+
+    /*  TODO
+        println("Reading specific rows with filter: Key >= 'F' ...")
+        val names3 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+          .withSerializer(serializer)
+          .withSchema(hbaseSchema)
+          .withKeyValue(startKey = "F")
+          .toDataStream()
+          .collect.map(_ ("NAME").toString)
+
+        names3.foreach(println)
+        assert(names3 == Seq("Fred", "Gary", "Jane", "Steve", "Geoff", "Neil", "May", "Joanna").sorted)
+    */
   }
 
-  def readWithNumericRange(): Unit = {
+  test("readWithNumericRange") {
     upsertData()
 
     println("Reading specific rows with filter: age >= 50 ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val result1 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withPredicate(Predicate.gte("AGE", 50))
       .toDataStream()
-      .collect
-      .foreach(println)
+      .collect.map(_ ("NAME").toString)
+    result1.foreach(println)
+    assert(result1 == Seq("Fred", "Steve", "Neil", "Anne").sorted)
 
     println("Reading specific rows with filter: age >= 30 and age <= 50 ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val result2 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withPredicate(Predicate.and(Predicate.gte("AGE", 30), Predicate.lte("AGE", 50)))
       .toDataStream()
-      .collect
-      .foreach(println)
+      .collect.map(_ ("NAME").toString)
+    result2.foreach(println)
+    assert(result2 == Seq("Gary", "Geoff", "Alice", "Joanna").sorted)
 
     println("Reading specific rows with filter: age = 33 or age = 46 ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val result3 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
       .withPredicate(Predicate.or(Predicate.equals("AGE", 33), Predicate.equals("AGE", 46)))
       .toDataStream()
-      .collect
-      .foreach(println)
+      .collect.map(_ ("NAME").toString)
+    result3.foreach(println)
+    assert(result3 == Seq("Gary", "Alice").sorted)
 
     // todo not returning rows
     println("Reading specific rows with filter: salary >= 1200000 and salary <= 1200000.99 ...")
@@ -188,14 +229,15 @@ object HbaseTestApp extends App with HbaseTests with Logging {
       .foreach(println)
   }
 
-  def readingHbaseSourceStats(): Unit = {
+  test("readingHbaseSourceStats") {
     upsertData()
 
     println("Reading stats...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val cf = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .statistics()
       .columnFamilies
-      .foreach(println)
+    cf.foreach(println)
+    assert(cf.length == 1)
   }
 
 
@@ -221,19 +263,6 @@ object HbaseTestApp extends App with HbaseTests with Logging {
   }
 
   private def createSourceData(): Unit = {
-    val sqlCmds = Seq(
-      "CREATE TABLE IF NOT EXISTS PERSON(NAME VARCHAR(30), AGE INT, SALARY NUMBER(38,5))",
-      "INSERT INTO PERSON VALUES ('Fred', 55, 650000.34)",
-      "INSERT INTO PERSON VALUES ('Gary', 46, 1200000.45)",
-      "INSERT INTO PERSON VALUES ('Jane', 21, 350000.23)",
-      "INSERT INTO PERSON VALUES ('Steve', 55, 1000000.654)",
-      "INSERT INTO PERSON VALUES ('Geoff', 45, 950000.876)",
-      "INSERT INTO PERSON VALUES ('Neil', 55, 1050000.23)",
-      "INSERT INTO PERSON VALUES ('Alice', 33, 450000.98)",
-      "INSERT INTO PERSON VALUES ('May', 29, 650000.34)",
-      "INSERT INTO PERSON VALUES ('Joanna', 38, 570000.34)",
-      "INSERT INTO PERSON VALUES ('Anne', 58, 880000.34)"
-    )
     executeBatchSql(dataSource, sqlCmds)
   }
 
