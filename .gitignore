@@ -28,3 +28,6 @@ parquet-speed-test
 orc-speed-test
 miniclusters
 *.crc
+hive_test_*
+*.parquet
+*.orc

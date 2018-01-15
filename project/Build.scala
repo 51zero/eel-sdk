@@ -200,10 +200,17 @@ object Build extends Build {
           <connection>scm:git@github.com:51zero/eel-sdk.git</connection>
         </scm>
         <developers>
+/*
           <developer>
             <id>hannesmiller</id>
             <name>hannesmiller</name>
             <url>https://github.com/51zero</url>
+          </developer>
+*/
+          <developer>
+            <id>sksamuel</id>
+            <name>sksamuel</name>
+            <url>http://github.com/sksamuel</url>
           </developer>
         </developers>
     }
