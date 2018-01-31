@@ -30,6 +30,8 @@ object OrcSchemaFns {
         }
       case TimestampMillisType => TypeDescription.createTimestamp()
       case VarcharType(size) => TypeDescription.createVarchar().withMaxLength(size)
+      case unsupportedDataType =>
+        throw new UnsupportedOperationException(s"type ${unsupportedDataType.toString} is not supported by ORC")
     }
   }
 
