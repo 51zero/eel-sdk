@@ -29,7 +29,7 @@ class DecimalWriterTest extends FunSuite {
     if (fileSystem.exists(path)) fileSystem.delete(path, false)
 
     // Write out the decimal values
-    val parquetWriter = RowParquetWriterFn(path = path, schema = schema, metadata = Map.empty, dictionary = false, roundingMode = RoundingMode.UP)
+    val parquetWriter = RowParquetWriterFn(path = path, schema = schema, metadata = Map.empty, dictionary = false, roundingMode = RoundingMode.UP, fileSystem.getConf)
     expectedBigDecimals.foreach { expectedBigDecimal =>
       println(s"Writing row with value $expectedBigDecimal")
       parquetWriter.write(Row.fromMap(schema, Map("bd" -> expectedBigDecimal)))
