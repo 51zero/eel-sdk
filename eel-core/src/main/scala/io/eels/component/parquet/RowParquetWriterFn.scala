@@ -35,7 +35,8 @@ object RowParquetWriterFn {
             schema: StructType,
             metadata: Map[String, String],
             dictionary: Boolean,
-            roundingMode: RoundingMode): ParquetWriter[Row] = {
+            roundingMode: RoundingMode,
+            fsConfig: Configuration): ParquetWriter[Row] = {
     val config = ParquetWriterConfig()
     val messageType = ParquetSchemaFns.toParquetMessageType(schema)
     new RowParquetWriterBuilder(path, messageType, roundingMode, metadata)
@@ -46,6 +47,7 @@ object RowParquetWriterFn {
       .withValidation(config.validating)
       .withWriteMode(ParquetFileWriter.Mode.CREATE)
       .withWriterVersion(ParquetProperties.WriterVersion.PARQUET_1_0)
+      .withConf(fsConfig)
       .build()
   }
 }

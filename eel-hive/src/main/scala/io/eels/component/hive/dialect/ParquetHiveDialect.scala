@@ -66,7 +66,7 @@ case class ParquetHiveDialect(options: ParquetWriteOptions = ParquetWriteOptions
 
       private val _records = new AtomicInteger(0)
       logger.debug(s"Creating parquet writer at $path")
-      private val writer = RowParquetWriterFn(path, schema, metadata, true, roundingMode)
+      private val writer = RowParquetWriterFn(path, schema, metadata, true, roundingMode, fs.getConf)
 
       override def write(row: Row) {
         require(row.values.nonEmpty, "Attempting to write an empty row")

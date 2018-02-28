@@ -41,7 +41,7 @@ case class ParquetSink(path: Path, options: ParquetWriteOptions = ParquetWriteOp
     if (options.overwrite && fs.exists(path))
       fs.delete(path, false)
 
-    val writer = RowParquetWriterFn(path, schema, options.metadata, options.dictionary, options.roundingMode)
+    val writer = RowParquetWriterFn(path, schema, options.metadata, options.dictionary, options.roundingMode, fs.getConf)
 
     override def write(row: Row): Unit = {
       writer.write(row)
