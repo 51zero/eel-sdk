@@ -28,7 +28,7 @@ class JdbcInserter(val connFn: () => Connection,
     try {
       batch.foreach { row =>
         row.values.zipWithIndex.foreach { case (value, k) =>
-          stmt.setObject(k + 1, value)
+          dialect.setObject(k, value, row.schema.field(k), stmt, conn)
         }
         stmt.addBatch()
       }

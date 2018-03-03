@@ -11,7 +11,10 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
   // generic jdbc will just return the values as is
   override def sanitize(value: Any): Any = value
 
-  override def toJdbcType(field: Field): String = field.dataType match {
+  override def toJdbcType(field: Field): String =
+    toJdbcType(field.dataType)
+
+  def toJdbcType(dataType: DataType): String = dataType match {
     case BigIntType => "int"
     case BinaryType => "binary"
     case BooleanType => "boolean"
@@ -33,7 +36,7 @@ class GenericJdbcDialect extends JdbcDialect with Logging {
         logger.warn(s"Invalid size $size specified for varchar; defaulting to 255")
         "varchar(255)"
       }
-    case _ => sys.error(s"Unsupported data type with JDBC Sink: ${field.dataType}")
+    case _ => sys.error(s"Unsupported data type with JDBC Sink: $dataType")
   }
 
   private def decimalType(column: Int, metadata: ResultSetMetaData): DecimalType = {
