@@ -14,7 +14,14 @@ import scala.math.BigDecimal.RoundingMode.RoundingMode
 // accepts a scala/java value and writes it out to a record consumer as
 // the appropriate parquet type
 trait RecordWriter {
-  def write(record: RecordConsumer, value: Any): Unit
+  def _write(record: RecordConsumer, value: Any): Unit
+
+  def write(record: RecordConsumer, value: Any): Unit = {
+    value match {
+      case Some(someValue) => _write(record, someValue)
+      case _ => _write(record, value)
+    }
+  }
 }
 
 object RecordWriter {
@@ -46,7 +53,7 @@ object RecordWriter {
 class MapRecordWriter(mapType: MapType,
                       keyWriter: RecordWriter,
                       valueWriter: RecordWriter) extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     val map = MapCoercer.coerce(value)
 
     record.startGroup()
@@ -70,7 +77,7 @@ class MapRecordWriter(mapType: MapType,
 }
 
 class ArrayRecordWriter(nested: RecordWriter) extends RecordWriter with Logging {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
 
     val seq = SequenceCoercer.coerce(value)
 
@@ -99,7 +106,7 @@ class StructRecordWriter(structType: StructType,
 
   val writers = structType.fields.map(_.dataType).map(RecordWriter.apply(_, roundingMode))
 
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     require(record != null)
     if (nested)
       record.startGroup()
@@ -121,7 +128,7 @@ class StructRecordWriter(structType: StructType,
 }
 
 object BinaryParquetWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     value match {
       case array: Array[Byte] => record.addBinary(Binary.fromReusedByteArray(array))
       case seq: Seq[Byte] => write(record, seq.toArray)
@@ -135,7 +142,7 @@ class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMo
 
   private val byteSizeForPrecision = ParquetSchemaFns.byteSizeForPrecision(precision.value)
 
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     val bd = BigDecimalCoercer.coerce(value)
       .setScale(scale.value, roundingMode)
       .underlying()
@@ -160,7 +167,7 @@ class DecimalWriter(precision: Precision, scale: Scale, roundingMode: RoundingMo
 }
 
 object BigIntRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addLong(BigIntegerCoercer.coerce(value).longValue)
   }
 }
@@ -170,7 +177,7 @@ object DateRecordWriter extends RecordWriter {
   private val UnixEpoch = LocalDate.of(1970, 1, 1)
 
   // should write out number of days since unix epoch
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     value match {
       case date: java.sql.Date =>
         val local = Instant.ofEpochMilli(date.getTime).atZone(ZoneId.systemDefault).toLocalDate
@@ -187,7 +194,7 @@ object TimeRecordWriter extends RecordWriter {
 
   // first 8 bytes are the nanoseconds
   // second 4 bytes are the days
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     val timestamp = TimestampCoercer.coerce(value)
     val nanos = timestamp.getNanos
     val dt = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.systemDefault)
@@ -202,7 +209,7 @@ object TimestampRecordWriter extends RecordWriter {
 
   private val JulianEpochInGregorian = LocalDateTime.of(-4713, 11, 24, 0, 0, 0)
 
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     val timestamp = TimestampCoercer.coerce(value)
     val dt = Instant.ofEpochMilli(timestamp.getTime).atZone(ZoneId.systemDefault)
     val days = ChronoUnit.DAYS.between(JulianEpochInGregorian, dt).toInt
@@ -214,43 +221,43 @@ object TimestampRecordWriter extends RecordWriter {
 }
 
 object StringRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addBinary(Binary.fromString(StringCoercer.coerce(value)))
   }
 }
 
 object ShortParquetWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addInteger(ShortCoercer.coerce(value))
   }
 }
 
 object DoubleRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addDouble(DoubleCoercer.coerce(value))
   }
 }
 
 object FloatRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addFloat(FloatCoercer.coerce(value))
   }
 }
 
 object BooleanRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addBoolean(BooleanCoercer.coerce(value))
   }
 }
 
 object LongRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addLong(LongCoercer.coerce(value))
   }
 }
 
 object IntRecordWriter extends RecordWriter {
-  override def write(record: RecordConsumer, value: Any): Unit = {
+  override def _write(record: RecordConsumer, value: Any): Unit = {
     record.addInteger(IntCoercer.coerce(value))
   }
 }
