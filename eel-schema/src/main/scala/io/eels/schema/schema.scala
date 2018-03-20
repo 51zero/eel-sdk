@@ -300,7 +300,7 @@ object StructType {
       val fields = tpe.declarations.collect {
         case m: MethodSymbol if m.isCaseAccessor =>
           val dataType = process(m.returnType)
-          val nullable = m.returnType.isInstanceOf[Option[_]]
+          val nullable = m.returnType <:< typeOf[Option[Any]]
           Field(fieldNameStrategy.fieldName(m.name.toString), dataType, nullable)
       }
       StructType(fields.toList)
@@ -311,6 +311,8 @@ object StructType {
       if (tpe <:< typeOf[scala.collection.Seq[Any]]) {
         // val dataType = process(tpe.typeConstructor..head)
         ArrayType(StringType)
+      } else if (tpe <:< typeOf[Option[Any]]) {
+        process(tpe.typeArgs(0))
       } else if (tpe <:< typeOf[Product]) {
         struct(tpe)
       } else {
