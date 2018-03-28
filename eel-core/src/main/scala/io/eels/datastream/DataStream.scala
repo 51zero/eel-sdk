@@ -285,12 +285,16 @@ trait DataStream extends Logging {
   def iterator: Iterator[Row] = {
     val queue = new LinkedBlockingQueue[Row]()
     val executor = Executors.newSingleThreadExecutor()
-    self.subscribe(new Subscriber[Seq[Row]] {
-      override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
-      override def completed(): Unit = queue.put(Row.SentinelSingle)
-      override def error(t: Throwable): Unit = queue.put(Row.SentinelSingle)
-      override def subscribed(c: Subscription): Unit = ()
-    })
+    executor.submit(new Runnable {
+      override def run(): Unit =
+        self.subscribe(new Subscriber[Seq[Row]] {
+          override def next(t: Seq[Row]): Unit = t.foreach(queue.put)
+          override def completed(): Unit = queue.put(Row.SentinelSingle)
+          override def error(t: Throwable): Unit = queue.put(Row.SentinelSingle)
+          override def subscribed(c: Subscription): Unit = ()
+        })
+      }
+    )
     executor.shutdown()
     BlockingQueueConcurrentIterator(queue, Row.SentinelSingle)
   }

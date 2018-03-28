@@ -15,6 +15,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scala.util.Random
 
 class ParquetSinkTest extends FlatSpec with Matchers {
+  Class.forName("org.h2.Driver")
 
   private implicit val conf = new Configuration()
   private implicit val fs = FileSystem.get(conf)
