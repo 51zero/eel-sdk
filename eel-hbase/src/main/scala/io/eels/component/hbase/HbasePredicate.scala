@@ -62,7 +62,7 @@ object HbasePredicate {
   }
 
   def hbaseComparator[T](comparableClass: Class[T], name: String, dataType: DataType, value: Any)
-                        (implicit schema: StructType, serializer: HbaseSerializer): ByteArrayComparable = (comparableClass, name) match {
+                        (implicit schema: StructType, serializer: HbaseSerializer): ByteArrayComparable = (comparableClass, value) match {
     case (ByteComparableClazz, _) => new BinaryComparator(serializer.toBytes(value, name, dataType))
     case (RegexStringComparableClazz, stringValue: String) => new RegexStringComparator(stringValue)
     case (StringComparableClazz, stringValue: String) => new SubstringComparator(stringValue)

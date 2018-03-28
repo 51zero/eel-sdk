@@ -43,7 +43,7 @@ class StandardHbaseSerializer extends HbaseSerializer {
   override def fromBytes(value: Array[Byte], name: String, dataType: DataType): Any = dataType match {
     case StringType | VarcharType(_) | CharType(_) => Bytes.toString(value)
     case DoubleType => Bytes.toDouble(value)
-    case DecimalType(_, _) | DecimalType.Wildcard => Bytes.toBigDecimal(value)
+    case DecimalType(_, _) => Bytes.toBigDecimal(value)
     case ShortType.Signed => Bytes.toShort(value)
     case IntType.Signed => Bytes.toInt(value)
     case LongType.Signed => Bytes.toLong(value)
@@ -58,7 +58,7 @@ class StandardHbaseSerializer extends HbaseSerializer {
   override def toBytes(value: Any, name: String, dataType: DataType): Array[Byte] = dataType match {
     case StringType | VarcharType(_) | CharType(_) => Bytes.toBytes(HbaseCoercers.StringCoercer.coerce(value))
     case DoubleType => Bytes.toBytes(HbaseCoercers.DoubleCoercer.coerce(value))
-    case DecimalType(_, _) | DecimalType.Wildcard => Bytes.toBytes(HbaseCoercers.DecimalCoercer.coerce(value))
+    case DecimalType(_, _) => Bytes.toBytes(HbaseCoercers.DecimalCoercer.coerce(value))
     case ShortType.Signed => Bytes.toBytes(HbaseCoercers.ShortCoercer.coerce(value))
     case IntType.Signed => Bytes.toBytes(HbaseCoercers.IntCoercer.coerce(value))
     case LongType.Signed => Bytes.toBytes(HbaseCoercers.LongCoercer.coerce(value))

@@ -7,7 +7,7 @@ import io.eels.Predicate
 import io.eels.component.jdbc.JdbcSource
 import io.eels.schema._
 import org.apache.commons.dbcp.BasicDataSource
-import org.apache.hadoop.hbase.client.ConnectionFactory
+import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, NamespaceDescriptor, TableName}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -47,7 +47,7 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
 
   private val cluster = startHBaseCluster("hbase-cluster")
 
-  val hbaseConnection = ConnectionFactory.createConnection(cluster.getConfiguration)
+  val hbaseConnection: Connection = ConnectionFactory.createConnection(cluster.getConfiguration)
 
   override def beforeAll(): Unit = Try {
     createHBaseTables()
@@ -95,7 +95,7 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
   }
 
 
-  test("readingWithSpecificRow") {
+  test("readingWithEqualsPredicate") {
     upsertData()
 
     println("Reading a specific row using the key 'Gary'...")
@@ -109,7 +109,10 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
         println(r)
         assert(r.get("NAME") == "Gary")
       }
+  }
 
+  test("readWithProjectedSchema") {
+    upsertData()
 
     println("Reading rows with projection")
     HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
@@ -145,7 +148,7 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
     }
   }
 
-  test("readWithKeyRange") {
+  test("readWithKeyRanges") {
     upsertData()
 
     println("Reading specific rows with filter: Key >= 'F' and Key <= 'G' ...")
@@ -170,22 +173,24 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
 
     names2.foreach(println)
     assert(names2 == Seq("Fred"))
-
-    /*  TODO
-        println("Reading specific rows with filter: Key >= 'F' ...")
-        val names3 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
-          .withSerializer(serializer)
-          .withSchema(hbaseSchema)
-          .withKeyValue(startKey = "F")
-          .toDataStream()
-          .collect.map(_ ("NAME").toString)
-
-        names3.foreach(println)
-        assert(names3 == Seq("Fred", "Gary", "Jane", "Steve", "Geoff", "Neil", "May", "Joanna").sorted)
-    */
   }
 
-  test("readWithNumericRange") {
+  test("readWithKeyRangeWithoutStopKey") {
+    upsertData()
+    println("Reading specific rows with startKey = 'F' ...")
+    val names3 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withKeyValue(startKey = "F")
+      .toDataStream()
+      .collect.map(_ ("NAME").toString)
+
+    // Note the way this works is that the last key is not inclusive
+    names3.foreach(println)
+    assert(names3 == Seq("Fred", "Gary", "Jane", "Geoff", "Neil", "May", "Joanna").sorted)
+  }
+
+  test("readWithNumericRangePredicates") {
     upsertData()
 
     println("Reading specific rows with filter: age >= 50 ...")
@@ -217,16 +222,126 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
       .collect.map(_ ("NAME").toString)
     result3.foreach(println)
     assert(result3 == Seq("Gary", "Alice").sorted)
+  }
+
+  test("readWithCustomPredicates") {
+    upsertData()
+
+    println("Reading specific rows with filter: age >= 50 ...")
+    val result1 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.gte("AGE", 50))
+      .toDataStream()
+      .collect.map(_ ("NAME").toString)
+    result1.foreach(println)
+    assert(result1 == Seq("Fred", "Steve", "Neil", "Anne").sorted)
+
+    println("Reading specific rows with filter: age >= 30 and age <= 50 ...")
+    val result2 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.and(Predicate.gte("AGE", 30), Predicate.lte("AGE", 50)))
+      .toDataStream()
+      .collect.map(_ ("NAME").toString)
+    result2.foreach(println)
+    assert(result2 == Seq("Gary", "Geoff", "Alice", "Joanna").sorted)
+
+    println("Reading specific rows with filter: age = 33 or age = 46 ...")
+    val result3 = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(Predicate.or(Predicate.equals("AGE", 33), Predicate.equals("AGE", 46)))
+      .toDataStream()
+      .collect.map(_ ("NAME").toString)
+    result3.foreach(println)
+    assert(result3 == Seq("Gary", "Alice").sorted)
+  }
+
+  ignore("readWithBigDecimalNumericRangePredicate") {
+    upsertData()
 
     // todo not returning rows
     println("Reading specific rows with filter: salary >= 1200000 and salary <= 1200000.99 ...")
-    HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+    val result = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
       .withSerializer(serializer)
       .withSchema(hbaseSchema)
-      .withPredicate(Predicate.and(Predicate.gte("SALARY", BigDecimal("1200000")), Predicate.lte("SALARY", BigDecimal("1200000.99"))))
+      .withPredicate(Predicate.and(Predicate.gte("SALARY", BigDecimal(1200000.0d)), Predicate.lte("SALARY", BigDecimal(1200000.99d))))
       .toDataStream()
-      .collect
-      .foreach(println)
+      .collect.map(_ ("NAME").toString)
+    result.foreach(println)
+    assert(result == Seq("Gary").sorted)
+  }
+
+  test("readWithRowLimit") {
+    upsertData()
+
+    println("Reading with row limit of 2 ...")
+    val actual = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withLimitRows(2)
+      .toDataStream().collect
+    assert(actual.length == 2)
+  }
+
+  test("readWithRegexPredicate") {
+    upsertData()
+
+    println("Reading with name on regex Fred|Joanna ...")
+    val actual = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(HbasePredicate.regex("NAME", "Fred|Joanna"))
+      .toDataStream().collect.map(_ ("NAME").toString)
+    actual.foreach(println)
+    assert(actual == Seq("Fred", "Joanna"))
+  }
+
+  test("readWithContainsPredicate") {
+    upsertData()
+
+    println("Reading with name contains 'an' ...")
+    val actual = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(HbasePredicate.contains("NAME", "an"))
+      .toDataStream().collect.map(_ ("NAME").toString)
+    actual.foreach(println)
+    assert(actual == Seq("Anne", "Jane", "Joanna"))
+  }
+
+  test("readWithStartWithPredicate") {
+    upsertData()
+
+    println("Reading with name startsWith 'G' ...")
+    val actual = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withPredicate(HbasePredicate.startsWith("NAME", "G"))
+      .toDataStream().collect.map(_ ("NAME").toString)
+    actual.foreach(println)
+    assert(actual == Seq("Gary", "Geoff"))
+  }
+
+  test("readHbaseSourceInReverseKeyOrder") {
+    val query = "SELECT NAME FROM PERSON"
+    val expected = JdbcSource(() => dataSource.getConnection, query)
+      .toDataStream().collect.map(_ ("NAME").toString).sorted(Ordering[String].reverse)
+
+    upsertData()
+
+    println("Reading in reverse key order ...")
+    val actual = HbaseSource(namespace = "test", table = "person", connection = hbaseConnection)
+      .withSerializer(serializer)
+      .withSchema(hbaseSchema)
+      .withReverseScan(true)
+      .toDataStream()
+      .collect.map(_ ("NAME").toString)
+
+    actual.foreach(println)
+    assert(actual == expected)
+
   }
 
   test("readingHbaseSourceStats") {
@@ -237,7 +352,7 @@ class HbaseFullTests extends FunSuite with HbaseTests with BeforeAndAfterAll wit
       .statistics()
       .columnFamilies
     cf.foreach(println)
-    assert(cf.length == 1)
+    assert(cf.lengthCompare(1) == 0)
   }
 
 
