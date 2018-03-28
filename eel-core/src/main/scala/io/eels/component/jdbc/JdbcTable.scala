@@ -14,12 +14,10 @@ case class JdbcTable(tableName: String,
                      dbSchema: Option[String] = None)
                     (implicit conn: Connection) extends Logging with JdbcPrimitives with Using {
 
-  private val databaseMetaData: DatabaseMetaData = conn.getMetaData
-  private val tables = ResultSetIterator
-    .strings(databaseMetaData.getTables(catalog.orNull, dbSchema.orNull, null, Array("TABLE", "VIEW")))
-    .toList
-    .map(_ (2))
   private val dbPrefix: String = if (dbSchema.nonEmpty) dbSchema.get + "." else ""
+  private val databaseMetaData: DatabaseMetaData = conn.getMetaData
+  private val tables = RsIterator(databaseMetaData.getTables(catalog.orNull, dbSchema.orNull, null, Array("TABLE", "VIEW")))
+    .map(_.getString("TABLE_NAME"))
 
   val candidateTableName: String = tables.find(_.toLowerCase == tableName.toLowerCase).getOrElse(sys.error(s"$tableName not found!"))
   val primaryKeys: Seq[String] = RsIterator(databaseMetaData.getPrimaryKeys(catalog.orNull, dbSchema.orNull, candidateTableName))
