@@ -10,7 +10,7 @@ class H2SchemaCompatibilityTest extends FlatSpec with Matchers {
 
   Class.forName("org.h2.Driver")
 
-  val conn = DriverManager.getConnection("jdbc:h2:mem:schematest")
+  val conn = DriverManager.getConnection("jdbc:h2:mem:catalog")
   conn.createStatement().executeUpdate("create table t (" +
     "a integer, " +
     "b bit, " +
@@ -27,6 +27,7 @@ class H2SchemaCompatibilityTest extends FlatSpec with Matchers {
     "m char(15)," +
     "n numeric(66,5)" +
     ")")
+
 
   "JdbcSource" should "map schemas from jdbc to correct eel types" in {
     JdbcSource(() => conn, "select * from t").schema shouldBe
@@ -49,4 +50,82 @@ class H2SchemaCompatibilityTest extends FlatSpec with Matchers {
         )
       )
   }
+
+  "JdbcTable" should "Check primary key info for person table" in {
+
+    implicit val myConn = DriverManager.getConnection("jdbc:h2:mem:catalog")
+    val databaseMetaData = myConn.getMetaData
+    myConn.createStatement().executeUpdate(
+      """
+        |CREATE TABLE person(
+        |          personID INTEGER AUTO_INCREMENT PRIMARY KEY,
+        |          name VARCHAR(100) NOT NULL,
+        |          entryDate DATE,
+        |          lastUpdated TIMESTAMP)
+      """.stripMargin)
+
+    // With catalog, schema and table
+    JdbcTable(tableName = "person", catalog = Option("CATALOG"), dbSchema = Option("PUBLIC"))
+      .schema
+      .fields
+      .find(_.name.toUpperCase == "PERSONID").get.key.shouldBe(true)
+
+    // With schema and table
+    JdbcTable(tableName = "person", dbSchema = Option("PUBLIC"))
+      .schema
+      .fields
+      .find(_.name.toUpperCase == "PERSONID").get.key.shouldBe(true)
+
+    // With table only
+    JdbcTable(tableName = "person")
+      .schema
+      .fields
+      .find(_.name.toUpperCase == "PERSONID").get.key.shouldBe(true)
+
+    // Test primarykey method only
+    JdbcTable(tableName = "person").primaryKeys shouldBe Seq("PERSONID")
+  }
+
+  "JdbcTable for View" should "No primary keys returned for views" in {
+
+    implicit val myConn = DriverManager.getConnection("jdbc:h2:mem:catalog2")
+    val databaseMetaData = myConn.getMetaData
+    myConn.createStatement().executeUpdate(
+      """
+        |CREATE TABLE person(
+        |          personID INTEGER AUTO_INCREMENT PRIMARY KEY,
+        |          name VARCHAR(100) NOT NULL,
+        |          entryDate DATE,
+        |          lastUpdated TIMESTAMP)
+      """.stripMargin)
+
+    myConn.createStatement().executeUpdate(
+      """
+        |CREATE VIEW v_person
+        |AS
+        |SELECT * FROM person
+      """.stripMargin)
+
+    // With catalog, schema and table
+    JdbcTable(tableName = "v_person", catalog = Option("CATALOG2"), dbSchema = Option("PUBLIC"))
+      .schema
+      .fields
+      .find(_.name.toUpperCase == "PERSONID").get.key.shouldBe(false)
+
+    // With schema and table
+    JdbcTable(tableName = "v_person", dbSchema = Option("PUBLIC"))
+      .schema
+      .fields
+      .find(_.name.toUpperCase == "PERSONID").get.key.shouldBe(false)
+
+    // With table only
+    JdbcTable(tableName = "v_person")
+      .schema
+      .fields
+      .find(_.name.toUpperCase == "PERSONID").get.key.shouldBe(false)
+
+    // Test primarykey method only - should be empty
+    JdbcTable(tableName = "v_person").primaryKeys shouldBe Seq.empty
+  }
+
 }
