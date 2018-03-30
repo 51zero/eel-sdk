@@ -281,7 +281,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
     }
   }
 
-  def databaseExists(name: String): Boolean = {
+  def databaseExists(name: String): Boolean = client.synchronized {
     try {
       client.getDatabase(name) != null
     } catch {
