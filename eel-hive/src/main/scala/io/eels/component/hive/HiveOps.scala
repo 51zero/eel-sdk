@@ -1,5 +1,7 @@
 package io.eels.component.hive
 
+import java.rmi.NoSuchObjectException
+
 import com.sksamuel.exts.Logging
 import io.eels.Constants
 import io.eels.component.hive.dialect.ParquetHiveDialect
@@ -267,7 +269,7 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
   }
 
   def createDatabase(name: String, description: String = null, overwrite: Boolean = false): Unit = client.synchronized {
-    val exists = client.getDatabase(name) != null
+    val exists = databaseExists(name)
     if (exists && overwrite) {
       logger.info(s"Database exists, overwrite=true; dropping database $name")
       client.dropDatabase(name)
@@ -276,6 +278,14 @@ class HiveOps(val client: IMetaStoreClient) extends Logging {
       val database = new Database(name, description, null, null)
       logger.info(s"Creating database $name")
       client.createDatabase(database)
+    }
+  }
+
+  def databaseExists(name: String): Boolean = {
+    try {
+      client.getDatabase(name) != null
+    } catch {
+      case _: NoSuchObjectException => false
     }
   }
 }
