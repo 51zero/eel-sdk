@@ -3,6 +3,7 @@ package io.eels.component.csv
 import java.util.UUID
 
 import io.eels.Row
+import io.eels.component.parquet.ParquetSink
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
 import org.apache.hadoop.conf.Configuration
@@ -76,7 +77,7 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       result shouldBe "name,job,location\nclint eastwood,,carmel\nelton john,,pinner\n"
     }
     "support overwrite" in {
-      val path = new Path(s"target/${UUID.randomUUID().toString}", s"${UUID.randomUUID().toString}.pq")
+      val path = new Path(s"target/${UUID.randomUUID().toString}", s"${UUID.randomUUID().toString}.csv")
       val schema = StructType(Field("a", StringType))
       val ds = DataStream.fromRows(
         schema,
@@ -97,12 +98,21 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       parentStatus.head.getPath.getName shouldBe path.getName
 
       // Write again without overwrite
-      val appendPath = new Path(path.getParent, s"${UUID.randomUUID().toString}.pq")
+      val appendPath = new Path(path.getParent, s"${UUID.randomUUID().toString}.csv")
       ds.to(CsvSink(appendPath).withOverwrite(false))
       parentStatus = fs.listStatus(path.getParent)
       println("CSV Append:")
       parentStatus.foreach(p => println(p.getPath))
       parentStatus.length shouldBe 2
+
+      // Write overwrite the same file again - it should still be 2
+      ds.to(CsvSink(path).withOverwrite(true))
+      parentStatus = fs.listStatus(path.getParent)
+      println("CSV Again Overwrite:")
+      parentStatus.foreach(p => println(p.getPath))
+      parentStatus.length shouldBe 2
+      parentStatus.head.getPath.getName shouldBe path.getName
+
     }
   }
 }

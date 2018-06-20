@@ -79,6 +79,14 @@ class ParquetSinkTest extends FlatSpec with Matchers {
     println("Parquet Append:")
     parentStatus.foreach(p => println(p.getPath))
     parentStatus.length shouldBe 2
+
+    // Write overwrite the same file again - it should still be 2
+    ds.to(ParquetSink(path).withOverwrite(true))
+    parentStatus = fs.listStatus(path.getParent)
+    println("Parquet Again Overwrite:")
+    parentStatus.foreach(p => println(p.getPath))
+    parentStatus.length shouldBe 2
+    parentStatus.head.getPath.getName shouldBe path.getName
   }
 
   it should "support permissions" in {
