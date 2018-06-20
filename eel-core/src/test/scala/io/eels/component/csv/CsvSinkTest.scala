@@ -1,5 +1,7 @@
 package io.eels.component.csv
 
+import java.util.UUID
+
 import io.eels.Row
 import io.eels.datastream.DataStream
 import io.eels.schema.{Field, StringType, StructType}
@@ -74,20 +76,33 @@ class CsvSinkTest extends WordSpec with Matchers with BeforeAndAfter {
       result shouldBe "name,job,location\nclint eastwood,,carmel\nelton john,,pinner\n"
     }
     "support overwrite" in {
-
-      val path = new Path("overwrite_test.csv")
-      fs.delete(path, false)
-
+      val path = new Path(s"target/${UUID.randomUUID().toString}", s"${UUID.randomUUID().toString}.pq")
       val schema = StructType(Field("a", StringType))
-      val frame = DataStream.fromRows(
+      val ds = DataStream.fromRows(
         schema,
-        Row(schema, Vector("x")),
-        Row(schema, Vector("y"))
+        Seq(
+          Row(schema, Vector("x")),
+          Row(schema, Vector("y"))
+        )
       )
 
-      frame.to(CsvSink(path))
-      frame.to(CsvSink(path).withOverwrite(true))
-      fs.delete(path, false)
+      // Write twice to test overwrite
+      ds.to(CsvSink(path))
+      ds.to(CsvSink(path).withOverwrite(true))
+
+      var parentStatus = fs.listStatus(path.getParent)
+      println("CSV Overwrite:")
+      parentStatus.foreach(p => println(p.getPath))
+      parentStatus.length shouldBe 1
+      parentStatus.head.getPath.getName shouldBe path.getName
+
+      // Write again without overwrite
+      val appendPath = new Path(path.getParent, s"${UUID.randomUUID().toString}.pq")
+      ds.to(CsvSink(appendPath).withOverwrite(false))
+      parentStatus = fs.listStatus(path.getParent)
+      println("CSV Append:")
+      parentStatus.foreach(p => println(p.getPath))
+      parentStatus.length shouldBe 2
     }
   }
 }

@@ -1,6 +1,7 @@
 package io.eels.component.parquet
 
 import java.sql.DriverManager
+import java.util.UUID
 
 import com.sun.javafx.PlatformUtil
 import io.eels.{FilePattern, Row}
@@ -51,10 +52,7 @@ class ParquetSinkTest extends FlatSpec with Matchers {
   }
 
   it should "support overwrite" in {
-
-    val path = new Path("overwrite_test.pq")
-    fs.delete(path, false)
-
+    val path = new Path(s"target/${UUID.randomUUID().toString}", s"${UUID.randomUUID().toString}.pq")
     val schema = StructType(Field("a", StringType))
     val ds = DataStream.fromRows(
       schema,
@@ -64,9 +62,23 @@ class ParquetSinkTest extends FlatSpec with Matchers {
       )
     )
 
+    // Write twice to test overwrite
     ds.to(ParquetSink(path))
     ds.to(ParquetSink(path).withOverwrite(true))
-    fs.delete(path, false)
+
+    var parentStatus = fs.listStatus(path.getParent)
+    println("Parquet Overwrite:")
+    parentStatus.foreach(p => println(p.getPath))
+    parentStatus.length shouldBe 1
+    parentStatus.head.getPath.getName shouldBe path.getName
+
+    // Write again without overwrite
+    val appendPath = new Path(path.getParent, s"${UUID.randomUUID().toString}.pq")
+    ds.to(ParquetSink(appendPath).withOverwrite(false))
+    parentStatus = fs.listStatus(path.getParent)
+    println("Parquet Append:")
+    parentStatus.foreach(p => println(p.getPath))
+    parentStatus.length shouldBe 2
   }
 
   it should "support permissions" in {
