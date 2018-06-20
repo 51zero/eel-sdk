@@ -64,6 +64,34 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, BigDecimal(3.9), new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
       )
     }
+
+    "support reading the schema directly" in {
+      val schema = StructType(
+        Field("string", StringType),
+        Field("char", CharType(2)),
+        Field("int", IntType.Signed),
+        Field("double", DoubleType),
+        Field("boolean", BooleanType),
+        Field("long", LongType.Signed),
+        Field("decimal", DecimalType(4, 2)),
+        Field("timestamp", TimestampMillisType),
+        Field("varchar", VarcharType(100)),
+        Field("list", ArrayType(StringType)),
+        Field("map", MapType(StringType, BooleanType))
+      )
+
+      val ds = DataStream.fromRows(
+        schema,
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
+      )
+
+      val path = new Path(s"test_${System.currentTimeMillis()}.orc")
+      ds.to(OrcSink(path))
+
+      OrcSource(path).schema should equal (schema)
+    }
+
     "handle null values" in {
       val schema = StructType(
         Field("a", StringType),

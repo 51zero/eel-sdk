@@ -34,7 +34,7 @@ case class OrcSource(pattern: FilePattern,
   }
 
   override def schema: StructType = {
-    val reader = OrcFile.createReader(pattern.toPaths().head, new ReaderOptions(conf).maxLength(1))
+    val reader = OrcFile.createReader(pattern.toPaths().head, new ReaderOptions(conf))
     val schema = reader.getSchema
     OrcSchemaFns.fromOrcType(schema).asInstanceOf[StructType]
   }
