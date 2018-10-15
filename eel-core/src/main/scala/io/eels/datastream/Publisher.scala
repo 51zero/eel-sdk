@@ -80,6 +80,8 @@ object Publisher extends Logging {
           // once we've had an error that's it, we don't complete the subscriber
           if (error.get == null)
             s.completed()
+          else 
+            s.error(error.get)
         } catch {
           case t: Throwable =>
             logger.error("Error in merge subscriber", t)
