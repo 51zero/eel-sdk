@@ -3,8 +3,11 @@ package io.eels.datastream
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
 import io.eels.schema.{Field, StructType}
-import io.eels.{Row, Sink, SinkWriter}
+import io.eels.{Row, Sink, SinkWriter, Source}
+
 import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.time.{Span, Seconds}
+import org.scalatest.concurrent.Timeouts._
 
 import scala.util.Try
 
@@ -117,6 +120,44 @@ class SinkActionTest extends WordSpec with Matchers {
       }
 
       latch.await(20, TimeUnit.SECONDS) shouldBe true
+    }
+  "fail normally when queue is full because of slow sink and one of publishers fails" in {            
+      val dataDims = Seq.fill(4){DataStream.DefaultBufferSize * 2} //make sure we saturate queue      
+      val ds = new DataStreamSource(new StringLiteralSource(dataDims))
+      val parallelism = 2
+      failAfter(Span(10, Seconds)) {
+        assertThrows[RuntimeException] {
+          ds.to(new SlowSink, parallelism)
+        }
+      }
+    }
+  }
+}
+
+class StringLiteralSource(dataDims: Seq[Int]) extends Source {
+
+  override def schema(): StructType = StructType(Field("name"))
+
+  override def parts(): Seq[Publisher[Seq[Row]]] = {
+    dataDims.map(new StringFollowedByExceptionPublisher(schema, _))    
+  }    
+}
+
+class StringFollowedByExceptionPublisher(schema: StructType, rowCountToPublish: Int) extends Publisher[Seq[Row]] {
+  override def subscribe(subscriber: Subscriber[Seq[Row]]): Unit = {
+    val row = new Row(schema, IndexedSeq("stuff"))
+    (1 to rowCountToPublish).foreach(_ => subscriber.next(Seq(row)))
+    subscriber.error(new RuntimeException("boom"))    
+  }
+}
+
+class SlowSink extends Sink {
+  override def open(schema: StructType): SinkWriter = new SinkWriter {
+    var nWritten: Int = 0
+    override def close(): Unit = ()
+    override def write(row: Row): Unit = {
+      nWritten += 1
+      if (nWritten % 2 == 0) Thread.sleep(10)
     }
   }
 }
