@@ -1,7 +1,7 @@
 package io.eels.datastream
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
-import java.util.concurrent.{ExecutorService, LinkedBlockingQueue}
+import java.util.concurrent.{ExecutorService, LinkedBlockingQueue, TimeUnit}
 
 import com.sksamuel.exts.Logging
 import com.sksamuel.exts.collection.BlockingQueueConcurrentIterator
@@ -41,10 +41,10 @@ object Publisher extends Logging {
         }
 
         // status flag that an error occured and the subscriptions should watch for it
-        val error = new AtomicReference[Throwable](null)
+        val errorRef = new AtomicReference[Throwable](null)
         def terminate(t: Throwable): Unit = {
           logger.error(s"Error in merge", t)
-          error.set(t)
+          errorRef.set(t)
           subscription.cancel()
           queue.clear()
           queue.put(Right(sentinel))
@@ -55,8 +55,13 @@ object Publisher extends Logging {
           executor.submit {
             try {
               publisher.subscribe(new Subscriber[T] {
-                override def subscribed(sub: Subscription): Unit = if (sub != null) subscriptions.put(sub, 1)
-                override def next(t: T): Unit = queue.put(Right(t))
+                override def subscribed(sub: Subscription): Unit = if (sub != null) subscriptions.put(sub, 1)                
+                override def next(t: T): Unit = {
+                  var success = true
+                  do {
+                    success = queue.offer(Right(t), 100, TimeUnit.MILLISECONDS)
+                  } while(!success && errorRef.get == null)
+                }
                 override def error(t: Throwable): Unit = terminate(t)
                 override def completed(): Unit = {
                   if (outstanding.decrementAndGet() == 0) {
@@ -73,15 +78,15 @@ object Publisher extends Logging {
 
         try {
           s.subscribed(subscription)
-          BlockingQueueConcurrentIterator(queue, Right(sentinel)).takeWhile(_ => error.get == null).foreach {
+          BlockingQueueConcurrentIterator(queue, Right(sentinel)).takeWhile(_ => errorRef.get == null).foreach {
             case Left(t) => s.error(t)
             case Right(t) => s.next(t)
           }
           // once we've had an error that's it, we don't complete the subscriber
-          if (error.get == null)
+          if (errorRef.get == null)
             s.completed()
           else 
-            s.error(error.get)
+            s.error(errorRef.get)
         } catch {
           case t: Throwable =>
             logger.error("Error in merge subscriber", t)
