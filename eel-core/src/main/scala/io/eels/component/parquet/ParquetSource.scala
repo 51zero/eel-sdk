@@ -76,7 +76,8 @@ case class ParquetSource(pattern: FilePattern,
 
   override def parts(): Seq[Publisher[Seq[Row]]] = {
     logger.debug(s"Parquet source has ${paths.size} files: ${paths.mkString(", ")}")
-    paths.map { it => new ParquetPublisher(it, predicate, projection, caseSensitive, dictionaryFiltering) }
+    paths.filter(it => !it.getName.equalsIgnoreCase(s"_SUCCESS") && !it.getName.startsWith(".")).map
+    { it => new ParquetPublisher(it, predicate, projection, caseSensitive, dictionaryFiltering) }
   }
 
   def footers(): List[Footer] = {
