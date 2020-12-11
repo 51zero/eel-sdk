@@ -39,15 +39,16 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Field("timestamp", TimestampMillisType),
         Field("varchar", VarcharType(100)),
         Field("list", ArrayType(StringType)),
-        Field("map", MapType(StringType, BooleanType))
+        Field("map", MapType(StringType, BooleanType)),
+        Field("date", DateType)
       )
 
       desc.createRowBatch(3332)
 
       val ds = DataStream.fromRows(
         schema,
-        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false), javaDate("2018-12-18"))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true), sqlDate("2018-12-18")))
       )
       val path = new Path(s"test_${System.currentTimeMillis()}.orc")
       fs.delete(path, false)
@@ -60,8 +61,8 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
       rows.head.schema shouldBe ds.schema
 
       rows shouldBe Set(
-        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, BigDecimal(9.91), new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, BigDecimal(3.9), new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, BigDecimal(9.91), new Timestamp(1483726491000L), "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false), javaDate("2018-12-18"))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, BigDecimal(3.9), new Timestamp(1483726291000L), "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true), javaDate("2018-12-18")))
       )
     }
 
@@ -77,13 +78,14 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         Field("timestamp", TimestampMillisType),
         Field("varchar", VarcharType(100)),
         Field("list", ArrayType(StringType)),
-        Field("map", MapType(StringType, BooleanType))
+        Field("map", MapType(StringType, BooleanType)),
+        Field("date", DateType)
       )
 
       val ds = DataStream.fromRows(
         schema,
-        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false))),
-        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true)))
+        Row(schema, Vector("hello", "aa", 85, 1.9, true, 3256269123123L, 9.91, 1483726491000L, "abcdef", Seq("x", "y", "z"), Map("a" -> true, "b" -> false), javaDate("2018-12-18"))),
+        Row(schema, Vector("world", "bb", 65, 1.7, true, 1950173241323L, 3.9, 1483726291000L, "qwerty", Seq("p", "q", "r"), Map("x" -> false, "y" -> true), sqlDate("2018-12-18")))
       )
 
       val path = new Path(s"test_${System.currentTimeMillis()}.orc")
@@ -195,5 +197,15 @@ class OrcComponentTest extends WordSpec with Matchers with BeforeAndAfter {
         (name.startsWith("test_") && name.endsWith(".orc")) || (name.startsWith(".test_") && name.endsWith(".orc.crc"))
       }
     }).foreach(_.delete())
+  }
+
+  private def javaDate(s: String): java.util.Date = {
+    val sdf = new java.text.SimpleDateFormat("yyyy-MM-dd")
+    sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"))
+    sdf.parse(s)
+  }
+
+  private def sqlDate(s: String): java.sql.Date = {
+    new java.sql.Date(javaDate(s).getTime)
   }
 }

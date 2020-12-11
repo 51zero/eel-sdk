@@ -155,6 +155,7 @@ object BooleanSerializer extends OrcSerializer[LongColumnVector] {
 }
 
 object LongColumnSerializer extends OrcSerializer[LongColumnVector] {
+  val MILLIS_IN_DAY = 1000 * 60 * 60 * 24
   override def writeToVector(k: Int, vector: LongColumnVector, value: Any): Unit = {
     value match {
       case null =>
@@ -165,6 +166,8 @@ object LongColumnSerializer extends OrcSerializer[LongColumnVector] {
       case i: Int => vector.vector(k) = i
       case s: Short => vector.vector(k) = s
       case b: Byte => vector.vector(k) = b
+      case d: java.sql.Date => vector.vector(k) = d.getTime / MILLIS_IN_DAY
+      case d: java.util.Date => vector.vector(k) = d.getTime / MILLIS_IN_DAY
     }
   }
 }

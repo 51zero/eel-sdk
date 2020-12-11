@@ -12,7 +12,7 @@ object OrcDeserializer {
     case ArrayType(elementType) => new ListDeserializer(apply(elementType))
     case BooleanType => BooleanDeserializer
     case CharType(size) => StringDeserializer
-    case DateType => LongDeserializer
+    case DateType => DateDeserializer
     case DecimalType(p, s) => DecimalDeserializer
     case DoubleType => DoubleDeserializer
     case FloatType => FloatDeserializer
@@ -142,6 +142,14 @@ object LongDeserializer extends OrcDeserializer[LongColumnVector] {
   override def readFromVector(rowIndex: Int, vector: LongColumnVector): Any = {
     if (vector.isNull(rowIndex)) null
     else vector.vector(rowIndex)
+  }
+}
+
+object DateDeserializer extends OrcDeserializer[LongColumnVector] {
+  val MILLIS_IN_DAY = 1000 * 60 * 60 * 24
+  override def readFromVector(rowIndex: Int, vector: LongColumnVector): Any = {
+    if (vector.isNull(rowIndex)) null
+    else new java.util.Date(vector.vector(rowIndex) * MILLIS_IN_DAY)
   }
 }
 
